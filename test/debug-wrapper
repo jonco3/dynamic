@@ -1,0 +1,70 @@
+#!/bin/env python
+
+# debug-wrapper
+#
+# Run a command under debugger, displayinging a backtrace if it crashes,
+# and exiting with the child's return code
+
+import os
+import sys
+from subprocess import *
+import re
+
+# based on http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+def which(program):
+    for path in os.environ["PATH"].split(os.pathsep):
+        path = path.strip('"')
+        file = os.path.join(path, program)
+        if os.path.isfile(file) and os.access(file, os.X_OK):
+            return file
+    return None
+
+exit_pattern = re.compile(r" (?:exited with code|exited with status =) (\d+)")
+crash_pattern = re.compile(r"Program received signal")
+
+if which('lldb'):
+    command = [ 'lldb', '--' ]
+    prompt = '(lldb)'
+elif which('gdb'):
+    command = [ 'gdb', '-n', '-quiet', '-args' ]
+    prompt = '(gdb)'
+else:
+    sys.exit("Can't find a debugger!")
+
+args = sys.argv[1:]
+process = Popen(command + args, stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+
+state = 'init'
+actions = {
+    'init': ('run', 'running'),
+    'running': ('quit', 'finished'),
+    'crashed': ('backtrace', 'running')
+}
+
+returncode = 1 # fail if we can't extract exit code
+
+linebuffer = ''
+while process.poll() == None:
+    c = process.stdout.read(1)
+    linebuffer += c
+    if c == '\n':
+        if linebuffer != '\n':
+            sys.stdout.write(linebuffer)
+
+        m = exit_pattern.search(linebuffer)
+        if m:
+            returncode = int(m.group(1))
+        elif crash_pattern.match(linebuffer):
+            returncode = 1
+            state = 'crashed'
+
+        linebuffer = ''
+    elif linebuffer == prompt and state != 'finished':
+        #sys.stdout.write(linebuffer)
+        action = actions[state]
+        #sys.stdout.write(action[0] + '\n')
+        process.stdin.write(action[0] + '\n')
+        state = action[1]
+        linebuffer = ''
+
+sys.exit(returncode)
