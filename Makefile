@@ -2,7 +2,7 @@ CPP = clang++
 LD = clang
 #CPP = g++
 #LD = gcc
-FLAGS = -Wall -Werror --std=c++11 --stdlib=libstdc++
+FLAGS = -Wall -Werror --std=c++11 --stdlib=libc++
 CPPFLAGS = $(FLAGS)  # -DUSE_READLINE -I/usr/include/gc
 LFLAGS = $(FLAGS) -lstdc++ # -lm -lgc -lreadline
 DEBFLAGS = -g -DDEBUG
@@ -12,7 +12,8 @@ PROFFLAGS = $(RELFLAGS) -pg
 SRCS = \
 	src/main.cpp \
 	src/test.cpp \
-	src/token.cpp
+	src/token.cpp \
+	src/parser.cpp
 
 RELOBJS = $(subst src,build/rel,$(SRCS:.cpp=.o))
 RELDEPS = $(subst src,build/rel,$(SRCS:.cpp=.d))

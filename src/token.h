@@ -1,7 +1,8 @@
 #ifndef __TOKEN_H__
 #define __TOKEN_H__
 
-#include <cstdlib>
+#include <string>
+#include <ostream>
 
 enum TokenType
 {
@@ -9,7 +10,9 @@ enum TokenType
     Token_EOF,
     Token_Number,
     Token_Plus,
-    Token_Minus
+    Token_Minus,
+
+    TokenCount
 };
 
 struct TokenPos
@@ -19,21 +22,35 @@ struct TokenPos
     unsigned column;
 };
 
+struct Token
+{
+    TokenType type;
+    std::string text;
+    TokenPos pos;
+};
+
 struct Tokenizer
 {
     Tokenizer(const char* source, const char* file);
+    size_t numTypes();
+    std::string typeName(TokenType type);
 
-    TokenType nextToken();
-    const TokenPos& getPos() { return pos; }
-    const char* copyText();
+    Token nextToken();
 
 private:
     const char* source;
-    const char* token;
-    size_t length;
     TokenPos pos;
 
-    void advance();
+    char peekChar();
+    void nextChar(size_t count = 1);
+    void skipWhitespace();
 };
+
+/*
+ * To build a generic tokenizer framwork, we have a starting state, a set of
+ * intermediate states and a set of final states corresponding to token types.
+ * We can easily configure these at runtime by supplying predicate function for
+ * the state transitions.
+ */
 
 #endif

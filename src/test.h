@@ -24,10 +24,10 @@ struct TestCase
 
 extern void runTests();
 
-template <typename T>
+template <typename A>
 inline void testFailure(const char* testStr,
                         const char* actualStr, const char* expectedStr,
-                        const T& actual, const char* file, unsigned line)
+                        const A actual, const char* file, unsigned line)
 {
     using namespace std;
     cerr << file << ":" << line << ": test failed: ";
@@ -37,7 +37,8 @@ inline void testFailure(const char* testStr,
     exit(1);
 }
 
-inline void testEqualImpl(int actual, int expected,
+template <typename A, typename E>
+inline void testEqualImpl(const A actual, const E expected,
                           const char* actualStr, const char* expectedStr,
                           const char* file, unsigned line)
 {
@@ -45,6 +46,7 @@ inline void testEqualImpl(int actual, int expected,
         testFailure("==", actualStr, expectedStr, actual, file, line);
 }
 
+template <>
 inline void testEqualImpl(const char* actual, const char* expected,
                           const char* actualStr, const char* expectedStr,
                           const char* file, unsigned line)
