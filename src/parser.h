@@ -42,8 +42,21 @@ struct ExprSpec
     void addUnaryOp(TokenType type, UnaryOpHandler hanlder);
 
   private:
-    std::vector<PrefixHandler> prefixActions;
-    std::vector<std::pair<unsigned, InfixHandler> > infixActions;
+    struct PrefixAction
+    {
+        bool present;
+        PrefixHandler handler;
+    };
+
+    struct InfixAction
+    {
+        bool present;
+        unsigned bindLeft;
+        InfixHandler handler;
+    };
+
+    std::vector<PrefixAction> prefixActions;
+    std::vector<InfixAction> infixActions;
 
     friend struct Parser<T>;
 };
@@ -67,9 +80,9 @@ struct Parser
     T expression(const ExprSpec<T>& spec, unsigned bindRight = 0);
 
     void nextToken();
-    T prefix(const ExprSpec<T>& spec, TokenType type);
-    unsigned getBindLeft(const ExprSpec<T>& spec, TokenType type);
-    T infix(const ExprSpec<T>& spec, TokenType type, const T leftValue);
+    T prefix(const ExprSpec<T>& spec, Token token);
+    unsigned getBindLeft(const ExprSpec<T>& spec, Token token);
+    T infix(const ExprSpec<T>& spec, Token token, const T leftValue);
 
   private:
     const ExprSpec<T>& topSpec;
@@ -80,15 +93,17 @@ struct Parser
 template <typename T>
 ExprSpec<T>::ExprSpec(unsigned maxTokenTypes)
 {
-    prefixActions.resize(maxTokenTypes);
-    infixActions.resize(maxTokenTypes);
+    for (unsigned i = 0; i < maxTokenTypes; ++i) {
+        prefixActions.push_back({false});
+        infixActions.push_back({false});
+    }
 }
 
 template <typename T>
 void ExprSpec<T>::addPrefixHandler(TokenType type, PrefixHandler handler)
 {
     assert(type < prefixActions.size());
-    prefixActions[type] = handler;
+    prefixActions[type] = {true, handler};
 }
 
 template <typename T>
@@ -96,7 +111,7 @@ void ExprSpec<T>::addInfixHandler(TokenType type, unsigned bindLeft,
                                   InfixHandler handler)
 {
     assert(type < infixActions.size());
-    infixActions[type] = std::pair<unsigned, InfixHandler>(bindLeft, handler);
+    infixActions[type] = {true, bindLeft, handler};
 }
 
 template <typename T>
@@ -179,41 +194,44 @@ T Parser<T>::expression(const ExprSpec<T>& spec, unsigned bindRight)
 {
     Token t = token;
     nextToken();
-    T left = prefix(spec, t.type);
-    while (bindRight < getBindLeft(spec, token.type)) {
+    T left = prefix(spec, t);
+    while (bindRight < getBindLeft(spec, token)) {
         t = token;
         nextToken();
-        left = infix(spec, t.type, left);
+        left = infix(spec, t, left);
     }
     return left;
 }
 
 template <typename T>
-T Parser<T>::prefix(const ExprSpec<T>& spec, TokenType type)
+T Parser<T>::prefix(const ExprSpec<T>& spec, Token token)
 {
-    if (!spec.prefixActions[type]) {
-        throw ParseError("Unexpected '" + tokenizer.typeName(type));
+    const auto& action = spec.prefixActions[token.type];
+    if (!action.present) {
+        throw ParseError("Unexpected '" + tokenizer.typeName(token.type));
         // todo: + " in " + spec.name + " context"
     }
-    return spec.prefixActions[token.type](*this, spec, token);
+    return action.handler(*this, spec, token);
 }
 
 template <typename T>
-unsigned Parser<T>::getBindLeft(const ExprSpec<T>& spec, TokenType type)
+unsigned Parser<T>::getBindLeft(const ExprSpec<T>& spec, Token token)
 {
-    if (!spec.infixActions[type].second)
+    const auto& action = spec.infixActions[token.type];
+    if (!action.present)
         return 0;
-    return spec.infixActions[type].first;
+    return action.bindLeft;
 }
 
 template <typename T>
-T Parser<T>::infix(const ExprSpec<T>& spec, TokenType type, const T leftValue)
+T Parser<T>::infix(const ExprSpec<T>& spec, Token token, const T leftValue)
 {
-    if (!spec.infixActions[type].second) {
-        throw ParseError("Unexpected '" + tokenizer.typeName(type));
+    const auto& action = spec.infixActions[token.type];
+    if (!action.present) {
+        throw ParseError("Unexpected '" + tokenizer.typeName(token.type));
         // todo + " in " + spec.name + " context"
     }
-    return spec.infixActions[token.type].second(*this, spec, token, leftValue);
+    return action.handler(*this, spec, token, leftValue);
 }
 
 #endif

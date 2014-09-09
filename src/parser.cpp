@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <ostream>
 
+using namespace std;
+
 testcase("parser", {
     ExprSpec<int> spec(TokenCount);
     spec.addWord(Token_Number, [] (Token token) {
@@ -20,13 +22,9 @@ testcase("parser", {
             return -r;
         });
 
-    Tokenizer tokenizer("1 + 2 - 3", "");
+    Tokenizer tokenizer("2 + 3 - 1", "");
 
     Parser<int> parser(spec, tokenizer);
 
-    try {
-        testEqual(parser.parse(), -1);
-    } catch (const std::runtime_error& err) {
-        std::cerr << "Runtime error" << err.what() << std::endl;
-    }
+    testEqual(parser.parse(), 4);
 });

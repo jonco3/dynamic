@@ -87,13 +87,13 @@ Token Tokenizer::nextToken()
     const char *startText = source;
 
     if (!peekChar())
-        return Token({Token_EOF, std::string(), startPos});
+        return {Token_EOF, std::string(), startPos};
 
     for (const Keyword *k = keywords; k->match; ++k) {
         size_t len = strlen(k->match);
         if (strncmp(k->match, source, len) == 0) {
             nextChar(len);
-            return Token({k->type, std::string(k->match), startPos});
+            return {k->type, std::string(k->match), startPos};
         }
     }
 
@@ -102,10 +102,10 @@ Token Tokenizer::nextToken()
             nextChar();
         } while (is_digit(peekChar()));
         size_t length = source - startText;
-        return Token({Token_Number, std::string(startText, length), startPos});
+        return {Token_Number, std::string(startText, length), startPos};
     }
 
-    return Token({Token_Error, std::string(), startPos});
+    return {Token_Error, std::string(), startPos};
 }
 
 testcase("tokenizer", {
@@ -135,18 +135,21 @@ testcase("tokenizer", {
     Tokenizer expr("1+2 - 3", "");
     t = expr.nextToken();
     testEqual(t.type, Token_Number);
+    testEqual(t.text, "1");
     testEqual(t.pos.column, 0);
     t = expr.nextToken();
     testEqual(t.type, Token_Plus);
     testEqual(t.pos.column, 1);
     t = expr.nextToken();
     testEqual(t.type, Token_Number);
+    testEqual(t.text, "2");
     testEqual(t.pos.column, 2);
     t = expr.nextToken();
     testEqual(t.type, Token_Minus);
     testEqual(t.pos.column, 4);
     t = expr.nextToken();
     testEqual(t.type, Token_Number);
+    testEqual(t.text, "3");
     testEqual(t.pos.column, 6);
     t = expr.nextToken();
     testEqual(t.type, Token_EOF);

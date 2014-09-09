@@ -14,10 +14,14 @@ TestCase::TestCase(const char* name, TestFunc body) :
 void runTests()
 {
     printf("Running tests\n");
-    for (auto i = testcases.begin(); i != testcases.end(); ++i) {
-        const TestCase& t = *i;
-        printf("  %s\n", t.name);
-        t.body();
+    try {
+        for (auto i = testcases.begin(); i != testcases.end(); ++i) {
+            const TestCase& t = *i;
+            printf("  %s\n", t.name);
+            t.body();
+        }
+        printf("All tests passed.\n");
+    } catch (const std::runtime_error& err) {
+        std::cerr << "Runtime error: " << err.what() << std::endl;
     }
-    printf("All tests passed.\n");
 }
