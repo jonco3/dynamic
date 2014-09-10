@@ -7,7 +7,13 @@
 
 using namespace std;
 
+ParseError::ParseError(std::string message) :
+  runtime_error(message)
+{}
+
 testcase("parser", {
+    Tokenizer tokenizer;
+
     ExprSpec<int> spec(TokenCount);
     spec.addWord(Token_Number, [] (Token token) {
             return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
@@ -22,9 +28,8 @@ testcase("parser", {
             return -r;
         });
 
-    Tokenizer tokenizer("2 + 3 - 1", "");
-
     Parser<int> parser(spec, tokenizer);
 
+    parser.start("2 + 3 - 1");
     testEqual(parser.parse(), 4);
 });

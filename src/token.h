@@ -31,10 +31,11 @@ struct Token
 
 struct Tokenizer
 {
-    Tokenizer(const char* source, const char* file);
+    Tokenizer();
     size_t numTypes();
     std::string typeName(TokenType type);
 
+    void start(const char* source, const char* file = "");
     Token nextToken();
 
 private:

@@ -13,7 +13,8 @@ SRCS = \
 	src/main.cpp \
 	src/test.cpp \
 	src/token.cpp \
-	src/parser.cpp
+	src/parser.cpp \
+	src/syntax.cpp
 
 RELOBJS = $(subst src,build/rel,$(SRCS:.cpp=.o))
 RELDEPS = $(subst src,build/rel,$(SRCS:.cpp=.d))

@@ -17,13 +17,9 @@ static const Keyword keywords[] = {
     { nullptr, Token_Error }
 };
 
-Tokenizer::Tokenizer(const char* source, const char* file) :
-    source(source)
+Tokenizer::Tokenizer() :
+    source(nullptr)
 {
-    assert(source);
-    pos.file = file;
-    pos.line = 1;
-    pos.column = 0;
 }
 
 size_t Tokenizer::numTypes()
@@ -43,6 +39,14 @@ std::string Tokenizer::typeName(TokenType type)
     const size_t len = sizeof(names) / sizeof(const char*);
     assert(type < len);
     return names[type];
+}
+
+void Tokenizer::start(const char* s, const char* file)
+{
+    source = s;
+    pos.file = file;
+    pos.line = 1;
+    pos.column = 0;
 }
 
 static bool is_whitespace(char c)
@@ -109,49 +113,50 @@ Token Tokenizer::nextToken()
 }
 
 testcase("tokenizer", {
-    Tokenizer empty("", "empty.txt");
-    Token t = empty.nextToken();
+    Tokenizer tz;
+    tz.start("", "empty.txt");
+    Token t = tz.nextToken();
     testEqual(t.type, Token_EOF);
     testEqual(t.text, "");
     testEqual(t.pos.file, "empty.txt");
     testEqual(t.pos.line, 1);
     testEqual(t.pos.column, 0);
 
-    Tokenizer space("   ", "");
-    testEqual(space.nextToken().type, Token_EOF);
+    tz.start("   ", "");
+    testEqual(tz.nextToken().type, Token_EOF);
 
-    Tokenizer plus("+", "");
-    t = plus.nextToken();
+    tz.start("+", "");
+    t = tz.nextToken();
     testEqual(t.type, Token_Plus);
     testEqual(t.text, "+");
-    testEqual(plus.nextToken().type, Token_EOF);
+    testEqual(tz.nextToken().type, Token_EOF);
 
-    Tokenizer number("123", "");
-    t = number.nextToken();
+    tz.start("123", "");
+    t = tz.nextToken();
     testEqual(t.type, Token_Number);
     testEqual(t.text, "123");
-    testEqual(number.nextToken().type, Token_EOF);
+    testEqual(tz.nextToken().type, Token_EOF);
 
-    Tokenizer expr("1+2 - 3", "");
-    t = expr.nextToken();
+    tz.start("1+2 - 3", "");
+    t = tz.nextToken();
     testEqual(t.type, Token_Number);
     testEqual(t.text, "1");
     testEqual(t.pos.column, 0);
-    t = expr.nextToken();
+    t = tz.nextToken();
     testEqual(t.type, Token_Plus);
     testEqual(t.pos.column, 1);
-    t = expr.nextToken();
+    t = tz.nextToken();
     testEqual(t.type, Token_Number);
     testEqual(t.text, "2");
     testEqual(t.pos.column, 2);
-    t = expr.nextToken();
+    t = tz.nextToken();
     testEqual(t.type, Token_Minus);
     testEqual(t.pos.column, 4);
-    t = expr.nextToken();
+    t = tz.nextToken();
     testEqual(t.type, Token_Number);
     testEqual(t.text, "3");
     testEqual(t.pos.column, 6);
-    t = expr.nextToken();
+    t = tz.nextToken();
     testEqual(t.type, Token_EOF);
     testEqual(t.pos.column, 7);
     testEqual(t.pos.line, 1);

@@ -61,35 +61,6 @@ struct ExprSpec
     friend struct Parser<T>;
 };
 
-struct ParseError : public std::runtime_error
-{
-    ParseError(std::string message);
-};
-
-template <typename T>
-struct Parser
-{
-    Parser(const ExprSpec<T>& spec, Tokenizer& tokenizer);
-
-    bool atEnd() { return token.type == Token_EOF; }
-    T parse() { return expression(topSpec); }
-
-    bool notFollowedBy(TokenType type) { return token.type != type; }
-    bool opt(TokenType type, Token& tokenOut);
-    Token match(TokenType type);
-    T expression(const ExprSpec<T>& spec, unsigned bindRight = 0);
-
-    void nextToken();
-    T prefix(const ExprSpec<T>& spec, Token token);
-    unsigned getBindLeft(const ExprSpec<T>& spec, Token token);
-    T infix(const ExprSpec<T>& spec, Token token, const T leftValue);
-
-  private:
-    const ExprSpec<T>& topSpec;
-    Tokenizer& tokenizer;
-    Token token;
-};
-
 template <typename T>
 ExprSpec<T>::ExprSpec(unsigned maxTokenTypes)
 {
@@ -149,15 +120,41 @@ void ExprSpec<T>::addUnaryOp(TokenType type, UnaryOpHandler handler)
                      });
 }
 
-ParseError::ParseError(std::string message) :
-  runtime_error(message)
-{}
+struct ParseError : public std::runtime_error
+{
+    ParseError(std::string message);
+};
+
+template <typename T>
+struct Parser
+{
+    Parser(const ExprSpec<T>& spec, Tokenizer& tokenizer);
+
+    void start(const char* source, const char* file = "");
+
+    bool atEnd() { return token.type == Token_EOF; }
+    T parse() { return expression(topSpec); }
+
+    bool notFollowedBy(TokenType type) { return token.type != type; }
+    bool opt(TokenType type, Token& tokenOut);
+    Token match(TokenType type);
+    T expression(const ExprSpec<T>& spec, unsigned bindRight = 0);
+
+    void nextToken();
+    T prefix(const ExprSpec<T>& spec, Token token);
+    unsigned getBindLeft(const ExprSpec<T>& spec, Token token);
+    T infix(const ExprSpec<T>& spec, Token token, const T leftValue);
+
+  private:
+    const ExprSpec<T>& topSpec;
+    Tokenizer& tokenizer;
+    Token token;
+};
 
 template <typename T>
 Parser<T>::Parser(const ExprSpec<T>& spec, Tokenizer& tokenizer) :
   topSpec(spec),
-  tokenizer(tokenizer),
-  token(tokenizer.nextToken())
+  tokenizer(tokenizer)
 {}
 
 template <typename T>
@@ -165,6 +162,13 @@ void Parser<T>::nextToken()
 {
     if (atEnd())
         throw ParseError("Unexpected end of input");
+    token = tokenizer.nextToken();
+}
+
+template <typename T>
+void Parser<T>::start(const char* source, const char* file)
+{
+    tokenizer.start(source, file);
     token = tokenizer.nextToken();
 }
 
