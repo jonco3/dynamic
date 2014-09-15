@@ -14,7 +14,17 @@ SRCS = \
 	src/test.cpp \
 	src/token.cpp \
 	src/parser.cpp \
-	src/syntax.cpp
+	src/syntax.cpp \
+	src/block.cpp \
+	src/layout.cpp \
+	src/value.cpp \
+	src/object.cpp \
+	src/class.cpp \
+	src/none.cpp \
+	src/integer.cpp \
+	src/frame.cpp \
+	src/callable.cpp \
+	src/interp.cpp
 
 RELOBJS = $(subst src,build/rel,$(SRCS:.cpp=.o))
 RELDEPS = $(subst src,build/rel,$(SRCS:.cpp=.d))

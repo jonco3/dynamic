@@ -20,7 +20,7 @@ struct TestCase
 #define testcase(name, body)                                                           \
     static void CPP_CONCAT(testcase_body_, __LINE__)()                                 \
         body                                                                           \
-    TestCase CPP_CONCAT(testcase_obj_, __LINE__)(name, CPP_CONCAT(testcase_body_, __LINE__))
+    static TestCase CPP_CONCAT(testcase_obj_, __LINE__)(name, CPP_CONCAT(testcase_body_, __LINE__))
 
 extern void runTests();
 
@@ -57,5 +57,15 @@ inline void testEqualImpl(const char* actual, const char* expected,
 
 #define testEqual(actual, expected)                                           \
     testEqualImpl(actual, expected, #actual, #expected, __FILE__, __LINE__)
+
+inline void testTrueImpl(bool actual, const char* actualStr,
+                         const char* file, unsigned line)
+{
+    if (!actual)
+        testFailure("==", actualStr, "true", actual, file, line);
+}
+
+#define testTrue(actual)                                                      \
+    testTrueImpl(actual, #actual, __FILE__, __LINE__)
 
 #endif

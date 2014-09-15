@@ -130,12 +130,13 @@ struct Parser
 {
     Parser(const ExprSpec<T>& spec, Tokenizer& tokenizer);
 
-    void start(const char* source, const char* file = "");
+    void start(const Input& input);
 
     bool atEnd() { return token.type == Token_EOF; }
     T parse() { return expression(topSpec); }
 
     bool notFollowedBy(TokenType type) { return token.type != type; }
+    bool opt(TokenType type);
     bool opt(TokenType type, Token& tokenOut);
     Token match(TokenType type);
     T expression(const ExprSpec<T>& spec, unsigned bindRight = 0);
@@ -166,10 +167,19 @@ void Parser<T>::nextToken()
 }
 
 template <typename T>
-void Parser<T>::start(const char* source, const char* file)
+void Parser<T>::start(const Input& input)
 {
-    tokenizer.start(source, file);
+    tokenizer.start(input);
     token = tokenizer.nextToken();
+}
+
+template <typename T>
+bool Parser<T>::opt(TokenType type)
+{
+    if (notFollowedBy(type))
+        return false;
+    nextToken();
+    return true;
 }
 
 template <typename T>
@@ -212,7 +222,7 @@ T Parser<T>::prefix(const ExprSpec<T>& spec, Token token)
 {
     const auto& action = spec.prefixActions[token.type];
     if (!action.present) {
-        throw ParseError("Unexpected '" + tokenizer.typeName(token.type));
+        throw ParseError("Unexpected " + tokenizer.typeName(token.type));
         // todo: + " in " + spec.name + " context"
     }
     return action.handler(*this, spec, token);
@@ -232,7 +242,7 @@ T Parser<T>::infix(const ExprSpec<T>& spec, Token token, const T leftValue)
 {
     const auto& action = spec.infixActions[token.type];
     if (!action.present) {
-        throw ParseError("Unexpected '" + tokenizer.typeName(token.type));
+        throw ParseError("Unexpected " + tokenizer.typeName(token.type));
         // todo + " in " + spec.name + " context"
     }
     return action.handler(*this, spec, token, leftValue);

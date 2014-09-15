@@ -1,7 +1,8 @@
 #ifndef __TOKEN_H__
 #define __TOKEN_H__
 
-#include <string>
+#include "input.h"
+
 #include <ostream>
 
 enum TokenType
@@ -9,15 +10,21 @@ enum TokenType
     Token_Error,
     Token_EOF,
     Token_Number,
+    Token_Name,
     Token_Plus,
     Token_Minus,
+    Token_Dot,
+    Token_Assign,
+    Token_Bra,
+    Token_Ket,
+    Token_Comma,
 
     TokenCount
 };
 
 struct TokenPos
 {
-    const char* file;
+    std::string file;
     unsigned line;
     unsigned column;
 };
@@ -35,7 +42,7 @@ struct Tokenizer
     size_t numTypes();
     std::string typeName(TokenType type);
 
-    void start(const char* source, const char* file = "");
+    void start(const Input& input);
     Token nextToken();
 
 private:

@@ -14,6 +14,11 @@ struct Keyword
 static const Keyword keywords[] = {
     { "+", Token_Plus },
     { "-", Token_Minus },
+    { ".", Token_Dot },
+    { "=", Token_Assign },
+    { "(", Token_Bra },
+    { ")", Token_Ket },
+    { ",", Token_Comma },
     { nullptr, Token_Error }
 };
 
@@ -33,18 +38,24 @@ std::string Tokenizer::typeName(TokenType type)
         "Error",
         "EOF",
         "Number",
+        "Name",
         "Plus",
-        "Minus"
+        "Minus",
+        "Dot",
+        "Assign",
+        "Bra",
+        "Ket"
     };
     const size_t len = sizeof(names) / sizeof(const char*);
+    assert(len == TokenCount);
     assert(type < len);
     return names[type];
 }
 
-void Tokenizer::start(const char* s, const char* file)
+void Tokenizer::start(const Input& input)
 {
-    source = s;
-    pos.file = file;
+    source = input.text.c_str();
+    pos.file = input.file;
     pos.line = 1;
     pos.column = 0;
 }
@@ -57,6 +68,16 @@ static bool is_whitespace(char c)
 static bool is_digit(char c)
 {
     return c >= '0' && c <= '9';
+}
+
+static bool is_name_start(char c)
+{
+    return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static bool is_name_rest(char c)
+{
+    return is_name_start(c) || (c >= '0' && c <= '9');
 }
 
 char Tokenizer::peekChar()
@@ -109,12 +130,20 @@ Token Tokenizer::nextToken()
         return {Token_Number, std::string(startText, length), startPos};
     }
 
+    if (is_name_start(peekChar())) {
+        do {
+            nextChar();
+        } while (is_name_rest(peekChar()));
+        size_t length = source - startText;
+        return {Token_Name, std::string(startText, length), startPos};
+    }
+
     return {Token_Error, std::string(), startPos};
 }
 
 testcase("tokenizer", {
     Tokenizer tz;
-    tz.start("", "empty.txt");
+    tz.start(Input("", "empty.txt"));
     Token t = tz.nextToken();
     testEqual(t.type, Token_EOF);
     testEqual(t.text, "");
@@ -122,22 +151,28 @@ testcase("tokenizer", {
     testEqual(t.pos.line, 1);
     testEqual(t.pos.column, 0);
 
-    tz.start("   ", "");
+    tz.start("   ");
     testEqual(tz.nextToken().type, Token_EOF);
 
-    tz.start("+", "");
+    tz.start("+");
     t = tz.nextToken();
     testEqual(t.type, Token_Plus);
     testEqual(t.text, "+");
     testEqual(tz.nextToken().type, Token_EOF);
 
-    tz.start("123", "");
+    tz.start("123");
     t = tz.nextToken();
     testEqual(t.type, Token_Number);
     testEqual(t.text, "123");
     testEqual(tz.nextToken().type, Token_EOF);
 
-    tz.start("1+2 - 3", "");
+    tz.start("name_123");
+    t = tz.nextToken();
+    testEqual(t.type, Token_Name);
+    testEqual(t.text, "name_123");
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("1+2 - 3");
     t = tz.nextToken();
     testEqual(t.type, Token_Number);
     testEqual(t.text, "1");

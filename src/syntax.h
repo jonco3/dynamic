@@ -2,15 +2,20 @@
 #define __SYNTAX_H__
 
 #include "parser.h"
+#include "name.h"
 
 #include <string>
 #include <sstream>
 
 #define for_each_syntax(syntax)                                               \
     syntax(Number)                                                            \
+    syntax(Name)                                                              \
     syntax(Negate)                                                            \
     syntax(Plus)                                                              \
-    syntax(Minus)
+    syntax(Minus)                                                             \
+    syntax(PropRef)                                                           \
+    syntax(Assign)                                                            \
+    syntax(Call)
 
 enum SyntaxType
 {
@@ -34,6 +39,9 @@ struct SyntaxVisitor
 
 struct Syntax
 {
+    template <typename T> bool is() const { return type() == T::Type; }
+    template <typename T> T* as() { assert(is<T>()); return static_cast<T*>(this); }
+
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
     virtual std::string name() const = 0;
@@ -93,6 +101,22 @@ struct SyntaxNumber : public Syntax
     syntax_accept()
 };
 
+struct SyntaxName : public Syntax
+{
+    Name id;
+
+    SyntaxName(std::string id) : id(id) {}
+
+    syntax_type(Syntax_Name)
+    syntax_name("name")
+
+    virtual std::string repr() const {
+        return id;
+    }
+
+    syntax_accept()
+};
+
 struct SyntaxNegate : public UnarySyntax
 {
     SyntaxNegate(Syntax* right) : UnarySyntax(right) {}
@@ -115,6 +139,57 @@ struct SyntaxMinus : public BinarySyntax
     syntax_type(Syntax_Minus)
     syntax_name("-")
     syntax_accept()
+};
+
+struct SyntaxPropRef : public BinarySyntax
+{
+    SyntaxPropRef(Syntax* l, Syntax* r) : BinarySyntax(l, r) {
+        assert(r->is<SyntaxName>());
+    }
+
+    Name name() { return right->as<SyntaxName>()->id; }
+
+    syntax_type(Syntax_PropRef)
+    syntax_name(".")
+    syntax_accept()
+};
+
+struct SyntaxAssign : public BinarySyntax
+{
+    SyntaxAssign(Syntax* l, Syntax* r) : BinarySyntax(l, r) {}
+    syntax_type(Syntax_Assign)
+    syntax_name("=")
+    syntax_accept()
+};
+
+struct SyntaxCall : public Syntax
+{
+    std::auto_ptr<Syntax> left;
+    std::vector<Syntax*> right;
+
+    SyntaxCall(Syntax* l) : left(l) {}
+    void addArg(Syntax* arg) { right.push_back(arg); }
+    ~SyntaxCall() {
+        // todo: use auto_ptr
+        for (auto i = right.begin(); i != right.end(); ++i)
+            delete *i;
+    }
+
+    syntax_type(Syntax_Call)
+    syntax_name("call")
+    syntax_accept()
+
+    virtual std::string repr() const {
+        std::ostringstream s;
+        s << left->repr() << "(";
+        for (auto i = right.begin(); i != right.end(); ++i) {
+            if (i != right.begin())
+                s << ", ";
+            s << *i;
+        }
+        s << "(";
+        return s.str();
+    }
 };
 
 struct SyntaxParser : public Parser<Syntax *>
