@@ -1,5 +1,5 @@
-CPP = clang++
-LD = clang
+CPP = ccache clang++
+LD = ccache clang
 #CPP = g++
 #LD = gcc
 FLAGS = -Wall -Werror --std=c++11 --stdlib=libc++
