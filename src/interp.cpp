@@ -6,6 +6,8 @@
 #include "utility.h"
 #include "callable.h"
 
+//#define TRACE_INTERP
+
 bool Interpreter::interpret(Block* block, Value& valueOut)
 {
     frame = new Frame(*this, nullptr);
@@ -13,7 +15,9 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 
     while (instrp) {
         Instr *instr = *instrp++;
+#ifdef TRACE_INTERP
         std::cerr << "execute " << repr(instr) << std::endl;
+#endif
         if (!instr->execute(*this, frame)) {
             std::cerr << "Error" << std::endl;
             return false;
