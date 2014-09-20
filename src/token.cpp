@@ -35,16 +35,9 @@ size_t Tokenizer::numTypes()
 std::string Tokenizer::typeName(TokenType type)
 {
     static const char* names[] = {
-        "Error",
-        "EOF",
-        "Number",
-        "Name",
-        "Plus",
-        "Minus",
-        "Dot",
-        "Assign",
-        "Bra",
-        "Ket"
+#define token_name(name) #name,
+        for_each_token(token_name)
+#undef token_name
     };
     const size_t len = sizeof(names) / sizeof(const char*);
     assert(len == TokenCount);

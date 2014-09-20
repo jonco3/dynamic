@@ -5,19 +5,27 @@
 
 #include <ostream>
 
+#define for_each_token(token)                                                 \
+    token(EOF)                                                                \
+    token(Error)                                                              \
+    token(Newline)                                                            \
+    token(Indent)                                                             \
+    token(Dedent)                                                             \
+    token(Number)                                                             \
+    token(Name)                                                               \
+    token(Plus)                                                               \
+    token(Minus)                                                              \
+    token(Dot)                                                                \
+    token(Assign)                                                             \
+    token(Bra)                                                                \
+    token(Ket)                                                                \
+    token(Comma)
+
 enum TokenType
 {
-    Token_Error,
-    Token_EOF,
-    Token_Number,
-    Token_Name,
-    Token_Plus,
-    Token_Minus,
-    Token_Dot,
-    Token_Assign,
-    Token_Bra,
-    Token_Ket,
-    Token_Comma,
+#define token_enum(name) Token_##name,
+    for_each_token(token_enum)
+#undef token_enum
 
     TokenCount
 };
