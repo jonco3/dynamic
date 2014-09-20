@@ -20,7 +20,6 @@ struct Interpreter
     bool interpret(Block* block, Value& valueOut);
 
     void pushStack(Value value) {
-        std::cerr << "  push " << repr(value) << std::endl;
         stack.push_back(value);
     }
 

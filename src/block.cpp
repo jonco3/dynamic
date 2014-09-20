@@ -95,6 +95,8 @@ struct BlockBuilder : public SyntaxVisitor
         if (methodCall) {
             SyntaxPropRef* pr = s.left->as<SyntaxPropRef>();
             pr->left->accept(*this);
+            // todo: replace this dup / getprop / swap sequence with a
+            // prepMethod instruction
             block->append(new InstrDup());
             block->append(new InstrGetProp(pr->right->as<SyntaxName>()->id));
             block->append(new InstrSwap());
