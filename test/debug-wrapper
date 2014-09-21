@@ -59,12 +59,12 @@ while process.poll() == None:
         elif crash_pattern.match(linebuffer):
             returncode = 1
             state = 'crashed'
+        elif 'Program exited normally' in linebuffer:
+            returncode = 0
 
         linebuffer = ''
     elif linebuffer == prompt and state != 'finished':
-        #sys.stdout.write(linebuffer)
         action = actions[state]
-        #sys.stdout.write(action[0] + '\n')
         process.stdin.write(action[0] + '\n')
         state = action[1]
         linebuffer = ''
