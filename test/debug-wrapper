@@ -22,12 +22,12 @@ def which(program):
 exit_pattern = re.compile(r" (?:exited with code|exited with status =) (\d+)")
 crash_pattern = re.compile(r"Program received signal")
 
-if which('lldb'):
-    command = [ 'lldb', '--' ]
-    prompt = '(lldb)'
-elif which('gdb'):
+if which('gdb'):
     command = [ 'gdb', '-n', '-quiet', '-args' ]
     prompt = '(gdb)'
+elif which('lldb'):
+    command = [ 'lldb', '--' ]
+    prompt = '(lldb)'
 else:
     sys.exit("Can't find a debugger!")
 
@@ -48,7 +48,9 @@ while process.poll() == None:
     c = process.stdout.read(1)
     linebuffer += c
     if c == '\n':
-        if linebuffer != '\n':
+        if linebuffer != '\n' and \
+           not "unsupported 'indirect' reference" in linebuffer and \
+           not "no debug information available" in linebuffer:
             sys.stdout.write(linebuffer)
 
         m = exit_pattern.search(linebuffer)
