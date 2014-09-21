@@ -23,6 +23,7 @@ struct TestCase
     static void CPP_CONCAT(testcase_body_, name)()
 
 extern void runTests();
+extern void abortTests();
 
 template <typename A>
 inline void testFailure(const char* testStr,
@@ -33,8 +34,7 @@ inline void testFailure(const char* testStr,
     cerr << file << ":" << line << ": test failed: ";
     cerr << actualStr << " " << testStr << " " << expectedStr;
     cerr << " but got " << actual << " at " << file << " line " << line << endl;
-    flush(cerr);
-    exit(1);
+    abortTests();
 }
 
 template <typename A, typename E>
@@ -67,6 +67,52 @@ inline void testTrueImpl(bool actual, const char* actualStr,
 
 #define testTrue(actual)                                                      \
     testTrueImpl(actual, #actual, __FILE__, __LINE__)
+
+template <typename A>
+inline void testThrowsFailureWrongException(const char* expectedName,
+                                            const char* actualStr, const A& actual,
+                                            const char* file, unsigned line)
+{
+    using namespace std;
+    cerr << file << ":" << line << ": test failed: ";
+    cerr << actualStr << " throws " << expectedName;
+    cerr << " but threw " << actual << " at " << file << " line " << line << endl;
+    abortTests();
+}
+
+inline void testThrowsFailureWrongException(const char* expectedName,
+                                            const char* actualStr,
+                                            const char* file, unsigned line)
+{
+    using namespace std;
+    cerr << file << ":" << line << ": test failed: ";
+    cerr << actualStr << " throws " << expectedName;
+    cerr << " but threw something else at " << file << " line " << line << endl;
+    abortTests();
+}
+
+inline void testThrowsFailureNoException(const char* expectedName, const char* actualStr,
+                                         const char* file, unsigned line)
+{
+    using namespace std;
+    cerr << file << ":" << line << ": test failed: ";
+    cerr << actualStr << " throws " << expectedName;
+    cerr << " but didn't throw at " << file << " line " << line << endl;
+    abortTests();
+}
+
+extern bool testExpectingException;
+
+#define testThrows(expr, exception)                                               \
+    try {                                                                         \
+        testExpectingException = true;                                            \
+        expr;                                                                     \
+        testThrowsFailureNoException(#exception, #expr, __FILE__, __LINE__);      \
+    } catch (const exception& e) {                                                \
+    } catch (...) {                                                               \
+        testThrowsFailureWrongException(#exception, #expr, __FILE__, __LINE__);   \
+    }                                                                             \
+    testExpectingException = false
 
 void maybeAbortTests(const std::runtime_error& exception);
 

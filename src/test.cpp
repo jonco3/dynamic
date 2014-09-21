@@ -3,15 +3,22 @@
 #include <vector>
 #include <cassert>
 
+bool testExpectingException = false;
+
 static std::vector<TestCase> testcases;
 static bool runningTests = false;
-static bool expectingException = false;
 
 TestCase::TestCase(const char* name, TestFunc body) :
   name(name),
   body(body)
 {
     testcases.push_back(*this);
+}
+
+void abortTests()
+{
+    fflush(stderr);
+    exit(1);
 }
 
 void runTests()
@@ -35,7 +42,7 @@ void runTests()
 
 void maybeAbortTests(const std::runtime_error& exception)
 {
-    if (runningTests && !expectingException)
+    if (runningTests && !testExpectingException)
     {
         std::cerr << "Exception thrown in test: " << exception.what() << std::endl;
         assert(false);

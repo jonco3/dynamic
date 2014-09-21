@@ -145,6 +145,7 @@ void Tokenizer::start(const Input& input)
     pos.file = input.file;
     pos.line = 1;
     pos.column = 0;
+    dedentCount = 0;
 }
 
 char Tokenizer::peekChar()
@@ -392,4 +393,28 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Dedent);
     testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("foo\n  bar\n baz");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Indent);
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testThrows(tz.nextToken(), TokenError);
+
+    tz.start("nand and anda");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_And);
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("a<<~3");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_BitLeftShift);
+    testEqual(tz.nextToken().type, Token_BitNot);
+    testEqual(tz.nextToken().type, Token_Number);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("$");
+    testThrows(tz.nextToken(), TokenError);
 }
