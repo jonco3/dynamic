@@ -1,7 +1,7 @@
-CPP = ccache clang++
-LD = ccache clang
-#CPP = g++
-#LD = gcc
+#CPP = ccache clang++
+#LD = ccache clang
+CPP = g++
+LD = gcc
 FLAGS = -Wall -Werror --std=c++11 --stdlib=libc++
 CPPFLAGS = $(FLAGS)  # -DUSE_READLINE -I/usr/include/gc
 LFLAGS = $(FLAGS) -lstdc++ # -lm -lgc -lreadline
