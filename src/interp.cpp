@@ -47,7 +47,8 @@ void Interpreter::popFrame()
     delete oldFrame;
 }
 
-testcase("interp", {
+testcase(interp)
+{
     Interpreter interp;
 
     Block* block = Block::buildTopLevel("3");
@@ -60,4 +61,4 @@ testcase("interp", {
     testTrue(interp.interpret(block, v));
     testEqual(repr(v), "4");
     delete block;
-});
+}

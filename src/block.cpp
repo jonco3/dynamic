@@ -135,7 +135,8 @@ std::ostream& operator<<(std::ostream& s, Block* block) {
     return s;
 }
 
-testcase("block", {
+testcase(block)
+{
     BlockBuilder bb;
 
     bb.start("3");
@@ -187,4 +188,4 @@ testcase("block", {
               "GetLocal foo, Dup, GetProp __plus__, Swap, ConstNumber 1, Call 2");
     delete block;
 
-});
+}

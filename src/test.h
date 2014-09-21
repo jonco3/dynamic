@@ -1,9 +1,9 @@
 #ifndef __TEST_H__
 #define __TEST_H__
 
-#include <iostream>
-
 #include <cstdlib>
+#include <iostream>
+#include <functional>
 
 typedef void (*TestFunc)();
 
@@ -17,10 +17,10 @@ struct TestCase
 #define CPP_CONCAT_(a, b) a##b
 #define CPP_CONCAT(a, b) CPP_CONCAT_(a, b)
 
-#define testcase(name, body)                                                           \
-    static void CPP_CONCAT(testcase_body_, __LINE__)()                                 \
-        body                                                                           \
-    static TestCase CPP_CONCAT(testcase_obj_, __LINE__)(name, CPP_CONCAT(testcase_body_, __LINE__))
+#define testcase(name)                                                                 \
+    static void CPP_CONCAT(testcase_body_, name)();                                          \
+    static TestCase CPP_CONCAT(testcase_obj_, name)(#name, CPP_CONCAT(testcase_body_, name)); \
+    static void CPP_CONCAT(testcase_body_, name)()
 
 extern void runTests();
 
@@ -67,5 +67,7 @@ inline void testTrueImpl(bool actual, const char* actualStr,
 
 #define testTrue(actual)                                                      \
     testTrueImpl(actual, #actual, __FILE__, __LINE__)
+
+void maybeAbortTests(const std::runtime_error& exception);
 
 #endif

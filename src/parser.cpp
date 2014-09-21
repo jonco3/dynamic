@@ -9,9 +9,12 @@ using namespace std;
 
 ParseError::ParseError(std::string message) :
   runtime_error(message)
-{}
+{
+    maybeAbortTests(*this);
+}
 
-testcase("parser", {
+testcase(parser)
+{
     Tokenizer tokenizer;
 
     ExprSpec<int> spec(TokenCount);
@@ -32,4 +35,4 @@ testcase("parser", {
 
     parser.start("2 + 3 - 1");
     testEqual(parser.parse(), 4);
-});
+}

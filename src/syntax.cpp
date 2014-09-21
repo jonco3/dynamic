@@ -9,7 +9,7 @@ SyntaxParser::SyntaxParser() :
                  [] (Token token) {
                      return new SyntaxNumber(atoi(token.text.c_str()));
                  });
-    spec.addWord(Token_Name,
+    spec.addWord(Token_Identifier,
                  [] (Token token) {
                      return new SyntaxName(token.text.c_str());
                  });
@@ -39,7 +39,7 @@ SyntaxParser::SyntaxParser() :
                      [] (Token _, Syntax* l, Syntax* r) {
                          return new SyntaxMinus(l, r);
                      });
-    spec.addBinaryOp(Token_Dot, 90, Assoc_Left,
+    spec.addBinaryOp(Token_Period, 90, Assoc_Left,
                      [] (Token _, Syntax* l, Syntax* r) {
                          if (!r->is<SyntaxName>())
                              throw ParseError("Bad property reference");
@@ -61,11 +61,12 @@ SyntaxParser::SyntaxParser() :
                          });
 }
 
-testcase("syntax", {
+testcase(syntax)
+{
     SyntaxParser sp;
     sp.start("1+2-3");
     Syntax *expr = sp.parse();
     testEqual(expr->repr(), "1 + 2 - 3");
 
     delete expr;
-});
+}
