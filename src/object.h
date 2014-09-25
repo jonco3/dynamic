@@ -9,6 +9,8 @@
 #include <ostream>
 #include <cassert>
 
+using namespace std;
+
 struct Class;
 
 struct Object
@@ -24,7 +26,7 @@ struct Object
         return static_cast<T*>(this);
     }
 
-    virtual void print(std::ostream& os) const;
+    virtual void print(ostream& os) const;
 
     bool getProp(Name name, Value& valueOut) const;
     void setProp(Name name, Value value);
@@ -34,12 +36,12 @@ struct Object
   private:
     Class* cls;
     const Layout* layout;
-    std::vector<Value> slots;
+    vector<Value> slots;
 
     void initAttrs();
 };
 
-inline std::ostream& operator<<(std::ostream& s, const Object* o) {
+inline ostream& operator<<(ostream& s, const Object* o) {
     o->print(s);
     return s;
 }

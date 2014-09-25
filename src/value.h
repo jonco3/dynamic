@@ -3,6 +3,8 @@
 
 #include <ostream>
 
+using namespace std;
+
 struct Object;
 
 struct Value
@@ -24,6 +26,6 @@ struct Value
     };
 };
 
-std::ostream& operator<<(std::ostream& s, const Value& v);
+ostream& operator<<(ostream& s, const Value& v);
 
 #endif

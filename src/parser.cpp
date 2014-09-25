@@ -5,9 +5,7 @@
 #include <stdexcept>
 #include <ostream>
 
-using namespace std;
-
-ParseError::ParseError(std::string message) :
+ParseError::ParseError(string message) :
   runtime_error(message)
 {
     maybeAbortTests(*this);

@@ -12,6 +12,8 @@
 
 #include <ostream>
 
+using namespace std;
+
 #define for_each_instr(instr)                                                \
     instr(Dup)                                                               \
     instr(Swap)                                                              \
@@ -42,11 +44,11 @@ struct Instr
 
     virtual ~Instr() {}
     virtual InstrType type() const = 0;
-    virtual void print(std::ostream& os) const = 0;
+    virtual void print(ostream& os) const = 0;
     virtual bool execute(Interpreter& interp, Frame* frame) = 0;
 };
 
-inline std::ostream& operator<<(std::ostream& s, Instr* i) {
+inline ostream& operator<<(ostream& s, Instr* i) {
     i->print(s);
     return s;
 }
@@ -61,7 +63,7 @@ struct InstrDup : public Instr
 
     instr_type(Instr_Dup);
 
-    virtual void print(std::ostream& s) const { s << "Dup"; }
+    virtual void print(ostream& s) const { s << "Dup"; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         interp.pushStack(interp.peekStack(0));
@@ -75,7 +77,7 @@ struct InstrSwap : public Instr
 
     instr_type(Instr_Swap);
 
-    virtual void print(std::ostream& s) const { s << "Swap"; }
+    virtual void print(ostream& s) const { s << "Swap"; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         interp.swapStack();
@@ -89,7 +91,7 @@ struct InstrConstInteger : public Instr
 
     instr_type(Instr_ConstInteger);
 
-    virtual void print(std::ostream& s) const { s << "ConstInteger " << value; }
+    virtual void print(ostream& s) const { s << "ConstInteger " << value; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         interp.pushStack(value);
@@ -108,7 +110,7 @@ struct InstrGetLocal : public Instr
 
     instr_type(Instr_GetLocal);
 
-    virtual void print(std::ostream& s) const { s << "GetLocal " << name; }
+    virtual void print(ostream& s) const { s << "GetLocal " << name; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value;
@@ -128,7 +130,7 @@ struct InstrSetLocal : public Instr
 
     instr_type(Instr_SetLocal);
 
-    virtual void print(std::ostream& s) const { s << "SetLocal " << name; }
+    virtual void print(ostream& s) const { s << "SetLocal " << name; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         frame->setProp(name, interp.popStack());
@@ -145,7 +147,7 @@ struct InstrGetProp : public Instr
 
     instr_type(Instr_GetProp);
 
-    virtual void print(std::ostream& s) const { s << "GetProp " << name; }
+    virtual void print(ostream& s) const { s << "GetProp " << name; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value;
@@ -165,7 +167,7 @@ struct InstrSetProp : public Instr
 
     instr_type(Instr_SetProp);
 
-    virtual void print(std::ostream& s) const { s << "SetProp " << name; }
+    virtual void print(ostream& s) const { s << "SetProp " << name; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value = interp.popStack();
@@ -183,20 +185,20 @@ struct InstrCall : public Instr
 
     instr_type(Instr_Call);
 
-    virtual void print(std::ostream& s) const { s << "Call " << args; }
+    virtual void print(ostream& s) const { s << "Call " << args; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object* target = interp.peekStack(args).toObject();
         if (target->is<Native>()) {
             Native* native = target->as<Native>();
             if (native->requiredArgs() < args)
-                throw std::runtime_error("Not enough arguments");
+                throw runtime_error("Not enough arguments");
             native->call(interp);
             return true;
         } else if (target->is<Function>()) {
             Function* function = target->as<Function>();
             if (function->requiredArgs() < args)
-                throw std::runtime_error("Not enough arguments");
+                throw runtime_error("Not enough arguments");
             // todo: argument checking etc.
 
             Frame *callFrame = interp.pushFrame(function);
@@ -206,7 +208,7 @@ struct InstrCall : public Instr
 
             return true;
         } else {
-            throw std::runtime_error("Attempt to call non-callable object: " +
+            throw runtime_error("Attempt to call non-callable object: " +
                                      repr(target));
             // todo: implement exceptions: return false and unwind
         }
@@ -220,7 +222,7 @@ struct InstrReturn : public Instr
 {
     instr_type(Instr_Return);
 
-    virtual void print(std::ostream& s) const { s << "Return"; }
+    virtual void print(ostream& s) const { s << "Return"; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value = interp.popStack();

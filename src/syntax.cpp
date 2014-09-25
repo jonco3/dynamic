@@ -3,8 +3,6 @@
 
 #include <memory>
 
-using namespace std;
-
 SyntaxParser::SyntaxParser() :
   Parser(spec, tokenizer),
   spec(TokenCount)

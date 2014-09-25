@@ -3,13 +3,15 @@
 
 #include <string>
 
+using namespace std;
+
 struct Input
 {
-    Input(std::string text, std::string file = "") : text(text), file(file) {}
+    Input(string text, string file = "") : text(text), file(file) {}
     Input(const char* text) : text(text), file("") {}
 
-    const std::string text;
-    const std::string file;
+    const string text;
+    const string file;
 };
 
 #endif

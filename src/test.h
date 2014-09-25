@@ -5,6 +5,8 @@
 #include <iostream>
 #include <functional>
 
+using namespace std;
+
 typedef void (*TestFunc)();
 
 struct TestCase
@@ -110,6 +112,6 @@ extern bool testExpectingException;
     }                                                                             \
     testExpectingException = false
 
-void maybeAbortTests(const std::runtime_error& exception);
+void maybeAbortTests(const runtime_error& exception);
 
 #endif

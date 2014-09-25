@@ -7,6 +7,8 @@
 #include <string>
 #include <sstream>
 
+using namespace std;
+
 #define for_each_syntax(syntax)                                               \
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
@@ -53,8 +55,8 @@ struct Syntax
 
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
-    virtual std::string name() const = 0;
-    virtual std::string repr() const = 0;
+    virtual string name() const = 0;
+    virtual string repr() const = 0;
     virtual void accept(SyntaxVisitor& v) const = 0;
 };
 
@@ -63,31 +65,31 @@ struct Syntax
     virtual SyntaxType type() const { return Type; }
 
 #define syntax_name(nm)                                                       \
-    virtual std::string name() const { return std::string(nm); }
+    virtual string name() const { return string(nm); }
 
 #define syntax_accept()                                                      \
     virtual void accept(SyntaxVisitor& v) const { v.visit(*this); }
 
 struct UnarySyntax : public Syntax
 {
-    std::auto_ptr<Syntax> right;
+    auto_ptr<Syntax> right;
 
     UnarySyntax(Syntax* r) : right(r) {}
 
-    virtual std::string repr() const {
+    virtual string repr() const {
         return name() + " " + right->repr();
     }
 };
 
 struct BinarySyntax : public Syntax
 {
-    std::auto_ptr<Syntax> left;
-    std::auto_ptr<Syntax> right;
+    auto_ptr<Syntax> left;
+    auto_ptr<Syntax> right;
 
     BinarySyntax(Syntax* l, Syntax* r) :
       left(l), right(r) {}
 
-    virtual std::string repr() const {
+    virtual string repr() const {
         return left->repr() + " " + name() + " " + right->repr();
     }
 };
@@ -98,19 +100,19 @@ struct SyntaxBlock : public Syntax
     syntax_name("block")
 
     void append(Syntax* s) { statements.push_back(s); }
-    const std::vector<Syntax *>& stmts() const { return statements; }
+    const vector<Syntax *>& stmts() const { return statements; }
 
-    virtual std::string repr() const {
-        std::ostringstream s;
+    virtual string repr() const {
+        ostringstream s;
         for (auto i = statements.begin(); i != statements.end(); ++i)
-            s << (*i)->repr() << std::endl;
+            s << (*i)->repr() << endl;
         return s.str();
     }
 
     syntax_accept();
 
   private:
-    std::vector<Syntax *> statements;
+    vector<Syntax *> statements;
 };
 
 struct SyntaxInteger : public Syntax
@@ -122,8 +124,8 @@ struct SyntaxInteger : public Syntax
     syntax_type(Syntax_Integer)
     syntax_name("number")
 
-    virtual std::string repr() const {
-        std::ostringstream s;
+    virtual string repr() const {
+        ostringstream s;
         s << value;
         return s.str();
     }
@@ -135,12 +137,12 @@ struct SyntaxName : public Syntax
 {
     Name id;
 
-    SyntaxName(std::string id) : id(id) {}
+    SyntaxName(string id) : id(id) {}
 
     syntax_type(Syntax_Name)
     syntax_name("name")
 
-    virtual std::string repr() const {
+    virtual string repr() const {
         return id;
     }
 
@@ -194,8 +196,8 @@ struct SyntaxAssign : public BinarySyntax
 
 struct SyntaxCall : public Syntax
 {
-    std::auto_ptr<Syntax> left;
-    std::vector<Syntax*> right;
+    auto_ptr<Syntax> left;
+    vector<Syntax*> right;
 
     SyntaxCall(Syntax* l) : left(l) {}
     void addArg(Syntax* arg) { right.push_back(arg); }
@@ -209,8 +211,8 @@ struct SyntaxCall : public Syntax
     syntax_name("call")
     syntax_accept()
 
-    virtual std::string repr() const {
-        std::ostringstream s;
+    virtual string repr() const {
+        ostringstream s;
         s << left->repr() << "(";
         for (auto i = right.begin(); i != right.end(); ++i) {
             if (i != right.begin())

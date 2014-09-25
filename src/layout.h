@@ -6,6 +6,8 @@
 #include <vector>
 #include <unordered_map>
 
+using namespace std;
+
 // Layout defines a mapping from names to slots and is used for object storage
 // and execution frames.
 
@@ -22,7 +24,7 @@ struct Layout
   private:
     const Layout* parent;
     const Name name;
-    mutable std::unordered_map<Name, Layout*> children;
+    mutable unordered_map<Name, Layout*> children;
 };
 
 #endif

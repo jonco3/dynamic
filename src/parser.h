@@ -8,6 +8,8 @@
 #include <stdexcept>
 #include <functional>
 
+using namespace std;
+
 template <typename T>
 struct Parser;
 
@@ -22,23 +24,23 @@ struct ExprSpec
 {
     ExprSpec(unsigned maxTokenTypes);
 
-    typedef std::function<T (Parser<T>& parser, const ExprSpec<T>& spec, Token token)>
+    typedef function<T (Parser<T>& parser, const ExprSpec<T>& spec, Token token)>
                 PrefixHandler;
     void addPrefixHandler(TokenType type, PrefixHandler handler);
 
-    typedef std::function<T (Parser<T>& parser, const ExprSpec<T>& spec, Token token,
+    typedef function<T (Parser<T>& parser, const ExprSpec<T>& spec, Token token,
                              const T leftValue)> InfixHandler;
     void addInfixHandler(TokenType type, unsigned bindLeft, InfixHandler handler);
 
-    typedef std::function<T (Token token)> WordHandler;
+    typedef function<T (Token token)> WordHandler;
     void addWord(TokenType type, WordHandler handler);
 
-    typedef std::function<T (Token token, const T leftValue, const T rightValue)>
+    typedef function<T (Token token, const T leftValue, const T rightValue)>
                 BinaryOpHandler;
     void addBinaryOp(TokenType type, unsigned bindLeft, Assoc assoc,
                      BinaryOpHandler handler);
 
-    typedef std::function<T (Token token, const T rightValue)> UnaryOpHandler;
+    typedef function<T (Token token, const T rightValue)> UnaryOpHandler;
     void addUnaryOp(TokenType type, UnaryOpHandler hanlder);
 
   private:
@@ -55,8 +57,8 @@ struct ExprSpec
         InfixHandler handler;
     };
 
-    std::vector<PrefixAction> prefixActions;
-    std::vector<InfixAction> infixActions;
+    vector<PrefixAction> prefixActions;
+    vector<InfixAction> infixActions;
 
     friend struct Parser<T>;
 };
@@ -120,9 +122,9 @@ void ExprSpec<T>::addUnaryOp(TokenType type, UnaryOpHandler handler)
                      });
 }
 
-struct ParseError : public std::runtime_error
+struct ParseError : public runtime_error
 {
-    ParseError(std::string message);
+    ParseError(string message);
 };
 
 template <typename T>

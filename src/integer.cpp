@@ -27,6 +27,6 @@ Value Integer::get(int v)
     return new Integer(v);
 }
 
-void Integer::print(std::ostream& s) const {
+void Integer::print(ostream& s) const {
     s << value;
 }

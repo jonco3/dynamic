@@ -17,10 +17,10 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
     while (instrp) {
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
-        std::cerr << "execute " << repr(instr) << std::endl;
+        cerr << "execute " << repr(instr) << endl;
 #endif
         if (!instr->execute(*this, frame)) {
-            std::cerr << "Error" << std::endl;
+            cerr << "Error" << endl;
             return false;
         }
     }

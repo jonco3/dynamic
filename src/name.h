@@ -7,6 +7,9 @@
  */
 
 #include <string>
-typedef std::string Name;
+
+using namespace std;
+
+typedef string Name;
 
 #endif

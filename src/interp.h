@@ -8,6 +8,8 @@
 #include <vector>
 #include <iostream>
 
+using namespace std;
+
 struct Instr;
 struct Frame;
 struct Block;
@@ -37,7 +39,7 @@ struct Interpreter
 
     void swapStack() {
         assert(stack.size() >= 2);
-        std::swap(stack[stack.size() - 1], stack[stack.size() - 2]);
+        swap(stack[stack.size() - 1], stack[stack.size() - 2]);
     }
 
     Instr** nextInstr() { return instrp; }
@@ -49,7 +51,7 @@ struct Interpreter
   private:
     Instr **instrp;
     Frame *frame;
-    std::vector<Value> stack;
+    vector<Value> stack;
 };
 
 #endif

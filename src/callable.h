@@ -5,6 +5,10 @@
 #include "interp.h"
 #include "block.h"
 
+#include <vector>
+
+using namespace std;
+
 struct Callable : public Object
 {
     Callable(Class* cls) : Object(cls) {}
@@ -80,8 +84,8 @@ struct Function : public Callable
     }
 
   private:
-    std::vector<Name> argNames;
-    std::auto_ptr<Block> block;
+    vector<Name> argNames;
+    auto_ptr<Block> block;
 };
 
 

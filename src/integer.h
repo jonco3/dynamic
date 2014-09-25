@@ -14,7 +14,7 @@ struct Integer : public Object
 
     Integer(int v);
     int toInt() { return value; }
-    virtual void print(std::ostream& os) const;
+    virtual void print(ostream& os) const;
 
   private:
     int value;

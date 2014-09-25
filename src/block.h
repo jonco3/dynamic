@@ -5,6 +5,8 @@
 #include <vector>
 #include <ostream>
 
+using namespace std;
+
 struct Input;
 struct Instr;
 struct Layout;
@@ -30,9 +32,9 @@ struct Block
 
   private:
     const Layout *layout;
-    std::vector<Instr*> instrs;
+    vector<Instr*> instrs;
 };
 
-std::ostream& operator<<(std::ostream& s, Block* block);
+ostream& operator<<(ostream& s, Block* block);
 
 #endif

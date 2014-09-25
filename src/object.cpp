@@ -42,14 +42,14 @@ bool Object::getProp(Name name, Value& valueOut) const
             return cls->getProp(name, valueOut);
 
         // todo: raise exception here
-        std::cerr << "Object has no attribute '" << name << "'" << std::endl;
+        cerr << "Object has no attribute '" << name << "'" << endl;
         return false;
     }
     assert(slot >= 0 && slot < slots.size());
     valueOut = slots[slot];
     if (valueOut == UninitializedSlot) {
         // todo: raise exception here
-        std::cerr << "Reference to uninitialized attribute '" << name << "'" << std::endl;
+        cerr << "Reference to uninitialized attribute '" << name << "'" << endl;
         return false;
     }
     return true;
@@ -68,6 +68,6 @@ void Object::setProp(Name name, Value value)
     slots[slot] = value;
 }
 
-void Object::print(std::ostream& s) const {
+void Object::print(ostream& s) const {
     s << "Object@" << reinterpret_cast<uintptr_t>(this);
 }

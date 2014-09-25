@@ -3,10 +3,12 @@
 
 #include <sstream>
 
+using namespace std;
+
 template <typename T>
-std::string repr(const T& t)
+string repr(const T& t)
 {
-    std::ostringstream s;
+    ostringstream s;
     s << t;
     return s.str();
 }

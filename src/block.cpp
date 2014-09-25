@@ -6,8 +6,6 @@
 
 #include <memory>
 
-using namespace std;
-
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
@@ -64,7 +62,7 @@ struct BlockBuilder : public SyntaxVisitor
     Layout* layout;
     Block* block;
 
-    void callUnaryMethod(const UnarySyntax& s, std::string name) {
+    void callUnaryMethod(const UnarySyntax& s, string name) {
         s.right->accept(*this);
         block->append(new InstrDup());
         block->append(new InstrGetProp(name));
@@ -72,7 +70,7 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrCall(1));
     }
 
-    void callBinaryMethod(const BinarySyntax& s, std::string name) {
+    void callBinaryMethod(const BinarySyntax& s, string name) {
         s.left->accept(*this);
         block->append(new InstrDup());
         block->append(new InstrGetProp(name));
@@ -164,7 +162,7 @@ Block::~Block()
         delete instrs[i];
 }
 
-std::ostream& operator<<(std::ostream& s, Block* block) {
+ostream& operator<<(ostream& s, Block* block) {
     for (unsigned i = 0; i < block->instrCount(); ++i) {
         if (i > 0)
             s << ", ";

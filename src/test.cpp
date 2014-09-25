@@ -5,7 +5,7 @@
 
 bool testExpectingException = false;
 
-static std::vector<TestCase> testcases;
+static vector<TestCase> testcases;
 static bool runningTests = false;
 
 TestCase::TestCase(const char* name, TestFunc body) :
@@ -32,19 +32,19 @@ void runTests()
             t.body();
         }
         printf("All tests passed.\n");
-    } catch (const std::runtime_error& err) {
-        std::cerr << "Runtime error: " << err.what() << std::endl;
+    } catch (const runtime_error& err) {
+        cerr << "Runtime error: " << err.what() << endl;
         assert(false);
         exit(1);
     }
     runningTests = false;
 }
 
-void maybeAbortTests(const std::runtime_error& exception)
+void maybeAbortTests(const runtime_error& exception)
 {
     if (runningTests && !testExpectingException)
     {
-        std::cerr << "Exception thrown in test: " << exception.what() << std::endl;
+        cerr << "Exception thrown in test: " << exception.what() << endl;
         assert(false);
     }
 }

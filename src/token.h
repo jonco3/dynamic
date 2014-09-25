@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+using namespace std;
+
 #define for_each_token(token)                                                 \
     token(EOF)                                                                \
                                                                               \
@@ -107,7 +109,7 @@ enum TokenType
 
 struct TokenPos
 {
-    std::string file;
+    string file;
     unsigned line;
     unsigned column;
 };
@@ -115,20 +117,20 @@ struct TokenPos
 struct Token
 {
     TokenType type;
-    std::string text;
+    string text;
     TokenPos pos;
 };
 
-struct TokenError : public std::runtime_error
+struct TokenError : public runtime_error
 {
-    TokenError(std::string message, const TokenPos& pos);
+    TokenError(string message, const TokenPos& pos);
 };
 
 struct Tokenizer
 {
     Tokenizer();
     size_t numTypes();
-    std::string typeName(TokenType type);
+    string typeName(TokenType type);
 
     void start(const Input& input);
     Token nextToken();
@@ -136,10 +138,10 @@ struct Tokenizer
 private:
     const char* source;
     TokenPos pos;
-    std::vector<unsigned> indentStack;
+    vector<unsigned> indentStack;
     unsigned dedentCount;
-    std::unordered_map<std::string, TokenType> keywords;
-    std::unordered_map<std::string, TokenType> operators;
+    unordered_map<string, TokenType> keywords;
+    unordered_map<string, TokenType> operators;
 
     char peekChar();
     char nextChar();

@@ -9,7 +9,7 @@ struct NoneObject : public Object
     static Class Class;
 
     NoneObject() : Object(&Class) {}
-    virtual void print(std::ostream& s) const { s << "None"; }
+    virtual void print(ostream& s) const { s << "None"; }
 };
 
 struct UninitializedSlotObject : public Object
@@ -17,7 +17,7 @@ struct UninitializedSlotObject : public Object
     static Class Class;
 
     UninitializedSlotObject() : Object(&Class) {}
-    virtual void print(std::ostream& s) const { s << "UninitializedSlot"; }
+    virtual void print(ostream& s) const { s << "UninitializedSlot"; }
 };
 
 extern UninitializedSlotObject* UninitializedSlot;
