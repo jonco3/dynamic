@@ -12,6 +12,14 @@ struct NoneObject : public Object
     virtual void print(std::ostream& s) const { s << "None"; }
 };
 
-extern NoneObject* None;
+struct UninitializedSlotObject : public Object
+{
+    static Class Class;
+
+    UninitializedSlotObject() : Object(&Class) {}
+    virtual void print(std::ostream& s) const { s << "UninitializedSlot"; }
+};
+
+extern UninitializedSlotObject* UninitializedSlot;
 
 #endif

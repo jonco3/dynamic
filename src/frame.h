@@ -11,7 +11,7 @@ struct Frame : public Object
 {
     static Class Class;
 
-    Frame(Interpreter& interp, Frame* prev);
+    Frame(Interpreter& interp, Frame* prev, const Layout* layout);
     Instr** returnInstr() { return retInstr; }
     unsigned stackPos() { return pos; }
     Frame* popFrame();

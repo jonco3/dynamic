@@ -8,14 +8,16 @@
 #include <sstream>
 
 #define for_each_syntax(syntax)                                               \
-    syntax(Number)                                                            \
+    syntax(Block)                                                             \
+    syntax(Integer)                                                           \
     syntax(Name)                                                              \
     syntax(Negate)                                                            \
     syntax(Plus)                                                              \
     syntax(Minus)                                                             \
     syntax(PropRef)                                                           \
     syntax(Assign)                                                            \
-    syntax(Call)
+    syntax(Call)                                                              \
+    syntax(Return)
 
 enum SyntaxType
 {
@@ -33,6 +35,13 @@ struct SyntaxVisitor
 {
     virtual ~SyntaxVisitor() {}
 #define syntax_visitor(name) virtual void visit(const Syntax##name&) = 0;
+    for_each_syntax(syntax_visitor)
+#undef syntax_visitor
+};
+
+struct DefaultSyntaxVisitor : public SyntaxVisitor
+{
+#define syntax_visitor(name) virtual void visit(const Syntax##name&) override {}
     for_each_syntax(syntax_visitor)
 #undef syntax_visitor
 };
@@ -83,13 +92,34 @@ struct BinarySyntax : public Syntax
     }
 };
 
-struct SyntaxNumber : public Syntax
+struct SyntaxBlock : public Syntax
+{
+    syntax_type(Syntax_Block)
+    syntax_name("block")
+
+    void append(Syntax* s) { statements.push_back(s); }
+    const std::vector<Syntax *>& stmts() const { return statements; }
+
+    virtual std::string repr() const {
+        std::ostringstream s;
+        for (auto i = statements.begin(); i != statements.end(); ++i)
+            s << (*i)->repr() << std::endl;
+        return s.str();
+    }
+
+    syntax_accept();
+
+  private:
+    std::vector<Syntax *> statements;
+};
+
+struct SyntaxInteger : public Syntax
 {
     int value;
 
-    SyntaxNumber(int value) : value(value) {}
+    SyntaxInteger(int value) : value(value) {}
 
-    syntax_type(Syntax_Number)
+    syntax_type(Syntax_Integer)
     syntax_name("number")
 
     virtual std::string repr() const {
@@ -192,9 +222,18 @@ struct SyntaxCall : public Syntax
     }
 };
 
+struct SyntaxReturn : public UnarySyntax
+{
+    SyntaxReturn(Syntax* right) : UnarySyntax(right) {}
+    syntax_type(Syntax_Return)
+    syntax_name("return")
+    syntax_accept()
+};
+
 struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
+    SyntaxBlock *parseBlock();
   private:
     Tokenizer tokenizer;
     ExprSpec<Syntax *> spec;

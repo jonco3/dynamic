@@ -92,7 +92,8 @@
     token(AssignBitLeftShift)                                                 \
     token(AssignPower)                                                        \
                                                                               \
-    token(Number)                                                             \
+    token(Integer)                                                            \
+    token(String)                                                             \
     token(Identifier)
 
 enum TokenType
@@ -141,11 +142,18 @@ private:
     std::unordered_map<std::string, TokenType> operators;
 
     char peekChar();
-    void nextChar(size_t count = 1);
+    char nextChar();
     void ungetChar(char c);
 
     void skipWhitespace();
     unsigned skipIndentation();
+
+    bool isWhitespace(char c);
+    bool isNewline(char c);
+    bool isDigit(char c);
+    bool isIdentifierStart(char c);
+    bool isIdentifierRest(char c);
+    bool isOrdinary(char c);
 };
 
 /*

@@ -13,8 +13,9 @@ struct Class;
 
 struct Object
 {
-    Object(Class *cls) : cls(cls), layout(new Layout) {}
-    virtual ~Object() { delete layout; }
+    Object(Class *cls);
+    Object(Class *cls, const Layout *layout);
+    virtual ~Object();
 
     template <typename T> bool is() { return cls == &T::Class; }
 
@@ -25,13 +26,17 @@ struct Object
 
     virtual void print(std::ostream& os) const;
 
-    bool getProp(Name name, Value& valueOut);
+    bool getProp(Name name, Value& valueOut) const;
     void setProp(Name name, Value value);
+
+    const Layout* getLayout() const { return layout; }
 
   private:
     Class* cls;
-    Layout* layout;
+    const Layout* layout;
     std::vector<Value> slots;
+
+    void initAttrs();
 };
 
 inline std::ostream& operator<<(std::ostream& s, const Object* o) {

@@ -4,29 +4,53 @@
 #include "test.h"
 #include "utility.h"
 
+#include <memory>
+
+using namespace std;
+
+// Find the names that are defined in the current block
+struct DefinitionFinder : public DefaultSyntaxVisitor
+{
+    Layout* layout;
+
+    DefinitionFinder() : layout(nullptr) {}
+
+    virtual void visit(const SyntaxAssign& s) {
+        if (s.left->is<SyntaxName>()) {
+            SyntaxName* n = s.left->as<SyntaxName>();
+            layout = layout->addName(n->id);
+        }
+    }
+
+    // todo: recurse into blocks etc
+
+    static Layout* buildLayout(Syntax *s) {
+        DefinitionFinder df;
+        s->accept(df);
+        return df.layout;
+    }
+};
+
 struct BlockBuilder : public SyntaxVisitor
 {
     BlockBuilder() : block(nullptr) {}
     ~BlockBuilder() { delete block; }
 
-    void start(const Input& input) {
+    void buildRaw(const Input& input) {
         parser.start(input);
-    }
-
-    void build() {
         assert(!block);
         block = new Block;
-        while (!parser.atEnd())
-            parser.parse()->accept(*this);
+        unique_ptr<Syntax> syntax(parser.parseBlock());
+        layout = DefinitionFinder::buildLayout(syntax.get());
+        syntax->accept(*this);
     }
 
-    void buildTopLevel() {
-        assert(!block);
-        block = new Block;
-        block->append(new InstrConstNumber(0)); // todo: should be None
-        while (!parser.atEnd())
-            parser.parse()->accept(*this);
-        block->append(new InstrReturn());
+    void build(const Input& input) {
+        buildRaw(input);
+        if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>()) {
+            block->append(new InstrConstInteger(0)); // todo: should be None
+            block->append(new InstrReturn());
+        }
     }
 
     Block* takeBlock() {
@@ -37,7 +61,8 @@ struct BlockBuilder : public SyntaxVisitor
 
   private:
     SyntaxParser parser;
-    Block *block;
+    Layout* layout;
+    Block* block;
 
     void callUnaryMethod(const UnarySyntax& s, std::string name) {
         s.right->accept(*this);
@@ -56,8 +81,13 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrCall(2));
     }
 
-    virtual void visit(const SyntaxNumber& s) {
-        block->append(new InstrConstNumber(s.value));
+    virtual void visit(const SyntaxBlock& s) {
+        for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i)
+            (*i)->accept(*this);
+    }
+
+    virtual void visit(const SyntaxInteger& s) {
+        block->append(new InstrConstInteger(s.value));
     }
 
     virtual void visit(const SyntaxName& s) {
@@ -109,16 +139,24 @@ struct BlockBuilder : public SyntaxVisitor
         unsigned count = s.right.size() + (methodCall ? 1 : 0);
         block->append(new InstrCall(count));
     }
+
+    virtual void visit(const SyntaxReturn& s) {
+        s.right->accept(*this);
+        block->append(new InstrReturn);
+    }
 };
 
 
 Block* Block::buildTopLevel(const Input& input)
 {
     BlockBuilder builder;
-    builder.start(input);
-    builder.buildTopLevel();
+    builder.build(input);
     return builder.takeBlock();
 }
+
+Block::Block()
+  : layout(Frame::Class.getLayout())
+{}
 
 Block::~Block()
 {
@@ -139,53 +177,54 @@ testcase(block)
 {
     BlockBuilder bb;
 
-    bb.start("3");
-    bb.build();
+    bb.buildRaw("3");
     Block* block = bb.takeBlock();
-    testEqual(repr(block), "ConstNumber 3");
+    testEqual(repr(block), "ConstInteger 3");
     delete block;
 
-    bb.start("foo.bar");
-    bb.build();
+    bb.buildRaw("foo.bar");
     block = bb.takeBlock();
     testEqual(repr(block), "GetLocal foo, GetProp bar");
     delete block;
 
-    bb.start("foo()");
-    bb.build();
+    bb.buildRaw("foo()");
     block = bb.takeBlock();
     testEqual(repr(block), "GetLocal foo, Call 0");
     delete block;
 
-    bb.start("foo(bar, baz)");
-    bb.build();
+    bb.buildRaw("foo(bar, baz)");
     block = bb.takeBlock();
     testEqual(repr(block), "GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
     delete block;
 
-    bb.start("foo.bar(baz)");
-    bb.build();
+    bb.buildRaw("foo.bar(baz)");
     block = bb.takeBlock();
     testEqual(repr(block), "GetLocal foo, Dup, GetProp bar, Swap, GetLocal baz, Call 2");
     delete block;
 
-    bb.start("foo = 1");
-    bb.build();
+    bb.buildRaw("foo = 1");
     block = bb.takeBlock();
-    testEqual(repr(block), "ConstNumber 1, SetLocal foo");
+    testEqual(repr(block), "ConstInteger 1, SetLocal foo");
     delete block;
 
-    bb.start("foo.bar = baz");
-    bb.build();
+    bb.buildRaw("foo.bar = baz");
     block = bb.takeBlock();
     testEqual(repr(block), "GetLocal foo, GetLocal baz, SetProp bar");
     delete block;
 
-    bb.start("foo + 1");
-    bb.build();
+    bb.buildRaw("foo + 1");
     block = bb.takeBlock();
     testEqual(repr(block),
-              "GetLocal foo, Dup, GetProp __plus__, Swap, ConstNumber 1, Call 2");
+              "GetLocal foo, Dup, GetProp __plus__, Swap, ConstInteger 1, Call 2");
     delete block;
 
+    bb.build("1");
+    block = bb.takeBlock();
+    testEqual(repr(block), "ConstInteger 1, ConstInteger 0, Return");
+    delete block;
+
+    bb.build("return 1");
+    block = bb.takeBlock();
+    testEqual(repr(block), "ConstInteger 1, Return");
+    delete block;
 }

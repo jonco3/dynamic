@@ -58,15 +58,11 @@ inline void testEqualImpl(const char* actual, const char* expected,
 #define testEqual(actual, expected)                                           \
     testEqualImpl(actual, expected, #actual, #expected, __FILE__, __LINE__)
 
-inline void testTrueImpl(bool actual, const char* actualStr,
-                         const char* file, unsigned line)
-{
-    if (!actual)
-        testFailure("==", actualStr, "true", actual, file, line);
-}
-
 #define testTrue(actual)                                                      \
-    testTrueImpl(actual, #actual, __FILE__, __LINE__)
+    testEqual(actual, true)
+
+#define testFalse(actual)                                                     \
+    testEqual(actual, false)
 
 template <typename A>
 inline void testThrowsFailureWrongException(const char* expectedName,

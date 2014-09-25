@@ -1,3 +1,4 @@
+#include "input.h"
 #include "interp.h"
 #include "frame.h"
 #include "block.h"
@@ -10,7 +11,7 @@
 
 bool Interpreter::interpret(Block* block, Value& valueOut)
 {
-    frame = new Frame(*this, nullptr);
+    frame = new Frame(*this, nullptr, block->getLayout());
     instrp = block->startInstr();
 
     while (instrp) {
@@ -31,7 +32,7 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 
 Frame* Interpreter::pushFrame(Function *function)
 {
-    Frame *newFrame = new Frame(*this, frame);
+    Frame *newFrame = new Frame(*this, frame, function->getLayout());
     instrp = function->startInstr();
     frame = newFrame;
     return newFrame;
@@ -39,7 +40,7 @@ Frame* Interpreter::pushFrame(Function *function)
 
 void Interpreter::popFrame()
 {
-    assert(frame->stackPos() < stack.size());
+    assert(frame->stackPos() <= stack.size());
     stack.resize(frame->stackPos());
     instrp = frame->returnInstr();
     Frame* oldFrame = frame;
@@ -51,13 +52,14 @@ testcase(interp)
 {
     Interpreter interp;
 
-    Block* block = Block::buildTopLevel("3");
+    Block* block = Block::buildTopLevel("return 3");
     Value v;
+    testEqual(repr(block), "ConstInteger 3, Return");
     testTrue(interp.interpret(block, v));
     testEqual(repr(v), "3");
     delete block;
 
-    block = Block::buildTopLevel("2 + 2");
+    block = Block::buildTopLevel("return 2 + 2");
     testTrue(interp.interpret(block, v));
     testEqual(repr(v), "4");
     delete block;

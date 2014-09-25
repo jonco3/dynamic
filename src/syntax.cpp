@@ -1,13 +1,17 @@
 #include "syntax.h"
 #include "test.h"
 
+#include <memory>
+
+using namespace std;
+
 SyntaxParser::SyntaxParser() :
   Parser(spec, tokenizer),
   spec(TokenCount)
 {
-    spec.addWord(Token_Number,
+    spec.addWord(Token_Integer,
                  [] (Token token) {
-                     return new SyntaxNumber(atoi(token.text.c_str()));
+                     return new SyntaxInteger(atoi(token.text.c_str()));
                  });
     spec.addWord(Token_Identifier,
                  [] (Token token) {
@@ -18,7 +22,7 @@ SyntaxParser::SyntaxParser() :
                         return new SyntaxNegate(r);
                     });
     spec.addPrefixHandler(Token_Bra,
-                          [] (Parser<Syntax*>& parser, ExprSpec<Syntax*> spec,
+                          [] (Derived& parser, Spec& spec,
                               Token _2) {
                               Syntax* content = parser.expression(spec);
                               parser.match(Token_Ket);
@@ -46,7 +50,7 @@ SyntaxParser::SyntaxParser() :
                          return new SyntaxPropRef(l, r);
                      });
     spec.addInfixHandler(Token_Bra, 80,
-                         [] (Parser<Syntax*>& parser, ExprSpec<Syntax*> spec, Token _,
+                         [] (Derived& parser, Spec& spec, Token _,
                              Syntax* l) {
                              SyntaxCall* call = new SyntaxCall(l);
                              bool first = true;
@@ -59,14 +63,40 @@ SyntaxParser::SyntaxParser() :
                              }
                              return call;
                          });
+    spec.addPrefixHandler(Token_Return, [] (Derived& parser, Spec& spec, Token _2) {
+            Syntax *expr;
+            if (parser.notFollowedBy(Token_EOF) &&
+                parser.notFollowedBy(Token_Newline) &&
+                parser.notFollowedBy(Token_Dedent))
+            {
+                expr = parser.expression(spec);
+            } else {
+                expr = new SyntaxInteger(0); // todo: none
+            }
+            return new SyntaxReturn(expr);
+        });
+}
+
+SyntaxBlock* SyntaxParser::parseBlock()
+{
+    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
+    while (!atEnd()) {
+        syntax->append(parse());
+        if (atEnd())
+            break;
+        match(Token_Newline);
+    }
+    return syntax.release();
 }
 
 testcase(syntax)
 {
     SyntaxParser sp;
     sp.start("1+2-3");
-    Syntax *expr = sp.parse();
+    unique_ptr<Syntax> expr(sp.parse());
     testEqual(expr->repr(), "1 + 2 - 3");
 
-    delete expr;
+    sp.start("1\n2");
+    expr.reset(sp.parseBlock());
+    testEqual(expr->repr(), "1\n2\n");
 }

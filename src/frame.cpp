@@ -4,8 +4,8 @@
 
 Class Frame::Class;
 
-Frame::Frame(Interpreter& interp, Frame* prev) :
-  Object(&Class),
+Frame::Frame(Interpreter& interp, Frame* prev, const Layout* layout) :
+  Object(&Class, layout),
   prev(prev),
   next(nullptr),
   retInstr(interp.nextInstr()),

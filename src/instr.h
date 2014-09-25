@@ -15,7 +15,7 @@
 #define for_each_instr(instr)                                                \
     instr(Dup)                                                               \
     instr(Swap)                                                              \
-    instr(ConstNumber)                                                       \
+    instr(ConstInteger)                                                      \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
     instr(GetProp)                                                           \
@@ -52,14 +52,14 @@ inline std::ostream& operator<<(std::ostream& s, Instr* i) {
 }
 
 #define instr_type(it)                                                       \
-    static const InstrType Type = it;                                        \
-    virtual InstrType type() const { return Type; }
+    virtual InstrType type() const { return Type; }                          \
+    static const InstrType Type = it
 
 struct InstrDup : public Instr
 {
     InstrDup() {}
 
-    instr_type(Instr_Dup)
+    instr_type(Instr_Dup);
 
     virtual void print(std::ostream& s) const { s << "Dup"; }
 
@@ -73,7 +73,7 @@ struct InstrSwap : public Instr
 {
     InstrSwap() {}
 
-    instr_type(Instr_Swap)
+    instr_type(Instr_Swap);
 
     virtual void print(std::ostream& s) const { s << "Swap"; }
 
@@ -83,13 +83,13 @@ struct InstrSwap : public Instr
     }
 };
 
-struct InstrConstNumber : public Instr
+struct InstrConstInteger : public Instr
 {
-    InstrConstNumber(int v) : value(Integer::get(v)) {}
+    InstrConstInteger(int v) : value(Integer::get(v)) {}
 
-    instr_type(Instr_ConstNumber)
+    instr_type(Instr_ConstInteger);
 
-    virtual void print(std::ostream& s) const { s << "ConstNumber " << value; }
+    virtual void print(std::ostream& s) const { s << "ConstInteger " << value; }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         interp.pushStack(value);
@@ -106,7 +106,7 @@ struct InstrGetLocal : public Instr
 {
     InstrGetLocal(Name name) : name(name) {}
 
-    instr_type(Instr_GetLocal)
+    instr_type(Instr_GetLocal);
 
     virtual void print(std::ostream& s) const { s << "GetLocal " << name; }
 
@@ -126,7 +126,7 @@ struct InstrSetLocal : public Instr
 {
     InstrSetLocal(Name name) : name(name) {}
 
-    instr_type(Instr_SetLocal)
+    instr_type(Instr_SetLocal);
 
     virtual void print(std::ostream& s) const { s << "SetLocal " << name; }
 
@@ -143,7 +143,7 @@ struct InstrGetProp : public Instr
 {
     InstrGetProp(Name name) : name(name) {}
 
-    instr_type(Instr_GetProp)
+    instr_type(Instr_GetProp);
 
     virtual void print(std::ostream& s) const { s << "GetProp " << name; }
 
@@ -163,7 +163,7 @@ struct InstrSetProp : public Instr
 {
     InstrSetProp(Name name) : name(name) {}
 
-    instr_type(Instr_SetProp)
+    instr_type(Instr_SetProp);
 
     virtual void print(std::ostream& s) const { s << "SetProp " << name; }
 
@@ -181,7 +181,7 @@ struct InstrCall : public Instr
 {
     InstrCall(unsigned args) : args(args) {}
 
-    instr_type(Instr_Call)
+    instr_type(Instr_Call);
 
     virtual void print(std::ostream& s) const { s << "Call " << args; }
 
@@ -218,7 +218,7 @@ struct InstrCall : public Instr
 
 struct InstrReturn : public Instr
 {
-    instr_type(Instr_Return)
+    instr_type(Instr_Return);
 
     virtual void print(std::ostream& s) const { s << "Return"; }
 

@@ -22,11 +22,11 @@ struct ExprSpec
 {
     ExprSpec(unsigned maxTokenTypes);
 
-    typedef std::function<T (Parser<T>& parser, ExprSpec<T> spec, Token token)>
+    typedef std::function<T (Parser<T>& parser, const ExprSpec<T>& spec, Token token)>
                 PrefixHandler;
     void addPrefixHandler(TokenType type, PrefixHandler handler);
 
-    typedef std::function<T (Parser<T>& parser, ExprSpec<T> spec, Token token,
+    typedef std::function<T (Parser<T>& parser, const ExprSpec<T>& spec, Token token,
                              const T leftValue)> InfixHandler;
     void addInfixHandler(TokenType type, unsigned bindLeft, InfixHandler handler);
 
@@ -128,6 +128,9 @@ struct ParseError : public std::runtime_error
 template <typename T>
 struct Parser
 {
+    typedef Parser<T> Derived;
+    typedef const ExprSpec<T> Spec;
+
     Parser(const ExprSpec<T>& spec, Tokenizer& tokenizer);
 
     void start(const Input& input);

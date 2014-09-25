@@ -153,19 +153,18 @@ char Tokenizer::peekChar()
     return *source;
 }
 
-void Tokenizer::nextChar(size_t count)
+char Tokenizer::nextChar()
 {
-    for (size_t i = 0; i < count; ++i) {
-        char c = *source++;
-        if (c == '\n') {
-            ++pos.line;
-            pos.column = 0;
-        } else if (c == '\t') {
-            pos.column += 8 - (pos.column % 8);
-        } else if (c != '\0') {
-            ++pos.column;
-        }
+    char c = *source++;
+    if (c == '\n') {
+        ++pos.line;
+        pos.column = 0;
+    } else if (c == '\t') {
+        pos.column += 8 - (pos.column % 8);
+    } else if (c != '\0') {
+        ++pos.column;
     }
+    return c;
 }
 
 void Tokenizer::ungetChar(char c)
@@ -177,32 +176,32 @@ void Tokenizer::ungetChar(char c)
     --pos.column;
 }
 
-static bool is_whitespace(char c)
+bool Tokenizer::isWhitespace(char c)
 {
     return c == '\t' || c == ' ';
 }
 
-static bool is_newline(char c)
+bool Tokenizer::isNewline(char c)
 {
     return c == '\n';
 }
 
-static bool is_digit(char c)
+bool Tokenizer::isDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-static bool is_identifier_start(char c)
+bool Tokenizer::isIdentifierStart(char c)
 {
     return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-static bool is_identifier_rest(char c)
+bool Tokenizer::isIdentifierRest(char c)
 {
-    return is_identifier_start(c) || (c >= '0' && c <= '9');
+    return isIdentifierStart(c) || isDigit(c);
 }
 
-static bool is_ordinary(char c)
+bool Tokenizer::isOrdinary(char c)
 {
     return
         c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '<' ||
@@ -213,15 +212,17 @@ static bool is_ordinary(char c)
 
 void Tokenizer::skipWhitespace()
 {
-    while (is_whitespace(peekChar()))
+    while (isWhitespace(peekChar()))
         nextChar();
 }
 
 unsigned Tokenizer::skipIndentation()
 {
     skipWhitespace();
-    while (is_newline(peekChar()))
+    while (isNewline(peekChar())) {
+        nextChar();
         skipWhitespace();
+    }
     if (!peekChar())
         return 0;
     return pos.column;
@@ -229,12 +230,13 @@ unsigned Tokenizer::skipIndentation()
 
 Token Tokenizer::nextToken()
 {
-    // Return any queued dedent token
+    // Return any queued dedent tokens
     if (dedentCount) {
         --dedentCount;
         return {Token_Dedent, std::string(), pos};
     }
 
+    // Whitespace
     TokenPos startPos = pos;
     if (pos.column == 0) {
         // Handle indentation at the start of a line
@@ -259,26 +261,57 @@ Token Tokenizer::nextToken()
     startPos = pos;
     const char *startText = source;
 
+    // EOF
     if (!peekChar())
         return {Token_EOF, std::string(), startPos};
 
+    // Newline
     if (peekChar() == '\n') {
         nextChar();
         return {Token_Newline, std::string(), startPos};
     }
 
-    if (is_digit(peekChar())) {
+    // Numeric literals
+    if (isDigit(peekChar())) {
+        // todo: floating pointer, prefixes, etc.
         do {
             nextChar();
-        } while (is_digit(peekChar()));
+        } while (isDigit(peekChar()));
         size_t length = source - startText;
-        return {Token_Number, std::string(startText, length), startPos};
+        return {Token_Integer, std::string(startText, length), startPos};
     }
 
-    if (is_identifier_start(peekChar())) {
+    // String literals
+    if (peekChar() == '\'' || peekChar() == '"') {
+        // todo: r u and b prefixes, long strings
+        char delimiter = nextChar();
+        std::ostringstream s;
+        char c;
+        while (c = nextChar(), c && c != delimiter) {
+            if (c != '\\') {
+                s << c;
+            } else {
+                char escape = nextChar();
+                if (!escape)
+                    break;
+                if (escape == 'n')
+                    s << "\n";
+                else if (escape == '\t')
+                    s << "\t";
+                else
+                    throw TokenError("Unimplimented string escape", pos);
+            }
+        }
+        if (c != delimiter)
+            throw TokenError("Unterminated string", pos);
+        return {Token_String, s.str()};
+    }
+
+    // Identifiers and keywords
+    if (isIdentifierStart(peekChar())) {
         do {
             nextChar();
-        } while (is_identifier_rest(peekChar()));
+        } while (isIdentifierRest(peekChar()));
         size_t length = source - startText;
 
         std::string s(startText, length);
@@ -289,10 +322,11 @@ Token Tokenizer::nextToken()
         return {Token_Identifier, s, startPos};
     }
 
-    if (is_ordinary(peekChar())) {
+    // Operators and delimiters
+    if (isOrdinary(peekChar())) {
         do {
             nextChar();
-        } while (is_ordinary(peekChar()));
+        } while (isOrdinary(peekChar()));
         size_t length = source - startText;
 
         // Return the longest valid token we can make out of what we found.
@@ -308,6 +342,14 @@ Token Tokenizer::nextToken()
     }
 
     throw TokenError("Unexpected " + std::string(startText, 1), startPos);
+}
+
+static void tokenize(const char *source)
+{
+    Tokenizer tz;
+    tz.start(source);
+    while (tz.nextToken().type != Token_EOF)
+        ;
 }
 
 testcase(tokenizer)
@@ -332,7 +374,7 @@ testcase(tokenizer)
 
     tz.start("123");
     t = tz.nextToken();
-    testEqual(t.type, Token_Number);
+    testEqual(t.type, Token_Integer);
     testEqual(t.text, "123");
     testEqual(tz.nextToken().type, Token_EOF);
 
@@ -344,21 +386,21 @@ testcase(tokenizer)
 
     tz.start("1+2 - 3");
     t = tz.nextToken();
-    testEqual(t.type, Token_Number);
+    testEqual(t.type, Token_Integer);
     testEqual(t.text, "1");
     testEqual(t.pos.column, 0);
     t = tz.nextToken();
     testEqual(t.type, Token_Plus);
     testEqual(t.pos.column, 1);
     t = tz.nextToken();
-    testEqual(t.type, Token_Number);
+    testEqual(t.type, Token_Integer);
     testEqual(t.text, "2");
     testEqual(t.pos.column, 2);
     t = tz.nextToken();
     testEqual(t.type, Token_Minus);
     testEqual(t.pos.column, 4);
     t = tz.nextToken();
-    testEqual(t.type, Token_Number);
+    testEqual(t.type, Token_Integer);
     testEqual(t.text, "3");
     testEqual(t.pos.column, 6);
     t = tz.nextToken();
@@ -378,7 +420,7 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_AssignBitRightShift);
     testEqual(tz.nextToken().type, Token_Bra);
-    testEqual(tz.nextToken().type, Token_Number);
+    testEqual(tz.nextToken().type, Token_Integer);
     testEqual(tz.nextToken().type, Token_Power);
     testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_Ket);
@@ -402,6 +444,12 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Newline);
     testThrows(tz.nextToken(), TokenError);
 
+    tz.start("foo\n\n    \nbaz");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_EOF);
+
     tz.start("nand and anda");
     testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_And);
@@ -412,9 +460,17 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_BitLeftShift);
     testEqual(tz.nextToken().type, Token_BitNot);
-    testEqual(tz.nextToken().type, Token_Number);
+    testEqual(tz.nextToken().type, Token_Integer);
     testEqual(tz.nextToken().type, Token_EOF);
 
-    tz.start("$");
-    testThrows(tz.nextToken(), TokenError);
+    testThrows(tokenize("$"), TokenError);
+
+    testThrows(tokenize("'string\""), TokenError);
+    testThrows(tokenize("\"string'"), TokenError);
+
+    tz.start("'$tring'");
+    testEqual(tz.nextToken().type, Token_String);
+
+    tz.start("\"gnirts\"");
+    testEqual(tz.nextToken().type, Token_String);
 }

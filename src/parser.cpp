@@ -18,7 +18,7 @@ testcase(parser)
     Tokenizer tokenizer;
 
     ExprSpec<int> spec(TokenCount);
-    spec.addWord(Token_Number, [] (Token token) {
+    spec.addWord(Token_Integer, [] (Token token) {
             return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
         });
     spec.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
@@ -34,5 +34,14 @@ testcase(parser)
     Parser<int> parser(spec, tokenizer);
 
     parser.start("2 + 3 - 1");
+    testFalse(parser.atEnd());
     testEqual(parser.parse(), 4);
+    testTrue(parser.atEnd());
+    testThrows(parser.parse(), ParseError);
+
+    parser.start("1 2");
+    testEqual(parser.parse(), 1);
+    testEqual(parser.parse(), 2);
+    testTrue(parser.atEnd());
+    testThrows(parser.parse(), ParseError);
 }

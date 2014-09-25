@@ -4,13 +4,25 @@
 #include "name.h"
 
 #include <vector>
+#include <unordered_map>
+
+// Layout defines a mapping from names to slots and is used for object storage
+// and execution frames.
 
 struct Layout
 {
-    // todo: eventually we will need layout lineage a.k.a shape tree
-    std::vector<Name> names;
-    int lookupName(Name name);
-    int addName(Name name);
+    Layout(const Layout* parent, Name name);
+
+    unsigned slotCount() const;
+    bool subsumes(const Layout* other) const;
+    int lookupName(Name name) const;
+
+    Layout* addName(Name name) const;
+
+  private:
+    const Layout* parent;
+    const Name name;
+    mutable std::unordered_map<Name, Layout*> children;
 };
 
 #endif
