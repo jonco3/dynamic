@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "name.h"
 
+#include <memory>
 #include <string>
 #include <sstream>
 
@@ -17,7 +18,8 @@ using namespace std;
     syntax(Plus)                                                              \
     syntax(Minus)                                                             \
     syntax(PropRef)                                                           \
-    syntax(Assign)                                                            \
+    syntax(AssignName)                                                        \
+    syntax(AssignProp)                                                        \
     syntax(Call)                                                              \
     syntax(Return)
 
@@ -72,7 +74,7 @@ struct Syntax
 
 struct UnarySyntax : public Syntax
 {
-    auto_ptr<Syntax> right;
+    unique_ptr<Syntax> right;
 
     UnarySyntax(Syntax* r) : right(r) {}
 
@@ -83,8 +85,8 @@ struct UnarySyntax : public Syntax
 
 struct BinarySyntax : public Syntax
 {
-    auto_ptr<Syntax> left;
-    auto_ptr<Syntax> right;
+    unique_ptr<Syntax> left;
+    unique_ptr<Syntax> right;
 
     BinarySyntax(Syntax* l, Syntax* r) :
       left(l), right(r) {}
@@ -186,23 +188,45 @@ struct SyntaxPropRef : public BinarySyntax
     syntax_accept()
 };
 
-struct SyntaxAssign : public BinarySyntax
+struct SyntaxAssignName : public Syntax
 {
-    SyntaxAssign(Syntax* l, Syntax* r) : BinarySyntax(l, r) {}
-    syntax_type(Syntax_Assign)
+    unique_ptr<SyntaxName> left;
+    unique_ptr<Syntax> right;
+
+    SyntaxAssignName(SyntaxName* l, Syntax* r) : left(l), right(r) {}
+    syntax_type(Syntax_AssignName)
     syntax_name("=")
     syntax_accept()
+
+    virtual string repr() const {
+        return left->repr() + " " + name() + " " + right->repr();
+    }
+};
+
+struct SyntaxAssignProp : public Syntax
+{
+    unique_ptr<SyntaxPropRef> left;
+    unique_ptr<Syntax> right;
+
+    SyntaxAssignProp(SyntaxPropRef* l, Syntax* r) : left(l), right(r) {}
+    syntax_type(Syntax_AssignProp)
+    syntax_name("=")
+    syntax_accept()
+
+    virtual string repr() const {
+        return left->repr() + " " + name() + " " + right->repr();
+    }
 };
 
 struct SyntaxCall : public Syntax
 {
-    auto_ptr<Syntax> left;
+    unique_ptr<Syntax> left;
     vector<Syntax*> right;
 
     SyntaxCall(Syntax* l) : left(l) {}
     void addArg(Syntax* arg) { right.push_back(arg); }
     ~SyntaxCall() {
-        // todo: use auto_ptr
+        // todo: use unique_ptr
         for (auto i = right.begin(); i != right.end(); ++i)
             delete *i;
     }

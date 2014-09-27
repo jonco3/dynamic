@@ -13,11 +13,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     DefinitionFinder() : layout(nullptr) {}
 
-    virtual void visit(const SyntaxAssign& s) {
-        if (s.left->is<SyntaxName>()) {
-            SyntaxName* n = s.left->as<SyntaxName>();
-            layout = layout->addName(n->id);
-        }
+    virtual void visit(const SyntaxAssignName& s) {
+        layout = layout->addName(s.left->id);
     }
 
     // todo: recurse into blocks etc
@@ -102,18 +99,15 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrGetProp(s.right->as<SyntaxName>()->id));
     }
 
-    virtual void visit(const SyntaxAssign& s) {
-        assert(s.left->is<SyntaxName>() || s.left->is<SyntaxPropRef>());
-        if (s.left->is<SyntaxName>()) {
-            SyntaxName* n = s.left->as<SyntaxName>();
-            s.right->accept(*this);
-            block->append(new InstrSetLocal(n->id));
-        } else {
-            SyntaxPropRef* pr = s.left->as<SyntaxPropRef>();
-            pr->left->accept(*this);
-            s.right->accept(*this);
-            block->append(new InstrSetProp(pr->name()));
-        }
+    virtual void visit(const SyntaxAssignName& s) {
+        s.right->accept(*this);
+        block->append(new InstrSetLocal(s.left->id));
+    }
+
+    virtual void visit(const SyntaxAssignProp& s) {
+        s.left->left->accept(*this);
+        s.right->accept(*this);
+        block->append(new InstrSetProp(s.left->name()));
     }
 
     virtual void visit(const SyntaxCall& s) {

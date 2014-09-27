@@ -23,10 +23,14 @@ SyntaxParser::SyntaxParser() :
         // todo: parse tuples
         return content;
     });
-    spec.addBinaryOp(Token_Assign, 10, Assoc_Right, [] (Token _, Syntax* l, Syntax* r) {
-        if (!l->is<SyntaxName>() && !l->is<SyntaxPropRef>())
+    spec.addBinaryOp(Token_Assign, 10, Assoc_Right,
+                     [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
+        if (l->is<SyntaxName>())
+            return new SyntaxAssignName(l->as<SyntaxName>(), r);
+        else if (l->is<SyntaxPropRef>())
+            return new SyntaxAssignProp(l->as<SyntaxPropRef>(), r);
+        else
             throw ParseError("Illegal LHS for assignment");
-        return new SyntaxAssign(l, r);
     });
     spec.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxPlus(l, r);
