@@ -251,4 +251,15 @@ T Parser<T>::infix(const ExprSpec& spec, Token token, const T leftValue)
     return action.handler(*this, spec, token, leftValue);
 }
 
+struct Syntax;
+struct SyntaxBlock;
+struct SyntaxParser : public Parser<Syntax *>
+{
+    SyntaxParser();
+    SyntaxBlock *parseBlock();
+  private:
+    Tokenizer tokenizer;
+    Parser<Syntax*>::ExprSpec spec;
+};
+
 #endif

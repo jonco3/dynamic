@@ -14,7 +14,6 @@ SRCS = \
 	src/test.cpp \
 	src/token.cpp \
 	src/parser.cpp \
-	src/syntax.cpp \
 	src/block.cpp \
 	src/layout.cpp \
 	src/value.cpp \

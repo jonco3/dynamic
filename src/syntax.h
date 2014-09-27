@@ -259,13 +259,4 @@ struct SyntaxReturn : public UnarySyntax
     syntax_accept()
 };
 
-struct SyntaxParser : public Parser<Syntax *>
-{
-    SyntaxParser();
-    SyntaxBlock *parseBlock();
-  private:
-    Tokenizer tokenizer;
-    Parser<Syntax*>::ExprSpec spec;
-};
-
 #endif
