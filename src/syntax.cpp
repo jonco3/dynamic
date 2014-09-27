@@ -1,4 +1,6 @@
 #include "syntax.h"
+
+#include "repr.h"
 #include "test.h"
 
 #include <memory>
@@ -88,9 +90,9 @@ testcase(syntax)
     SyntaxParser sp;
     sp.start("1+2-3");
     unique_ptr<Syntax> expr(sp.parse());
-    testEqual(expr->repr(), "1 + 2 - 3");
+    testEqual(repr(expr.get()), "1 + 2 - 3");
 
     sp.start("1\n2");
     expr.reset(sp.parseBlock());
-    testEqual(expr->repr(), "1\n2\n");
+    testEqual(repr(expr.get()), "1\n2\n");
 }

@@ -5,8 +5,8 @@
 #include "name.h"
 
 #include <memory>
+#include <ostream>
 #include <string>
-#include <sstream>
 
 using namespace std;
 
@@ -58,19 +58,24 @@ struct Syntax
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
     virtual string name() const = 0;
-    virtual string repr() const = 0;
+    virtual void print(ostream& s) const = 0;
     virtual void accept(SyntaxVisitor& v) const = 0;
 };
 
+inline ostream& operator<<(ostream& s, Syntax* syntax) {
+    syntax->print(s);
+    return s;
+}
+
 #define syntax_type(st)                                                       \
     static const SyntaxType Type = st;                                        \
-    virtual SyntaxType type() const { return Type; }
+    virtual SyntaxType type() const override { return Type; }
 
 #define syntax_name(nm)                                                       \
-    virtual string name() const { return string(nm); }
+    virtual string name() const override { return string(nm); }
 
 #define syntax_accept()                                                      \
-    virtual void accept(SyntaxVisitor& v) const { v.visit(*this); }
+    virtual void accept(SyntaxVisitor& v) const override { v.visit(*this); }
 
 struct UnarySyntax : public Syntax
 {
@@ -78,8 +83,8 @@ struct UnarySyntax : public Syntax
 
     UnarySyntax(Syntax* r) : right(r) {}
 
-    virtual string repr() const {
-        return name() + " " + right->repr();
+    virtual void print(ostream& s) const override {
+        s << name() << " " << right.get();
     }
 };
 
@@ -91,8 +96,8 @@ struct BinarySyntax : public Syntax
     BinarySyntax(Syntax* l, Syntax* r) :
       left(l), right(r) {}
 
-    virtual string repr() const {
-        return left->repr() + " " + name() + " " + right->repr();
+    virtual void print(ostream& s) const override {
+        s << left.get() << " " << name() << " " << right.get();
     }
 };
 
@@ -104,11 +109,9 @@ struct SyntaxBlock : public Syntax
     void append(Syntax* s) { statements.push_back(s); }
     const vector<Syntax *>& stmts() const { return statements; }
 
-    virtual string repr() const {
-        ostringstream s;
+    virtual void print(ostream& s) const override {
         for (auto i = statements.begin(); i != statements.end(); ++i)
-            s << (*i)->repr() << endl;
-        return s.str();
+            s << (*i) << endl;
     }
 
     syntax_accept();
@@ -126,10 +129,8 @@ struct SyntaxInteger : public Syntax
     syntax_type(Syntax_Integer)
     syntax_name("number")
 
-    virtual string repr() const {
-        ostringstream s;
+    virtual void print(ostream& s) const override {
         s << value;
-        return s.str();
     }
 
     syntax_accept()
@@ -144,8 +145,8 @@ struct SyntaxName : public Syntax
     syntax_type(Syntax_Name)
     syntax_name("name")
 
-    virtual string repr() const {
-        return id;
+    virtual void print(ostream& s) const override {
+        s << id;
     }
 
     syntax_accept()
@@ -198,8 +199,8 @@ struct SyntaxAssignName : public Syntax
     syntax_name("=")
     syntax_accept()
 
-    virtual string repr() const {
-        return left->repr() + " " + name() + " " + right->repr();
+    virtual void print(ostream& s) const override {
+        s << left.get() << " = " << right.get();
     }
 };
 
@@ -213,8 +214,8 @@ struct SyntaxAssignProp : public Syntax
     syntax_name("=")
     syntax_accept()
 
-    virtual string repr() const {
-        return left->repr() + " " + name() + " " + right->repr();
+    virtual void print(ostream& s) const override {
+        s << left.get() << " = " << right.get();
     }
 };
 
@@ -235,16 +236,14 @@ struct SyntaxCall : public Syntax
     syntax_name("call")
     syntax_accept()
 
-    virtual string repr() const {
-        ostringstream s;
-        s << left->repr() << "(";
+    virtual void print(ostream& s) const override {
+        s << left.get() << "(";
         for (auto i = right.begin(); i != right.end(); ++i) {
             if (i != right.begin())
                 s << ", ";
             s << *i;
         }
-        s << "(";
-        return s.str();
+        s << ")";
     }
 };
 
