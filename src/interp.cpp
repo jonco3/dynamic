@@ -4,7 +4,7 @@
 #include "block.h"
 #include "instr.h"
 #include "test.h"
-#include "utility.h"
+#include "repr.h"
 #include "callable.h"
 
 //#define TRACE_INTERP

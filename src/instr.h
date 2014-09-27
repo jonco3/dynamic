@@ -8,7 +8,7 @@
 #include "frame.h"
 #include "object.h"
 #include "callable.h"
-#include "utility.h"
+#include "repr.h"
 
 #include <ostream>
 

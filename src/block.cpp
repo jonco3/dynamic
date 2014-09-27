@@ -2,7 +2,7 @@
 #include "syntax.h"
 #include "instr.h"
 #include "test.h"
-#include "utility.h"
+#include "repr.h"
 
 #include <memory>
 

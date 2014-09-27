@@ -2,7 +2,7 @@
 #define __INTERP_H__
 
 #include "value.h"
-#include "utility.h"
+#include "repr.h"
 
 #include <cassert>
 #include <vector>
