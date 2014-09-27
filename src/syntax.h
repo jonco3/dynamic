@@ -238,7 +238,7 @@ struct SyntaxParser : public Parser<Syntax *>
     SyntaxBlock *parseBlock();
   private:
     Tokenizer tokenizer;
-    ExprSpec<Syntax *> spec;
+    Parser<Syntax*>::ExprSpec spec;
 };
 
 #endif

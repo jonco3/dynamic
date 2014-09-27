@@ -16,7 +16,7 @@ SyntaxParser::SyntaxParser() :
     spec.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
             return new SyntaxNegate(r);
         });
-    spec.addPrefixHandler(Token_Bra, [] (Derived& parser, Spec& spec, Token _2) {
+    spec.addPrefixHandler(Token_Bra, [] (Derived& parser, const ExprSpec& spec, Token _2) {
             Syntax* content = parser.expression(spec);
             parser.match(Token_Ket);
             // todo: parse tuples
@@ -38,7 +38,7 @@ SyntaxParser::SyntaxParser() :
                 throw ParseError("Bad property reference");
             return new SyntaxPropRef(l, r);
         });
-    spec.addInfixHandler(Token_Bra, 80, [] (Derived& parser, Spec& spec, Token _, Syntax* l) {
+    spec.addInfixHandler(Token_Bra, 80, [] (Derived& parser, const ExprSpec& spec, Token _, Syntax* l) {
             SyntaxCall* call = new SyntaxCall(l);
             bool first = true;
             while (!parser.opt(Token_Ket)) {
@@ -50,7 +50,7 @@ SyntaxParser::SyntaxParser() :
             }
             return call;
         });
-    spec.addPrefixHandler(Token_Return, [] (Derived& parser, Spec& spec, Token _2) {
+    spec.addPrefixHandler(Token_Return, [] (Derived& parser, const ExprSpec& spec, Token _2) {
             Syntax *expr;
             if (parser.notFollowedBy(Token_EOF) &&
                 parser.notFollowedBy(Token_Newline) &&

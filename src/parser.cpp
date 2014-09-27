@@ -15,7 +15,7 @@ testcase(parser)
 {
     Tokenizer tokenizer;
 
-    ExprSpec<int> spec(TokenCount);
+    Parser<int>::ExprSpec spec(TokenCount);
     spec.addWord(Token_Integer, [] (Token token) {
             return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
         });
