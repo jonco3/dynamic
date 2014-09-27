@@ -47,16 +47,13 @@ SyntaxParser::SyntaxParser() :
     });
     spec.addInfixHandler(Token_Bra, 80, [] (ParserT& parser, const ExprSpec& spec,
                                             Token _, Syntax* l) {
-        SyntaxCall* call = new SyntaxCall(l);
-        bool first = true;
+        vector<Syntax*> args;
         while (!parser.opt(Token_Ket)) {
-            if (!first)
+            if (!args.empty())
                 parser.match(Token_Comma);
-            else
-                first = false;
-            call->addArg(parser.expression(spec));
+            args.push_back(parser.expression(spec));
         }
-        return call;
+        return new SyntaxCall(l, args);
     });
     spec.addPrefixHandler(Token_Return, [] (ParserT& parser, const ExprSpec& spec,
                                             Token _) {

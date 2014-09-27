@@ -138,34 +138,39 @@ struct SyntaxBlock : public Syntax
 
 struct SyntaxInteger : public Syntax
 {
-    int value;
-
-    SyntaxInteger(int value) : value(value) {}
+    SyntaxInteger(int value) : value_(value) {}
 
     syntax_type(Syntax_Integer)
     syntax_name("number")
+    int value() const { return value_; }
 
     virtual void print(ostream& s) const override {
-        s << value;
+        s << value_;
     }
 
     syntax_accept()
+
+  private:
+    int value_;
 };
 
 struct SyntaxName : public Syntax
 {
-    Name id;
 
-    SyntaxName(string id) : id(id) {}
+    SyntaxName(string id) : id_(id) {}
 
     syntax_type(Syntax_Name)
     syntax_name("name")
+    Name id() const { return id_; }
 
     virtual void print(ostream& s) const override {
-        s << id;
+        s << id_;
     }
 
     syntax_accept()
+
+  private:
+    Name id_;
 };
 
 struct SyntaxNegate : public UnarySyntax
@@ -195,9 +200,6 @@ struct SyntaxMinus : public BinarySyntax
 struct SyntaxPropRef : public BinarySyntaxBase<Syntax, SyntaxName>
 {
     SyntaxPropRef(Syntax* l, SyntaxName* r) : BinarySyntaxBase(l, r) {}
-
-    Name name() { return right()->id; }
-
     syntax_type(Syntax_PropRef)
     syntax_name(".")
     syntax_accept()
@@ -221,10 +223,8 @@ struct SyntaxAssignProp : public BinarySyntaxBase<SyntaxPropRef, Syntax>
 
 struct SyntaxCall : public Syntax
 {
-    SyntaxCall(Syntax* l) : left_(l) {}
-    void addArg(Syntax* arg) { right_.push_back(arg); }
+    SyntaxCall(Syntax* l, vector<Syntax *> r) : left_(l), right_(r) {}
     ~SyntaxCall() {
-        // todo: use unique_ptr
         for (auto i = right_.begin(); i != right_.end(); ++i)
             delete *i;
     }

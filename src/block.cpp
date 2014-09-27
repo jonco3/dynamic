@@ -14,7 +14,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     DefinitionFinder() : layout(nullptr) {}
 
     virtual void visit(const SyntaxAssignName& s) {
-        layout = layout->addName(s.left()->id);
+        layout = layout->addName(s.left()->id());
     }
 
     // todo: recurse into blocks etc
@@ -82,11 +82,11 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxInteger& s) {
-        block->append(new InstrConstInteger(s.value));
+        block->append(new InstrConstInteger(s.value()));
     }
 
     virtual void visit(const SyntaxName& s) {
-        block->append(new InstrGetLocal(s.id));
+        block->append(new InstrGetLocal(s.id()));
     }
 
     // todo: actual names
@@ -96,18 +96,18 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxPropRef& s) {
         s.left()->accept(*this);
-        block->append(new InstrGetProp(s.right()->id));
+        block->append(new InstrGetProp(s.right()->id()));
     }
 
     virtual void visit(const SyntaxAssignName& s) {
         s.right()->accept(*this);
-        block->append(new InstrSetLocal(s.left()->id));
+        block->append(new InstrSetLocal(s.left()->id()));
     }
 
     virtual void visit(const SyntaxAssignProp& s) {
         s.left()->left()->accept(*this);
         s.right()->accept(*this);
-        block->append(new InstrSetProp(s.left()->right()->id));
+        block->append(new InstrSetProp(s.left()->right()->id()));
     }
 
     virtual void visit(const SyntaxCall& s) {
@@ -120,7 +120,7 @@ struct BlockBuilder : public SyntaxVisitor
             // todo: replace this dup / getprop / swap sequence with a
             // prepMethod instruction
             block->append(new InstrDup());
-            block->append(new InstrGetProp(pr->right()->as<SyntaxName>()->id));
+            block->append(new InstrGetProp(pr->right()->as<SyntaxName>()->id()));
             block->append(new InstrSwap());
         } else {
             s.left()->accept(*this);
