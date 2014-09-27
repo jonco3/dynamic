@@ -50,17 +50,20 @@ void Interpreter::popFrame()
 
 testcase(interp)
 {
+    unique_ptr<Block> block;
     Interpreter interp;
-
-    Block* block = Block::buildTopLevel("return 3");
     Value v;
-    testEqual(repr(block), "ConstInteger 3, Return");
-    testTrue(interp.interpret(block, v));
-    testEqual(repr(v), "3");
-    delete block;
 
-    block = Block::buildTopLevel("return 2 + 2");
-    testTrue(interp.interpret(block, v));
+    block.reset(Block::buildTopLevel("return 3"));
+    testEqual(repr(block.get()), "ConstInteger 3, Return");
+    testTrue(interp.interpret(block.get(), v));
+    testEqual(repr(v), "3");
+
+    block.reset(Block::buildTopLevel("return 2 + 2"));
+    testTrue(interp.interpret(block.get(), v));
     testEqual(repr(v), "4");
-    delete block;
+
+    block.reset(Block::buildTopLevel("foo = 2 + 3\nreturn foo"));
+    testTrue(interp.interpret(block.get(), v));
+    testEqual(repr(v), "5");
 }

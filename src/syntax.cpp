@@ -34,10 +34,10 @@ SyntaxParser::SyntaxParser() :
         else
             throw ParseError("Illegal LHS for assignment");
     });
-    spec.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    spec.addBinaryOp(Token_Plus, 20, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxPlus(l, r);
     });
-    spec.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    spec.addBinaryOp(Token_Minus, 20, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxMinus(l, r);
     });
     spec.addBinaryOp(Token_Period, 90, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
@@ -88,6 +88,10 @@ testcase(syntax)
     sp.start("1+2-3");
     unique_ptr<Syntax> expr(sp.parse());
     testEqual(repr(expr.get()), "1 + 2 - 3");
+
+    sp.start("f = 1 + 2");
+    expr.reset(sp.parse());
+    testTrue(expr.get()->is<SyntaxAssignName>());
 
     sp.start("1\n2");
     expr.reset(sp.parseBlock());
