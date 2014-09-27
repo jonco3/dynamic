@@ -27,17 +27,17 @@ struct ParseError : public runtime_error
 template <typename T>
 struct Parser
 {
-    typedef Parser<T> Derived;
+    typedef Parser<T> ParserT;
 
     struct ExprSpec
     {
         ExprSpec(unsigned maxTokenTypes);
 
-        typedef function<T (Derived& parser, const ExprSpec& spec, Token token)>
+        typedef function<T (ParserT& parser, const ExprSpec& spec, Token token)>
         PrefixHandler;
         void addPrefixHandler(TokenType type, PrefixHandler handler);
 
-        typedef function<T (Derived& parser, const ExprSpec& spec, Token token,
+        typedef function<T (ParserT& parser, const ExprSpec& spec, Token token,
                             const T leftValue)> InfixHandler;
         void addInfixHandler(TokenType type, unsigned bindLeft, InfixHandler handler);
 
