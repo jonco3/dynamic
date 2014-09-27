@@ -14,7 +14,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     DefinitionFinder() : layout(nullptr) {}
 
     virtual void visit(const SyntaxAssignName& s) {
-        layout = layout->addName(s.left->id);
+        layout = layout->addName(s.left()->id);
     }
 
     // todo: recurse into blocks etc
@@ -60,7 +60,7 @@ struct BlockBuilder : public SyntaxVisitor
     Block* block;
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
-        s.right->accept(*this);
+        s.right()->accept(*this);
         block->append(new InstrDup());
         block->append(new InstrGetProp(name));
         block->append(new InstrSwap());
@@ -68,11 +68,11 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     void callBinaryMethod(const BinarySyntax& s, string name) {
-        s.left->accept(*this);
+        s.left()->accept(*this);
         block->append(new InstrDup());
         block->append(new InstrGetProp(name));
         block->append(new InstrSwap());
-        s.right->accept(*this);
+        s.right()->accept(*this);
         block->append(new InstrCall(2));
     }
 
@@ -95,45 +95,45 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxMinus& s) { callBinaryMethod(s, "__minus__"); }
 
     virtual void visit(const SyntaxPropRef& s) {
-        s.left->accept(*this);
-        block->append(new InstrGetProp(s.right->as<SyntaxName>()->id));
+        s.left()->accept(*this);
+        block->append(new InstrGetProp(s.right()->id));
     }
 
     virtual void visit(const SyntaxAssignName& s) {
-        s.right->accept(*this);
-        block->append(new InstrSetLocal(s.left->id));
+        s.right()->accept(*this);
+        block->append(new InstrSetLocal(s.left()->id));
     }
 
     virtual void visit(const SyntaxAssignProp& s) {
-        s.left->left->accept(*this);
-        s.right->accept(*this);
-        block->append(new InstrSetProp(s.left->name()));
+        s.left()->left()->accept(*this);
+        s.right()->accept(*this);
+        block->append(new InstrSetProp(s.left()->right()->id));
     }
 
     virtual void visit(const SyntaxCall& s) {
         // todo: check this actually how python works
-        bool methodCall = s.left->is<SyntaxPropRef>();
+        bool methodCall = s.left()->is<SyntaxPropRef>();
 
         if (methodCall) {
-            SyntaxPropRef* pr = s.left->as<SyntaxPropRef>();
-            pr->left->accept(*this);
+            const SyntaxPropRef* pr = s.left()->as<SyntaxPropRef>();
+            pr->left()->accept(*this);
             // todo: replace this dup / getprop / swap sequence with a
             // prepMethod instruction
             block->append(new InstrDup());
-            block->append(new InstrGetProp(pr->right->as<SyntaxName>()->id));
+            block->append(new InstrGetProp(pr->right()->as<SyntaxName>()->id));
             block->append(new InstrSwap());
         } else {
-            s.left->accept(*this);
+            s.left()->accept(*this);
         }
 
-        for (auto i = s.right.begin(); i != s.right.end(); ++i)
+        for (auto i = s.right().begin(); i != s.right().end(); ++i)
             (*i)->accept(*this);
-        unsigned count = s.right.size() + (methodCall ? 1 : 0);
+        unsigned count = s.right().size() + (methodCall ? 1 : 0);
         block->append(new InstrCall(count));
     }
 
     virtual void visit(const SyntaxReturn& s) {
-        s.right->accept(*this);
+        s.right()->accept(*this);
         block->append(new InstrReturn);
     }
 };

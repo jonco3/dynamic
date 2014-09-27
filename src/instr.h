@@ -48,7 +48,7 @@ struct Instr
     virtual bool execute(Interpreter& interp, Frame* frame) = 0;
 };
 
-inline ostream& operator<<(ostream& s, Instr* i) {
+inline ostream& operator<<(ostream& s, const Instr* i) {
     i->print(s);
     return s;
 }

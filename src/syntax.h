@@ -53,7 +53,16 @@ struct DefaultSyntaxVisitor : public SyntaxVisitor
 struct Syntax
 {
     template <typename T> bool is() const { return type() == T::Type; }
-    template <typename T> T* as() { assert(is<T>()); return static_cast<T*>(this); }
+
+    template <typename T> T* as() {
+        assert(is<T>());
+        return static_cast<T*>(this);
+    }
+
+    template <typename T> const T* as() const {
+        assert(is<T>());
+        return static_cast<const T*>(this);
+    }
 
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
@@ -62,7 +71,7 @@ struct Syntax
     virtual void accept(SyntaxVisitor& v) const = 0;
 };
 
-inline ostream& operator<<(ostream& s, Syntax* syntax) {
+inline ostream& operator<<(ostream& s, const Syntax* syntax) {
     syntax->print(s);
     return s;
 }
@@ -79,27 +88,34 @@ inline ostream& operator<<(ostream& s, Syntax* syntax) {
 
 struct UnarySyntax : public Syntax
 {
-    unique_ptr<Syntax> right;
-
-    UnarySyntax(Syntax* r) : right(r) {}
+    UnarySyntax(Syntax* r) : right_(r) {}
+    const Syntax* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
-        s << name() << " " << right.get();
+        s << name() << " " << right();
     }
+
+  private:
+    unique_ptr<Syntax> right_;
 };
 
-struct BinarySyntax : public Syntax
+template <typename L, typename R>
+struct BinarySyntaxBase : public Syntax
 {
-    unique_ptr<Syntax> left;
-    unique_ptr<Syntax> right;
-
-    BinarySyntax(Syntax* l, Syntax* r) :
-      left(l), right(r) {}
+    BinarySyntaxBase(L* l, R* r) : left_(l), right_(r) {}
+    const L* left() const { return left_.get(); }
+    const R* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
-        s << left.get() << " " << name() << " " << right.get();
+        s << left() << " " << name() << " " << right();
     }
+
+  private:
+    unique_ptr<L> left_;
+    unique_ptr<R> right_;
 };
+
+typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
 
 struct SyntaxBlock : public Syntax
 {
@@ -176,75 +192,63 @@ struct SyntaxMinus : public BinarySyntax
     syntax_accept()
 };
 
-struct SyntaxPropRef : public BinarySyntax
+struct SyntaxPropRef : public BinarySyntaxBase<Syntax, SyntaxName>
 {
-    SyntaxPropRef(Syntax* l, Syntax* r) : BinarySyntax(l, r) {
-        assert(r->is<SyntaxName>());
-    }
+    SyntaxPropRef(Syntax* l, SyntaxName* r) : BinarySyntaxBase(l, r) {}
 
-    Name name() { return right->as<SyntaxName>()->id; }
+    Name name() { return right()->id; }
 
     syntax_type(Syntax_PropRef)
     syntax_name(".")
     syntax_accept()
 };
 
-struct SyntaxAssignName : public Syntax
+struct SyntaxAssignName : public BinarySyntaxBase<SyntaxName, Syntax>
 {
-    unique_ptr<SyntaxName> left;
-    unique_ptr<Syntax> right;
-
-    SyntaxAssignName(SyntaxName* l, Syntax* r) : left(l), right(r) {}
+    SyntaxAssignName(SyntaxName* l, Syntax* r) : BinarySyntaxBase(l, r) {}
     syntax_type(Syntax_AssignName)
     syntax_name("=")
     syntax_accept()
-
-    virtual void print(ostream& s) const override {
-        s << left.get() << " = " << right.get();
-    }
 };
 
-struct SyntaxAssignProp : public Syntax
+struct SyntaxAssignProp : public BinarySyntaxBase<SyntaxPropRef, Syntax>
 {
-    unique_ptr<SyntaxPropRef> left;
-    unique_ptr<Syntax> right;
-
-    SyntaxAssignProp(SyntaxPropRef* l, Syntax* r) : left(l), right(r) {}
+    SyntaxAssignProp(SyntaxPropRef* l, Syntax* r) : BinarySyntaxBase(l, r) {}
     syntax_type(Syntax_AssignProp)
     syntax_name("=")
     syntax_accept()
-
-    virtual void print(ostream& s) const override {
-        s << left.get() << " = " << right.get();
-    }
 };
 
 struct SyntaxCall : public Syntax
 {
-    unique_ptr<Syntax> left;
-    vector<Syntax*> right;
-
-    SyntaxCall(Syntax* l) : left(l) {}
-    void addArg(Syntax* arg) { right.push_back(arg); }
+    SyntaxCall(Syntax* l) : left_(l) {}
+    void addArg(Syntax* arg) { right_.push_back(arg); }
     ~SyntaxCall() {
         // todo: use unique_ptr
-        for (auto i = right.begin(); i != right.end(); ++i)
+        for (auto i = right_.begin(); i != right_.end(); ++i)
             delete *i;
     }
+
+    const Syntax* left() const { return left_.get(); }
+    const vector<Syntax*>& right() const { return right_; }
 
     syntax_type(Syntax_Call)
     syntax_name("call")
     syntax_accept()
 
     virtual void print(ostream& s) const override {
-        s << left.get() << "(";
-        for (auto i = right.begin(); i != right.end(); ++i) {
-            if (i != right.begin())
+        s << left() << "(";
+        for (auto i = right_.begin(); i != right_.end(); ++i) {
+            if (i != right_.begin())
                 s << ", ";
             s << *i;
         }
         s << ")";
     }
+
+  private:
+    unique_ptr<Syntax> left_;
+    vector<Syntax*> right_;
 };
 
 struct SyntaxReturn : public UnarySyntax

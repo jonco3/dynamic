@@ -43,7 +43,7 @@ SyntaxParser::SyntaxParser() :
     spec.addBinaryOp(Token_Period, 90, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
             throw ParseError("Bad property reference");
-        return new SyntaxPropRef(l, r);
+        return new SyntaxPropRef(l, r->as<SyntaxName>());
     });
     spec.addInfixHandler(Token_Bra, 80, [] (ParserT& parser, const ExprSpec& spec,
                                             Token _, Syntax* l) {
