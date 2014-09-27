@@ -66,4 +66,13 @@ testcase(interp)
     block.reset(Block::buildTopLevel("foo = 2 + 3\nreturn foo"));
     testTrue(interp.interpret(block.get(), v));
     testEqual(repr(v), "5");
+
+    block.reset(Block::buildTopLevel("foo = 3\nbar = 4\nreturn foo + bar"));
+    testTrue(interp.interpret(block.get(), v));
+    testEqual(repr(v), "7");
+
+    // todo: should be: AttributeError: 'int' object has no attribute 'foo'
+    block.reset(Block::buildTopLevel("foo = 0\nfoo.bar = 1\nreturn foo + foo.bar"));
+    testTrue(interp.interpret(block.get(), v));
+    testEqual(repr(v), "1");
 }
