@@ -3,8 +3,9 @@
 
 #include "name.h"
 
-#include <vector>
+#include <ostream>
 #include <unordered_map>
+#include <vector>
 
 using namespace std;
 
@@ -15,6 +16,9 @@ struct Layout
 {
     Layout(const Layout* parent, Name name);
 
+    const Layout* parent() const { return parent_; }
+    const string& name() const { return name_; }
+
     unsigned slotCount() const;
     bool subsumes(const Layout* other) const;
     int lookupName(Name name) const;
@@ -22,9 +26,11 @@ struct Layout
     Layout* addName(Name name) const;
 
   private:
-    const Layout* parent;
-    const Name name;
-    mutable unordered_map<Name, Layout*> children;
+    const Layout* parent_;
+    const Name name_;
+    mutable unordered_map<Name, Layout*> children_;
 };
+
+ostream& operator<<(ostream& s, const Layout* layout);
 
 #endif

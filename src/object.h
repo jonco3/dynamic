@@ -1,13 +1,13 @@
 #ifndef __OBJECT_H__
 #define __OBJECT_H__
 
-#include "value.h"
-#include "name.h"
 #include "layout.h"
+#include "name.h"
+#include "value.h"
 
-#include <vector>
-#include <ostream>
 #include <cassert>
+#include <ostream>
+#include <vector>
 
 using namespace std;
 
@@ -15,11 +15,17 @@ struct Class;
 
 struct Object
 {
-    Object(Class *cls);
-    Object(Class *cls, const Layout *layout);
+    static void init();
+
+    static Class* ObjectClass;
+    static Layout* InitialLayout;
+
+    Object(Class *cls = ObjectClass, const Layout *layout = InitialLayout);
     virtual ~Object();
 
-    template <typename T> bool is() { return cls == &T::Class; }
+    void initClass(Class* cls, Object* base); // Only for use during initialization
+
+    template <typename T> bool is() { return class_ == T::ObjectClass; }
 
     template <typename T> T* as() {
         assert(is<T>());
@@ -31,14 +37,17 @@ struct Object
     bool getProp(Name name, Value& valueOut) const;
     void setProp(Name name, Value value);
 
-    const Layout* getLayout() const { return layout; }
+    const Layout* layout() const { return layout_; }
+
+  protected:
+    Object(Class *cls, Object *base, const Layout* layout = InitialLayout);
 
   private:
-    Class* cls;
-    const Layout* layout;
-    vector<Value> slots;
+    Class* class_;
+    const Layout* layout_;
+    vector<Value> slots_;
 
-    void initAttrs();
+    void initAttrs(Object* base);
 };
 
 inline ostream& operator<<(ostream& s, const Object* o) {

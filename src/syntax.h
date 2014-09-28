@@ -15,8 +15,15 @@ using namespace std;
     syntax(Integer)                                                           \
     syntax(Name)                                                              \
     syntax(Negate)                                                            \
+    syntax(BitLeftShift)                                                      \
+    syntax(BitRightShift)                                                     \
     syntax(Plus)                                                              \
     syntax(Minus)                                                             \
+    syntax(Multiply)                                                          \
+    syntax(Divide)                                                            \
+    syntax(IntDivide)                                                         \
+    syntax(Modulo)                                                            \
+    syntax(Power)                                                             \
     syntax(PropRef)                                                           \
     syntax(AssignName)                                                        \
     syntax(AssignProp)                                                        \
@@ -117,6 +124,15 @@ struct BinarySyntaxBase : public Syntax
 
 typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
 
+#define define_simple_binary_syntax(name, nameStr)                            \
+    struct Syntax##name : public BinarySyntax                                 \
+    {                                                                         \
+        Syntax##name(Syntax* l, Syntax* r) : BinarySyntax(l, r) {}            \
+        syntax_type(Syntax_##name)                                            \
+        syntax_name(nameStr)                                                  \
+        syntax_accept()                                                       \
+    }
+
 struct SyntaxBlock : public Syntax
 {
     syntax_type(Syntax_Block)
@@ -181,21 +197,15 @@ struct SyntaxNegate : public UnarySyntax
     syntax_accept()
 };
 
-struct SyntaxPlus : public BinarySyntax
-{
-    SyntaxPlus(Syntax* l, Syntax* r) : BinarySyntax(l, r) {}
-    syntax_type(Syntax_Plus)
-    syntax_name("+")
-    syntax_accept()
-};
-
-struct SyntaxMinus : public BinarySyntax
-{
-    SyntaxMinus(Syntax* l, Syntax* r) : BinarySyntax(l, r) {}
-    syntax_type(Syntax_Minus)
-    syntax_name("-")
-    syntax_accept()
-};
+define_simple_binary_syntax(BitLeftShift, "<<");
+define_simple_binary_syntax(BitRightShift, ">>");
+define_simple_binary_syntax(Plus, "+");
+define_simple_binary_syntax(Minus, "-");
+define_simple_binary_syntax(Multiply, "*");
+define_simple_binary_syntax(Divide, "/");
+define_simple_binary_syntax(IntDivide, "//");
+define_simple_binary_syntax(Modulo, "%");
+define_simple_binary_syntax(Power, "**");
 
 struct SyntaxPropRef : public BinarySyntaxBase<Syntax, SyntaxName>
 {

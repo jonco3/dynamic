@@ -8,16 +8,18 @@ struct IntegerClass;
 
 struct Integer : public Object
 {
-    static IntegerClass Class;
+    static void init();
+
+    static IntegerClass* ObjectClass;
 
     static Value get(int v);
 
     Integer(int v);
-    int toInt() { return value; }
+    int value() { return value_; }
     virtual void print(ostream& os) const;
 
   private:
-    int value;
+    int value_;
 };
 
 #endif

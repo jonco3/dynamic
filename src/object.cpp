@@ -6,47 +6,79 @@
 #include <cassert>
 #include <iostream>
 
-Object::Object(Class *cls)
-  : cls(cls), layout(new Layout(nullptr, "__class__"))
+Class* Object::ObjectClass = nullptr;
+Layout* Object::InitialLayout = nullptr;
+
+void Object::init()
 {
-    initAttrs();
+    InitialLayout = new Layout(nullptr, "__class__");
+    ObjectClass = new Class("Object");
 }
 
-Object::Object(Class *cls, const Layout *layout)
-  : cls(cls), layout(layout)
+Object::Object(Class *cls, Object* base, const Layout* layout)
+  : class_(cls), layout_(layout)
 {
-    // todo: check that layout is compatible with class, i.e. that the class'
-    // layout is an ancestor of the one specified
-    assert(layout->subsumes(cls->getLayout()));
-    initAttrs();
+    if (cls != Class::ObjectClass)
+        assert(base == cls);
+    assert(layout_);
+    assert(layout_->subsumes(InitialLayout));
+    if (Class::ObjectClass)
+        initAttrs(base);
+}
+
+Object::Object(Class *cls, const Layout* layout)
+  : class_(cls), layout_(layout)
+{
+    assert(layout_);
+    assert(layout_->subsumes(InitialLayout));
+    if (Class::ObjectClass)
+        initAttrs(cls);
 }
 
 Object::~Object()
 {
 }
 
-void Object::initAttrs()
+void Object::initClass(Class* cls, Object* base)
 {
-    slots.resize(layout->slotCount());
-    for (unsigned i = 0; i < layout->slotCount(); ++i)
-        slots[i] = UninitializedSlot;
-    setProp("__class__", cls);
+    assert(cls);
+    assert(!class_);
+    class_ = cls;
+    initAttrs(base);
+}
+
+void Object::initAttrs(Object* base)
+{
+    assert(class_);
+    assert(layout_);
+    slots_.resize(layout_->slotCount());
+    for (unsigned i = 0; i < layout_->slotCount(); ++i)
+        slots_[i] = UninitializedSlot;
+    setProp("__class__", base);
 }
 
 bool Object::getProp(Name name, Value& valueOut) const
 {
-    int slot = layout->lookupName(name);
+    assert(class_);
+    int slot = layout_->lookupName(name);
     if (slot == -1) {
-        // todo: check this is how python actually works
-        if (cls)
-            return cls->getProp(name, valueOut);
+        // lookup attribute in class hierarchy
+        const Object *o = this;
+        Value cv;
+        while (o->getProp("__class__", cv)) {
+            o = cv.toObject();
+            if (!o)
+                break;
+            if (o->getProp(name, valueOut))
+                return true;
+        }
 
         // todo: raise exception here
-        cerr << "Object has no attribute '" << name << "'" << endl;
+        cerr << "Object " << this << " has no attribute '" << name << "'" << endl;
         return false;
     }
-    assert(slot >= 0 && slot < slots.size());
-    valueOut = slots[slot];
+    assert(slot >= 0 && slot < slots_.size());
+    valueOut = slots_[slot];
     if (valueOut == UninitializedSlot) {
         // todo: raise exception here
         cerr << "Reference to uninitialized attribute '" << name << "'" << endl;
@@ -57,17 +89,30 @@ bool Object::getProp(Name name, Value& valueOut) const
 
 void Object::setProp(Name name, Value value)
 {
-    int slot = layout->lookupName(name);
+    int slot = layout_->lookupName(name);
     if (slot == -1) {
-        layout = layout->addName(name);
-        slot = slots.size();
-        assert(layout->lookupName(name) == slot);
-        slots.resize(slots.size() + 1);
+        layout_ = layout_->addName(name);
+        slot = slots_.size();
+        assert(layout_->lookupName(name) == slot);
+        slots_.resize(slots_.size() + 1);
     }
-    assert(slot >= 0 && slot < slots.size());
-    slots[slot] = value;
+    assert(slot >= 0 && slot < slots_.size());
+    slots_[slot] = value;
 }
 
 void Object::print(ostream& s) const {
-    s << "Object@" << reinterpret_cast<uintptr_t>(this);
+    s << class_->name() << "@" << reinterpret_cast<uintptr_t>(this);
+}
+
+#include "test.h"
+#include "integer.h"
+
+testcase(object)
+{
+    unique_ptr<Object> o(new Object);
+    Value v;
+
+    testFalse(o->getProp("foo", v));
+    o->setProp("foo", Integer::get(1));
+    testTrue(o->getProp("foo", v));
 }

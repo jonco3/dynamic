@@ -21,12 +21,19 @@ SyntaxParser::SyntaxParser() :
     spec.addWord(Token_Integer, [] (Token token) {
         return new SyntaxInteger(atoi(token.text.c_str()));
     });
+
     spec.addWord(Token_Identifier, [] (Token token) {
         return new SyntaxName(token.text.c_str());
     });
+
+    // Unary operations
+
     spec.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
         return new SyntaxNegate(r);
     });
+
+    // Displays
+
     spec.addPrefixHandler(Token_Bra, [] (ParserT& parser, const ExprSpec& spec,
                                          Token _) {
         Syntax* content = parser.expression(spec);
@@ -34,6 +41,9 @@ SyntaxParser::SyntaxParser() :
         // todo: parse tuples
         return content;
     });
+
+    // Assignments
+
     spec.addBinaryOp(Token_Assign, 10, Assoc_Right,
                      [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
         if (l->is<SyntaxName>())
@@ -43,18 +53,42 @@ SyntaxParser::SyntaxParser() :
         else
             throw ParseError("Illegal LHS for assignment");
     });
-    spec.addBinaryOp(Token_Plus, 20, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+
+    // Arithermetic binary operators
+
+    spec.addBinaryOp(Token_BitLeftShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxBitLeftShift(l, r);
+    });
+    spec.addBinaryOp(Token_BitRightShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxBitRightShift(l, r);
+    });
+
+    spec.addBinaryOp(Token_Plus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxPlus(l, r);
     });
-    spec.addBinaryOp(Token_Minus, 20, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    spec.addBinaryOp(Token_Minus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxMinus(l, r);
     });
-    spec.addBinaryOp(Token_Period, 90, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        if (!r->is<SyntaxName>())
-            throw ParseError("Bad property reference");
-        return new SyntaxPropRef(l, r->as<SyntaxName>());
+
+    spec.addBinaryOp(Token_Times, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxMultiply(l, r);
     });
-    spec.addInfixHandler(Token_Bra, 80, [] (ParserT& parser, const ExprSpec& spec,
+    spec.addBinaryOp(Token_Divide, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxDivide(l, r);
+    });
+    spec.addBinaryOp(Token_IntDivide, 180, Assoc_Left, [] (Token _, Syntax* l,
+                                                           Syntax* r) {
+        return new SyntaxIntDivide(l, r);
+    });
+    spec.addBinaryOp(Token_Modulo, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxModulo(l, r);
+    });
+
+    spec.addBinaryOp(Token_Power, 190, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxPower(l, r);
+    });
+
+    spec.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const ExprSpec& spec,
                                             Token _, Syntax* l) {
         vector<Syntax*> args;
         while (!parser.opt(Token_Ket)) {
@@ -64,6 +98,13 @@ SyntaxParser::SyntaxParser() :
         }
         return new SyntaxCall(l, args);
     });
+
+    spec.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        if (!r->is<SyntaxName>())
+            throw ParseError("Bad property reference");
+        return new SyntaxPropRef(l, r->as<SyntaxName>());
+    });
+
     spec.addPrefixHandler(Token_Return, [] (ParserT& parser, const ExprSpec& spec,
                                             Token _) {
         Syntax *expr;
@@ -93,8 +134,6 @@ SyntaxBlock* SyntaxParser::parseBlock()
 
 testcase(parser)
 {
-    Tokenizer tokenizer;
-
     Parser<int>::ExprSpec spec(TokenCount);
     spec.addWord(Token_Integer, [] (Token token) {
             return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
@@ -109,6 +148,7 @@ testcase(parser)
             return -r;
         });
 
+    Tokenizer tokenizer;
     Parser<int> parser(spec, tokenizer);
 
     parser.start("2 + 3 - 1");
@@ -127,6 +167,10 @@ testcase(parser)
     sp.start("1+2-3");
     unique_ptr<Syntax> expr(sp.parse());
     testEqual(repr(expr.get()), "1 + 2 - 3");
+
+    sp.start("4 ** 5");
+    expr.reset(sp.parse());
+    testEqual(repr(expr.get()), "4 ** 5");
 
     sp.start("f = 1 + 2");
     expr.reset(sp.parse());

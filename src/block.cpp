@@ -89,10 +89,22 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrGetLocal(s.id()));
     }
 
-    // todo: actual names
-    virtual void visit(const SyntaxNegate& s) { callUnaryMethod(s, "__negate__"); }
-    virtual void visit(const SyntaxPlus& s) { callBinaryMethod(s, "__plus__"); }
-    virtual void visit(const SyntaxMinus& s) { callBinaryMethod(s, "__minus__"); }
+    virtual void visit(const SyntaxNegate& s) { callUnaryMethod(s, "__neg__"); }
+
+#define define_vist_binary_as_method_call(syntax, method)                     \
+    virtual void visit(const syntax& s) { callBinaryMethod(s, method); }
+
+    define_vist_binary_as_method_call(SyntaxBitLeftShift, "__lshift__");
+    define_vist_binary_as_method_call(SyntaxBitRightShift, "__rshift__");
+    define_vist_binary_as_method_call(SyntaxPlus, "__add__");
+    define_vist_binary_as_method_call(SyntaxMinus, "__sub__");
+    define_vist_binary_as_method_call(SyntaxMultiply, "__mul__");
+    define_vist_binary_as_method_call(SyntaxDivide, "__div__");
+    define_vist_binary_as_method_call(SyntaxIntDivide, "__floordiv__");
+    define_vist_binary_as_method_call(SyntaxModulo, "__mod__");
+    define_vist_binary_as_method_call(SyntaxPower, "__pow__");
+
+#undef define_vist_binary_as_method_call
 
     virtual void visit(const SyntaxPropRef& s) {
         s.left()->accept(*this);
@@ -147,7 +159,7 @@ Block* Block::buildTopLevel(const Input& input)
 }
 
 Block::Block()
-  : layout(Frame::Class.getLayout())
+  : layout(Frame::ObjectClass->layout())
 {}
 
 Block::~Block()
@@ -207,7 +219,7 @@ testcase(block)
     bb.buildRaw("foo + 1");
     block = bb.takeBlock();
     testEqual(repr(block),
-              "GetLocal foo, Dup, GetProp __plus__, Swap, ConstInteger 1, Call 2");
+              "GetLocal foo, Dup, GetProp __add__, Swap, ConstInteger 1, Call 2");
     delete block;
 
     bb.build("1");

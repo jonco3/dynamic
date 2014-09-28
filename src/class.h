@@ -7,9 +7,16 @@
 
 struct Class : public Object
 {
-    static Class ClassInstance;
+    static void init();
 
-    Class() : Object(&ClassInstance) {}
+    static Class* ObjectClass;
+
+    Class(string name);
+
+    const string& name() const { return name_; }
+
+  private:
+    string name_;
 };
 
 #endif

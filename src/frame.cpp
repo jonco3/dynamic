@@ -2,10 +2,15 @@
 
 #include "interp.h"
 
-Class Frame::Class;
+Class* Frame::ObjectClass;
+
+void Frame::init()
+{
+    ObjectClass = new Class("Frame");
+}
 
 Frame::Frame(Interpreter& interp, Frame* prev, const Layout* layout) :
-  Object(&Class, layout),
+  Object(ObjectClass, layout),
   prev(prev),
   next(nullptr),
   retInstr(interp.nextInstr()),

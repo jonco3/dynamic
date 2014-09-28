@@ -32,7 +32,7 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 
 Frame* Interpreter::pushFrame(Function *function)
 {
-    Frame *newFrame = new Frame(*this, frame, function->getLayout());
+    Frame *newFrame = new Frame(*this, frame, function->layout());
     instrp = function->startInstr();
     frame = newFrame;
     return newFrame;
@@ -62,6 +62,10 @@ testcase(interp)
     block.reset(Block::buildTopLevel("return 2 + 2"));
     testTrue(interp.interpret(block.get(), v));
     testEqual(repr(v), "4");
+
+    block.reset(Block::buildTopLevel("return 2 ** 4 - 1"));
+    testTrue(interp.interpret(block.get(), v));
+    testEqual(repr(v), "15");
 
     block.reset(Block::buildTopLevel("foo = 2 + 3\nreturn foo"));
     testTrue(interp.interpret(block.get(), v));

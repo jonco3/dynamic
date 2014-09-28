@@ -15,10 +15,12 @@ struct Callable : public Object
     virtual unsigned requiredArgs() = 0;
 };
 
+// todo: natives can't throw
 struct Native : public Callable
 {
-    static Class Class;
-    Native() : Callable(&Class) {}
+    static void init();
+    static Class* ObjectClass;
+    Native() : Callable(ObjectClass) {}
     virtual bool call(Interpreter& interp) = 0;
 };
 
@@ -71,9 +73,10 @@ struct Native2 : public Native
 
 struct Function : public Callable
 {
-    static Class Class;
+    static void init();
+    static Class* ObjectClass;
 
-    Function() : Callable(&Class) {}
+    Function() : Callable(ObjectClass) {}
 
     virtual unsigned requiredArgs() { return argNames.size(); }
     Instr** startInstr() { return block->startInstr(); }

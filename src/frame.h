@@ -9,7 +9,8 @@ struct Interpreter;
 
 struct Frame : public Object
 {
-    static Class Class;
+    static Class* ObjectClass;
+    static void init();
 
     Frame(Interpreter& interp, Frame* prev, const Layout* layout);
     Instr** returnInstr() { return retInstr; }
