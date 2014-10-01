@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstdio>
 
 bool testExpectingException = false;
 
@@ -26,7 +27,7 @@ void runTests()
     runningTests = true;
     printf("Running tests\n");
     try {
-        for (auto i = testcases.begin(); i != testcases.end(); ++i) {
+        for (vector<TestCase>::iterator i = testcases.begin(); i != testcases.end(); ++i) {
             const TestCase& t = *i;
             printf("  %s\n", t.name);
             t.body();

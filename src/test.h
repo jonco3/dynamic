@@ -2,8 +2,10 @@
 #define __TEST_H__
 
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <functional>
+#include <stdexcept>
 
 using namespace std;
 

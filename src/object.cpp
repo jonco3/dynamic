@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <memory>
 
 Class* Object::ObjectClass = nullptr;
 Layout* Object::InitialLayout = nullptr;
@@ -77,7 +78,7 @@ bool Object::getProp(Name name, Value& valueOut) const
         cerr << "Object " << this << " has no attribute '" << name << "'" << endl;
         return false;
     }
-    assert(slot >= 0 && slot < slots_.size());
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     valueOut = slots_[slot];
     if (valueOut == UninitializedSlot) {
         // todo: raise exception here
@@ -96,7 +97,7 @@ void Object::setProp(Name name, Value value)
         assert(layout_->lookupName(name) == slot);
         slots_.resize(slots_.size() + 1);
     }
-    assert(slot >= 0 && slot < slots_.size());
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     slots_[slot] = value;
 }
 

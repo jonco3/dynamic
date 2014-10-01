@@ -5,6 +5,7 @@
 #include "interp.h"
 #include "block.h"
 
+#include <memory>
 #include <vector>
 
 using namespace std;
@@ -88,7 +89,7 @@ struct Function : public Callable
 
   private:
     vector<Name> argNames;
-    auto_ptr<Block> block;
+    unique_ptr<Block> block;
 };
 
 

@@ -2,9 +2,9 @@
 #LD = ccache clang
 CPP = ccache g++
 LD = ccache gcc
-FLAGS = -Wall -Werror --std=c++11 --stdlib=libc++
+FLAGS = -Wall -Werror --std=c++11 # --stdlib=libc++
 CPPFLAGS = $(FLAGS)  # -DUSE_READLINE -I/usr/include/gc
-LFLAGS = $(FLAGS) -lstdc++ # -lm -lgc -lreadline
+LDLAGS = $(FLAGS) -lstdc++ -lm # -lgc -lreadline
 DEBFLAGS = -g -DDEBUG
 RELFLAGS = -O3
 PROFFLAGS = $(RELFLAGS) -pg
@@ -33,13 +33,13 @@ PROFOBJS = $(subst src,build/prof,$(SRCS:.cpp=.o))
 PROFDEPS = $(subst src,build/prof,$(SRCS:.cpp=.d))
 
 dynamic: $(RELOBJS)
-	$(LD) $(RELOBJS) $(RELFLAGS) $(LFLAGS) -o dynamic
+	$(LD) $(RELOBJS) $(RELFLAGS) $(LDLAGS) -o dynamic
 
 dynamic-debug: $(DEBOBJS)
-	$(LD) $(DEBOBJS) $(DEBFLAGS) $(LFLAGS) -o dynamic-debug
+	$(LD) $(DEBOBJS) $(DEBFLAGS) $(LDLAGS) -o dynamic-debug
 
 dynamic-prof: $(PROFOBJS)
-	$(LD) $(PROFOBJS) $(PROFFLAGS) $(LFLAGS) -o dynamic-prof
+	$(LD) $(PROFOBJS) $(PROFFLAGS) $(LDLAGS) -o dynamic-prof
 
 .PHONY: all
 all: dynamic
