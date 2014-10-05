@@ -43,7 +43,7 @@ struct BlockBuilder : public SyntaxVisitor
     void build(const Input& input) {
         buildRaw(input);
         if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>()) {
-            block->append(new InstrConstInteger(0)); // todo: should be None
+            block->append(new InstrConstNone);
             block->append(new InstrReturn());
         }
     }
@@ -224,7 +224,7 @@ testcase(block)
 
     bb.build("1");
     block = bb.takeBlock();
-    testEqual(repr(block), "ConstInteger 1, ConstInteger 0, Return");
+    testEqual(repr(block), "ConstInteger 1, ConstNone, Return");
     delete block;
 
     bb.build("return 1");

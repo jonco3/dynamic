@@ -1,14 +1,15 @@
 #ifndef __INSTR_H__
 #define __INSTR_H__
 
-#include "value.h"
+#include "callable.h"
+#include "frame.h"
+#include "integer.h"
 #include "interp.h"
 #include "name.h"
-#include "integer.h"
-#include "frame.h"
+#include "none.h"
 #include "object.h"
-#include "callable.h"
 #include "repr.h"
+#include "value.h"
 
 #include <ostream>
 
@@ -17,6 +18,7 @@ using namespace std;
 #define for_each_instr(instr)                                                \
     instr(Dup)                                                               \
     instr(Swap)                                                              \
+    instr(ConstNone)                                                         \
     instr(ConstInteger)                                                      \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
@@ -102,6 +104,18 @@ struct InstrConstInteger : public Instr
 
   private:
     Value value;
+};
+
+struct InstrConstNone : public Instr
+{
+    instr_type(Instr_ConstNone);
+
+    virtual void print(ostream& s) const { s << "ConstNone"; }
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        interp.pushStack(None);
+        return true;
+    }
 };
 
 struct InstrGetLocal : public Instr
