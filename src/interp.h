@@ -42,6 +42,8 @@ struct Interpreter
         swap(stack[stack.size() - 1], stack[stack.size() - 2]);
     }
 
+    void branchTo(Instr** i);
+
     Instr** nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 

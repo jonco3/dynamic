@@ -15,6 +15,8 @@ using namespace std;
     syntax(Integer)                                                           \
     syntax(Name)                                                              \
     syntax(Negate)                                                            \
+    syntax(Or)                                                                \
+    syntax(And)                                                               \
     syntax(Not)                                                               \
     syntax(In)                                                                \
     syntax(Is)                                                                \
@@ -217,6 +219,8 @@ struct SyntaxNot : public UnarySyntax
     syntax_accept()
 };
 
+define_simple_binary_syntax(Or, "or");
+define_simple_binary_syntax(And, "and");
 define_simple_binary_syntax(In, "in");
 define_simple_binary_syntax(Is, "is");
 define_simple_binary_syntax(LT, "<");

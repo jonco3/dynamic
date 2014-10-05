@@ -1,7 +1,11 @@
 #include "object.h"
 
+#include "bool.h"
 #include "class.h"
+#include "integer.h"
 #include "none.h"
+
+#include "value-inl.h"
 
 #include <cassert>
 #include <iostream>
@@ -101,8 +105,22 @@ void Object::setProp(Name name, Value value)
     slots_[slot] = value;
 }
 
-void Object::print(ostream& s) const {
+void Object::print(ostream& s) const
+{
     s << class_->name() << "@" << reinterpret_cast<uintptr_t>(this);
+}
+
+bool Object::isTrue() const
+{
+    // the following values are interpreted as false: False, None, numeric zero
+    // of all types, and empty strings and containers (including strings,
+    // tuples, lists, dictionaries, sets and frozensets).
+    // https://docs.python.org/2/reference/expressions.html#boolean-operations
+
+    return
+        this != None &&
+        this != Boolean::False &&
+        this != Integer::Zero;
 }
 
 #include "test.h"
@@ -116,4 +134,8 @@ testcase(object)
     testFalse(o->getProp("foo", v));
     o->setProp("foo", Integer::get(1));
     testTrue(o->getProp("foo", v));
+
+    testFalse(None->isTrue());
+    testFalse(Integer::get(0).isTrue());
+    testTrue(Integer::get(1).isTrue());
 }

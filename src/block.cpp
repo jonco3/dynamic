@@ -85,6 +85,22 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrGetLocal(s.id()));
     }
 
+    virtual void visit(const SyntaxOr& s) {
+        s.left()->accept(*this);
+        InstrOrBranch* branch = new InstrOrBranch;
+        block->append(branch);
+        s.right()->accept(*this);
+        branch->setDest(block->nextInstr());
+    }
+
+    virtual void visit(const SyntaxAnd& s) {
+        s.left()->accept(*this);
+        InstrAndBranch* branch = new InstrAndBranch;
+        block->append(branch);
+        s.right()->accept(*this);
+        branch->setDest(block->nextInstr());
+    }
+
     virtual void visit(const SyntaxNot& s) {
         s.right()->accept(*this);
         block->append(new InstrNot);

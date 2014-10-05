@@ -10,7 +10,8 @@
 #include "none.h"
 #include "object.h"
 #include "repr.h"
-#include "value.h"
+
+#include "value-inl.h"
 
 #include <ostream>
 
@@ -28,7 +29,9 @@ using namespace std;
     instr(Return)                                                            \
     instr(In)                                                                \
     instr(Is)                                                                \
-    instr(Not)
+    instr(Not)                                                               \
+    instr(OrBranch)                                                          \
+    instr(AndBranch)
 
 enum InstrType
 {
@@ -285,11 +288,52 @@ struct InstrNot : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object* obj = interp.popStack().toObject();
-        bool result =
-            obj != None &&
-            // obj != False &&
-            obj != Integer::Zero;
-        interp.pushStack(Boolean::get(result));
+        interp.pushStack(Boolean::get(!obj->isTrue()));
+        return true;
+    }
+};
+
+struct InstrBranchBase : public Instr
+{
+    InstrBranchBase() : dest_(nullptr) {}
+
+    void setDest(Instr** i) {
+        assert(!dest_);
+        dest_ = i;
+    }
+
+  protected:
+    Instr** dest_;
+};
+
+struct InstrOrBranch : public InstrBranchBase
+{
+    instr_type(Instr_OrBranch);
+    instr_print("OrBranch");
+
+    // The expression x or y first evaluates x; if x is true, its value is
+    // returned; otherwise, y is evaluated and the resulting value is returned.
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Object *x = interp.peekStack(0).toObject();
+        if (x->isTrue())
+            interp.branchTo(dest_);
+        return true;
+    }
+};
+
+struct InstrAndBranch : public InstrBranchBase
+{
+    instr_type(Instr_AndBranch);
+    instr_print("AndBranch");
+
+    // The expression x and y first evaluates x; if x is false, its value is
+    // returned; otherwise, y is evaluated and the resulting value is returned.
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Object *x = interp.peekStack(0).toObject();
+        if (!x->isTrue())
+            interp.branchTo(dest_);
         return true;
     }
 };

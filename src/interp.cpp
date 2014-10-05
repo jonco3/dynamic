@@ -11,7 +11,7 @@
 
 bool Interpreter::interpret(Block* block, Value& valueOut)
 {
-    frame = new Frame(*this, nullptr, block->getLayout());
+    frame = new Frame(*this, nullptr, block);
     instrp = block->startInstr();
 
     while (instrp) {
@@ -32,8 +32,9 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 
 Frame* Interpreter::pushFrame(Function *function)
 {
-    Frame *newFrame = new Frame(*this, frame, function->layout());
-    instrp = function->startInstr();
+    Block* block = function->block();
+    Frame *newFrame = new Frame(*this, frame, block);
+    instrp = block->startInstr();
     frame = newFrame;
     return newFrame;
 }
@@ -46,6 +47,12 @@ void Interpreter::popFrame()
     Frame* oldFrame = frame;
     frame = oldFrame->popFrame();
     delete oldFrame;
+}
+
+void Interpreter::branchTo(Instr** i)
+{
+    assert(frame->block()->contains(i));
+    instrp = i;
 }
 
 static void testInterp(const string& input, const string& expected)
@@ -80,4 +87,8 @@ testcase(interp)
     testInterp("return 2 == 3", "False");
     testInterp("return 3 == 3", "True");
     testInterp("return 3 == 2", "False");
+    testInterp("return 1 or 2", "1");
+    testInterp("return 0 or 2", "2");
+    testInterp("return 1 and 2", "2");
+    testInterp("return 0 and 2", "0");
 }

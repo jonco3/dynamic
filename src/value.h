@@ -19,6 +19,8 @@ struct Value
     bool operator==(const Value& other) const { return objectp == other.objectp; }
     bool operator!=(const Value& other) const { return !(*this == other); }
 
+    inline bool isTrue() const;
+
   private:
     union
     {

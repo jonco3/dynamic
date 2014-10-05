@@ -77,19 +77,20 @@ struct Function : public Callable
     static void init();
     static Class* ObjectClass;
 
-    Function() : Callable(ObjectClass) {}
+    Function(Block* block) : Callable(ObjectClass), block_(block) {}
 
     virtual unsigned requiredArgs() { return argNames.size(); }
-    Instr** startInstr() { return block->startInstr(); }
 
     Name argName(unsigned i) {
         assert(i < argNames.size());
         return argNames[i];
     }
 
+    Block* block() const { return block_.get(); }
+
   private:
     vector<Name> argNames;
-    unique_ptr<Block> block;
+    unique_ptr<Block> block_;
 };
 
 

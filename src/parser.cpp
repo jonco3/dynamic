@@ -61,6 +61,14 @@ SyntaxParser::SyntaxParser() :
 
     // Boolean operators
 
+    spec.addBinaryOp(Token_Or, 100, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxOr(l, r);
+    });
+
+    spec.addBinaryOp(Token_And, 110, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxAnd(l, r);
+    });
+
     // Comparison operators
 
     spec.addBinaryOp(Token_In, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {

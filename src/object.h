@@ -39,6 +39,8 @@ struct Object
 
     const Layout* layout() const { return layout_; }
 
+    bool isTrue() const;
+
   protected:
     Object(Class *cls, Object *base, const Layout* layout = InitialLayout);
 

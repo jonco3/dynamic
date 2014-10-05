@@ -21,13 +21,24 @@ struct Block
     Instr** startInstr() { return &instrs[0]; }
     unsigned instrCount() { return instrs.size(); }
     Instr* instr(unsigned i) { return instrs.at(i); }
-    const Layout* getLayout() { return layout; }
+    const Layout* getLayout() const { return layout; }
 
-    void append(Instr* instr) { instrs.push_back(instr); }
+    void append(Instr* instr) {
+        assert(instr);
+        instrs.push_back(instr);
+    }
 
     Instr* lastInstr() {
         assert(!instrs.empty());
         return instrs.back();
+    }
+
+    Instr** nextInstr() {
+        return &instrs.back() + 1;
+    }
+
+    bool contains(Instr** i) const {
+        return i >= &instrs.front() && i <= &instrs.back();
     }
 
   private:
