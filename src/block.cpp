@@ -61,17 +61,13 @@ struct BlockBuilder : public SyntaxVisitor
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
         s.right()->accept(*this);
-        block->append(new InstrDup());
-        block->append(new InstrGetProp(name));
-        block->append(new InstrSwap());
+        block->append(new InstrGetMethod(name));
         block->append(new InstrCall(1));
     }
 
     void callBinaryMethod(const BinarySyntax& s, string name) {
         s.left()->accept(*this);
-        block->append(new InstrDup());
-        block->append(new InstrGetProp(name));
-        block->append(new InstrSwap());
+        block->append(new InstrGetMethod(name));
         s.right()->accept(*this);
         block->append(new InstrCall(2));
     }
@@ -129,11 +125,7 @@ struct BlockBuilder : public SyntaxVisitor
         if (methodCall) {
             const SyntaxPropRef* pr = s.left()->as<SyntaxPropRef>();
             pr->left()->accept(*this);
-            // todo: replace this dup / getprop / swap sequence with a
-            // prepMethod instruction
-            block->append(new InstrDup());
-            block->append(new InstrGetProp(pr->right()->as<SyntaxName>()->id()));
-            block->append(new InstrSwap());
+            block->append(new InstrGetMethod(pr->right()->as<SyntaxName>()->id()));
         } else {
             s.left()->accept(*this);
         }
@@ -203,7 +195,7 @@ testcase(block)
 
     bb.buildRaw("foo.bar(baz)");
     block = bb.takeBlock();
-    testEqual(repr(block), "GetLocal foo, Dup, GetProp bar, Swap, GetLocal baz, Call 2");
+    testEqual(repr(block), "GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
     delete block;
 
     bb.buildRaw("foo = 1");
@@ -219,7 +211,7 @@ testcase(block)
     bb.buildRaw("foo + 1");
     block = bb.takeBlock();
     testEqual(repr(block),
-              "GetLocal foo, Dup, GetProp __add__, Swap, ConstInteger 1, Call 2");
+              "GetLocal foo, GetMethod __add__, ConstInteger 1, Call 2");
     delete block;
 
     bb.build("1");

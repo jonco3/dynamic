@@ -16,14 +16,13 @@
 using namespace std;
 
 #define for_each_instr(instr)                                                \
-    instr(Dup)                                                               \
-    instr(Swap)                                                              \
     instr(ConstNone)                                                         \
     instr(ConstInteger)                                                      \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
     instr(GetProp)                                                           \
     instr(SetProp)                                                           \
+    instr(GetMethod)                                                         \
     instr(Call)                                                              \
     instr(Return)
 
@@ -58,34 +57,6 @@ inline ostream& operator<<(ostream& s, const Instr* i) {
 #define instr_type(it)                                                       \
     virtual InstrType type() const { return Type; }                          \
     static const InstrType Type = it
-
-struct InstrDup : public Instr
-{
-    InstrDup() {}
-
-    instr_type(Instr_Dup);
-
-    virtual void print(ostream& s) const { s << "Dup"; }
-
-    virtual bool execute(Interpreter& interp, Frame* frame) {
-        interp.pushStack(interp.peekStack(0));
-        return true;
-    }
-};
-
-struct InstrSwap : public Instr
-{
-    InstrSwap() {}
-
-    instr_type(Instr_Swap);
-
-    virtual void print(ostream& s) const { s << "Swap"; }
-
-    virtual bool execute(Interpreter& interp, Frame* frame) {
-        interp.swapStack();
-        return true;
-    }
-};
 
 struct InstrConstInteger : public Instr
 {
@@ -186,6 +157,28 @@ struct InstrSetProp : public Instr
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value = interp.popStack();
         interp.popStack().toObject()->setProp(name, value);
+        return true;
+    }
+
+  private:
+    Name name;
+};
+
+struct InstrGetMethod : public Instr
+{
+    InstrGetMethod(Name name) : name(name) {}
+
+    instr_type(Instr_GetMethod);
+
+    virtual void print(ostream& s) const { s << "GetMethod " << name; }
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Object* obj = interp.popStack().toObject();
+        Value method;
+        if (!obj->getProp(name, method))
+            return false;
+        interp.pushStack(method);
+        interp.pushStack(obj);
         return true;
     }
 
