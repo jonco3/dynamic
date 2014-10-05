@@ -106,7 +106,9 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrNot);
     }
 
-    virtual void visit(const SyntaxNegate& s) { callUnaryMethod(s, "__neg__"); }
+    virtual void visit(const SyntaxPos& s) { callUnaryMethod(s, "__pos__"); }
+    virtual void visit(const SyntaxNeg& s) { callUnaryMethod(s, "__neg__"); }
+    virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
 
 #define define_vist_binary_as_method_call(syntax, method)                     \
     virtual void visit(const syntax& s) { callBinaryMethod(s, method); }
@@ -244,4 +246,6 @@ testcase(block)
     testBuild("return 1", "ConstInteger 1, Return");
     testBuild("return foo in bar", "GetLocal foo, GetLocal bar, In, Return");
     testBuild("return foo is not bar", "GetLocal foo, GetLocal bar, Is, Not, Return");
+    testBuild("return 2 - - 1",
+              "ConstInteger 2, GetMethod __sub__, ConstInteger 1, GetMethod __neg__, Call 1, Call 2, Return");
 }

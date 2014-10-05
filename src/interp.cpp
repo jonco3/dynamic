@@ -17,7 +17,11 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
     while (instrp) {
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
-        cerr << "execute " << repr(instr) << endl;
+        cerr << "stack:";
+        for (auto i = stack.begin(); i != stack.end(); ++i)
+            cerr << " " << *i;
+        cerr << endl;
+        cerr << "  execute " << repr(instr) << endl;
 #endif
         if (!instr->execute(*this, frame)) {
             cerr << "Error" << endl;
@@ -91,4 +95,8 @@ testcase(interp)
     testInterp("return 0 or 2", "2");
     testInterp("return 1 and 2", "2");
     testInterp("return 0 and 2", "0");
+    testInterp("return -2", "-2");
+    testInterp("return --2", "2");
+    testInterp("return -2 + 1", "-1");
+    testInterp("return 2 - -1", "3");
 }

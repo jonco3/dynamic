@@ -30,11 +30,14 @@ SyntaxParser::SyntaxParser() :
 
     // todo: check the precedence of these works as expected
 
-    spec.addUnaryOp(Token_Not, [] (Token _, Syntax* r) {
-        return new SyntaxNot(r);
+    spec.addUnaryOp(Token_Plus, [] (Token _, Syntax* r) {
+        return new SyntaxPos(r);
     });
     spec.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
-        return new SyntaxNegate(r);
+        return new SyntaxNeg(r);
+    });
+    spec.addUnaryOp(Token_Not, [] (Token _, Syntax* r) {
+        return new SyntaxInvert(r);
     });
 
     // Displays
@@ -58,6 +61,14 @@ SyntaxParser::SyntaxParser() :
         else
             throw ParseError("Illegal LHS for assignment");
     });
+
+    // todo: Conditional expression
+
+    /*
+    spec.addBinaryOp(Token_If, 90, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxCondExpr(l, r);
+    });
+    */
 
     // Boolean operators
 

@@ -47,6 +47,7 @@ struct Native1 : public Native
 
     virtual bool call(Interpreter& interp) {
         Value arg = interp.popStack();
+        interp.popStack();
         interp.pushStack(func(arg));
         return true;
     }
@@ -64,6 +65,7 @@ struct Native2 : public Native
     virtual bool call(Interpreter& interp) {
         Value arg2 = interp.popStack();
         Value arg1 = interp.popStack();
+        interp.popStack();
         interp.pushStack(func(arg1, arg2));
         return true;
     }

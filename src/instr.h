@@ -218,8 +218,9 @@ struct InstrCall : public Instr
                 throw runtime_error("Not enough arguments");
             // todo: argument checking etc.
 
+            // todo: set args and pop function before pushing frame
             Frame *callFrame = interp.pushFrame(function);
-            for (unsigned i = args - 1; i < args; --i)
+            for (int i = args - 1; i >= 0; --i)
                 callFrame->setProp(function->argName(i), interp.popStack());
             interp.popStack();
 

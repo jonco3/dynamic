@@ -150,7 +150,7 @@ void Parser<T>::ExprSpec::addUnaryOp(TokenType type, UnaryOpHandler handler)
 {
     addPrefixHandler(type,
                      [=] (Parser<T>& parser, ExprSpec spec, Token token) {
-                         T rightValue = parser.expression(spec, 100);
+                         T rightValue = parser.expression(spec, 500);
                          return handler(token, rightValue);
                      });
 }

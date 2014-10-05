@@ -8,6 +8,18 @@
 
 struct IntegerClass : public Class
 {
+#define define_unary_int_operator(name, op)                                   \
+    static Value name(Value arg) {                                            \
+        int a = arg.toObject()->as<Integer>()->value();                       \
+        return Integer::get(op a);                                            \
+    }
+
+    define_unary_int_operator(int_pos, +);
+    define_unary_int_operator(int_neg, -);
+    define_unary_int_operator(int_invert, ~);
+
+#undef define_unary_int_operator
+
 #define define_binary_int_operator(name, op)                                  \
     static Value name(Value arg1, Value arg2) {                               \
         int a = arg1.toObject()->as<Integer>()->value();                      \
@@ -52,6 +64,9 @@ struct IntegerClass : public Class
     }
 
     IntegerClass() : Class("int") {
+        setProp("__pos__",      new Native1(int_pos));
+        setProp("__neg__",      new Native1(int_neg));
+        setProp("__invert__",   new Native1(int_invert));
         setProp("__lt__",       new Native2(int_le));
         setProp("__le__",       new Native2(int_le));
         setProp("__gt__",       new Native2(int_gt));

@@ -37,9 +37,9 @@ inline void testFailure(const char* testStr,
 {
     using namespace std;
     cerr << file << ":" << line << ": test failed: ";
-    cerr << actualStr << " " << testStr << " " << expectedStr;
-    cerr << " but got " << actual << " " << testStr << " " << expected;
-    cerr << " at " << file << " line " << line << endl;
+    cerr << actualStr << " " << testStr << " " << expectedStr << endl;
+    cerr << "  got: " << actual << " " << testStr << " " << expected << endl;
+    cerr << "  at: " << file << " line " << line << endl;
     abortTests();
 }
 

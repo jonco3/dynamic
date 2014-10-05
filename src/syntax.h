@@ -14,7 +14,9 @@ using namespace std;
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
     syntax(Name)                                                              \
-    syntax(Negate)                                                            \
+    syntax(Pos)                                                               \
+    syntax(Neg)                                                               \
+    syntax(Invert)                                                            \
     syntax(Or)                                                                \
     syntax(And)                                                               \
     syntax(Not)                                                               \
@@ -147,6 +149,15 @@ typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
         syntax_accept()                                                       \
     }
 
+#define define_simple_unary_syntax(name, nameStr)                             \
+    struct Syntax##name : public UnarySyntax                                  \
+    {                                                                         \
+        Syntax##name(Syntax* r) : UnarySyntax(r) {}                           \
+        syntax_type(Syntax_##name)                                            \
+        syntax_name(nameStr)                                                  \
+        syntax_accept()                                                       \
+    }
+
 struct SyntaxBlock : public Syntax
 {
     syntax_type(Syntax_Block)
@@ -203,21 +214,10 @@ struct SyntaxName : public Syntax
     Name id_;
 };
 
-struct SyntaxNegate : public UnarySyntax
-{
-    SyntaxNegate(Syntax* right) : UnarySyntax(right) {}
-    syntax_type(Syntax_Negate)
-    syntax_name("-")
-    syntax_accept()
-};
-
-struct SyntaxNot : public UnarySyntax
-{
-    SyntaxNot(Syntax* right) : UnarySyntax(right) {}
-    syntax_type(Syntax_Not)
-    syntax_name("not")
-    syntax_accept()
-};
+define_simple_unary_syntax(Neg, "-");
+define_simple_unary_syntax(Pos, "+");
+define_simple_unary_syntax(Invert, "~");
+define_simple_unary_syntax(Not, "not");
 
 define_simple_binary_syntax(Or, "or");
 define_simple_binary_syntax(And, "and");
