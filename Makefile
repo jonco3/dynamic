@@ -20,6 +20,7 @@ SRCS = \
 	src/object.cpp \
 	src/class.cpp \
 	src/none.cpp \
+	src/bool.cpp \
 	src/integer.cpp \
 	src/frame.cpp \
 	src/callable.cpp \

@@ -3,6 +3,7 @@
 
 #include "input.h"
 
+#include <list>
 #include <ostream>
 #include <stdexcept>
 #include <unordered_map>
@@ -39,10 +40,12 @@ using namespace std;
     token(Class)                                                              \
     token(Exec)                                                               \
     token(In)                                                                 \
+    token(NotIn)                                                              \
     token(Raise)                                                              \
     token(Continue)                                                           \
     token(Finally)                                                            \
     token(Is)                                                                 \
+    token(IsNot)                                                              \
     token(Return)                                                             \
     token(Def)                                                                \
     token(For)                                                                \
@@ -139,7 +142,7 @@ private:
     const char* source;
     TokenPos pos;
     vector<unsigned> indentStack;
-    unsigned dedentCount;
+    list<Token> tokenQueue;
     unordered_map<string, TokenType> keywords;
     unordered_map<string, TokenType> operators;
 

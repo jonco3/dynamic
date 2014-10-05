@@ -110,8 +110,7 @@ TokenError::TokenError(string message, const TokenPos& pos) :
 }
 
 Tokenizer::Tokenizer() :
-  source(nullptr),
-  dedentCount(0)
+  source(nullptr)
 {
     indentStack.push_back(0);
 
@@ -145,7 +144,7 @@ void Tokenizer::start(const Input& input)
     pos.file = input.file;
     pos.line = 1;
     pos.column = 0;
-    dedentCount = 0;
+    tokenQueue.clear();
 }
 
 char Tokenizer::peekChar()
@@ -228,13 +227,19 @@ unsigned Tokenizer::skipIndentation()
     return pos.column;
 }
 
+template <typename T>
+T popFront(list<T>& list)
+{
+    T result = list.front();
+    list.pop_front();
+    return result;
+}
+
 Token Tokenizer::nextToken()
 {
-    // Return any queued dedent tokens
-    if (dedentCount) {
-        --dedentCount;
-        return {Token_Dedent, string(), pos};
-    }
+    // Return any queued tokens
+    if (!tokenQueue.empty())
+        return popFront(tokenQueue);
 
     // Whitespace
     TokenPos startPos = pos;
@@ -247,12 +252,11 @@ Token Tokenizer::nextToken()
         } else if (indent < indentStack.back()) {
             while (indent < indentStack.back()) {
                 indentStack.pop_back();
-                ++dedentCount;
+                tokenQueue.push_back({Token_Dedent, string(), pos});
             }
             if (indent != indentStack.back())
                 throw TokenError("Bad indentation", startPos);
-            --dedentCount;
-            return {Token_Dedent, string(), pos};
+            return popFront(tokenQueue);
         }
     } else {
         skipWhitespace();
@@ -316,8 +320,22 @@ Token Tokenizer::nextToken()
 
         string s(startText, length);
         auto k = keywords.find(s);
-        if (k != keywords.end())
-            return {(*k).second, s, startPos};
+        if (k != keywords.end()) {
+            TokenType type = (*k).second;
+
+            // Special cases to make "not in" and "is not" single tokens
+            if (type == Token_Not || type == Token_Is) {
+                Token next = nextToken();
+                if (type == Token_Not and next.type == Token_In)
+                    type = Token_NotIn;
+                else if (type == Token_Is and next.type == Token_Not)
+                    type = Token_IsNot;
+                else
+                    tokenQueue.push_front(next);
+            }
+
+            return {type, s, startPos};
+        }
 
         return {Token_Identifier, s, startPos};
     }
@@ -473,4 +491,12 @@ testcase(tokenizer)
 
     tz.start("\"gnirts\"");
     testEqual(tz.nextToken().type, Token_String);
+
+    tz.start("is is not not not in in");
+    testEqual(tz.nextToken().type, Token_Is);
+    testEqual(tz.nextToken().type, Token_IsNot);
+    testEqual(tz.nextToken().type, Token_Not);
+    testEqual(tz.nextToken().type, Token_NotIn);
+    testEqual(tz.nextToken().type, Token_In);
+    testEqual(tz.nextToken().type, Token_EOF);
 }

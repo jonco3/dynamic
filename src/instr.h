@@ -1,6 +1,7 @@
 #ifndef __INSTR_H__
 #define __INSTR_H__
 
+#include "bool.h"
 #include "callable.h"
 #include "frame.h"
 #include "integer.h"
@@ -24,7 +25,10 @@ using namespace std;
     instr(SetProp)                                                           \
     instr(GetMethod)                                                         \
     instr(Call)                                                              \
-    instr(Return)
+    instr(Return)                                                            \
+    instr(In)                                                                \
+    instr(Is)                                                                \
+    instr(Not)
 
 enum InstrType
 {
@@ -57,6 +61,9 @@ inline ostream& operator<<(ostream& s, const Instr* i) {
 #define instr_type(it)                                                       \
     virtual InstrType type() const { return Type; }                          \
     static const InstrType Type = it
+
+#define instr_print(name)                                                    \
+    virtual void print(ostream& s) const { s << name; }
 
 struct InstrConstInteger : public Instr
 {
@@ -235,6 +242,54 @@ struct InstrReturn : public Instr
         Value value = interp.popStack();
         interp.popFrame();
         interp.pushStack(value);
+        return true;
+    }
+};
+
+struct InstrIn : public Instr
+{
+    instr_type(Instr_In);
+    instr_print("In");
+
+    // todo: implement this
+    // https://docs.python.org/2/reference/expressions.html#membership-test-details
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        cerr << "not implemented" << endl;
+        return false;
+    }
+};
+
+struct InstrIs : public Instr
+{
+    instr_type(Instr_Is);
+    instr_print("Is");
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Value b = interp.popStack();
+        Value a = interp.popStack();
+        bool result = a.toObject() == b.toObject();
+        interp.pushStack(Boolean::get(result));
+        return true;
+    }
+};
+
+struct InstrNot : public Instr
+{
+    instr_type(Instr_Not);
+    instr_print("Not");
+
+    // the following values are interpreted as false: False, None, numeric zero
+    // of all types, and empty strings and containers (including strings,
+    // tuples, lists, dictionaries, sets and frozensets).
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Object* obj = interp.popStack().toObject();
+        bool result =
+            obj != None &&
+            // obj != False &&
+            obj != Integer::Zero;
+        interp.pushStack(Boolean::get(result));
         return true;
     }
 };

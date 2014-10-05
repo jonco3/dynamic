@@ -1,4 +1,6 @@
 #include "integer.h"
+
+#include "bool.h"
 #include "callable.h"
 
 #include <cmath>
@@ -6,24 +8,42 @@
 
 struct IntegerClass : public Class
 {
-#define define_int_method(name, op)                                           \
+#define define_binary_int_operator(name, op)                                  \
     static Value name(Value arg1, Value arg2) {                               \
         int a = arg1.toObject()->as<Integer>()->value();                      \
         int b = arg2.toObject()->as<Integer>()->value();                      \
         return Integer::get(a op b);                                          \
     }
 
-    define_int_method(int_or, |);
-    define_int_method(int_xor, ^);
-    define_int_method(int_and, &);
-    define_int_method(int_lshift, <<);
-    define_int_method(int_rshift, >>);
-    define_int_method(int_add, +);
-    define_int_method(int_sub, -);
-    define_int_method(int_mul, *);
-    define_int_method(int_div, /);
-    define_int_method(int_floordiv, /);
-    define_int_method(int_mod, %);
+    define_binary_int_operator(int_or, |);
+    define_binary_int_operator(int_xor, ^);
+    define_binary_int_operator(int_and, &);
+    define_binary_int_operator(int_lshift, <<);
+    define_binary_int_operator(int_rshift, >>);
+    define_binary_int_operator(int_add, +);
+    define_binary_int_operator(int_sub, -);
+    define_binary_int_operator(int_mul, *);
+    define_binary_int_operator(int_div, /);
+    define_binary_int_operator(int_floordiv, /);
+    define_binary_int_operator(int_mod, %);
+
+#undef define_binary_int_operator
+
+#define define_binary_bool_operator(name, op)                                 \
+    static Value name(Value arg1, Value arg2) {                               \
+        int a = arg1.toObject()->as<Integer>()->value();                      \
+        int b = arg2.toObject()->as<Integer>()->value();                      \
+        return Boolean::get(a op b);                                          \
+    }
+
+    define_binary_bool_operator(int_lt, <);
+    define_binary_bool_operator(int_le, <=);
+    define_binary_bool_operator(int_gt, >);
+    define_binary_bool_operator(int_ge, >=);
+    define_binary_bool_operator(int_eq, ==);
+    define_binary_bool_operator(int_ne, !=);
+
+#undef define_binary_bool_operator
 
     static Value int_pow(Value arg1, Value arg2) {
         int a = arg1.toObject()->as<Integer>()->value();
@@ -31,7 +51,13 @@ struct IntegerClass : public Class
         return Integer::get(std::pow(a, b));
     }
 
-    IntegerClass() : Class("Integer") {
+    IntegerClass() : Class("int") {
+        setProp("__lt__",       new Native2(int_le));
+        setProp("__le__",       new Native2(int_le));
+        setProp("__gt__",       new Native2(int_gt));
+        setProp("__ge__",       new Native2(int_ge));
+        setProp("__eq__",       new Native2(int_eq));
+        setProp("__ne__",       new Native2(int_ne));
         setProp("__or__",       new Native2(int_or));
         setProp("__xor__",      new Native2(int_xor));
         setProp("__and__",      new Native2(int_and));
@@ -47,11 +73,13 @@ struct IntegerClass : public Class
     }
 };
 
-IntegerClass* Integer::ObjectClass;
+IntegerClass* Integer::ObjectClass = nullptr;
+Integer* Integer::Zero = nullptr;
 
 void Integer::init()
 {
     ObjectClass = new IntegerClass;
+    Integer::Zero = new Integer(0);
 }
 
 Integer::Integer(int v)
@@ -60,6 +88,8 @@ Integer::Integer(int v)
 
 Value Integer::get(int v)
 {
+    if (v == 0)
+        return Zero;
     return new Integer(v);
 }
 

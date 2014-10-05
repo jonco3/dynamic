@@ -12,6 +12,8 @@ struct Integer : public Object
 
     static IntegerClass* ObjectClass;
 
+    static Integer* Zero;
+
     static Value get(int v);
 
     Integer(int v);

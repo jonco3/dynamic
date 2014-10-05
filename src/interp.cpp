@@ -74,4 +74,10 @@ testcase(interp)
     testInterp("return 1 | 8", "9");
     testInterp("return 3 ^ 5", "6");
     testInterp("return 3 & 5", "1");
+    testInterp("return 2 > 3", "False");
+    testInterp("return 3 > 3", "False");
+    testInterp("return 3 > 2", "True");
+    testInterp("return 2 == 3", "False");
+    testInterp("return 3 == 3", "True");
+    testInterp("return 3 == 2", "False");
 }

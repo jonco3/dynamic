@@ -85,11 +85,22 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrGetLocal(s.id()));
     }
 
+    virtual void visit(const SyntaxNot& s) {
+        s.right()->accept(*this);
+        block->append(new InstrNot);
+    }
+
     virtual void visit(const SyntaxNegate& s) { callUnaryMethod(s, "__neg__"); }
 
 #define define_vist_binary_as_method_call(syntax, method)                     \
     virtual void visit(const syntax& s) { callBinaryMethod(s, method); }
 
+    define_vist_binary_as_method_call(SyntaxLT, "__lt__");
+    define_vist_binary_as_method_call(SyntaxLE, "__le__");
+    define_vist_binary_as_method_call(SyntaxGT, "__gt__");
+    define_vist_binary_as_method_call(SyntaxGE, "__ge__");
+    define_vist_binary_as_method_call(SyntaxEQ, "__eq__");
+    define_vist_binary_as_method_call(SyntaxNE, "__ne__");
     define_vist_binary_as_method_call(SyntaxBitOr, "__or__");
     define_vist_binary_as_method_call(SyntaxBitXor, "__xor__");
     define_vist_binary_as_method_call(SyntaxBitAnd, "__and__");
@@ -104,6 +115,18 @@ struct BlockBuilder : public SyntaxVisitor
     define_vist_binary_as_method_call(SyntaxPower, "__pow__");
 
 #undef define_vist_binary_as_method_call
+
+#define define_vist_binary_instr(syntax, instr)                               \
+    virtual void visit(const syntax& s) {                                     \
+        s.left()->accept(*this);                                              \
+        s.right()->accept(*this);                                             \
+        block->append(new instr);                                             \
+    }
+
+    define_vist_binary_instr(SyntaxIn, InstrIn);
+    define_vist_binary_instr(SyntaxIs, InstrIs);
+
+#undef define_vist_binary_instr
 
     virtual void visit(const SyntaxPropRef& s) {
         s.left()->accept(*this);
@@ -172,58 +195,37 @@ ostream& operator<<(ostream& s, Block* block) {
     return s;
 }
 
-testcase(block)
+void testBuildRaw(const string& input, const string& expected)
 {
     BlockBuilder bb;
-
-    bb.buildRaw("3");
+    bb.buildRaw(input);
     Block* block = bb.takeBlock();
-    testEqual(repr(block), "ConstInteger 3");
+    testEqual(repr(block), expected);
     delete block;
+}
 
-    bb.buildRaw("foo.bar");
-    block = bb.takeBlock();
-    testEqual(repr(block), "GetLocal foo, GetProp bar");
+void testBuild(const string& input, const string& expected)
+{
+    BlockBuilder bb;
+    bb.build(input);
+    Block* block = bb.takeBlock();
+    testEqual(repr(block), expected);
     delete block;
+}
 
-    bb.buildRaw("foo()");
-    block = bb.takeBlock();
-    testEqual(repr(block), "GetLocal foo, Call 0");
-    delete block;
-
-    bb.buildRaw("foo(bar, baz)");
-    block = bb.takeBlock();
-    testEqual(repr(block), "GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
-    delete block;
-
-    bb.buildRaw("foo.bar(baz)");
-    block = bb.takeBlock();
-    testEqual(repr(block), "GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
-    delete block;
-
-    bb.buildRaw("foo = 1");
-    block = bb.takeBlock();
-    testEqual(repr(block), "ConstInteger 1, SetLocal foo");
-    delete block;
-
-    bb.buildRaw("foo.bar = baz");
-    block = bb.takeBlock();
-    testEqual(repr(block), "GetLocal foo, GetLocal baz, SetProp bar");
-    delete block;
-
-    bb.buildRaw("foo + 1");
-    block = bb.takeBlock();
-    testEqual(repr(block),
-              "GetLocal foo, GetMethod __add__, ConstInteger 1, Call 2");
-    delete block;
-
-    bb.build("1");
-    block = bb.takeBlock();
-    testEqual(repr(block), "ConstInteger 1, ConstNone, Return");
-    delete block;
-
-    bb.build("return 1");
-    block = bb.takeBlock();
-    testEqual(repr(block), "ConstInteger 1, Return");
-    delete block;
+testcase(block)
+{
+    testBuildRaw("3", "ConstInteger 3");
+    testBuildRaw("foo.bar", "GetLocal foo, GetProp bar");
+    testBuildRaw("foo()", "GetLocal foo, Call 0");
+    testBuildRaw("foo(bar, baz)", "GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
+    testBuildRaw("foo.bar(baz)", "GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
+    testBuildRaw("foo = 1", "ConstInteger 1, SetLocal foo");
+    testBuildRaw("foo.bar = baz", "GetLocal foo, GetLocal baz, SetProp bar");
+    testBuildRaw("foo + 1",
+                 "GetLocal foo, GetMethod __add__, ConstInteger 1, Call 2");
+    testBuild("1", "ConstInteger 1, ConstNone, Return");
+    testBuild("return 1", "ConstInteger 1, Return");
+    testBuild("return foo in bar", "GetLocal foo, GetLocal bar, In, Return");
+    testBuild("return foo is not bar", "GetLocal foo, GetLocal bar, Is, Not, Return");
 }

@@ -28,6 +28,11 @@ SyntaxParser::SyntaxParser() :
 
     // Unary operations
 
+    // todo: check the precedence of these works as expected
+
+    spec.addUnaryOp(Token_Not, [] (Token _, Syntax* r) {
+        return new SyntaxNot(r);
+    });
     spec.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
         return new SyntaxNegate(r);
     });
@@ -52,6 +57,41 @@ SyntaxParser::SyntaxParser() :
             return new SyntaxAssignProp(l->as<SyntaxPropRef>(), r);
         else
             throw ParseError("Illegal LHS for assignment");
+    });
+
+    // Boolean operators
+
+    // Comparison operators
+
+    spec.addBinaryOp(Token_In, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxIn(l, r);
+    });
+    spec.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxNot(new SyntaxIn(l, r));
+    });
+    spec.addBinaryOp(Token_Is, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxIs(l, r);
+    });
+    spec.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxNot(new SyntaxIs(l, r));
+    });
+    spec.addBinaryOp(Token_LT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxLT(l, r);
+    });
+    spec.addBinaryOp(Token_LE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxLE(l, r);
+    });
+    spec.addBinaryOp(Token_GT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxGT(l, r);
+    });
+    spec.addBinaryOp(Token_GE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxGE(l, r);
+    });
+    spec.addBinaryOp(Token_EQ, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxEQ(l, r);
+    });
+    spec.addBinaryOp(Token_NE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxNE(l, r);
     });
 
     // Bitwise binary operators

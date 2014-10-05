@@ -1,5 +1,6 @@
 #include <cstdio>
 
+#include "bool.h"
 #include "callable.h"
 #include "class.h"
 #include "frame.h"
@@ -15,6 +16,7 @@ int main(int argc, char *argv[])
     Native::init();
     Function::init();
     Frame::init();
+    Boolean::init();
     Integer::init();
     initSingletons();
 

@@ -15,6 +15,15 @@ using namespace std;
     syntax(Integer)                                                           \
     syntax(Name)                                                              \
     syntax(Negate)                                                            \
+    syntax(Not)                                                               \
+    syntax(In)                                                                \
+    syntax(Is)                                                                \
+    syntax(LT)                                                                \
+    syntax(LE)                                                                \
+    syntax(GT)                                                                \
+    syntax(GE)                                                                \
+    syntax(EQ)                                                                \
+    syntax(NE)                                                                \
     syntax(BitOr)                                                             \
     syntax(BitXor)                                                            \
     syntax(BitAnd)                                                            \
@@ -200,6 +209,22 @@ struct SyntaxNegate : public UnarySyntax
     syntax_accept()
 };
 
+struct SyntaxNot : public UnarySyntax
+{
+    SyntaxNot(Syntax* right) : UnarySyntax(right) {}
+    syntax_type(Syntax_Not)
+    syntax_name("not")
+    syntax_accept()
+};
+
+define_simple_binary_syntax(In, "in");
+define_simple_binary_syntax(Is, "is");
+define_simple_binary_syntax(LT, "<");
+define_simple_binary_syntax(LE, "<=");
+define_simple_binary_syntax(GT, ">");
+define_simple_binary_syntax(GE, ">=");
+define_simple_binary_syntax(EQ, "!=");
+define_simple_binary_syntax(NE, "==");
 define_simple_binary_syntax(BitOr, "|");
 define_simple_binary_syntax(BitXor, "^");
 define_simple_binary_syntax(BitAnd, "&");
