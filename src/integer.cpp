@@ -13,31 +13,37 @@ struct IntegerClass : public Class
         return Integer::get(a op b);                                          \
     }
 
-    define_int_method(lshift, <<);
-    define_int_method(rshift, >>);
-    define_int_method(add, +);
-    define_int_method(sub, -);
-    define_int_method(mul, *);
-    define_int_method(div, /);
-    define_int_method(floordiv, /);
-    define_int_method(mod, %);
+    define_int_method(int_or, |);
+    define_int_method(int_xor, ^);
+    define_int_method(int_and, &);
+    define_int_method(int_lshift, <<);
+    define_int_method(int_rshift, >>);
+    define_int_method(int_add, +);
+    define_int_method(int_sub, -);
+    define_int_method(int_mul, *);
+    define_int_method(int_div, /);
+    define_int_method(int_floordiv, /);
+    define_int_method(int_mod, %);
 
-    static Value pow(Value arg1, Value arg2) {
+    static Value int_pow(Value arg1, Value arg2) {
         int a = arg1.toObject()->as<Integer>()->value();
         int b = arg2.toObject()->as<Integer>()->value();
         return Integer::get(std::pow(a, b));
     }
 
     IntegerClass() : Class("Integer") {
-        setProp("__lshift__", new Native2(lshift));
-        setProp("__rshift__", new Native2(rshift));
-        setProp("__add__", new Native2(add));
-        setProp("__sub__", new Native2(sub));
-        setProp("__mul__", new Native2(mul));
-        setProp("__div__", new Native2(div));
-        setProp("__floordiv__", new Native2(floordiv));
-        setProp("__mod__", new Native2(mod));
-        setProp("__pow__", new Native2(pow));
+        setProp("__or__",       new Native2(int_or));
+        setProp("__xor__",      new Native2(int_xor));
+        setProp("__and__",      new Native2(int_and));
+        setProp("__lshift__",   new Native2(int_lshift));
+        setProp("__rshift__",   new Native2(int_rshift));
+        setProp("__add__",      new Native2(int_add));
+        setProp("__sub__",      new Native2(int_sub));
+        setProp("__mul__",      new Native2(int_mul));
+        setProp("__div__",      new Native2(int_div));
+        setProp("__floordiv__", new Native2(int_floordiv));
+        setProp("__mod__",      new Native2(int_mod));
+        setProp("__pow__",      new Native2(int_pow));
     }
 };
 

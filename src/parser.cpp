@@ -54,14 +54,25 @@ SyntaxParser::SyntaxParser() :
             throw ParseError("Illegal LHS for assignment");
     });
 
-    // Arithermetic binary operators
+    // Bitwise binary operators
 
+    spec.addBinaryOp(Token_BitOr, 130, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxBitOr(l, r);
+    });
+    spec.addBinaryOp(Token_BitXor, 140, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxBitXor(l, r);
+    });
+    spec.addBinaryOp(Token_BitAnd, 150, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+        return new SyntaxBitAnd(l, r);
+    });
     spec.addBinaryOp(Token_BitLeftShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitLeftShift(l, r);
     });
     spec.addBinaryOp(Token_BitRightShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitRightShift(l, r);
     });
+
+    // Arithermetic binary operators
 
     spec.addBinaryOp(Token_Plus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxPlus(l, r);

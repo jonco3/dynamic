@@ -90,6 +90,9 @@ struct BlockBuilder : public SyntaxVisitor
 #define define_vist_binary_as_method_call(syntax, method)                     \
     virtual void visit(const syntax& s) { callBinaryMethod(s, method); }
 
+    define_vist_binary_as_method_call(SyntaxBitOr, "__or__");
+    define_vist_binary_as_method_call(SyntaxBitXor, "__xor__");
+    define_vist_binary_as_method_call(SyntaxBitAnd, "__and__");
     define_vist_binary_as_method_call(SyntaxBitLeftShift, "__lshift__");
     define_vist_binary_as_method_call(SyntaxBitRightShift, "__rshift__");
     define_vist_binary_as_method_call(SyntaxPlus, "__add__");

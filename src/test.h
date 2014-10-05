@@ -29,15 +29,17 @@ struct TestCase
 extern void runTests();
 extern void abortTests();
 
-template <typename A>
+template <typename A, typename E>
 inline void testFailure(const char* testStr,
                         const char* actualStr, const char* expectedStr,
-                        const A actual, const char* file, unsigned line)
+                        const A actual, const E expected,
+                        const char* file, unsigned line)
 {
     using namespace std;
     cerr << file << ":" << line << ": test failed: ";
     cerr << actualStr << " " << testStr << " " << expectedStr;
-    cerr << " but got " << actual << " at " << file << " line " << line << endl;
+    cerr << " but got " << actual << " " << testStr << " " << expected;
+    cerr << " at " << file << " line " << line << endl;
     abortTests();
 }
 
@@ -47,7 +49,7 @@ inline void testEqualImpl(const A actual, const E expected,
                           const char* file, unsigned line)
 {
     if (actual != expected)
-        testFailure("==", actualStr, expectedStr, actual, file, line);
+        testFailure("==", actualStr, expectedStr, actual, expected, file, line);
 }
 
 template <>
@@ -56,7 +58,7 @@ inline void testEqualImpl(const char* actual, const char* expected,
                           const char* file, unsigned line)
 {
     if (strcmp(actual, expected) != 0)
-        testFailure("==", actualStr, expectedStr, actual, file, line);
+        testFailure("==", actualStr, expectedStr, actual, expected, file, line);
 }
 
 #define testEqual(actual, expected)                                           \

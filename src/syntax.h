@@ -15,6 +15,9 @@ using namespace std;
     syntax(Integer)                                                           \
     syntax(Name)                                                              \
     syntax(Negate)                                                            \
+    syntax(BitOr)                                                             \
+    syntax(BitXor)                                                            \
+    syntax(BitAnd)                                                            \
     syntax(BitLeftShift)                                                      \
     syntax(BitRightShift)                                                     \
     syntax(Plus)                                                              \
@@ -197,6 +200,9 @@ struct SyntaxNegate : public UnarySyntax
     syntax_accept()
 };
 
+define_simple_binary_syntax(BitOr, "|");
+define_simple_binary_syntax(BitXor, "^");
+define_simple_binary_syntax(BitAnd, "&");
 define_simple_binary_syntax(BitLeftShift, "<<");
 define_simple_binary_syntax(BitRightShift, ">>");
 define_simple_binary_syntax(Plus, "+");

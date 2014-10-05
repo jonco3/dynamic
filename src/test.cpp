@@ -19,6 +19,7 @@ TestCase::TestCase(const char* name, TestFunc body) :
 void abortTests()
 {
     fflush(stderr);
+    assert(false);
     exit(1);
 }
 

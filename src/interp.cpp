@@ -48,35 +48,30 @@ void Interpreter::popFrame()
     delete oldFrame;
 }
 
+static void testInterp(const string& input, const string& expected)
+{
+    unique_ptr<Block> block(Block::buildTopLevel(input));
+    Interpreter interp;
+    Value result;
+    testTrue(interp.interpret(block.get(), result));
+    testEqual(repr(result), expected);
+}
+
 testcase(interp)
 {
-    unique_ptr<Block> block;
-    Interpreter interp;
-    Value v;
-
-    block.reset(Block::buildTopLevel("return 3"));
-    testEqual(repr(block.get()), "ConstInteger 3, Return");
-    testTrue(interp.interpret(block.get(), v));
-    testEqual(repr(v), "3");
-
-    block.reset(Block::buildTopLevel("return 2 + 2"));
-    testTrue(interp.interpret(block.get(), v));
-    testEqual(repr(v), "4");
-
-    block.reset(Block::buildTopLevel("return 2 ** 4 - 1"));
-    testTrue(interp.interpret(block.get(), v));
-    testEqual(repr(v), "15");
-
-    block.reset(Block::buildTopLevel("foo = 2 + 3\nreturn foo"));
-    testTrue(interp.interpret(block.get(), v));
-    testEqual(repr(v), "5");
-
-    block.reset(Block::buildTopLevel("foo = 3\nbar = 4\nreturn foo + bar"));
-    testTrue(interp.interpret(block.get(), v));
-    testEqual(repr(v), "7");
-
+    testInterp("return 3", "3");
+    testInterp("return 2 + 2", "4");
+    testInterp("return 2 ** 4 - 1", "15");
+    testInterp("foo = 2 + 3\n"
+               "return foo", "5");
+    testInterp("foo = 3\n"
+               "bar = 4\n"
+               "return foo + bar", "7");
     // todo: should be: AttributeError: 'int' object has no attribute 'foo'
-    block.reset(Block::buildTopLevel("foo = 0\nfoo.bar = 1\nreturn foo + foo.bar"));
-    testTrue(interp.interpret(block.get(), v));
-    testEqual(repr(v), "1");
+    testInterp("foo = 0\n"
+               "foo.bar = 1\n"
+               "return foo + foo.bar", "1");
+    testInterp("return 1 | 8", "9");
+    testInterp("return 3 ^ 5", "6");
+    testInterp("return 3 & 5", "1");
 }
