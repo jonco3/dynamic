@@ -15,14 +15,14 @@ ParseError::ParseError(string message) :
 }
 
 SyntaxParser::SyntaxParser() :
-  Parser(spec, tokenizer),
-  spec(TokenCount)
+  Parser(acts, tokenizer),
+  acts(TokenCount)
 {
-    spec.addWord(Token_Integer, [] (Token token) {
+    acts.addWord(Token_Integer, [] (Token token) {
         return new SyntaxInteger(atoi(token.text.c_str()));
     });
 
-    spec.addWord(Token_Identifier, [] (Token token) {
+    acts.addWord(Token_Identifier, [] (Token token) {
         return new SyntaxName(token.text.c_str());
     });
 
@@ -30,21 +30,21 @@ SyntaxParser::SyntaxParser() :
 
     // todo: check the precedence of these works as expected
 
-    spec.addUnaryOp(Token_Plus, [] (Token _, Syntax* r) {
+    acts.addUnaryOp(Token_Plus, [] (Token _, Syntax* r) {
         return new SyntaxPos(r);
     });
-    spec.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
+    acts.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
         return new SyntaxNeg(r);
     });
-    spec.addUnaryOp(Token_Not, [] (Token _, Syntax* r) {
+    acts.addUnaryOp(Token_Not, [] (Token _, Syntax* r) {
         return new SyntaxInvert(r);
     });
 
     // Displays
 
-    spec.addPrefixHandler(Token_Bra, [] (ParserT& parser, const ExprSpec& spec,
+    acts.addPrefixHandler(Token_Bra, [] (ParserT& parser, const Actions& acts,
                                          Token _) {
-        Syntax* content = parser.expression(spec);
+        Syntax* content = parser.expression(acts);
         parser.match(Token_Ket);
         // todo: parse tuples
         return content;
@@ -52,7 +52,7 @@ SyntaxParser::SyntaxParser() :
 
     // Assignments
 
-    spec.addBinaryOp(Token_Assign, 10, Assoc_Right,
+    acts.addBinaryOp(Token_Assign, 10, Assoc_Right,
                      [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
         if (l->is<SyntaxName>())
             return new SyntaxAssignName(l->as<SyntaxName>(), r);
@@ -65,124 +65,124 @@ SyntaxParser::SyntaxParser() :
     // todo: Conditional expression
 
     /*
-    spec.addBinaryOp(Token_If, 90, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_If, 90, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxCondExpr(l, r);
     });
     */
 
     // Boolean operators
 
-    spec.addBinaryOp(Token_Or, 100, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Or, 100, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxOr(l, r);
     });
 
-    spec.addBinaryOp(Token_And, 110, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_And, 110, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxAnd(l, r);
     });
 
     // Comparison operators
 
-    spec.addBinaryOp(Token_In, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_In, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxIn(l, r);
     });
-    spec.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxNot(new SyntaxIn(l, r));
     });
-    spec.addBinaryOp(Token_Is, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Is, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxIs(l, r);
     });
-    spec.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxNot(new SyntaxIs(l, r));
     });
-    spec.addBinaryOp(Token_LT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_LT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxLT(l, r);
     });
-    spec.addBinaryOp(Token_LE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_LE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxLE(l, r);
     });
-    spec.addBinaryOp(Token_GT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_GT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxGT(l, r);
     });
-    spec.addBinaryOp(Token_GE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_GE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxGE(l, r);
     });
-    spec.addBinaryOp(Token_EQ, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_EQ, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxEQ(l, r);
     });
-    spec.addBinaryOp(Token_NE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_NE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxNE(l, r);
     });
 
     // Bitwise binary operators
 
-    spec.addBinaryOp(Token_BitOr, 130, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_BitOr, 130, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitOr(l, r);
     });
-    spec.addBinaryOp(Token_BitXor, 140, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_BitXor, 140, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitXor(l, r);
     });
-    spec.addBinaryOp(Token_BitAnd, 150, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_BitAnd, 150, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitAnd(l, r);
     });
-    spec.addBinaryOp(Token_BitLeftShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_BitLeftShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitLeftShift(l, r);
     });
-    spec.addBinaryOp(Token_BitRightShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_BitRightShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxBitRightShift(l, r);
     });
 
     // Arithermetic binary operators
 
-    spec.addBinaryOp(Token_Plus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Plus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxPlus(l, r);
     });
-    spec.addBinaryOp(Token_Minus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Minus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxMinus(l, r);
     });
 
-    spec.addBinaryOp(Token_Times, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Times, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxMultiply(l, r);
     });
-    spec.addBinaryOp(Token_Divide, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Divide, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxDivide(l, r);
     });
-    spec.addBinaryOp(Token_IntDivide, 180, Assoc_Left, [] (Token _, Syntax* l,
+    acts.addBinaryOp(Token_IntDivide, 180, Assoc_Left, [] (Token _, Syntax* l,
                                                            Syntax* r) {
         return new SyntaxIntDivide(l, r);
     });
-    spec.addBinaryOp(Token_Modulo, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Modulo, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxModulo(l, r);
     });
 
-    spec.addBinaryOp(Token_Power, 190, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Power, 190, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxPower(l, r);
     });
 
-    spec.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const ExprSpec& spec,
+    acts.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const Actions& acts,
                                             Token _, Syntax* l) {
         vector<Syntax*> args;
         while (!parser.opt(Token_Ket)) {
             if (!args.empty())
                 parser.match(Token_Comma);
-            args.push_back(parser.expression(spec));
+            args.push_back(parser.expression(acts));
         }
         return new SyntaxCall(l, args);
     });
 
-    spec.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    acts.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
             throw ParseError("Bad property reference");
         return new SyntaxPropRef(l, r->as<SyntaxName>());
     });
 
-    spec.addPrefixHandler(Token_Return, [] (ParserT& parser, const ExprSpec& spec,
+    acts.addPrefixHandler(Token_Return, [] (ParserT& parser, const Actions& acts,
                                             Token _) {
         Syntax *expr;
         if (parser.notFollowedBy(Token_EOF) &&
             parser.notFollowedBy(Token_Newline) &&
             parser.notFollowedBy(Token_Dedent))
         {
-            expr = parser.expression(spec);
+            expr = parser.expression(acts);
         } else {
             expr = new SyntaxInteger(0); // todo: none
         }
@@ -204,22 +204,22 @@ SyntaxBlock* SyntaxParser::parseBlock()
 
 testcase(parser)
 {
-    Parser<int>::ExprSpec spec(TokenCount);
-    spec.addWord(Token_Integer, [] (Token token) {
+    Parser<int>::Actions acts(TokenCount);
+    acts.addWord(Token_Integer, [] (Token token) {
             return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
         });
-    spec.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
+    acts.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
             return l + r;
         });
-    spec.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {
+    acts.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {
             return l - r;
         });
-    spec.addUnaryOp(Token_Minus, [] (Token _, int r) {
+    acts.addUnaryOp(Token_Minus, [] (Token _, int r) {
             return -r;
         });
 
     Tokenizer tokenizer;
-    Parser<int> parser(spec, tokenizer);
+    Parser<int> parser(acts, tokenizer);
 
     parser.start("2 + 3 - 1");
     testFalse(parser.atEnd());

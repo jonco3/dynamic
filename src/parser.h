@@ -29,15 +29,15 @@ struct Parser
 {
     typedef Parser<T> ParserT;
 
-    struct ExprSpec
+    struct Actions
     {
-        ExprSpec(unsigned maxTokenTypes);
+        Actions(unsigned maxTokenTypes);
 
-        typedef function<T (ParserT& parser, const ExprSpec& spec, Token token)>
+        typedef function<T (ParserT& parser, const Actions& acts, Token token)>
         PrefixHandler;
         void addPrefixHandler(TokenType type, PrefixHandler handler);
 
-        typedef function<T (ParserT& parser, const ExprSpec& spec, Token token,
+        typedef function<T (ParserT& parser, const Actions& acts, Token token,
                             const T leftValue)> InfixHandler;
         void addInfixHandler(TokenType type, unsigned bindLeft, InfixHandler handler);
 
@@ -72,32 +72,32 @@ struct Parser
         friend struct Parser<T>;
     };
 
-    Parser(const ExprSpec& spec, Tokenizer& tokenizer);
+    Parser(const Actions& acts, Tokenizer& tokenizer);
 
     void start(const Input& input);
 
     bool atEnd() { return token.type == Token_EOF; }
-    T parse() { return expression(topSpec); }
+    T parse() { return expression(actions); }
 
     bool notFollowedBy(TokenType type) { return token.type != type; }
     bool opt(TokenType type);
     bool opt(TokenType type, Token& tokenOut);
     Token match(TokenType type);
-    T expression(const ExprSpec& spec, unsigned bindRight = 0);
+    T expression(const Actions& acts, unsigned bindRight = 0);
 
     void nextToken();
-    T prefix(const ExprSpec& spec, Token token);
-    unsigned getBindLeft(const ExprSpec& spec, Token token);
-    T infix(const ExprSpec& spec, Token token, const T leftValue);
+    T prefix(const Actions& acts, Token token);
+    unsigned getBindLeft(const Actions& acts, Token token);
+    T infix(const Actions& acts, Token token, const T leftValue);
 
   private:
-    const ExprSpec& topSpec;
+    const Actions& actions;
     Tokenizer& tokenizer;
     Token token;
 };
 
 template <typename T>
-Parser<T>::ExprSpec::ExprSpec(unsigned maxTokenTypes)
+Parser<T>::Actions::Actions(unsigned maxTokenTypes)
 {
     for (unsigned i = 0; i < maxTokenTypes; ++i) {
         prefixActions.push_back({false});
@@ -106,14 +106,14 @@ Parser<T>::ExprSpec::ExprSpec(unsigned maxTokenTypes)
 }
 
 template <typename T>
-void Parser<T>::ExprSpec::addPrefixHandler(TokenType type, PrefixHandler handler)
+void Parser<T>::Actions::addPrefixHandler(TokenType type, PrefixHandler handler)
 {
     assert(type < prefixActions.size());
     prefixActions[type] = {true, handler};
 }
 
 template <typename T>
-void Parser<T>::ExprSpec::addInfixHandler(TokenType type, unsigned bindLeft,
+void Parser<T>::Actions::addInfixHandler(TokenType type, unsigned bindLeft,
                                   InfixHandler handler)
 {
     assert(type < infixActions.size());
@@ -121,16 +121,16 @@ void Parser<T>::ExprSpec::addInfixHandler(TokenType type, unsigned bindLeft,
 }
 
 template <typename T>
-void Parser<T>::ExprSpec::addWord(TokenType type, WordHandler handler)
+void Parser<T>::Actions::addWord(TokenType type, WordHandler handler)
 {
     addPrefixHandler(type,
-                     [=] (Parser<T>& parser, ExprSpec spec, Token token) {
+                     [=] (Parser<T>& parser, Actions acts, Token token) {
                          return handler(token);
                      });
 }
 
 template <typename T>
-void Parser<T>::ExprSpec::addBinaryOp(TokenType type, unsigned bindLeft, Assoc assoc,
+void Parser<T>::Actions::addBinaryOp(TokenType type, unsigned bindLeft, Assoc assoc,
                  BinaryOpHandler handler) {
     // calculate right binding power by addng left binding power and
     // associativity, hence why left binding power must be a multiple
@@ -138,26 +138,26 @@ void Parser<T>::ExprSpec::addBinaryOp(TokenType type, unsigned bindLeft, Assoc a
     unsigned bindRight = bindLeft + assoc;
     addInfixHandler(type,
                     bindLeft,
-                    [=] (Parser<T>& parser, ExprSpec spec, Token token,
+                    [=] (Parser<T>& parser, Actions acts, Token token,
                          const T leftValue) {
-                        T rightValue = parser.expression(spec, bindRight);
+                        T rightValue = parser.expression(acts, bindRight);
                         return handler(token, leftValue, rightValue);
                     });
 }
 
 template <typename T>
-void Parser<T>::ExprSpec::addUnaryOp(TokenType type, UnaryOpHandler handler)
+void Parser<T>::Actions::addUnaryOp(TokenType type, UnaryOpHandler handler)
 {
     addPrefixHandler(type,
-                     [=] (Parser<T>& parser, ExprSpec spec, Token token) {
-                         T rightValue = parser.expression(spec, 500);
+                     [=] (Parser<T>& parser, Actions acts, Token token) {
+                         T rightValue = parser.expression(acts, 500);
                          return handler(token, rightValue);
                      });
 }
 
 template <typename T>
-Parser<T>::Parser(const ExprSpec& spec, Tokenizer& tokenizer) :
-  topSpec(spec),
+Parser<T>::Parser(const Actions& acts, Tokenizer& tokenizer) :
+  actions(acts),
   tokenizer(tokenizer)
 {}
 
@@ -207,48 +207,48 @@ Token Parser<T>::match(TokenType type)
 }
 
 template <typename T>
-T Parser<T>::expression(const ExprSpec& spec, unsigned bindRight)
+T Parser<T>::expression(const Actions& acts, unsigned bindRight)
 {
     Token t = token;
     nextToken();
-    T left = prefix(spec, t);
-    while (bindRight < getBindLeft(spec, token)) {
+    T left = prefix(acts, t);
+    while (bindRight < getBindLeft(acts, token)) {
         t = token;
         nextToken();
-        left = infix(spec, t, left);
+        left = infix(acts, t, left);
     }
     return left;
 }
 
 template <typename T>
-T Parser<T>::prefix(const ExprSpec& spec, Token token)
+T Parser<T>::prefix(const Actions& acts, Token token)
 {
-    const auto& action = spec.prefixActions[token.type];
+    const auto& action = acts.prefixActions[token.type];
     if (!action.present) {
         throw ParseError("Unexpected " + tokenizer.typeName(token.type));
-        // todo: + " in " + spec.name + " context"
+        // todo: + " in " + acts.name + " context"
     }
-    return action.handler(*this, spec, token);
+    return action.handler(*this, acts, token);
 }
 
 template <typename T>
-unsigned Parser<T>::getBindLeft(const ExprSpec& spec, Token token)
+unsigned Parser<T>::getBindLeft(const Actions& acts, Token token)
 {
-    const auto& action = spec.infixActions[token.type];
+    const auto& action = acts.infixActions[token.type];
     if (!action.present)
         return 0;
     return action.bindLeft;
 }
 
 template <typename T>
-T Parser<T>::infix(const ExprSpec& spec, Token token, const T leftValue)
+T Parser<T>::infix(const Actions& acts, Token token, const T leftValue)
 {
-    const auto& action = spec.infixActions[token.type];
+    const auto& action = acts.infixActions[token.type];
     if (!action.present) {
         throw ParseError("Unexpected " + tokenizer.typeName(token.type));
-        // todo + " in " + spec.name + " context"
+        // todo + " in " + acts.name + " context"
     }
-    return action.handler(*this, spec, token, leftValue);
+    return action.handler(*this, acts, token, leftValue);
 }
 
 struct Syntax;
@@ -259,7 +259,7 @@ struct SyntaxParser : public Parser<Syntax *>
     SyntaxBlock *parseBlock();
   private:
     Tokenizer tokenizer;
-    Parser<Syntax*>::ExprSpec spec;
+    Parser<Syntax*>::Actions acts;
 };
 
 #endif
