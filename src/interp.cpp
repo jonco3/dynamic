@@ -53,10 +53,11 @@ void Interpreter::popFrame()
     delete oldFrame;
 }
 
-void Interpreter::branchTo(Instr** i)
+void Interpreter::branch(int offset)
 {
-    assert(frame->block()->contains(i));
-    instrp = i;
+    Instr** target = instrp + offset - 1;
+    assert(frame->block()->contains(target));
+    instrp = target;
 }
 
 static void testInterp(const string& input, const string& expected)
@@ -99,4 +100,6 @@ testcase(interp)
     testInterp("return --2", "2");
     testInterp("return -2 + 1", "-1");
     testInterp("return 2 - -1", "3");
+    testInterp("return 1 if 2 < 3 else 0", "1");
+    testInterp("return 1 if 2 > 3 else 2 + 2", "4");
 }

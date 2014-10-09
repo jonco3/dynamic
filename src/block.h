@@ -23,10 +23,8 @@ struct Block
     Instr* instr(unsigned i) { return instrs.at(i); }
     const Layout* getLayout() const { return layout; }
 
-    void append(Instr* instr) {
-        assert(instr);
-        instrs.push_back(instr);
-    }
+    unsigned append(Instr* instr);
+    void branchHere(unsigned source);
 
     Instr* lastInstr() {
         assert(!instrs.empty());

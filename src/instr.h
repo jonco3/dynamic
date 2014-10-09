@@ -30,8 +30,9 @@ using namespace std;
     instr(In)                                                                \
     instr(Is)                                                                \
     instr(Not)                                                               \
-    instr(OrBranch)                                                          \
-    instr(AndBranch)
+    instr(BranchAlways)                                                      \
+    instr(BranchIfTrue)                                                      \
+    instr(BranchIfFalse)
 
 enum InstrType
 {
@@ -40,6 +41,8 @@ enum InstrType
 #undef instr_enum
     InstrTypeCount
 };
+
+struct Branch;
 
 struct Instr
 {
@@ -52,8 +55,15 @@ struct Instr
 
     virtual ~Instr() {}
     virtual InstrType type() const = 0;
-    virtual void print(ostream& os) const = 0;
+    virtual string name() const = 0;
     virtual bool execute(Interpreter& interp, Frame* frame) = 0;
+
+    virtual bool isBranch() const { return false; };
+    inline Branch* asBranch();
+
+    virtual void print(ostream& s, Instr** loc = nullptr) const {
+        s << name();
+    }
 };
 
 inline ostream& operator<<(ostream& s, const Instr* i) {
@@ -65,16 +75,19 @@ inline ostream& operator<<(ostream& s, const Instr* i) {
     virtual InstrType type() const { return Type; }                          \
     static const InstrType Type = it
 
-#define instr_print(name)                                                    \
-    virtual void print(ostream& s) const { s << name; }
+#define instr_name(nameStr)                                                    \
+    virtual string name() const { return nameStr; }
 
 struct InstrConstInteger : public Instr
 {
     InstrConstInteger(int v) : value(Integer::get(v)) {}
 
     instr_type(Instr_ConstInteger);
+    instr_name("ConstInteger");
 
-    virtual void print(ostream& s) const { s << "ConstInteger " << value; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << value;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         interp.pushStack(value);
@@ -90,8 +103,7 @@ struct InstrConstInteger : public Instr
 struct InstrConstNone : public Instr
 {
     instr_type(Instr_ConstNone);
-
-    virtual void print(ostream& s) const { s << "ConstNone"; }
+    instr_name("ConstNone");
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         interp.pushStack(None);
@@ -101,91 +113,106 @@ struct InstrConstNone : public Instr
 
 struct InstrGetLocal : public Instr
 {
-    InstrGetLocal(Name name) : name(name) {}
+    InstrGetLocal(Name name) : localName(name) {}
 
     instr_type(Instr_GetLocal);
+    instr_name("GetLocal");
 
-    virtual void print(ostream& s) const { s << "GetLocal " << name; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << localName;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value;
-        if (!frame->getProp(name, value))
+        if (!frame->getProp(localName, value))
             return false;
         interp.pushStack(value);
         return true;
     }
 
   private:
-    Name name;
+    Name localName;
 };
 
 struct InstrSetLocal : public Instr
 {
-    InstrSetLocal(Name name) : name(name) {}
+    InstrSetLocal(Name name) : localName(name) {}
 
     instr_type(Instr_SetLocal);
+    instr_name("SetLocal");
 
-    virtual void print(ostream& s) const { s << "SetLocal " << name; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << localName;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        frame->setProp(name, interp.popStack());
+        frame->setProp(localName, interp.popStack());
         return true;
     }
 
   private:
-    Name name;
+    Name localName;
 };
 
 struct InstrGetProp : public Instr
 {
-    InstrGetProp(Name name) : name(name) {}
+    InstrGetProp(Name attr) : attrName(attr) {}
 
     instr_type(Instr_GetProp);
+    instr_name("GetProp");
 
-    virtual void print(ostream& s) const { s << "GetProp " << name; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << attrName;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value;
-        if (!interp.popStack().toObject()->getProp(name, value))
+        if (!interp.popStack().toObject()->getProp(attrName, value))
             return false;
         interp.pushStack(value);
         return true;
     }
 
   private:
-    Name name;
+    Name attrName;
 };
 
 struct InstrSetProp : public Instr
 {
-    InstrSetProp(Name name) : name(name) {}
+    InstrSetProp(Name name) : attrName(name) {}
 
     instr_type(Instr_SetProp);
+    instr_name("SetProp");
 
-    virtual void print(ostream& s) const { s << "SetProp " << name; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << attrName;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value = interp.popStack();
-        interp.popStack().toObject()->setProp(name, value);
+        interp.popStack().toObject()->setProp(attrName, value);
         return true;
     }
 
   private:
-    Name name;
+    Name attrName;
 };
 
 struct InstrGetMethod : public Instr
 {
-    InstrGetMethod(Name name) : name(name) {}
+    InstrGetMethod(Name name) : methodName(name) {}
 
     instr_type(Instr_GetMethod);
+    instr_name("GetMethod");
 
-    virtual void print(ostream& s) const { s << "GetMethod " << name; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << methodName;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object* obj = interp.popStack().toObject();
         Value method;
-        if (!obj->getProp(name, method))
+        if (!obj->getProp(methodName, method))
             return false;
         interp.pushStack(method);
         interp.pushStack(obj);
@@ -193,7 +220,7 @@ struct InstrGetMethod : public Instr
     }
 
   private:
-    Name name;
+    Name methodName;
 };
 
 struct InstrCall : public Instr
@@ -201,8 +228,11 @@ struct InstrCall : public Instr
     InstrCall(unsigned args) : args(args) {}
 
     instr_type(Instr_Call);
+    instr_name("Call");
 
-    virtual void print(ostream& s) const { s << "Call " << args; }
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << args;
+    }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object* target = interp.peekStack(args).toObject();
@@ -239,8 +269,7 @@ struct InstrCall : public Instr
 struct InstrReturn : public Instr
 {
     instr_type(Instr_Return);
-
-    virtual void print(ostream& s) const { s << "Return"; }
+    instr_name("Return");
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value = interp.popStack();
@@ -253,7 +282,7 @@ struct InstrReturn : public Instr
 struct InstrIn : public Instr
 {
     instr_type(Instr_In);
-    instr_print("In");
+    instr_name("In");
 
     // todo: implement this
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
@@ -267,7 +296,7 @@ struct InstrIn : public Instr
 struct InstrIs : public Instr
 {
     instr_type(Instr_Is);
-    instr_print("Is");
+    instr_name("Is");
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value b = interp.popStack();
@@ -281,7 +310,7 @@ struct InstrIs : public Instr
 struct InstrNot : public Instr
 {
     instr_type(Instr_Not);
-    instr_print("Not");
+    instr_name("Not");
 
     // the following values are interpreted as false: False, None, numeric zero
     // of all types, and empty strings and containers (including strings,
@@ -294,23 +323,45 @@ struct InstrNot : public Instr
     }
 };
 
-struct InstrBranchBase : public Instr
+struct Branch : public Instr
 {
-    InstrBranchBase() : dest_(nullptr) {}
+    Branch() : offset_(0) {}
+    virtual bool isBranch() const { return true; };
 
-    void setDest(Instr** i) {
-        assert(!dest_);
-        dest_ = i;
+    void setOffset(int offset) {
+        assert(!offset_);
+        offset_ = offset;
+    }
+
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << offset_;
     }
 
   protected:
-    Instr** dest_;
+    int offset_;
 };
 
-struct InstrOrBranch : public InstrBranchBase
+inline Branch* Instr::asBranch()
 {
-    instr_type(Instr_OrBranch);
-    instr_print("OrBranch");
+    assert(isBranch());
+    return static_cast<Branch*>(this);
+}
+
+struct InstrBranchAlways : public Branch
+{
+    instr_type(Instr_BranchAlways);
+    instr_name("BranchAlways");
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        interp.branch(offset_);
+        return true;
+    }
+};
+
+struct InstrBranchIfTrue : public Branch
+{
+    instr_type(Instr_BranchIfTrue);
+    instr_name("BranchIfTrue");
 
     // The expression x or y first evaluates x; if x is true, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
@@ -318,15 +369,15 @@ struct InstrOrBranch : public InstrBranchBase
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object *x = interp.peekStack(0).toObject();
         if (x->isTrue())
-            interp.branchTo(dest_);
+            interp.branch(offset_);
         return true;
     }
 };
 
-struct InstrAndBranch : public InstrBranchBase
+struct InstrBranchIfFalse : public Branch
 {
-    instr_type(Instr_AndBranch);
-    instr_print("AndBranch");
+    instr_type(Instr_BranchIfFalse);
+    instr_name("BranchIfFalse");
 
     // The expression x and y first evaluates x; if x is false, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
@@ -334,7 +385,7 @@ struct InstrAndBranch : public InstrBranchBase
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object *x = interp.peekStack(0).toObject();
         if (!x->isTrue())
-            interp.branchTo(dest_);
+            interp.branch(offset_);
         return true;
     }
 };

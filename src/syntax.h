@@ -44,7 +44,8 @@ using namespace std;
     syntax(AssignName)                                                        \
     syntax(AssignProp)                                                        \
     syntax(Call)                                                              \
-    syntax(Return)
+    syntax(Return)                                                            \
+    syntax(Cond)
 
 enum SyntaxType
 {
@@ -302,6 +303,29 @@ struct SyntaxReturn : public UnarySyntax
     syntax_type(Syntax_Return)
     syntax_name("return")
     syntax_accept()
+};
+
+struct SyntaxCond : public Syntax
+{
+    SyntaxCond(Syntax* cons, Syntax* cond, Syntax* alt)
+      : cons_(cons), cond_(cond), alt_(alt) {}
+    syntax_type(Syntax_Cond)
+    syntax_name("cond")
+
+    const Syntax* cons() const { return cons_.get(); }
+    const Syntax* cond() const { return cond_.get(); }
+    const Syntax* alt() const { return alt_.get(); }
+
+    syntax_accept()
+
+    virtual void print(ostream& s) const override {
+        s << cons() << " if " << cond() << " else " << alt();
+    }
+
+  private:
+    unique_ptr<Syntax> cons_;
+    unique_ptr<Syntax> cond_;
+    unique_ptr<Syntax> alt_;
 };
 
 #endif

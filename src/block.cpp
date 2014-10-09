@@ -6,6 +6,22 @@
 
 #include <memory>
 
+//#define TRACE_BUILD
+
+unsigned Block::append(Instr* instr)
+{
+    assert(instr);
+    instrs.push_back(instr);
+    return instrs.size() - 1;
+}
+
+void Block::branchHere(unsigned source)
+{
+    assert(source < instrs.size());
+    Branch* b = instrs[source]->asBranch();
+    b->setOffset(instrs.size() - source);
+}
+
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
@@ -46,6 +62,9 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrConstNone);
             block->append(new InstrReturn());
         }
+#ifdef TRACE_BUILD
+        cerr << repr(block) << endl;
+#endif
     }
 
     Block* takeBlock() {
@@ -87,18 +106,16 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxOr& s) {
         s.left()->accept(*this);
-        InstrOrBranch* branch = new InstrOrBranch;
-        block->append(branch);
+        unsigned branch = block->append(new InstrBranchIfTrue);
         s.right()->accept(*this);
-        branch->setDest(block->nextInstr());
+        block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxAnd& s) {
         s.left()->accept(*this);
-        InstrAndBranch* branch = new InstrAndBranch;
-        block->append(branch);
+        unsigned branch = block->append(new InstrBranchIfFalse);
         s.right()->accept(*this);
-        branch->setDest(block->nextInstr());
+        block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxNot& s) {
@@ -184,6 +201,16 @@ struct BlockBuilder : public SyntaxVisitor
         s.right()->accept(*this);
         block->append(new InstrReturn);
     }
+
+    virtual void visit(const SyntaxCond& s) {
+        s.cond()->accept(*this);
+        unsigned altBranch = block->append(new InstrBranchIfFalse);
+        s.cons()->accept(*this);
+        unsigned endBranch = block->append(new InstrBranchAlways);
+        block->branchHere(altBranch);
+        s.alt()->accept(*this);
+        block->branchHere(endBranch);
+    }
 };
 
 
@@ -205,10 +232,11 @@ Block::~Block()
 }
 
 ostream& operator<<(ostream& s, Block* block) {
-    for (unsigned i = 0; i < block->instrCount(); ++i) {
+    Instr** ptr = block->startInstr();
+    for (unsigned i = 0; i < block->instrCount(); ++i, ++ptr) {
         if (i > 0)
             s << ", ";
-        s << block->instr(i);
+        (*ptr)->print(s, ptr);
     }
     return s;
 }

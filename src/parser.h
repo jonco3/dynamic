@@ -259,7 +259,7 @@ struct SyntaxParser : public Parser<Syntax *>
     SyntaxBlock *parseBlock();
   private:
     Tokenizer tokenizer;
-    Parser<Syntax*>::Actions acts;
+    Parser<Syntax*>::Actions expr;
 };
 
 #endif
