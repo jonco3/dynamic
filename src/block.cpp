@@ -29,16 +29,21 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     DefinitionFinder() : layout(nullptr) {}
 
-    virtual void visit(const SyntaxAssignName& s) {
-        layout = layout->addName(s.left()->id());
-    }
-
-    // todo: recurse into blocks etc
-
     static Layout* buildLayout(Syntax *s) {
         DefinitionFinder df;
         s->accept(df);
         return df.layout;
+    }
+
+    virtual void visit(const SyntaxAssignName& s) {
+        layout = layout->addName(s.left()->id());
+    }
+
+    // Recurse into blocks etc.
+
+    virtual void visit(const SyntaxCond& s) {
+        s.cons()->accept(*this);
+        s.alt()->accept(*this);
     }
 };
 
@@ -47,16 +52,21 @@ struct BlockBuilder : public SyntaxVisitor
     BlockBuilder() : block(nullptr) {}
     ~BlockBuilder() { delete block; }
 
-    void buildRaw(const Input& input) {
-        parser.start(input);
+    void build(Syntax* s) {
         assert(!block);
         block = new Block;
-        unique_ptr<Syntax> syntax(parser.parseBlock());
-        layout = DefinitionFinder::buildLayout(syntax.get());
-        syntax->accept(*this);
+        layout = DefinitionFinder::buildLayout(s);  // todo: use this!
+        s->accept(*this);
     }
 
-    void build(const Input& input) {
+    void buildRaw(const Input& input) {
+        SyntaxParser parser;
+        parser.start(input);
+        unique_ptr<Syntax> syntax(parser.parseBlock());
+        build(syntax.get());
+    }
+
+    void buildFunctionBody(const Input& input) {
         buildRaw(input);
         if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>()) {
             block->append(new InstrConstNone);
@@ -74,7 +84,6 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
   private:
-    SyntaxParser parser;
     Layout* layout;
     Block* block;
 
@@ -211,13 +220,21 @@ struct BlockBuilder : public SyntaxVisitor
         s.alt()->accept(*this);
         block->branchHere(endBranch);
     }
+
+    virtual void visit(const SyntaxLambda& a) {
+        BlockBuilder exprBuilder;
+        exprBuilder.build(a.expr());
+        Block* exprBlock = exprBuilder.takeBlock();
+        exprBlock->append(new InstrReturn);
+        block->append(new InstrLambda(a.params(), exprBlock));
+    }
 };
 
 
 Block* Block::buildTopLevel(const Input& input)
 {
     BlockBuilder builder;
-    builder.build(input);
+    builder.buildFunctionBody(input);
     return builder.takeBlock();
 }
 
@@ -253,7 +270,7 @@ void testBuildRaw(const string& input, const string& expected)
 void testBuild(const string& input, const string& expected)
 {
     BlockBuilder bb;
-    bb.build(input);
+    bb.buildFunctionBody(input);
     Block* block = bb.takeBlock();
     testEqual(repr(block), expected);
     delete block;

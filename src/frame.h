@@ -13,7 +13,9 @@ struct Frame : public Object
     static Class* ObjectClass;
     static void init();
 
-    Frame(Interpreter& interp, Frame* prev, Block* block);
+    Frame(Frame* prev, Block* block);
+    void setReturn(Interpreter& interp);
+
     Instr** returnInstr() { return retInstr; }
     unsigned stackPos() { return pos; }
     Frame* popFrame();

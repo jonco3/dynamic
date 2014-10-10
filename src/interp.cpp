@@ -11,10 +11,11 @@
 
 bool Interpreter::interpret(Block* block, Value& valueOut)
 {
-    frame = new Frame(*this, nullptr, block);
+    frame = new Frame(nullptr, block);
     instrp = block->startInstr();
 
     while (instrp) {
+        assert(frame->block()->contains(instrp));
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
         cerr << "stack:";
@@ -37,7 +38,7 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 Frame* Interpreter::pushFrame(Function *function)
 {
     Block* block = function->block();
-    Frame *newFrame = new Frame(*this, frame, block);
+    Frame *newFrame = new Frame(frame, block);
     instrp = block->startInstr();
     frame = newFrame;
     return newFrame;
@@ -102,4 +103,5 @@ testcase(interp)
     testInterp("return 2 - -1", "3");
     testInterp("return 1 if 2 < 3 else 0", "1");
     testInterp("return 1 if 2 > 3 else 2 + 2", "4");
+    testInterp("return (lambda: 2 + 2)()", "4");
 }

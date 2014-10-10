@@ -45,7 +45,8 @@ using namespace std;
     syntax(AssignProp)                                                        \
     syntax(Call)                                                              \
     syntax(Return)                                                            \
-    syntax(Cond)
+    syntax(Cond)                                                              \
+    syntax(Lambda)
 
 enum SyntaxType
 {
@@ -269,7 +270,7 @@ struct SyntaxAssignProp : public BinarySyntaxBase<SyntaxPropRef, Syntax>
 
 struct SyntaxCall : public Syntax
 {
-    SyntaxCall(Syntax* l, vector<Syntax *> r) : left_(l), right_(r) {}
+    SyntaxCall(Syntax* l, const vector<Syntax *>& r) : left_(l), right_(r) {}
     ~SyntaxCall() {
         for (auto i = right_.begin(); i != right_.end(); ++i)
             delete *i;
@@ -326,6 +327,31 @@ struct SyntaxCond : public Syntax
     unique_ptr<Syntax> cons_;
     unique_ptr<Syntax> cond_;
     unique_ptr<Syntax> alt_;
+};
+
+struct SyntaxLambda : public Syntax
+{
+    SyntaxLambda(const vector<Name>& params, Syntax* expr)
+      : params_(params), expr_(expr) {}
+
+    syntax_type(Syntax_Lambda);
+    syntax_name("lambda");
+    syntax_accept();
+
+    const vector<Name>& params() const { return params_; }
+    Syntax* expr() const { return expr_; }
+
+    virtual void print(ostream& s) const override {
+        s << "lambda";
+        for (auto i = params_.begin(); i != params_.end(); ++i)
+            s << " " << *i;
+        s << ": ";
+        expr_->print(s);
+    }
+
+  private:
+    vector<Name> params_;
+    Syntax* expr_;
 };
 
 #endif

@@ -79,20 +79,23 @@ struct Function : public Callable
     static void init();
     static Class* ObjectClass;
 
-    Function(Block* block) : Callable(ObjectClass), block_(block) {}
+    Function(const vector<Name>& params, Block* block, Frame* scope)
+      : Callable(ObjectClass), params_(params), block_(block), scope_(scope) {}
 
-    virtual unsigned requiredArgs() { return argNames.size(); }
+    virtual unsigned requiredArgs() { return params_.size(); }
 
-    Name argName(unsigned i) {
-        assert(i < argNames.size());
-        return argNames[i];
+    Name paramName(unsigned i) {
+        assert(i < params_.size());
+        return params_[i];
     }
 
-    Block* block() const { return block_.get(); }
+    Block* block() const { return block_; }
+    Frame* scope() const { return scope_; }
 
   private:
-    vector<Name> argNames;
-    unique_ptr<Block> block_;
+    const vector<Name>& params_;
+    Block* block_;
+    Frame* scope_;
 };
 
 

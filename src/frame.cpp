@@ -10,18 +10,25 @@ void Frame::init()
     ObjectClass = new Class("Frame");
 }
 
-Frame::Frame(Interpreter& interp, Frame* prev, Block* block) :
+Frame::Frame(Frame* prev, Block* block) :
   Object(ObjectClass, block->getLayout()),
   prev(prev),
   next(nullptr),
   block_(block),
-  retInstr(interp.nextInstr()),
-  pos(interp.stackPos())
+  retInstr(nullptr),
+  pos(0)
 {
     if (prev) {
         assert(!prev->next);
         prev->next = this;
     }
+}
+
+void Frame::setReturn(Interpreter& interp)
+{
+    assert(!retInstr);
+    retInstr = interp.nextInstr();
+    pos = interp.stackPos();
 }
 
 Frame* Frame::popFrame()

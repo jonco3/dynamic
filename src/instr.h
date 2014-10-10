@@ -32,7 +32,8 @@ using namespace std;
     instr(Not)                                                               \
     instr(BranchAlways)                                                      \
     instr(BranchIfTrue)                                                      \
-    instr(BranchIfFalse)
+    instr(BranchIfFalse)                                                     \
+    instr(Lambda)
 
 enum InstrType
 {
@@ -246,14 +247,11 @@ struct InstrCall : public Instr
             Function* function = target->as<Function>();
             if (function->requiredArgs() < args)
                 throw runtime_error("Not enough arguments");
-            // todo: argument checking etc.
-
-            // todo: set args and pop function before pushing frame
             Frame *callFrame = interp.pushFrame(function);
             for (int i = args - 1; i >= 0; --i)
-                callFrame->setProp(function->argName(i), interp.popStack());
+                callFrame->setProp(function->paramName(i), interp.popStack());
             interp.popStack();
-
+            frame->setReturn(interp);
             return true;
         } else {
             throw runtime_error("Attempt to call non-callable object: " +
@@ -388,6 +386,31 @@ struct InstrBranchIfFalse : public Branch
             interp.branch(offset_);
         return true;
     }
+};
+
+struct InstrLambda : public Instr
+{
+    InstrLambda(const vector<Name>& params, Block* block)
+      : params_(params), block_(block) {}
+
+    instr_type(Instr_Lambda);
+    instr_name("Lambda");
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        interp.pushStack(new Function(params_, block_.get(), frame));
+        return true;
+    }
+
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name();
+        for (auto i = params_.begin(); i != params_.end(); ++i)
+            s << " " << *i;
+        s << ": { " << block_.get() << " }";
+    }
+
+  private:
+    vector<Name> params_;
+    unique_ptr<Block> block_;
 };
 
 #endif

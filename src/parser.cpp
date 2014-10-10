@@ -62,6 +62,24 @@ SyntaxParser::SyntaxParser() :
             throw ParseError("Illegal LHS for assignment");
     });
 
+    // Lambda
+
+    expr.addPrefixHandler(Token_Lambda, [] (ParserT& parser, const Actions& acts,
+                                            Token _) {
+        vector<string> params;
+        if (!parser.opt(Token_Colon)) {
+            for (;;) {
+                // todo: * and **
+                Token t = parser.match(Token_Identifier);
+                params.push_back(t.text);
+                if (parser.opt(Token_Colon))
+                    break;
+                parser.match(Token_Comma);
+            }
+        }
+        return new SyntaxLambda(params, parser.expression(acts));
+    });
+
     // Conditional expression
 
     expr.addInfixHandler(Token_If, 90,
