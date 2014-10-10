@@ -11,7 +11,7 @@ void Frame::init()
 }
 
 Frame::Frame(Frame* prev, Block* block) :
-  Object(ObjectClass, block->getLayout()),
+  Object(ObjectClass, block->layout()),
   prev(prev),
   next(nullptr),
   block_(block),

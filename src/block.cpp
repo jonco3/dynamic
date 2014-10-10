@@ -8,18 +8,38 @@
 
 //#define TRACE_BUILD
 
+Block::Block(Layout* layout)
+  : layout_(layout)
+{}
+
+Block::~Block()
+{
+    for (unsigned i = 0; i < instrs_.size(); ++i)
+        delete instrs_[i];
+}
+
 unsigned Block::append(Instr* instr)
 {
     assert(instr);
-    instrs.push_back(instr);
-    return instrs.size() - 1;
+    instrs_.push_back(instr);
+    return instrs_.size() - 1;
 }
 
 void Block::branchHere(unsigned source)
 {
-    assert(source < instrs.size());
-    Branch* b = instrs[source]->asBranch();
-    b->setOffset(instrs.size() - source);
+    assert(source < instrs_.size());
+    Branch* b = instrs_[source]->asBranch();
+    b->setOffset(instrs_.size() - source);
+}
+
+ostream& operator<<(ostream& s, Block* block) {
+    Instr** ptr = block->startInstr();
+    for (unsigned i = 0; i < block->instrCount(); ++i, ++ptr) {
+        if (i > 0)
+            s << ", ";
+        (*ptr)->print(s, ptr);
+    }
+    return s;
 }
 
 // Find the names that are defined in the current block
@@ -27,7 +47,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 {
     Layout* layout;
 
-    DefinitionFinder() : layout(nullptr) {}
+    DefinitionFinder() : layout(Object::InitialLayout) {}
 
     static Layout* buildLayout(Syntax *s) {
         DefinitionFinder df;
@@ -54,8 +74,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     void build(Syntax* s) {
         assert(!block);
-        block = new Block;
-        layout = DefinitionFinder::buildLayout(s);  // todo: use this!
+        block = new Block(DefinitionFinder::buildLayout(s));
         s->accept(*this);
     }
 
@@ -84,7 +103,6 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
   private:
-    Layout* layout;
     Block* block;
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
@@ -236,26 +254,6 @@ Block* Block::buildTopLevel(const Input& input)
     BlockBuilder builder;
     builder.buildFunctionBody(input);
     return builder.takeBlock();
-}
-
-Block::Block()
-  : layout(Frame::ObjectClass->layout())
-{}
-
-Block::~Block()
-{
-    for (unsigned i = 0; i < instrs.size(); ++i)
-        delete instrs[i];
-}
-
-ostream& operator<<(ostream& s, Block* block) {
-    Instr** ptr = block->startInstr();
-    for (unsigned i = 0; i < block->instrCount(); ++i, ++ptr) {
-        if (i > 0)
-            s << ", ";
-        (*ptr)->print(s, ptr);
-    }
-    return s;
 }
 
 void testBuildRaw(const string& input, const string& expected)
