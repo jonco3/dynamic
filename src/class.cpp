@@ -4,6 +4,7 @@ Class* Class::ObjectClass = nullptr;
 
 void Class::init()
 {
+    gc::addRoot(&ObjectClass);
     ObjectClass = new Class("Class");
     Class::ObjectClass->initClass(Class::ObjectClass, nullptr);
     Object::ObjectClass->initClass(Class::ObjectClass, nullptr);

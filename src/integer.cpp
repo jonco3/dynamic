@@ -64,6 +64,7 @@ struct IntegerClass : public Class
     }
 
     IntegerClass() : Class("int") {
+        Root<Object> root(this);
         setProp("__pos__",      new Native1(int_pos));
         setProp("__neg__",      new Native1(int_neg));
         setProp("__invert__",   new Native1(int_invert));
@@ -96,7 +97,7 @@ void Integer::init()
     gc::addRoot(&ObjectClass);
     gc::addRoot(&Zero);
     ObjectClass = new IntegerClass;
-    Integer::Zero = new Integer(0);
+    Zero = new Integer(0);
 }
 
 Integer::Integer(int v)

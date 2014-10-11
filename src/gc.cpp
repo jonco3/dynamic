@@ -15,14 +15,20 @@ static int8_t prevEpoc = 0;
 static vector<Cell*> cells;
 static list<Cell**> roots;
 static bool isSweeping = false;
+static size_t collectAt = 10;
+static double scheduleFactor = 1.5;
 }
 
-Cell::Cell() :
-  epoc_(gc::currentEpoc)
+Cell::Cell()
 {
+    if (gc::cells.size() >= gc::collectAt) {
+        gc::collect();
+    }
+
 #ifdef TRACE_GC
     cerr << "created " << hex << reinterpret_cast<uintptr_t>(this) << endl;
 #endif
+    epoc_ = gc::currentEpoc;
     gc::cells.push_back(this);
 }
 
@@ -149,6 +155,9 @@ void gc::collect() {
     isSweeping = true;
     cells.erase(remove_if(cells.begin(), cells.end(), Cell::sweep), cells.end());
     isSweeping = false;
+
+    // Schedule next collection
+    collectAt = static_cast<size_t>(static_cast<double>(cellCount()) * scheduleFactor);
 
 #ifdef TRACE_GC
     cerr << "< gc::collect " << dec << cellCount() << endl;

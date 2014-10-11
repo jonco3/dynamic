@@ -19,12 +19,11 @@
 using namespace std;
 
 #define for_each_instr(instr)                                                \
-    instr(ConstNone)                                                         \
-    instr(ConstInteger)                                                      \
+    instr(Const)                                                             \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
-    instr(GetLexical)                                                          \
-    instr(SetLexical)                                                          \
+    instr(GetLexical)                                                        \
+    instr(SetLexical)                                                        \
     instr(GetProp)                                                           \
     instr(SetProp)                                                           \
     instr(GetMethod)                                                         \
@@ -84,12 +83,12 @@ inline ostream& operator<<(ostream& s, Instr *i) {
 #define instr_name(nameStr)                                                  \
     virtual string name() const { return nameStr; }
 
-struct InstrConstInteger : public Instr
+struct InstrConst : public Instr
 {
-    InstrConstInteger(int v) : value(Integer::get(v)) {}
+    InstrConst(Value v) : value(v) {}
 
-    instr_type(Instr_ConstInteger);
-    instr_name("ConstInteger");
+    instr_type(Instr_Const);
+    instr_name("Const");
 
     virtual void print(ostream& s) const {
         s << name() << " " << value;
@@ -108,17 +107,6 @@ struct InstrConstInteger : public Instr
 
   private:
     Value value;
-};
-
-struct InstrConstNone : public Instr
-{
-    instr_type(Instr_ConstNone);
-    instr_name("ConstNone");
-
-    virtual bool execute(Interpreter& interp, Frame* frame) {
-        interp.pushStack(None);
-        return true;
-    }
 };
 
 struct InstrGetLocal : public Instr

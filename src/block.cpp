@@ -45,8 +45,6 @@ void Block::trace(Tracer& t) const
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
-    Layout* layout_;
-
     DefinitionFinder(Layout* layout) : layout_(layout) {}
 
     static Layout* buildLayout(Syntax *s, Layout* layout) {
@@ -70,6 +68,9 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         s.cons()->accept(*this);
         s.alt()->accept(*this);
     }
+
+  private:
+    Root<Layout> layout_;
 };
 
 struct BlockBuilder : public SyntaxVisitor
@@ -84,7 +85,8 @@ struct BlockBuilder : public SyntaxVisitor
 
     void build(Syntax* s) {
         assert(!block);
-        block = new Block(DefinitionFinder::buildLayout(s, layout));
+        layout = DefinitionFinder::buildLayout(s, layout);
+        block = new Block(layout);
         s->accept(*this);
     }
 
@@ -98,7 +100,7 @@ struct BlockBuilder : public SyntaxVisitor
     void buildFunctionBody(const Input& input) {
         buildRaw(input);
         if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>()) {
-            block->append(new InstrConstNone);
+            block->append(new InstrConst(None));
             block->append(new InstrReturn());
         }
 #ifdef TRACE_BUILD
@@ -114,8 +116,8 @@ struct BlockBuilder : public SyntaxVisitor
 
   private:
     BlockBuilder* parent;
-    Layout* layout;
-    Block* block;
+    Root<Layout> layout;
+    Root<Block> block;
 
     int lookupLexical(Name name) {
         int count = 1;
@@ -148,7 +150,9 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxInteger& s) {
-        block->append(new InstrConstInteger(s.value()));
+        Value v = Integer::get(s.value());
+        Root<Object> i(v.toObject());
+        block->append(new InstrConst(v));
     }
 
     virtual void visit(const SyntaxOr& s) {
@@ -283,7 +287,7 @@ struct BlockBuilder : public SyntaxVisitor
         BlockBuilder exprBuilder(this);
         exprBuilder.addParams(a.params());
         exprBuilder.build(a.expr());
-        Block* exprBlock = exprBuilder.takeBlock();
+        Root<Block> exprBlock(exprBuilder.takeBlock());
         exprBlock->append(new InstrReturn);
         block->append(new InstrLambda(a.params(), exprBlock));
     }
@@ -299,58 +303,56 @@ Block* Block::buildTopLevel(const Input& input)
 
 void testBuildRaw(const string& input, const string& expected)
 {
-    gc::collect(); // Check necessary roots are in place
     BlockBuilder bb;
     bb.buildRaw(input);
-    Block* block = bb.takeBlock();
+    Root<Block> block(bb.takeBlock());
     testEqual(repr(block), expected);
 }
 
 void testBuild(const string& input, const string& expected)
 {
-    gc::collect(); // Check necessary roots are in place
     BlockBuilder bb;
     bb.buildFunctionBody(input);
-    Block* block = bb.takeBlock();
+    Root<Block> block(bb.takeBlock());
     testEqual(repr(block), expected);
 }
 
 testcase(block)
 {
-    testBuildRaw("3", "ConstInteger 3");
-    testBuildRaw("foo = 1", "ConstInteger 1, SetLocal foo");
+    testBuildRaw("3", "Const 3");
+    testBuildRaw("foo = 1", "Const 1, SetLocal foo");
     testBuildRaw("foo = 1\n"
                  "foo.bar",
-                 "ConstInteger 1, SetLocal foo, GetLocal foo, GetProp bar");
+                 "Const 1, SetLocal foo, GetLocal foo, GetProp bar");
     testBuildRaw("foo = 1\n"
                  "foo()",
-                 "ConstInteger 1, SetLocal foo, GetLocal foo, Call 0");
+                 "Const 1, SetLocal foo, GetLocal foo, Call 0");
     testBuildRaw("foo = 1\n"
                  "bar = 1\n"
                  "baz = 1\n"
                  "foo(bar, baz)",
-                 "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal bar, ConstInteger 1, SetLocal baz, GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
+                 "Const 1, SetLocal foo, Const 1, SetLocal bar, Const 1, SetLocal baz, GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
     testBuildRaw("foo = 1\n"
                  "baz = 1\n"
                  "foo.bar(baz)",
-                 "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal baz, GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
+                 "Const 1, SetLocal foo, Const 1, SetLocal baz, GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
     testBuildRaw("foo = 1\n"
                  "baz = 1\n"
                  "foo.bar = baz",
-                 "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal baz, GetLocal foo, GetLocal baz, SetProp bar");
+                 "Const 1, SetLocal foo, Const 1, SetLocal baz, GetLocal foo, GetLocal baz, SetProp bar");
     testBuildRaw("foo = 1\n"
                  "foo + 1",
-                 "ConstInteger 1, SetLocal foo, GetLocal foo, GetMethod __add__, ConstInteger 1, Call 2");
-    testBuild("1", "ConstInteger 1, ConstNone, Return");
-    testBuild("return 1", "ConstInteger 1, Return");
+                 "Const 1, SetLocal foo, GetLocal foo, GetMethod __add__, Const 1, Call 2");
+    testBuild("1", "Const 1, Const None, Return");
+    testBuild("return 1", "Const 1, Return");
     testBuild("foo = 1\n"
               "bar = 1\n"
               "return foo in bar",
-              "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal bar, GetLocal foo, GetLocal bar, In, Return");
+              "Const 1, SetLocal foo, Const 1, SetLocal bar, GetLocal foo, GetLocal bar, In, Return");
     testBuild("foo = 1\n"
               "bar = 1\n"
               "return foo is not bar",
-              "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal bar, GetLocal foo, GetLocal bar, Is, Not, Return");
+              "Const 1, SetLocal foo, Const 1, SetLocal bar, GetLocal foo, GetLocal bar, Is, Not, Return");
     testBuild("return 2 - - 1",
-              "ConstInteger 2, GetMethod __sub__, ConstInteger 1, GetMethod __neg__, Call 1, Call 2, Return");
+              "Const 2, GetMethod __sub__, Const 1, GetMethod __neg__, Call 1, Call 2, Return");
 }

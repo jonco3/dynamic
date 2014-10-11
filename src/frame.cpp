@@ -7,6 +7,7 @@ Class* Frame::ObjectClass;
 
 void Frame::init()
 {
+    gc::addRoot(&ObjectClass);
     ObjectClass = new Class("Frame");
 }
 

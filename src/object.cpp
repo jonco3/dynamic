@@ -101,6 +101,7 @@ bool Object::getProp(Name name, Value& valueOut) const
 
 void Object::setProp(Name name, Value value)
 {
+    Root<Object> root(value.toObject());  // todo: need Root<Value>
     int slot = layout_->lookupName(name);
     if (slot == -1) {
         layout_ = layout_->addName(name);
@@ -143,7 +144,7 @@ void Object::trace(Tracer& t) const
 
 testcase(object)
 {
-    Object* o = new Object;
+    Root<Object> o(new Object);
     Value v;
 
     testFalse(o->getProp("foo", v));

@@ -62,8 +62,8 @@ void Interpreter::branch(int offset)
 
 static void testInterp(const string& input, const string& expected)
 {
-    gc::collect(); // Check necessary roots are in place
-    Block* block(Block::buildTopLevel(input));
+    //gc::collect(); // Check necessary roots are in place
+    Root<Block> block(Block::buildTopLevel(input));
     Interpreter interp;
     Value result;
     testTrue(interp.interpret(block, result));
