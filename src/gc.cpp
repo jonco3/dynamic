@@ -7,25 +7,29 @@
 
 //#define TRACE_GC
 
-static const uint8_t InvalidEpoc = -1;
-
 namespace gc {
 static const int8_t epocs = 2;
+static const int8_t invalidEpoc = -1;
 static int8_t currentEpoc = 0;
 static int8_t prevEpoc = 0;
 static vector<Cell*> cells;
 static list<Cell**> roots;
+static bool isSweeping = false;
 }
 
 Cell::Cell() :
   epoc_(gc::currentEpoc)
 {
+#ifdef TRACE_GC
+    cerr << "created " << hex << reinterpret_cast<uintptr_t>(this) << endl;
+#endif
     gc::cells.push_back(this);
 }
 
 Cell::~Cell()
 {
-    epoc_ = InvalidEpoc;
+    assert(gc::isSweeping);
+    epoc_ = gc::invalidEpoc;
 }
 
 bool Cell::shouldMark()
@@ -38,6 +42,15 @@ bool Cell::shouldSweep()
 {
     assert(epoc_ == gc::currentEpoc || epoc_ == gc::prevEpoc);
     return epoc_ == gc::prevEpoc;
+}
+
+bool Cell::isDying() const
+{
+    assert(gc::isSweeping);
+    assert(epoc_ == gc::currentEpoc ||
+           epoc_ == gc::prevEpoc ||
+           epoc_ == gc::invalidEpoc);
+    return epoc_ != gc::currentEpoc;
 }
 
 bool Cell::mark(Cell** cellp)
@@ -57,9 +70,17 @@ bool Cell::mark(Cell** cellp)
 bool Cell::sweep(Cell* cell)
 {
     if (cell->shouldSweep()) {
-        delete cell;
 #ifdef TRACE_GC
-        cerr << "  swept " << hex << reinterpret_cast<uintptr_t>(cell) << endl;
+        cerr << "  sweeping " << hex << reinterpret_cast<uintptr_t>(cell) << endl;
+#endif
+#ifdef DEBUG
+        size_t cellSize = cell->size();
+#endif
+        delete cell;
+#ifdef DEBUG
+        memset(reinterpret_cast<uint8_t*>(cell) + sizeof(Cell),
+               0xff,
+               cellSize - sizeof(Cell));
 #endif
         return true;
     }
@@ -67,13 +88,13 @@ bool Cell::sweep(Cell* cell)
     return false;
 }
 
-void RootBase::add(Cell** cellp)
+void gc::addRoot(Cell** cellp)
 {
     assert(cellp);
     gc::roots.push_back(cellp);
 }
 
-void RootBase::remove(Cell** cellp)
+void gc::removeRoot(Cell** cellp)
 {
     assert(cellp);
     // todo: use embedded list pointers to avoid this lookup
@@ -102,7 +123,7 @@ struct Marker : public Tracer
 
 void gc::collect() {
 #ifdef TRACE_GC
-    cerr << "> gc::collect" << endl;
+    cerr << "> gc::collect " << dec << cellCount() << endl;
 #endif
 
     // Begin new epoc
@@ -110,18 +131,27 @@ void gc::collect() {
     currentEpoc = (currentEpoc + 1) % epocs;
 
     // Gather roots
+#ifdef TRACE_GC
+    cerr << "- marking roots" << endl;
+#endif
     Marker marker;
-    for (auto i = roots.begin(); i != roots.end(); ++i)
+    for (auto i = roots.begin(); i != roots.end(); ++i) {
         marker.visit(*i);
+    }
 
     // Mark
+#ifdef TRACE_GC
+    cerr << "- marking reachable" << endl;
+#endif
     marker.markRecursively();
 
     // Sweep
+    isSweeping = true;
     cells.erase(remove_if(cells.begin(), cells.end(), Cell::sweep), cells.end());
+    isSweeping = false;
 
 #ifdef TRACE_GC
-    cerr << "< gc::collect" << endl;
+    cerr << "< gc::collect " << dec << cellCount() << endl;
 #endif
 }
 
@@ -136,6 +166,12 @@ struct TestCell : private Cell
             t.visit(&(*i));
     }
 
+    virtual size_t size() const { return sizeof(*this); }
+
+    virtual void print(ostream& s) const {
+        s << "TestCell@" << hex << static_cast<const void*>(this);
+    }
+
     void addChild(TestCell* cell) {
         children_.push_back(cell);
     }
@@ -148,37 +184,40 @@ testcase(gc)
 {
     using namespace gc;
 
-    testEqual(cellCount(), 0);
     collect();
-    testEqual(cellCount(), 0);
+    size_t initCount = cellCount();
+
+    testEqual(cellCount(), initCount);
+    collect();
+    testEqual(cellCount(), initCount);
 
     Root<TestCell> r;
     collect();
-    testEqual(cellCount(), 0);
+    testEqual(cellCount(), initCount);
     r = new TestCell;
-    testEqual(cellCount(), 1);
+    testEqual(cellCount(), initCount + 1);
     collect();
-    testEqual(cellCount(), 1);
+    testEqual(cellCount(), initCount + 1);
     r = nullptr;
     collect();
-    testEqual(cellCount(), 0);
+    testEqual(cellCount(), initCount);
 
     r = new TestCell;
     r->addChild(new TestCell);
-    testEqual(cellCount(), 2);
+    testEqual(cellCount(), initCount + 2);
     collect();
-    testEqual(cellCount(), 2);
+    testEqual(cellCount(), initCount + 2);
     r = nullptr;
     collect();
-    testEqual(cellCount(), 0);
+    testEqual(cellCount(), initCount);
 
     r = new TestCell;
     TestCell* b = new TestCell;
     r->addChild(b);
     b->addChild(r);
-    testEqual(cellCount(), 2);
+    testEqual(cellCount(), initCount + 2);
     r = nullptr;
     collect();
-    testEqual(cellCount(), 0);
+    testEqual(cellCount(), initCount);
 }
 

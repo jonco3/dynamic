@@ -51,7 +51,6 @@ void Interpreter::popFrame()
     instrp = frame->returnInstr();
     Frame* oldFrame = frame;
     frame = oldFrame->popFrame();
-    delete oldFrame;
 }
 
 void Interpreter::branch(int offset)
@@ -63,10 +62,11 @@ void Interpreter::branch(int offset)
 
 static void testInterp(const string& input, const string& expected)
 {
-    unique_ptr<Block> block(Block::buildTopLevel(input));
+    gc::collect(); // Check necessary roots are in place
+    Block* block(Block::buildTopLevel(input));
     Interpreter interp;
     Value result;
-    testTrue(interp.interpret(block.get(), result));
+    testTrue(interp.interpret(block, result));
     testEqual(repr(result), expected);
 }
 

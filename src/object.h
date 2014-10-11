@@ -1,6 +1,7 @@
 #ifndef __OBJECT_H__
 #define __OBJECT_H__
 
+#include "gc.h"
 #include "layout.h"
 #include "name.h"
 #include "value.h"
@@ -13,7 +14,7 @@ using namespace std;
 
 struct Class;
 
-struct Object
+struct Object : public Cell
 {
     static void init();
 
@@ -44,6 +45,9 @@ struct Object
 
   protected:
     Object(Class *cls, Object *base, const Layout* layout = InitialLayout);
+
+    virtual void trace(Tracer& t) const;
+    virtual size_t size() const { return sizeof(*this); }
 
   private:
     Class* class_;

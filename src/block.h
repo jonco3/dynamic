@@ -1,6 +1,8 @@
 #ifndef __BLOCK_H__
 #define __BLOCK_H__
 
+#include "gc.h"
+
 #include <cassert>
 #include <vector>
 #include <ostream>
@@ -12,12 +14,11 @@ struct Instr;
 struct Layout;
 struct Syntax;
 
-struct Block
+struct Block : public Cell
 {
     static Block* buildTopLevel(const Input& input);
 
     Block(Layout* layout);
-    ~Block();
     Instr** startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
     Instr* instr(unsigned i) { return instrs_.at(i); }
@@ -39,11 +40,18 @@ struct Block
         return i >= &instrs_.front() && i <= &instrs_.back();
     }
 
+    virtual void trace(Tracer& t) const;
+    virtual size_t size() const { return sizeof(*this); }
+    virtual void print(ostream& s) const;
+
   private:
     Layout* layout_;
     vector<Instr*> instrs_;
 };
 
-ostream& operator<<(ostream& s, Block* block);
+inline ostream& operator<<(ostream& s, Block* block) {
+    block->print(s);
+    return s;
+}
 
 #endif

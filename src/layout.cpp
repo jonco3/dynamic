@@ -7,6 +7,20 @@ Layout::Layout(const Layout* parent, Name name)
   : parent_(parent), name_(name)
 {}
 
+Layout::~Layout()
+{
+    assert(isDying());
+    if (!parent_->isDying())
+        parent_->removeChild(this);
+}
+
+void Layout::removeChild(const Layout* child) const
+{
+    auto i = children_.find(child->name());
+    assert(i != children_.end());
+    children_.erase(i);
+}
+
 unsigned Layout::slotCount() const
 {
     const Layout *layout = this;
@@ -55,14 +69,20 @@ Layout* Layout::addName(Name name) const
     return child;
 }
 
-ostream& operator<<(ostream& s, const Layout* layout)
+void Layout::trace(Tracer& t) const
 {
-    if (!layout) {
-        s << "<empty>";
-        return s;
+    t.visit(&parent_);
+}
+
+void Layout::print(ostream& s) const
+{
+    s << "Layout {";
+    const Layout *l = this;
+    while (l) {
+        s << l->name();
+        l = l->parent();
+        if (l)
+            s << ", ";
     }
-    if (layout->parent())
-        s << layout->parent() << ", ";
-    s << layout->name() << "@" << (void*)layout;
-    return s;
+    s << "}";
 }

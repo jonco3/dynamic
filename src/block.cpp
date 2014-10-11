@@ -12,12 +12,6 @@ Block::Block(Layout* layout)
   : layout_(layout)
 {}
 
-Block::~Block()
-{
-    for (unsigned i = 0; i < instrs_.size(); ++i)
-        delete instrs_[i];
-}
-
 unsigned Block::append(Instr* instr)
 {
     assert(instr);
@@ -32,14 +26,20 @@ void Block::branchHere(unsigned source)
     b->setOffset(instrs_.size() - source);
 }
 
-ostream& operator<<(ostream& s, Block* block) {
-    Instr** ptr = block->startInstr();
-    for (unsigned i = 0; i < block->instrCount(); ++i, ++ptr) {
-        if (i > 0)
+void Block::print(ostream& s) const {
+    for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
+        if (i != instrs_.begin())
             s << ", ";
-        (*ptr)->print(s, ptr);
+        (*i)->print(s);
     }
-    return s;
+}
+
+void Block::trace(Tracer& t) const
+{
+    t.visit(&layout_);
+    for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
+        t.visit(&*i);
+    }
 }
 
 // Find the names that are defined in the current block
@@ -76,10 +76,6 @@ struct BlockBuilder : public SyntaxVisitor
 {
     BlockBuilder(BlockBuilder* parent = nullptr)
       : parent(parent), layout(Object::InitialLayout), block(nullptr) {}
-
-    ~BlockBuilder() {
-        delete block;
-    }
 
     void addParams(const vector<Name>& params) {
         for (auto i = params.begin(); i != params.end(); ++i)
@@ -303,20 +299,20 @@ Block* Block::buildTopLevel(const Input& input)
 
 void testBuildRaw(const string& input, const string& expected)
 {
+    gc::collect(); // Check necessary roots are in place
     BlockBuilder bb;
     bb.buildRaw(input);
     Block* block = bb.takeBlock();
     testEqual(repr(block), expected);
-    delete block;
 }
 
 void testBuild(const string& input, const string& expected)
 {
+    gc::collect(); // Check necessary roots are in place
     BlockBuilder bb;
     bb.buildFunctionBody(input);
     Block* block = bb.takeBlock();
     testEqual(repr(block), expected);
-    delete block;
 }
 
 testcase(block)

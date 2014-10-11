@@ -13,9 +13,12 @@ Boolean* Boolean::False = nullptr;
 
 void Boolean::init()
 {
+    gc::addRoot(&ObjectClass);
+    gc::addRoot(&True);
+    gc::addRoot(&False);
     ObjectClass = new BooleanClass;
-    Boolean::True = new Boolean(true);
-    Boolean::False = new Boolean(false);
+    True = new Boolean(true);
+    False = new Boolean(false);
 }
 
 Boolean::Boolean(bool v)

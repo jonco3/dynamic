@@ -1,6 +1,7 @@
 #ifndef __LAYOUT_H__
 #define __LAYOUT_H__
 
+#include "gc.h"
 #include "name.h"
 
 #include <ostream>
@@ -12,9 +13,10 @@ using namespace std;
 // Layout defines a mapping from names to slots and is used for object storage
 // and execution frames.
 
-struct Layout
+struct Layout : public Cell
 {
     Layout(const Layout* parent, Name name);
+    virtual ~Layout();
 
     const Layout* parent() const { return parent_; }
     const string& name() const { return name_; }
@@ -26,12 +28,24 @@ struct Layout
 
     Layout* addName(Name name) const;
 
+    virtual void trace(Tracer& t) const;
+    virtual size_t size() const { return sizeof(*this); }
+    virtual void print(ostream& s) const;
+
   private:
     const Layout* parent_;
     const Name name_;
     mutable unordered_map<Name, Layout*> children_;
+
+    void removeChild(const Layout* child) const;
 };
 
-ostream& operator<<(ostream& s, const Layout* layout);
+inline ostream& operator<<(ostream& s, const Layout* layout) {
+    if (layout)
+        layout->print(s);
+    else
+        s << "Layout {}";
+    return s;
+}
 
 #endif

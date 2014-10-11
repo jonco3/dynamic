@@ -28,12 +28,16 @@ Class* UninitializedSlotObject::ObjectClass = nullptr;
 
 void NoneObject::init()
 {
+    gc::addRoot(&ObjectClass);
+    gc::addRoot(&None);
     ObjectClass = new Class("None");
     None = new NoneObject;
 }
 
 void UninitializedSlotObject::init()
 {
+    gc::addRoot(&ObjectClass);
+    gc::addRoot(&UninitializedSlot);
     ObjectClass = new Class("UninitializedSlot");
     UninitializedSlot = new UninitializedSlotObject;
 }

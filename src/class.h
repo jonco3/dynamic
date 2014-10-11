@@ -15,6 +15,8 @@ struct Class : public Object
 
     const string& name() const { return name_; }
 
+    virtual void print(ostream& s) const;
+
   private:
     string name_;
 };

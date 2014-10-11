@@ -16,6 +16,8 @@ Layout* Object::InitialLayout = nullptr;
 
 void Object::init()
 {
+    gc::addRoot(&InitialLayout);
+    gc::addRoot(&ObjectClass);
     InitialLayout = new Layout(nullptr, "__class__");
     ObjectClass = new Class("Object");
 }
@@ -128,12 +130,20 @@ bool Object::isTrue() const
         this != Integer::Zero;
 }
 
+void Object::trace(Tracer& t) const
+{
+    t.visit(&layout_);
+    for (auto i = slots_.begin(); i != slots_.end(); ++i)
+        (*i).trace(t);
+}
+
+
 #include "test.h"
 #include "integer.h"
 
 testcase(object)
 {
-    unique_ptr<Object> o(new Object);
+    Object* o = new Object;
     Value v;
 
     testFalse(o->getProp("foo", v));

@@ -93,6 +93,8 @@ Integer* Integer::Zero = nullptr;
 
 void Integer::init()
 {
+    gc::addRoot(&ObjectClass);
+    gc::addRoot(&Zero);
     ObjectClass = new IntegerClass;
     Integer::Zero = new Integer(0);
 }

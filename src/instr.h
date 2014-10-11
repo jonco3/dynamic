@@ -4,6 +4,7 @@
 #include "bool.h"
 #include "callable.h"
 #include "frame.h"
+#include "gc.h"
 #include "integer.h"
 #include "interp.h"
 #include "name.h"
@@ -47,7 +48,7 @@ enum InstrType
 
 struct Branch;
 
-struct Instr
+struct Instr : public Cell
 {
     template <typename T> bool is() { return type() == T::Type; }
 
@@ -64,12 +65,14 @@ struct Instr
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
-    virtual void print(ostream& s, Instr** loc = nullptr) const {
+    virtual void trace(Tracer& t) const {}
+    virtual size_t size() const { return sizeof(*this); }
+    virtual void print(ostream& s) const {
         s << name();
     }
 };
 
-inline ostream& operator<<(ostream& s, const Instr* i) {
+inline ostream& operator<<(ostream& s, Instr *i) {
     i->print(s);
     return s;
 }
@@ -78,7 +81,7 @@ inline ostream& operator<<(ostream& s, const Instr* i) {
     virtual InstrType type() const { return Type; }                          \
     static const InstrType Type = it
 
-#define instr_name(nameStr)                                                    \
+#define instr_name(nameStr)                                                  \
     virtual string name() const { return nameStr; }
 
 struct InstrConstInteger : public Instr
@@ -88,7 +91,7 @@ struct InstrConstInteger : public Instr
     instr_type(Instr_ConstInteger);
     instr_name("ConstInteger");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << value;
     }
 
@@ -98,6 +101,10 @@ struct InstrConstInteger : public Instr
     }
 
     Value getValue() { return value; }
+
+    virtual void trace(Tracer& t) const {
+        value.trace(t);
+    }
 
   private:
     Value value;
@@ -121,7 +128,7 @@ struct InstrGetLocal : public Instr
     instr_type(Instr_GetLocal);
     instr_name("GetLocal");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << localName;
     }
 
@@ -144,7 +151,7 @@ struct InstrSetLocal : public Instr
     instr_type(Instr_SetLocal);
     instr_name("SetLocal");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << localName;
     }
 
@@ -164,7 +171,7 @@ struct InstrGetLexical : public Instr
     instr_type(Instr_GetLexical);
     instr_name("GetLexical");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << frameIndex << " " << lexicalName;
     }
 
@@ -189,7 +196,7 @@ struct InstrSetLexical : public Instr
     instr_type(Instr_SetLexical);
     instr_name("SetLexical");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << frameIndex << " " << lexicalName;
     }
 
@@ -210,7 +217,7 @@ struct InstrGetProp : public Instr
     instr_type(Instr_GetProp);
     instr_name("GetProp");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << attrName;
     }
 
@@ -233,7 +240,7 @@ struct InstrSetProp : public Instr
     instr_type(Instr_SetProp);
     instr_name("SetProp");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << attrName;
     }
 
@@ -254,7 +261,7 @@ struct InstrGetMethod : public Instr
     instr_type(Instr_GetMethod);
     instr_name("GetMethod");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << methodName;
     }
 
@@ -279,7 +286,7 @@ struct InstrCall : public Instr
     instr_type(Instr_Call);
     instr_name("Call");
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << args;
     }
 
@@ -379,7 +386,7 @@ struct Branch : public Instr
         offset_ = offset;
     }
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void print(ostream& s) const {
         s << name() << " " << offset_;
     }
 
@@ -445,20 +452,24 @@ struct InstrLambda : public Instr
     instr_name("Lambda");
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        interp.pushStack(new Function(params_, block_.get(), frame));
+        interp.pushStack(new Function(params_, block_, frame));
         return true;
     }
 
-    virtual void print(ostream& s, Instr** loc) const {
+    virtual void trace(Tracer& t) const {
+        t.visit(&block_);
+    }
+
+    virtual void print(ostream& s) const {
         s << name();
         for (auto i = params_.begin(); i != params_.end(); ++i)
             s << " " << *i;
-        s << ": { " << block_.get() << " }";
+        s << ": { " << block_ << " }";
     }
 
   private:
     vector<Name> params_;
-    unique_ptr<Block> block_;
+    Block* block_;
 };
 
 #endif

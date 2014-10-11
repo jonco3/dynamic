@@ -12,3 +12,8 @@ void Class::init()
 Class::Class(string name) :
   Object(ObjectClass, nullptr, Object::InitialLayout), name_(name)
 {}
+
+void Class::print(ostream& s) const
+{
+    s << "Class " << name_;
+}
