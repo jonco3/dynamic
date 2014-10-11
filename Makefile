@@ -24,7 +24,8 @@ SRCS = \
 	src/integer.cpp \
 	src/frame.cpp \
 	src/callable.cpp \
-	src/interp.cpp
+	src/interp.cpp \
+	src/gc.cpp
 
 RELOBJS = $(subst src,build/rel,$(SRCS:.cpp=.o))
 RELDEPS = $(subst src,build/rel,$(SRCS:.cpp=.d))
