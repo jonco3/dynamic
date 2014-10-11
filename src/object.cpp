@@ -112,7 +112,7 @@ void Object::setProp(Name name, Value value)
 
 void Object::print(ostream& s) const
 {
-    s << class_->name() << "@" << reinterpret_cast<uintptr_t>(this);
+    s << class_->name() << "@" << hex << reinterpret_cast<uintptr_t>(this);
 }
 
 bool Object::isTrue() const
