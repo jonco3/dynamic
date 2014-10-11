@@ -20,6 +20,7 @@ struct Frame : public Object
     unsigned stackPos() { return pos; }
     Frame* popFrame();
     const Block* block() const { return block_; }
+    Frame* ancestor(unsigned count);
 
   private:
     Frame* prev;

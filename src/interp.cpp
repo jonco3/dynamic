@@ -104,4 +104,7 @@ testcase(interp)
     testInterp("return 1 if 2 < 3 else 0", "1");
     testInterp("return 1 if 2 > 3 else 2 + 2", "4");
     testInterp("return (lambda: 2 + 2)()", "4");
+    testInterp("return (lambda x: x + 1)(1)", "2");
+    testInterp("x = 0\nreturn (lambda x: x + 1)(1)", "2");
+    testInterp("x = 0\nreturn (lambda y: x + 1)(1)", "1");
 }

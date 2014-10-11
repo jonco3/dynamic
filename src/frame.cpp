@@ -38,3 +38,13 @@ Frame* Frame::popFrame()
         prev->next = nullptr;
     return prev;
 }
+
+Frame* Frame::ancestor(unsigned count)
+{
+    Frame *f = this;
+    while (count--) {
+        f = f->prev;
+        assert(f);
+    }
+    return f;
+}

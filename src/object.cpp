@@ -62,6 +62,11 @@ void Object::initAttrs(Object* base)
     setProp("__class__", base);
 }
 
+bool Object::hasProp(Name name) const
+{
+    return layout_->lookupName(name) != -1;
+}
+
 bool Object::getProp(Name name, Value& valueOut) const
 {
     assert(class_);

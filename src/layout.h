@@ -22,6 +22,7 @@ struct Layout
     unsigned slotCount() const;
     bool subsumes(const Layout* other) const;
     int lookupName(Name name) const;
+    int hasName(Name name) const { return lookupName(name) != -1; }
 
     Layout* addName(Name name) const;
 

@@ -22,6 +22,8 @@ using namespace std;
     instr(ConstInteger)                                                      \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
+    instr(GetLexical)                                                          \
+    instr(SetLexical)                                                          \
     instr(GetProp)                                                           \
     instr(SetProp)                                                           \
     instr(GetMethod)                                                         \
@@ -124,9 +126,9 @@ struct InstrGetLocal : public Instr
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
+        assert(frame->hasProp(localName));
         Value value;
-        if (!frame->getProp(localName, value))
-            return false;
+        frame->getProp(localName, value);
         interp.pushStack(value);
         return true;
     }
@@ -153,6 +155,52 @@ struct InstrSetLocal : public Instr
 
   private:
     Name localName;
+};
+
+struct InstrGetLexical : public Instr
+{
+    InstrGetLexical(int frame, Name name) : frameIndex(frame), lexicalName(name) {}
+
+    instr_type(Instr_GetLexical);
+    instr_name("GetLexical");
+
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << frameIndex << " " << lexicalName;
+    }
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Frame* f = frame->ancestor(frameIndex);
+        assert(f->hasProp(lexicalName));
+        Value value;
+        f->getProp(lexicalName, value);
+        interp.pushStack(value);
+        return true;
+    }
+
+  private:
+    int frameIndex;
+    Name lexicalName;
+};
+
+struct InstrSetLexical : public Instr
+{
+    InstrSetLexical(unsigned frame, Name name) : frameIndex(frame), lexicalName(name) {}
+
+    instr_type(Instr_SetLexical);
+    instr_name("SetLexical");
+
+    virtual void print(ostream& s, Instr** loc) const {
+        s << name() << " " << frameIndex << " " << lexicalName;
+    }
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        frame->ancestor(frameIndex)->setProp(lexicalName, interp.popStack());
+        return true;
+    }
+
+  private:
+    unsigned frameIndex;
+    Name lexicalName;
 };
 
 struct InstrGetProp : public Instr

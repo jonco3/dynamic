@@ -45,21 +45,26 @@ ostream& operator<<(ostream& s, Block* block) {
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
-    Layout* layout;
+    Layout* layout_;
 
-    DefinitionFinder() : layout(Object::InitialLayout) {}
+    DefinitionFinder(Layout* layout) : layout_(layout) {}
 
-    static Layout* buildLayout(Syntax *s) {
-        DefinitionFinder df;
+    static Layout* buildLayout(Syntax *s, Layout* layout) {
+        DefinitionFinder df(layout);
         s->accept(df);
-        return df.layout;
+        return df.layout_;
     }
 
     virtual void visit(const SyntaxAssignName& s) {
-        layout = layout->addName(s.left()->id());
+        layout_ = layout_->addName(s.left()->id());
     }
 
     // Recurse into blocks etc.
+
+    virtual void visit(const SyntaxBlock& s) {
+        for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i)
+            (*i)->accept(*this);
+    }
 
     virtual void visit(const SyntaxCond& s) {
         s.cons()->accept(*this);
@@ -69,12 +74,21 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
 struct BlockBuilder : public SyntaxVisitor
 {
-    BlockBuilder() : block(nullptr) {}
-    ~BlockBuilder() { delete block; }
+    BlockBuilder(BlockBuilder* parent = nullptr)
+      : parent(parent), layout(Object::InitialLayout), block(nullptr) {}
+
+    ~BlockBuilder() {
+        delete block;
+    }
+
+    void addParams(const vector<Name>& params) {
+        for (auto i = params.begin(); i != params.end(); ++i)
+            layout = layout->addName(*i);
+    }
 
     void build(Syntax* s) {
         assert(!block);
-        block = new Block(DefinitionFinder::buildLayout(s));
+        block = new Block(DefinitionFinder::buildLayout(s, layout));
         s->accept(*this);
     }
 
@@ -103,7 +117,21 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
   private:
+    BlockBuilder* parent;
+    Layout* layout;
     Block* block;
+
+    int lookupLexical(Name name) {
+        int count = 1;
+        BlockBuilder* b = parent;
+        while (b) {
+            if (b->block->layout()->hasName(name))
+                return count;
+            ++count;
+            b = b->parent;
+        }
+        return -1;
+    }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
         s.right()->accept(*this);
@@ -125,10 +153,6 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxInteger& s) {
         block->append(new InstrConstInteger(s.value()));
-    }
-
-    virtual void visit(const SyntaxName& s) {
-        block->append(new InstrGetLocal(s.id()));
     }
 
     virtual void visit(const SyntaxOr& s) {
@@ -190,14 +214,34 @@ struct BlockBuilder : public SyntaxVisitor
 
 #undef define_vist_binary_instr
 
-    virtual void visit(const SyntaxPropRef& s) {
-        s.left()->accept(*this);
-        block->append(new InstrGetProp(s.right()->id()));
+    virtual void visit(const SyntaxName& s) {
+        Name name = s.id();
+        if (block->layout()->hasName(name))
+            block->append(new InstrGetLocal(name));
+        else {
+            int frame = lookupLexical(name);
+            if (frame == -1)
+                throw ParseError(string("Name is not defined: ") + name);
+            block->append(new InstrGetLexical(frame, name));
+        }
     }
 
     virtual void visit(const SyntaxAssignName& s) {
         s.right()->accept(*this);
-        block->append(new InstrSetLocal(s.left()->id()));
+        Name name = s.left()->id();
+        if (block->layout()->hasName(name))
+            block->append(new InstrSetLocal(name));
+        else {
+            int frame = lookupLexical(name);
+            if (frame == -1)
+                throw ParseError(string("Name is not defined: ") + name);
+            block->append(new InstrSetLexical(frame, name));
+        }
+    }
+
+    virtual void visit(const SyntaxPropRef& s) {
+        s.left()->accept(*this);
+        block->append(new InstrGetProp(s.right()->id()));
     }
 
     virtual void visit(const SyntaxAssignProp& s) {
@@ -240,7 +284,8 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxLambda& a) {
-        BlockBuilder exprBuilder;
+        BlockBuilder exprBuilder(this);
+        exprBuilder.addParams(a.params());
         exprBuilder.build(a.expr());
         Block* exprBlock = exprBuilder.takeBlock();
         exprBlock->append(new InstrReturn);
@@ -277,18 +322,39 @@ void testBuild(const string& input, const string& expected)
 testcase(block)
 {
     testBuildRaw("3", "ConstInteger 3");
-    testBuildRaw("foo.bar", "GetLocal foo, GetProp bar");
-    testBuildRaw("foo()", "GetLocal foo, Call 0");
-    testBuildRaw("foo(bar, baz)", "GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
-    testBuildRaw("foo.bar(baz)", "GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
     testBuildRaw("foo = 1", "ConstInteger 1, SetLocal foo");
-    testBuildRaw("foo.bar = baz", "GetLocal foo, GetLocal baz, SetProp bar");
-    testBuildRaw("foo + 1",
-                 "GetLocal foo, GetMethod __add__, ConstInteger 1, Call 2");
+    testBuildRaw("foo = 1\n"
+                 "foo.bar",
+                 "ConstInteger 1, SetLocal foo, GetLocal foo, GetProp bar");
+    testBuildRaw("foo = 1\n"
+                 "foo()",
+                 "ConstInteger 1, SetLocal foo, GetLocal foo, Call 0");
+    testBuildRaw("foo = 1\n"
+                 "bar = 1\n"
+                 "baz = 1\n"
+                 "foo(bar, baz)",
+                 "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal bar, ConstInteger 1, SetLocal baz, GetLocal foo, GetLocal bar, GetLocal baz, Call 2");
+    testBuildRaw("foo = 1\n"
+                 "baz = 1\n"
+                 "foo.bar(baz)",
+                 "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal baz, GetLocal foo, GetMethod bar, GetLocal baz, Call 2");
+    testBuildRaw("foo = 1\n"
+                 "baz = 1\n"
+                 "foo.bar = baz",
+                 "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal baz, GetLocal foo, GetLocal baz, SetProp bar");
+    testBuildRaw("foo = 1\n"
+                 "foo + 1",
+                 "ConstInteger 1, SetLocal foo, GetLocal foo, GetMethod __add__, ConstInteger 1, Call 2");
     testBuild("1", "ConstInteger 1, ConstNone, Return");
     testBuild("return 1", "ConstInteger 1, Return");
-    testBuild("return foo in bar", "GetLocal foo, GetLocal bar, In, Return");
-    testBuild("return foo is not bar", "GetLocal foo, GetLocal bar, Is, Not, Return");
+    testBuild("foo = 1\n"
+              "bar = 1\n"
+              "return foo in bar",
+              "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal bar, GetLocal foo, GetLocal bar, In, Return");
+    testBuild("foo = 1\n"
+              "bar = 1\n"
+              "return foo is not bar",
+              "ConstInteger 1, SetLocal foo, ConstInteger 1, SetLocal bar, GetLocal foo, GetLocal bar, Is, Not, Return");
     testBuild("return 2 - - 1",
               "ConstInteger 2, GetMethod __sub__, ConstInteger 1, GetMethod __neg__, Call 1, Call 2, Return");
 }

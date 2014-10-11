@@ -34,6 +34,7 @@ struct Object
 
     virtual void print(ostream& os) const;
 
+    bool hasProp(Name name) const;
     bool getProp(Name name, Value& valueOut) const;
     void setProp(Name name, Value value);
 
