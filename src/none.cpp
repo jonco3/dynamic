@@ -2,12 +2,12 @@
 
 #include "class.h"
 
-Object* None = nullptr;
-Object* UninitializedSlot = nullptr;
+Root<Object> None;
+Root<Object> UninitializedSlot;
 
 struct NoneObject : public Object
 {
-    static Class* ObjectClass;
+    static Root<Class> ObjectClass;
     static void init();
 
     NoneObject() : Object(ObjectClass) {}
@@ -16,28 +16,24 @@ struct NoneObject : public Object
 
 struct UninitializedSlotObject : public Object
 {
-    static Class* ObjectClass;
+    static Root<Class> ObjectClass;
     static void init();
 
     UninitializedSlotObject() : Object(ObjectClass) {}
     virtual void print(ostream& s) const { s << "UninitializedSlot"; }
 };
 
-Class* NoneObject::ObjectClass = nullptr;
-Class* UninitializedSlotObject::ObjectClass = nullptr;
+Root<Class> NoneObject::ObjectClass;
+Root<Class> UninitializedSlotObject::ObjectClass;
 
 void NoneObject::init()
 {
-    gc::addRoot(&ObjectClass);
-    gc::addRoot(&None);
     ObjectClass = new Class("None");
     None = new NoneObject;
 }
 
 void UninitializedSlotObject::init()
 {
-    gc::addRoot(&ObjectClass);
-    gc::addRoot(&UninitializedSlot);
     ObjectClass = new Class("UninitializedSlot");
     UninitializedSlot = new UninitializedSlotObject;
 }

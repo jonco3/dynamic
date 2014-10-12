@@ -3,11 +3,10 @@
 #include "block.h"
 #include "interp.h"
 
-Class* Frame::ObjectClass;
+Root<Class> Frame::ObjectClass;
 
 void Frame::init()
 {
-    gc::addRoot(&ObjectClass);
     ObjectClass = new Class("Frame");
 }
 

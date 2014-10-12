@@ -7,13 +7,33 @@
 
 //#define TRACE_GC
 
+#ifdef TRACE_GC
+static inline void log(const char* s) {
+    cerr << s << endl;
+}
+static inline void log(const char* s, void *p) {
+    cerr << s << " " << p << endl;
+}
+static inline void log(const char* s, void *p, void *p2) {
+    cerr << s << " " << p << " " << p2 << endl;
+}
+static inline void log(const char* s, size_t i) {
+    cerr << s << " " << dec << i << endl;
+}
+#else
+static inline void log(const char* s) {}
+static inline void log(const char* s, void *p) {}
+static inline void log(const char* s, void *p, void *p2) {}
+static inline void log(const char* s, size_t i) {}
+#endif
+
 namespace gc {
 static const int8_t epocs = 2;
 static const int8_t invalidEpoc = -1;
 static int8_t currentEpoc = 0;
 static int8_t prevEpoc = 0;
 static vector<Cell*> cells;
-static list<Cell**> roots;
+static RootBase* rootList;
 static bool isSweeping = false;
 static size_t collectAt = 10;
 static double scheduleFactor = 1.5;
@@ -25,9 +45,7 @@ Cell::Cell()
         gc::collect();
     }
 
-#ifdef TRACE_GC
-    cerr << "created " << hex << reinterpret_cast<uintptr_t>(this) << endl;
-#endif
+    log("created", this);
     epoc_ = gc::currentEpoc;
     gc::cells.push_back(this);
 }
@@ -38,15 +56,20 @@ Cell::~Cell()
     epoc_ = gc::invalidEpoc;
 }
 
-bool Cell::shouldMark()
+void Cell::checkValid()
 {
     assert(epoc_ == gc::currentEpoc || epoc_ == gc::prevEpoc);
+}
+
+bool Cell::shouldMark()
+{
+    checkValid();
     return epoc_ == gc::prevEpoc;
 }
 
 bool Cell::shouldSweep()
 {
-    assert(epoc_ == gc::currentEpoc || epoc_ == gc::prevEpoc);
+    checkValid();
     return epoc_ == gc::prevEpoc;
 }
 
@@ -64,9 +87,7 @@ bool Cell::mark(Cell** cellp)
     Cell* cell = *cellp;
     if (cell->shouldMark()) {
         cell->epoc_ = gc::currentEpoc;
-#ifdef TRACE_GC
-        cerr << "  marked " << hex << reinterpret_cast<uintptr_t>(cell) << endl;
-#endif
+        log("  marked", cell);
         return true;
     }
 
@@ -76,9 +97,7 @@ bool Cell::mark(Cell** cellp)
 bool Cell::sweep(Cell* cell)
 {
     if (cell->shouldSweep()) {
-#ifdef TRACE_GC
-        cerr << "  sweeping " << hex << reinterpret_cast<uintptr_t>(cell) << endl;
-#endif
+        log("  sweeping", cell);
 #ifdef DEBUG
         size_t cellSize = cell->size();
 #endif
@@ -94,24 +113,42 @@ bool Cell::sweep(Cell* cell)
     return false;
 }
 
-void gc::addRoot(Cell** cellp)
+void RootBase::insert()
 {
-    assert(cellp);
-    gc::roots.push_back(cellp);
+    log("insert root", this);
+    assert(this);
+    assert(!next_ && !prev_);
+
+    next_ = gc::rootList;
+    prev_ = nullptr;
+    if (next_)
+        next_->prev_ = this;
+    gc::rootList = this;
 }
 
-void gc::removeRoot(Cell** cellp)
+void RootBase::remove()
 {
-    assert(cellp);
-    // todo: use embedded list pointers to avoid this lookup
-    gc::roots.remove(cellp);
+    log("remove root", this);
+    assert(this);
+    assert(gc::rootList == this || prev_);
+
+    if (next_)
+        next_->prev_ = prev_;
+    if (prev_)
+        prev_->next_ = next_;
+    else
+        gc::rootList = next_;
+    next_ = nullptr;
+    prev_ = nullptr;
 }
 
 struct Marker : public Tracer
 {
     virtual void visit(Cell** cellp) {
-        if (*cellp && Cell::mark(cellp))
+        if (*cellp && Cell::mark(cellp)) {
+            log("  pushed", cellp, *cellp);
             stack_.push_back(cellp);
+        }
     }
 
     void markRecursively() {
@@ -128,27 +165,20 @@ struct Marker : public Tracer
 };
 
 void gc::collect() {
-#ifdef TRACE_GC
-    cerr << "> gc::collect " << dec << cellCount() << endl;
-#endif
+    log("> gc::collect", cellCount());
 
     // Begin new epoc
     prevEpoc = currentEpoc;
     currentEpoc = (currentEpoc + 1) % epocs;
 
-    // Gather roots
-#ifdef TRACE_GC
-    cerr << "- marking roots" << endl;
-#endif
+    // Mark roots
+    log("- marking roots");
     Marker marker;
-    for (auto i = roots.begin(); i != roots.end(); ++i) {
-        marker.visit(*i);
-    }
+    for (RootBase* r = rootList; r; r = r->next())
+        r->trace(marker);
 
     // Mark
-#ifdef TRACE_GC
-    cerr << "- marking reachable" << endl;
-#endif
+    log("- marking reachable");
     marker.markRecursively();
 
     // Sweep
@@ -159,16 +189,14 @@ void gc::collect() {
     // Schedule next collection
     collectAt = static_cast<size_t>(static_cast<double>(cellCount()) * scheduleFactor);
 
-#ifdef TRACE_GC
-    cerr << "< gc::collect " << dec << cellCount() << endl;
-#endif
+    log("< gc::collect", cellCount());
 }
 
 size_t gc::cellCount() {
     return cells.size();
 }
 
-struct TestCell : private Cell
+struct TestCell : public Cell
 {
     virtual void trace(Tracer& t) const {
         for (auto i = children_.begin(); i != children_.end(); ++i)

@@ -89,13 +89,11 @@ struct IntegerClass : public Class
     }
 };
 
-IntegerClass* Integer::ObjectClass = nullptr;
-Integer* Integer::Zero = nullptr;
+Root<Class> Integer::ObjectClass;
+Root<Integer> Integer::Zero;
 
 void Integer::init()
 {
-    gc::addRoot(&ObjectClass);
-    gc::addRoot(&Zero);
     ObjectClass = new IntegerClass;
     Zero = new Integer(0);
 }

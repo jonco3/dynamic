@@ -10,7 +10,7 @@ struct Interpreter;
 
 struct Frame : public Object
 {
-    static Class* ObjectClass;
+    static Root<Class> ObjectClass;
     static void init();
 
     Frame(Frame* prev, Block* block);

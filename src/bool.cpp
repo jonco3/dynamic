@@ -7,15 +7,12 @@ struct BooleanClass : public Class
     BooleanClass() : Class("bool") {}
 };
 
-BooleanClass* Boolean::ObjectClass = nullptr;
-Boolean* Boolean::True = nullptr;
-Boolean* Boolean::False = nullptr;
+Root<Class> Boolean::ObjectClass;
+Root<Boolean> Boolean::True;
+Root<Boolean> Boolean::False;
 
 void Boolean::init()
 {
-    gc::addRoot(&ObjectClass);
-    gc::addRoot(&True);
-    gc::addRoot(&False);
     ObjectClass = new BooleanClass;
     True = new Boolean(true);
     False = new Boolean(false);

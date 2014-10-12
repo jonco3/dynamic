@@ -3,8 +3,8 @@
 
 #include "object.h"
 
-extern Object* None;
-extern Object* UninitializedSlot;
+extern Root<Object> None;
+extern Root<Object> UninitializedSlot;
 extern void initSingletons();
 
 #endif

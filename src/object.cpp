@@ -11,13 +11,11 @@
 #include <iostream>
 #include <memory>
 
-Class* Object::ObjectClass = nullptr;
-Layout* Object::InitialLayout = nullptr;
+Root<Class> Object::ObjectClass;
+Root<Layout> Object::InitialLayout;
 
 void Object::init()
 {
-    gc::addRoot(&InitialLayout);
-    gc::addRoot(&ObjectClass);
     InitialLayout = new Layout(nullptr, "__class__");
     ObjectClass = new Class("Object");
 }

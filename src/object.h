@@ -18,8 +18,8 @@ struct Object : public Cell
 {
     static void init();
 
-    static Class* ObjectClass;
-    static Layout* InitialLayout;
+    static Root<Class> ObjectClass;
+    static Root<Layout> InitialLayout;
 
     Object(Class *cls = ObjectClass, const Layout *layout = InitialLayout);
     virtual ~Object();

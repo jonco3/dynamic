@@ -2,19 +2,17 @@
 
 #include "class.h"
 
-Class* Native::ObjectClass;
+Root<Class> Native::ObjectClass;
 
 void Native::init()
 {
-    gc::addRoot(&ObjectClass);
     ObjectClass = new Class("Native");
 }
 
-Class* Function::ObjectClass;
+Root<Class> Function::ObjectClass;
 
 void Function::init()
 {
-    gc::addRoot(&ObjectClass);
     ObjectClass = new Class("Function");
 }
 

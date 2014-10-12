@@ -4,15 +4,13 @@
 #include "object.h"
 #include "class.h"
 
-struct IntegerClass;
-
 struct Integer : public Object
 {
     static void init();
 
-    static IntegerClass* ObjectClass;
+    static Root<Class> ObjectClass;
 
-    static Integer* Zero;
+    static Root<Integer> Zero;
 
     static Value get(int v);
 
