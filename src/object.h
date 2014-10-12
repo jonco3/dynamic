@@ -18,8 +18,8 @@ struct Object : public Cell
 {
     static void init();
 
-    static Root<Class> ObjectClass;
-    static Root<Layout> InitialLayout;
+    static GlobalRoot<Class> ObjectClass;
+    static GlobalRoot<Layout> InitialLayout;
 
     Object(Class *cls = ObjectClass, const Layout *layout = InitialLayout);
     virtual ~Object();
@@ -56,10 +56,5 @@ struct Object : public Cell
 
     void initAttrs(Object* base);
 };
-
-inline ostream& operator<<(ostream& s, const Object* o) {
-    o->print(s);
-    return s;
-}
 
 #endif

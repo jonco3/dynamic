@@ -7,8 +7,6 @@
 #include <ostream>
 #include <type_traits>
 
-#include <iostream>
-
 using namespace std;
 
 // Simple mark and sweep garbage collector.
@@ -62,6 +60,12 @@ struct Cell
     friend void gc::collect();
 };
 
+// todo: should be Cell&
+inline ostream& operator<<(ostream& s, const Cell* cell) {
+    cell->print(s);
+    return s;
+}
+
 struct RootBase
 {
   RootBase() : next_(nullptr), prev_(nullptr) {}
@@ -78,52 +82,40 @@ struct RootBase
 };
 
 // Roots a cell as long as it is alive.
-//
-// The root is only added to the root list when it contains a non-null pointer
-// to allow global Root<> instances to be added only after the GC has been
-// initialised.
 template <typename T>
 struct Root : protected RootBase
 {
-    Root() : ptr_(nullptr) {}
-
-    explicit Root(T* ptr) : ptr_(ptr) {
-        if (ptr_) {
+    explicit Root(T* ptr = nullptr) : ptr_(ptr) {
+        if (ptr_)
             ptr_->checkValid();
-            insert();
-        }
+        insert();
     }
 
     Root(const Root& other) : ptr_(other.ptr_) {
-        if (ptr_) {
-            ptr_->checkValid();
-            insert();
-        }
-    }
-
-    ~Root() {
         if (ptr_)
-            remove();
+            ptr_->checkValid();
+        insert();
     }
 
-    operator T* () const { return ptr_; }
+    ~Root() { remove(); }
+
+    operator T* () { return ptr_; }
+    operator const T* () const { return ptr_; }
     T* operator->() { return ptr_; }
     const T* operator->() const { return ptr_; }
-    const T* get() const { return ptr_; }
     T* get() { return ptr_; }
+    const T* get() const { return ptr_; }
 
     Root& operator=(T* ptr) {
         if (ptr)
             ptr->checkValid();
-        if (ptr_ && !ptr)
-            remove();
-        else if (!ptr_ && ptr)
-            insert();
         ptr_ = ptr;
         return *this;
     }
 
     Root& operator=(const Root& other) {
+        if (other.ptr_)
+            other.ptr_->checkValid();
         *this = other.ptr_;
     }
 
@@ -132,5 +124,42 @@ struct Root : protected RootBase
   private:
     T* ptr_;
 };
+
+// Roots a cell.
+//
+// Intended for globals, it has deferred initialization and can cannot be reassigned.
+template <typename T>
+struct GlobalRoot : protected RootBase
+{
+    GlobalRoot() : ptr_(nullptr) {}
+    GlobalRoot(const GlobalRoot& other) = delete;
+
+    ~GlobalRoot() {
+        if (ptr_)
+            remove();
+    }
+
+    void init(T* ptr) {
+        assert(!ptr_);
+        ptr->checkValid();
+        insert();
+        ptr_ = ptr;
+    }
+
+    operator T* () { return ptr_; }
+    operator const T* () const { return ptr_; }
+    T* operator->() { return ptr_; }
+    const T* operator->() const { return ptr_; }
+    T* get() { return ptr_; }
+    const T* get() const { return ptr_; }
+
+    GlobalRoot& operator=(const GlobalRoot& other) = delete;
+
+    virtual void trace(Tracer& t) { t.visit(&ptr_); }
+
+  private:
+    T* ptr_;
+};
+
 
 #endif

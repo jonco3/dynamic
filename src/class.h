@@ -9,7 +9,7 @@ struct Class : public Object
 {
     static void init();
 
-    static Root<Class> ObjectClass;
+    static GlobalRoot<Class> ObjectClass;
 
     Class(string name);
 

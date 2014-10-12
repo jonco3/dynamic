@@ -89,13 +89,13 @@ struct IntegerClass : public Class
     }
 };
 
-Root<Class> Integer::ObjectClass;
-Root<Integer> Integer::Zero;
+GlobalRoot<Class> Integer::ObjectClass;
+GlobalRoot<Integer> Integer::Zero;
 
 void Integer::init()
 {
-    ObjectClass = new IntegerClass;
-    Zero = new Integer(0);
+    ObjectClass.init(new IntegerClass);
+    Zero.init(new Integer(0));
 }
 
 Integer::Integer(int v)

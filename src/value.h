@@ -14,8 +14,12 @@ struct Value
 {
     Value() : objectp(nullptr) {}
     Value(Object* o) : objectp(o) {}
+
+    // todo
     template <typename T>
     Value(Root<T>& o) : objectp(o.get()) {}
+    template <typename T>
+    Value(GlobalRoot<T>& o) : objectp(o.get()) {}
 
     bool isObject() const { return true; }
     Object *asObject() const { return objectp; }

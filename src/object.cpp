@@ -11,13 +11,13 @@
 #include <iostream>
 #include <memory>
 
-Root<Class> Object::ObjectClass;
-Root<Layout> Object::InitialLayout;
+GlobalRoot<Class> Object::ObjectClass;
+GlobalRoot<Layout> Object::InitialLayout;
 
 void Object::init()
 {
-    InitialLayout = new Layout(nullptr, "__class__");
-    ObjectClass = new Class("Object");
+    InitialLayout.init(new Layout(nullptr, "__class__"));
+    ObjectClass.init(new Class("Object"));
 }
 
 Object::Object(Class *cls, Object* base, const Layout* layout)
@@ -88,12 +88,12 @@ bool Object::getProp(Name name, Value& valueOut) const
         return false;
     }
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
-    valueOut = slots_[slot];
-    if (valueOut == UninitializedSlot) {
+    if (slots_[slot] == UninitializedSlot) {
         // todo: raise exception here
         cerr << "Reference to uninitialized attribute '" << name << "'" << endl;
         return false;
     }
+    valueOut = slots_[slot];
     return true;
 }
 

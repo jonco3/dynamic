@@ -8,10 +8,10 @@ struct Boolean : public Object
 {
     static void init();
 
-    static Root<Class> ObjectClass;
+    static GlobalRoot<Class> ObjectClass;
 
-    static Root<Boolean> True;
-    static Root<Boolean> False;
+    static GlobalRoot<Boolean> True;
+    static GlobalRoot<Boolean> False;
 
     static Boolean* get(bool v) { return v ? True : False; }
 

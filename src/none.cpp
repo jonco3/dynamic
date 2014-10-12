@@ -2,12 +2,12 @@
 
 #include "class.h"
 
-Root<Object> None;
-Root<Object> UninitializedSlot;
+GlobalRoot<Object> None;
+GlobalRoot<Object> UninitializedSlot;
 
 struct NoneObject : public Object
 {
-    static Root<Class> ObjectClass;
+    static GlobalRoot<Class> ObjectClass;
     static void init();
 
     NoneObject() : Object(ObjectClass) {}
@@ -16,26 +16,26 @@ struct NoneObject : public Object
 
 struct UninitializedSlotObject : public Object
 {
-    static Root<Class> ObjectClass;
+    static GlobalRoot<Class> ObjectClass;
     static void init();
 
     UninitializedSlotObject() : Object(ObjectClass) {}
     virtual void print(ostream& s) const { s << "UninitializedSlot"; }
 };
 
-Root<Class> NoneObject::ObjectClass;
-Root<Class> UninitializedSlotObject::ObjectClass;
+GlobalRoot<Class> NoneObject::ObjectClass;
+GlobalRoot<Class> UninitializedSlotObject::ObjectClass;
 
 void NoneObject::init()
 {
-    ObjectClass = new Class("None");
-    None = new NoneObject;
+    ObjectClass.init(new Class("None"));
+    None.init(new NoneObject);
 }
 
 void UninitializedSlotObject::init()
 {
-    ObjectClass = new Class("UninitializedSlot");
-    UninitializedSlot = new UninitializedSlotObject;
+    ObjectClass.init(new Class("UninitializedSlot"));
+    UninitializedSlot.init(new UninitializedSlotObject);
 }
 
 void initSingletons()

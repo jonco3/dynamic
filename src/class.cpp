@@ -1,10 +1,10 @@
 #include "class.h"
 
-Root<Class> Class::ObjectClass;
+GlobalRoot<Class> Class::ObjectClass;
 
 void Class::init()
 {
-    ObjectClass = new Class("Class");
+    ObjectClass.init(new Class("Class"));
     Class::ObjectClass->initClass(Class::ObjectClass, nullptr);
     Object::ObjectClass->initClass(Class::ObjectClass, nullptr);
 }

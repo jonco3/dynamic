@@ -71,11 +71,6 @@ struct Instr : public Cell
     }
 };
 
-inline ostream& operator<<(ostream& s, Instr *i) {
-    i->print(s);
-    return s;
-}
-
 #define instr_type(it)                                                       \
     virtual InstrType type() const { return Type; }                          \
     static const InstrType Type = it

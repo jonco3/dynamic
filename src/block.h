@@ -49,9 +49,4 @@ struct Block : public Cell
     vector<Instr*> instrs_;
 };
 
-inline ostream& operator<<(ostream& s, Block* block) {
-    block->print(s);
-    return s;
-}
-
 #endif
