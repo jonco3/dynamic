@@ -40,7 +40,7 @@ struct Block : public Cell
         return i >= &instrs_.front() && i <= &instrs_.back();
     }
 
-    virtual void trace(Tracer& t) const;
+    virtual void traceChildren(Tracer& t) const;
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
 

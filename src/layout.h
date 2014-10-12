@@ -28,7 +28,7 @@ struct Layout : public Cell
 
     Layout* addName(Name name) const;
 
-    virtual void trace(Tracer& t) const;
+    virtual void traceChildren(Tracer& t) const;
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
 

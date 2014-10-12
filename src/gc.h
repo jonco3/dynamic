@@ -24,13 +24,6 @@ extern bool isDying(const Cell* cell);
 struct Tracer
 {
     virtual void visit(Cell** cellp) = 0;
-
-    // Visit a |DerivedCell* const *| that doesn't implicity convert to |Cell**|
-    template <typename T>
-    void visit(const T*const* cellp) {
-        static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
-        visit(reinterpret_cast<Cell**>(const_cast<T**>(cellp)));
-    }
 };
 
 // Base class for all garbage collected classes.
@@ -39,8 +32,8 @@ struct Cell
     Cell();
     virtual ~Cell();
 
-    void checkValid();
-    virtual void trace(Tracer& t) const = 0;
+    void checkValid() const;
+    virtual void traceChildren(Tracer& t) const = 0;
     virtual size_t size() const = 0;
     virtual void print(ostream& s) const = 0;
 
@@ -59,6 +52,22 @@ struct Cell
     friend struct Marker;
     friend void gc::collect();
 };
+
+namespace gc {
+
+template <typename T>
+inline void checkValid(const T* cell) {
+    static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+    cell->checkValid();
+}
+
+template <typename T>
+inline void trace(Tracer& t, const T* const * cellp) {
+    static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+    t.visit(reinterpret_cast<Cell**>(const_cast<T**>(cellp)));
+}
+
+} // namespace gc
 
 // todo: should be Cell&
 inline ostream& operator<<(ostream& s, const Cell* cell) {
@@ -119,7 +128,9 @@ struct Root : protected RootBase
         *this = other.ptr_;
     }
 
-    virtual void trace(Tracer& t) { t.visit(&ptr_); }
+    virtual void trace(Tracer& t) {
+        gc::trace(t, &ptr_);
+    }
 
   private:
     T* ptr_;
@@ -141,7 +152,7 @@ struct GlobalRoot : protected RootBase
 
     void init(T* ptr) {
         assert(!ptr_);
-        ptr->checkValid();
+        gc::checkValid(ptr);
         insert();
         ptr_ = ptr;
     }
@@ -155,11 +166,12 @@ struct GlobalRoot : protected RootBase
 
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
-    virtual void trace(Tracer& t) { t.visit(&ptr_); }
+    virtual void trace(Tracer& t) {
+        gc::trace(t, &ptr_);
+    }
 
   private:
     T* ptr_;
 };
-
 
 #endif

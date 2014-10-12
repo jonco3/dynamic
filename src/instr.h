@@ -64,7 +64,7 @@ struct Instr : public Cell
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
-    virtual void trace(Tracer& t) const {}
+    virtual void traceChildren(Tracer& t) const {}
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const {
         s << name();
@@ -96,8 +96,8 @@ struct InstrConst : public Instr
 
     Value getValue() { return value; }
 
-    virtual void trace(Tracer& t) const {
-        value.trace(t);
+    virtual void traceChildren(Tracer& t) const {
+        gc::trace(t, &value);
     }
 
   private:
@@ -439,8 +439,8 @@ struct InstrLambda : public Instr
         return true;
     }
 
-    virtual void trace(Tracer& t) const {
-        t.visit(&block_);
+    virtual void traceChildren(Tracer& t) const {
+        gc::trace(t, &block_);
     }
 
     virtual void print(ostream& s) const {

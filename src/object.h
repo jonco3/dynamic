@@ -46,7 +46,7 @@ struct Object : public Cell
   protected:
     Object(Class *cls, Object *base, const Layout* layout = InitialLayout);
 
-    virtual void trace(Tracer& t) const;
+    virtual void traceChildren(Tracer& t) const;
     virtual size_t size() const { return sizeof(*this); }
 
   private:

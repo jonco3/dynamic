@@ -56,7 +56,7 @@ Cell::~Cell()
     epoc_ = gc::invalidEpoc;
 }
 
-void Cell::checkValid()
+void Cell::checkValid() const
 {
     assert(epoc_ == gc::currentEpoc || epoc_ == gc::prevEpoc);
 }
@@ -147,21 +147,21 @@ struct Marker : public Tracer
     virtual void visit(Cell** cellp) {
         if (*cellp && Cell::mark(cellp)) {
             log("  pushed", cellp, *cellp);
-            stack_.push_back(cellp);
+            stack_.push_back(*cellp);
         }
     }
 
     void markRecursively() {
         while (!stack_.empty()) {
-            Cell* cell = *stack_.back();
+            Cell* cell = stack_.back();
             stack_.pop_back();
-            cell->trace(*this);
+            cell->traceChildren(*this);
         }
     }
 
   private:
     // Stack of marked cells whose children have not yet been traced.
-    vector<Cell**> stack_;
+    vector<Cell*> stack_;
 };
 
 void gc::collect() {
@@ -198,9 +198,9 @@ size_t gc::cellCount() {
 
 struct TestCell : public Cell
 {
-    virtual void trace(Tracer& t) const {
+    virtual void traceChildren(Tracer& t) const {
         for (auto i = children_.begin(); i != children_.end(); ++i)
-            t.visit(&(*i));
+            gc::trace(t, &(*i));
     }
 
     virtual size_t size() const { return sizeof(*this); }

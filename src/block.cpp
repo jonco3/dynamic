@@ -34,12 +34,11 @@ void Block::print(ostream& s) const {
     }
 }
 
-void Block::trace(Tracer& t) const
+void Block::traceChildren(Tracer& t) const
 {
-    t.visit(&layout_);
-    for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
-        t.visit(&*i);
-    }
+    gc::trace(t, &layout_);
+    for (auto i = instrs_.begin(); i != instrs_.end(); ++i)
+        gc::trace(t, &*i);
 }
 
 // Find the names that are defined in the current block

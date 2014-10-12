@@ -69,9 +69,9 @@ Layout* Layout::addName(Name name) const
     return child;
 }
 
-void Layout::trace(Tracer& t) const
+void Layout::traceChildren(Tracer& t) const
 {
-    t.visit(&parent_);
+    gc::trace(t, &parent_);
 }
 
 void Layout::print(ostream& s) const

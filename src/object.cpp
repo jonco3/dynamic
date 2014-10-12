@@ -129,11 +129,11 @@ bool Object::isTrue() const
         this != Integer::Zero;
 }
 
-void Object::trace(Tracer& t) const
+void Object::traceChildren(Tracer& t) const
 {
-    t.visit(&layout_);
+    gc::trace(t, &layout_);
     for (auto i = slots_.begin(); i != slots_.end(); ++i)
-        (*i).trace(t);
+        gc::trace(t, &*i);
 }
 
 

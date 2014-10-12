@@ -30,10 +30,6 @@ struct Value
 
     inline bool isTrue() const;
 
-    void trace(Tracer& t) const {
-        t.visit(&objectp);
-    }
-
   private:
     union
     {
@@ -42,5 +38,10 @@ struct Value
 };
 
 ostream& operator<<(ostream& s, const Value& v);
+
+namespace gc {
+extern void checkValid(Value v);
+extern void trace(Tracer& t, const Value* v);
+} // namespace gc
 
 #endif
