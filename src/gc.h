@@ -33,7 +33,7 @@ struct Cell
     virtual ~Cell();
 
     void checkValid() const;
-    virtual void traceChildren(Tracer& t) const = 0;
+    virtual void traceChildren(Tracer& t) = 0;
     virtual size_t size() const = 0;
     virtual void print(ostream& s) const = 0;
 
@@ -53,27 +53,47 @@ struct Cell
     friend void gc::collect();
 };
 
-namespace gc {
-
-template <typename T>
-inline void checkValid(const T* cell) {
-    static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
-    cell->checkValid();
-}
-
-template <typename T>
-inline void trace(Tracer& t, const T* const * cellp) {
-    static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
-    t.visit(reinterpret_cast<Cell**>(const_cast<T**>(cellp)));
-}
-
-} // namespace gc
-
 // todo: should be Cell&
 inline ostream& operator<<(ostream& s, const Cell* cell) {
     cell->print(s);
     return s;
 }
+
+template <typename T> struct GCTraits {};
+
+template <typename T>
+struct GCTraits<T*>
+{
+    static T* nullValue() {
+        static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+        return nullptr;
+    }
+
+    static bool isNonNull(const T* cell) {
+        static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+        return cell != nullptr;
+    }
+
+    static void checkValid(const T* cell) {
+        static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+        if (cell)
+            cell->checkValid();
+    }
+
+    static void trace(Tracer& t, T** cellp) {
+        static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+        t.visit(reinterpret_cast<Cell**>(cellp));
+    }
+};
+
+namespace gc {
+
+template <typename T>
+inline void trace(Tracer& t, T* ptr) {
+    GCTraits<T>::trace(t, ptr);
+}
+
+} // namespace gc
 
 struct RootBase
 {
@@ -90,41 +110,39 @@ struct RootBase
     RootBase* prev_;
 };
 
+#define define_smart_ptr_getters                                              \
+    operator T () { return ptr_; }                                            \
+    operator const T () const { return ptr_; }                                \
+    T operator->() { return ptr_; }                                           \
+    const T operator->() const { return ptr_; }                               \
+    T get() { return ptr_; }                                                  \
+    const T get() const { return ptr_; }
+
 // Roots a cell as long as it is alive.
 template <typename T>
 struct Root : protected RootBase
 {
-    explicit Root(T* ptr = nullptr) : ptr_(ptr) {
-        if (ptr_)
-            ptr_->checkValid();
+    explicit Root(T ptr = GCTraits<T>::nullValue()) {
+        *this = ptr;
         insert();
     }
 
-    Root(const Root& other) : ptr_(other.ptr_) {
-        if (ptr_)
-            ptr_->checkValid();
+    Root(const Root& other) {
+        *this = other.ptr;
         insert();
     }
 
     ~Root() { remove(); }
 
-    operator T* () { return ptr_; }
-    operator const T* () const { return ptr_; }
-    T* operator->() { return ptr_; }
-    const T* operator->() const { return ptr_; }
-    T* get() { return ptr_; }
-    const T* get() const { return ptr_; }
+    define_smart_ptr_getters;
 
-    Root& operator=(T* ptr) {
-        if (ptr)
-            ptr->checkValid();
+    Root& operator=(T ptr) {
+        GCTraits<T>::checkValid(ptr);
         ptr_ = ptr;
         return *this;
     }
 
     Root& operator=(const Root& other) {
-        if (other.ptr_)
-            other.ptr_->checkValid();
         *this = other.ptr_;
     }
 
@@ -133,7 +151,7 @@ struct Root : protected RootBase
     }
 
   private:
-    T* ptr_;
+    T ptr_;
 };
 
 // Roots a cell.
@@ -142,27 +160,22 @@ struct Root : protected RootBase
 template <typename T>
 struct GlobalRoot : protected RootBase
 {
-    GlobalRoot() : ptr_(nullptr) {}
+    GlobalRoot() : ptr_(GCTraits<T>::nullValue()) {}
     GlobalRoot(const GlobalRoot& other) = delete;
 
     ~GlobalRoot() {
-        if (ptr_)
+        if (GCTraits<T>::isNonNull(ptr_))
             remove();
     }
 
-    void init(T* ptr) {
-        assert(!ptr_);
-        gc::checkValid(ptr);
+    void init(T ptr) {
+        assert(GCTraits<T>::isNonNull(ptr));
+        GCTraits<T>::checkValid(ptr);
         insert();
         ptr_ = ptr;
     }
 
-    operator T* () { return ptr_; }
-    operator const T* () const { return ptr_; }
-    T* operator->() { return ptr_; }
-    const T* operator->() const { return ptr_; }
-    T* get() { return ptr_; }
-    const T* get() const { return ptr_; }
+    define_smart_ptr_getters;
 
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
@@ -171,7 +184,7 @@ struct GlobalRoot : protected RootBase
     }
 
   private:
-    T* ptr_;
+    T ptr_;
 };
 
 #endif

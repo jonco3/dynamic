@@ -15,7 +15,7 @@ using namespace std;
 
 struct Layout : public Cell
 {
-    Layout(const Layout* parent, Name name);
+    Layout(Layout* parent, Name name);
     virtual ~Layout();
 
     const Layout* parent() const { return parent_; }
@@ -26,18 +26,18 @@ struct Layout : public Cell
     int lookupName(Name name) const;
     int hasName(Name name) const { return lookupName(name) != -1; }
 
-    Layout* addName(Name name) const;
+    Layout* addName(Name name);
 
-    virtual void traceChildren(Tracer& t) const;
+    virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
 
   private:
-    const Layout* parent_;
-    const Name name_;
-    mutable unordered_map<Name, Layout*> children_;
+    Layout* parent_;
+    Name name_;
+    unordered_map<Name, Layout*> children_;
 
-    void removeChild(const Layout* child) const;
+    void removeChild(const Layout* child);
 };
 
 inline ostream& operator<<(ostream& s, const Layout* layout) {

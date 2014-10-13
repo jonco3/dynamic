@@ -22,7 +22,7 @@ struct Block : public Cell
     Instr** startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
     Instr* instr(unsigned i) { return instrs_.at(i); }
-    const Layout* layout() const { return layout_; }
+    Layout* layout() const { return layout_; }
 
     unsigned append(Instr* instr);
     void branchHere(unsigned source);
@@ -40,7 +40,7 @@ struct Block : public Cell
         return i >= &instrs_.front() && i <= &instrs_.back();
     }
 
-    virtual void traceChildren(Tracer& t) const;
+    virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
 

@@ -2,12 +2,12 @@
 
 #include "class.h"
 
-GlobalRoot<Object> None;
-GlobalRoot<Object> UninitializedSlot;
+GlobalRoot<Object*> None;
+GlobalRoot<Object*> UninitializedSlot;
 
 struct NoneObject : public Object
 {
-    static GlobalRoot<Class> ObjectClass;
+    static GlobalRoot<Class*> ObjectClass;
     static void init();
 
     NoneObject() : Object(ObjectClass) {}
@@ -16,15 +16,15 @@ struct NoneObject : public Object
 
 struct UninitializedSlotObject : public Object
 {
-    static GlobalRoot<Class> ObjectClass;
+    static GlobalRoot<Class*> ObjectClass;
     static void init();
 
     UninitializedSlotObject() : Object(ObjectClass) {}
     virtual void print(ostream& s) const { s << "UninitializedSlot"; }
 };
 
-GlobalRoot<Class> NoneObject::ObjectClass;
-GlobalRoot<Class> UninitializedSlotObject::ObjectClass;
+GlobalRoot<Class*> NoneObject::ObjectClass;
+GlobalRoot<Class*> UninitializedSlotObject::ObjectClass;
 
 void NoneObject::init()
 {

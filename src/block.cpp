@@ -34,7 +34,7 @@ void Block::print(ostream& s) const {
     }
 }
 
-void Block::traceChildren(Tracer& t) const
+void Block::traceChildren(Tracer& t)
 {
     gc::trace(t, &layout_);
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i)
@@ -69,7 +69,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
   private:
-    Root<Layout> layout_;
+    Root<Layout*> layout_;
 };
 
 struct BlockBuilder : public SyntaxVisitor
@@ -115,8 +115,8 @@ struct BlockBuilder : public SyntaxVisitor
 
   private:
     BlockBuilder* parent;
-    Root<Layout> layout;
-    Root<Block> block;
+    Root<Layout*> layout;
+    Root<Block*> block;
 
     int lookupLexical(Name name) {
         int count = 1;
@@ -150,7 +150,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxInteger& s) {
         Value v = Integer::get(s.value());
-        Root<Object> i(v.toObject());
+        Root<Object*> i(v.toObject());
         block->append(new InstrConst(v));
     }
 
@@ -286,7 +286,7 @@ struct BlockBuilder : public SyntaxVisitor
         BlockBuilder exprBuilder(this);
         exprBuilder.addParams(a.params());
         exprBuilder.build(a.expr());
-        Root<Block> exprBlock(exprBuilder.takeBlock());
+        Root<Block*> exprBlock(exprBuilder.takeBlock());
         exprBlock->append(new InstrReturn);
         block->append(new InstrLambda(a.params(), exprBlock));
     }
@@ -304,7 +304,7 @@ void testBuildRaw(const string& input, const string& expected)
 {
     BlockBuilder bb;
     bb.buildRaw(input);
-    Root<Block> block(bb.takeBlock());
+    Root<Block*> block(bb.takeBlock());
     testEqual(repr(block), expected);
 }
 
@@ -312,7 +312,7 @@ void testBuild(const string& input, const string& expected)
 {
     BlockBuilder bb;
     bb.buildFunctionBody(input);
-    Root<Block> block(bb.takeBlock());
+    Root<Block*> block(bb.takeBlock());
     testEqual(repr(block), expected);
 }
 

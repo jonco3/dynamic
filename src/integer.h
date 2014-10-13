@@ -8,9 +8,9 @@ struct Integer : public Object
 {
     static void init();
 
-    static GlobalRoot<Class> ObjectClass;
+    static GlobalRoot<Class*> ObjectClass;
 
-    static GlobalRoot<Integer> Zero;
+    static GlobalRoot<Integer*> Zero;
 
     static Value get(int v);
 

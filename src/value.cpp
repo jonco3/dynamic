@@ -6,14 +6,9 @@ ostream& operator<<(ostream& s, const Value& v) {
     return s;
 }
 
-void gc::checkValid(Value v)
+void GCTraits<Value>::checkValid(Value value)
 {
-    v.asObject()->checkValid();
-}
-
-void gc::trace(Tracer& t, const Value* v)
-{
-    Object* o = v->asObject();
-    gc::trace(t, &o);
-    *const_cast<Value*>(v) = Value(o);
+    Object* o = value.asObject();
+    if (o)
+        o->checkValid();
 }

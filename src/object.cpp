@@ -11,8 +11,8 @@
 #include <iostream>
 #include <memory>
 
-GlobalRoot<Class> Object::ObjectClass;
-GlobalRoot<Layout> Object::InitialLayout;
+GlobalRoot<Class*> Object::ObjectClass;
+GlobalRoot<Layout*> Object::InitialLayout;
 
 void Object::init()
 {
@@ -20,7 +20,7 @@ void Object::init()
     ObjectClass.init(new Class("Object"));
 }
 
-Object::Object(Class *cls, Object* base, const Layout* layout)
+Object::Object(Class *cls, Object* base, Layout* layout)
   : class_(cls), layout_(layout)
 {
     if (cls != Class::ObjectClass)
@@ -31,7 +31,7 @@ Object::Object(Class *cls, Object* base, const Layout* layout)
         initAttrs(base);
 }
 
-Object::Object(Class *cls, const Layout* layout)
+Object::Object(Class *cls, Layout* layout)
   : class_(cls), layout_(layout)
 {
     assert(layout_);
@@ -97,9 +97,9 @@ bool Object::getProp(Name name, Value& valueOut) const
     return true;
 }
 
-void Object::setProp(Name name, Value value)
+void Object::setProp(Name name, Value valueArg)
 {
-    Root<Object> root(value.toObject());  // todo: need Root<Value>
+    Root<Value> value(valueArg);
     int slot = layout_->lookupName(name);
     if (slot == -1) {
         layout_ = layout_->addName(name);
@@ -129,7 +129,7 @@ bool Object::isTrue() const
         this != Integer::Zero;
 }
 
-void Object::traceChildren(Tracer& t) const
+void Object::traceChildren(Tracer& t)
 {
     gc::trace(t, &layout_);
     for (auto i = slots_.begin(); i != slots_.end(); ++i)
@@ -142,7 +142,7 @@ void Object::traceChildren(Tracer& t) const
 
 testcase(object)
 {
-    Root<Object> o(new Object);
+    Root<Object*> o(new Object);
     Value v;
 
     testFalse(o->getProp("foo", v));

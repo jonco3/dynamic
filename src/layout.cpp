@@ -3,7 +3,7 @@
 #include <cassert>
 #include <iostream>
 
-Layout::Layout(const Layout* parent, Name name)
+Layout::Layout(Layout* parent, Name name)
   : parent_(parent), name_(name)
 {}
 
@@ -14,7 +14,7 @@ Layout::~Layout()
         parent_->removeChild(this);
 }
 
-void Layout::removeChild(const Layout* child) const
+void Layout::removeChild(const Layout* child)
 {
     auto i = children_.find(child->name());
     assert(i != children_.end());
@@ -57,7 +57,7 @@ int Layout::lookupName(Name name) const {
     return layout->slotCount() - 1;
 }
 
-Layout* Layout::addName(Name name) const
+Layout* Layout::addName(Name name)
 {
     assert(lookupName(name) == -1);
     auto i = children_.find(name);
@@ -69,7 +69,7 @@ Layout* Layout::addName(Name name) const
     return child;
 }
 
-void Layout::traceChildren(Tracer& t) const
+void Layout::traceChildren(Tracer& t)
 {
     gc::trace(t, &parent_);
 }

@@ -1,6 +1,6 @@
 #include "class.h"
 
-GlobalRoot<Class> Class::ObjectClass;
+GlobalRoot<Class*> Class::ObjectClass;
 
 void Class::init()
 {

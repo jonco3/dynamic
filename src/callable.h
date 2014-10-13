@@ -20,7 +20,7 @@ struct Callable : public Object
 struct Native : public Callable
 {
     static void init();
-    static GlobalRoot<Class> ObjectClass;
+    static GlobalRoot<Class*> ObjectClass;
     Native() : Callable(ObjectClass) {}
     virtual bool call(Interpreter& interp) = 0;
 };
@@ -77,7 +77,7 @@ struct Native2 : public Native
 struct Function : public Callable
 {
     static void init();
-    static GlobalRoot<Class> ObjectClass;
+    static GlobalRoot<Class*> ObjectClass;
 
     Function(const vector<Name>& params, Block* block, Frame* scope)
       : Callable(ObjectClass), params_(params), block_(block), scope_(scope) {}

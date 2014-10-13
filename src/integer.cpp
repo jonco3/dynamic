@@ -64,7 +64,7 @@ struct IntegerClass : public Class
     }
 
     IntegerClass() : Class("int") {
-        Root<Object> root(this);
+        Root<Object*> root(this);
         setProp("__pos__",      new Native1(int_pos));
         setProp("__neg__",      new Native1(int_neg));
         setProp("__invert__",   new Native1(int_invert));
@@ -89,8 +89,8 @@ struct IntegerClass : public Class
     }
 };
 
-GlobalRoot<Class> Integer::ObjectClass;
-GlobalRoot<Integer> Integer::Zero;
+GlobalRoot<Class*> Integer::ObjectClass;
+GlobalRoot<Integer*> Integer::Zero;
 
 void Integer::init()
 {

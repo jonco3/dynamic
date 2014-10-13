@@ -198,7 +198,7 @@ size_t gc::cellCount() {
 
 struct TestCell : public Cell
 {
-    virtual void traceChildren(Tracer& t) const {
+    virtual void traceChildren(Tracer& t) {
         for (auto i = children_.begin(); i != children_.end(); ++i)
             gc::trace(t, &(*i));
     }
@@ -228,7 +228,7 @@ testcase(gc)
     collect();
     testEqual(cellCount(), initCount);
 
-    Root<TestCell> r;
+    Root<TestCell*> r;
     collect();
     testEqual(cellCount(), initCount);
     r = new TestCell;

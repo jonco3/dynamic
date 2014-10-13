@@ -3,7 +3,7 @@
 #include "block.h"
 #include "interp.h"
 
-GlobalRoot<Class> Frame::ObjectClass;
+GlobalRoot<Class*> Frame::ObjectClass;
 
 void Frame::init()
 {

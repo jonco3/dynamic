@@ -18,10 +18,10 @@ struct Object : public Cell
 {
     static void init();
 
-    static GlobalRoot<Class> ObjectClass;
-    static GlobalRoot<Layout> InitialLayout;
+    static GlobalRoot<Class*> ObjectClass;
+    static GlobalRoot<Layout*> InitialLayout;
 
-    Object(Class *cls = ObjectClass, const Layout *layout = InitialLayout);
+    Object(Class *cls = ObjectClass, Layout *layout = InitialLayout);
     virtual ~Object();
 
     void initClass(Class* cls, Object* base); // Only for use during initialization
@@ -44,14 +44,14 @@ struct Object : public Cell
     bool isTrue() const;
 
   protected:
-    Object(Class *cls, Object *base, const Layout* layout = InitialLayout);
+    Object(Class *cls, Object *base, Layout* layout = InitialLayout);
 
-    virtual void traceChildren(Tracer& t) const;
+    virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
 
   private:
     Class* class_;
-    const Layout* layout_;
+    Layout* layout_;
     vector<Value> slots_;
 
     void initAttrs(Object* base);

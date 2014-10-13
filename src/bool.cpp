@@ -7,9 +7,9 @@ struct BooleanClass : public Class
     BooleanClass() : Class("bool") {}
 };
 
-GlobalRoot<Class> Boolean::ObjectClass;
-GlobalRoot<Boolean> Boolean::True;
-GlobalRoot<Boolean> Boolean::False;
+GlobalRoot<Class*> Boolean::ObjectClass;
+GlobalRoot<Boolean*> Boolean::True;
+GlobalRoot<Boolean*> Boolean::False;
 
 void Boolean::init()
 {
