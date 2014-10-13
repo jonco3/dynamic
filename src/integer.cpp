@@ -63,29 +63,31 @@ struct IntegerClass : public Class
         return Integer::get(std::pow(a, b));
     }
 
-    IntegerClass() : Class("int") {
-        Root<Object*> root(this);
-        setProp("__pos__",      new Native1(int_pos));
-        setProp("__neg__",      new Native1(int_neg));
-        setProp("__invert__",   new Native1(int_invert));
-        setProp("__lt__",       new Native2(int_le));
-        setProp("__le__",       new Native2(int_le));
-        setProp("__gt__",       new Native2(int_gt));
-        setProp("__ge__",       new Native2(int_ge));
-        setProp("__eq__",       new Native2(int_eq));
-        setProp("__ne__",       new Native2(int_ne));
-        setProp("__or__",       new Native2(int_or));
-        setProp("__xor__",      new Native2(int_xor));
-        setProp("__and__",      new Native2(int_and));
-        setProp("__lshift__",   new Native2(int_lshift));
-        setProp("__rshift__",   new Native2(int_rshift));
-        setProp("__add__",      new Native2(int_add));
-        setProp("__sub__",      new Native2(int_sub));
-        setProp("__mul__",      new Native2(int_mul));
-        setProp("__div__",      new Native2(int_div));
-        setProp("__floordiv__", new Native2(int_floordiv));
-        setProp("__mod__",      new Native2(int_mod));
-        setProp("__pow__",      new Native2(int_pow));
+    IntegerClass() : Class("int") {}
+
+    void initNatives() {
+        Root<Value> value;
+        value = new Native1(int_pos);    setProp("__pos__", value);
+        value = new Native1(int_neg);    setProp("__neg__", value);
+        value = new Native1(int_invert); setProp("__invert__", value);
+        value = new Native2(int_le);     setProp("__lt__", value);
+        value = new Native2(int_le);     setProp("__le__", value);
+        value = new Native2(int_gt);     setProp("__gt__", value);
+        value = new Native2(int_ge);     setProp("__ge__", value);
+        value = new Native2(int_eq);     setProp("__eq__", value);
+        value = new Native2(int_ne);     setProp("__ne__", value);
+        value = new Native2(int_or);     setProp("__or__", value);
+        value = new Native2(int_xor);    setProp("__xor__", value);
+        value = new Native2(int_and);    setProp("__and__", value);
+        value = new Native2(int_lshift); setProp("__lshift__", value);
+        value = new Native2(int_rshift); setProp("__rshift__", value);
+        value = new Native2(int_add);    setProp("__add__", value);
+        value = new Native2(int_sub);    setProp("__sub__", value);
+        value = new Native2(int_mul);    setProp("__mul__", value);
+        value = new Native2(int_div);    setProp("__div__", value);
+        value = new Native2(int_floordiv); setProp("__floordiv__", value);
+        value = new Native2(int_mod);    setProp("__mod__", value);
+        value = new Native2(int_pow);    setProp("__pow__", value);
     }
 };
 
@@ -94,7 +96,9 @@ GlobalRoot<Integer*> Integer::Zero;
 
 void Integer::init()
 {
-    ObjectClass.init(new IntegerClass);
+    Root<IntegerClass*> cls(new IntegerClass);
+    cls->initNatives();
+    ObjectClass.init(cls);
     Zero.init(new Integer(0));
 }
 

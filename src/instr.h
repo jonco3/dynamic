@@ -139,7 +139,8 @@ struct InstrSetLocal : public Instr
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        frame->setProp(localName, interp.popStack());
+        Root<Value> value(interp.popStack());
+        frame->setProp(localName, value);
         return true;
     }
 
@@ -184,7 +185,8 @@ struct InstrSetLexical : public Instr
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        frame->ancestor(frameIndex)->setProp(lexicalName, interp.popStack());
+        Root<Value> value(interp.popStack());
+        frame->ancestor(frameIndex)->setProp(lexicalName, value);
         return true;
     }
 
@@ -228,7 +230,7 @@ struct InstrSetProp : public Instr
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        Value value = interp.popStack();
+        Root<Value> value(interp.popStack());
         interp.popStack().toObject()->setProp(attrName, value);
         return true;
     }
@@ -286,8 +288,10 @@ struct InstrCall : public Instr
             if (function->requiredArgs() < args)
                 throw runtime_error("Not enough arguments");
             Frame *callFrame = interp.pushFrame(function);
-            for (int i = args - 1; i >= 0; --i)
-                callFrame->setProp(function->paramName(i), interp.popStack());
+            for (int i = args - 1; i >= 0; --i) {
+                Root<Value> arg(interp.popStack());
+                callFrame->setProp(function->paramName(i), arg);
+            }
             interp.popStack();
             frame->setReturn(interp);
             return true;

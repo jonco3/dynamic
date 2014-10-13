@@ -59,7 +59,9 @@ void Object::initAttrs(Object* base)
     slots_.resize(layout_->slotCount());
     for (unsigned i = 0; i < layout_->slotCount(); ++i)
         slots_[i] = UninitializedSlot;
-    setProp("__class__", base);
+    // todo: root outwards
+    Root<Value> value(base);
+    setProp("__class__", value);
 }
 
 bool Object::hasProp(Name name) const
@@ -97,9 +99,8 @@ bool Object::getProp(Name name, Value& valueOut) const
     return true;
 }
 
-void Object::setProp(Name name, Value valueArg)
+void Object::setProp(Name name, Traced<Value> value)
 {
-    Root<Value> value(valueArg);
     int slot = layout_->lookupName(name);
     if (slot == -1) {
         layout_ = layout_->addName(name);
@@ -146,7 +147,8 @@ testcase(object)
     Value v;
 
     testFalse(o->getProp("foo", v));
-    o->setProp("foo", Integer::get(1));
+    Root<Value> one(Integer::get(1));
+    o->setProp("foo", one);
     testTrue(o->getProp("foo", v));
 
     testFalse(None->isTrue());

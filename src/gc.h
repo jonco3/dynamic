@@ -116,7 +116,8 @@ struct RootBase
     T operator->() { return ptr_; }                                           \
     const T operator->() const { return ptr_; }                               \
     T get() { return ptr_; }                                                  \
-    const T get() const { return ptr_; }
+    const T get() const { return ptr_; }                                      \
+    T* operator&() { return &ptr_; }
 
 // Roots a cell as long as it is alive.
 template <typename T>
@@ -185,6 +186,24 @@ struct GlobalRoot : protected RootBase
 
   private:
     T ptr_;
+};
+
+// A handled to a traced location
+template <typename T>
+struct Traced
+{
+    Traced(Root<T>& root) : handle_(&root) {}
+    Traced(GlobalRoot<T>& root) : handle_(&root) {}
+
+    operator T () { return *handle_; }
+    operator const T () const { return *handle_; }
+    T operator->() { return *handle_; }
+    const T operator->() const { return *handle_; }
+    T get() { return *handle_; }
+    const T get() const { return *handle_; }
+
+  private:
+    T* handle_;
 };
 
 #endif

@@ -37,7 +37,7 @@ struct Object : public Cell
 
     bool hasProp(Name name) const;
     bool getProp(Name name, Value& valueOut) const;
-    void setProp(Name name, Value value);
+    void setProp(Name name, Traced<Value> value);
 
     const Layout* layout() const { return layout_; }
 
