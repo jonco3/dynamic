@@ -30,16 +30,9 @@ SyntaxParser::SyntaxParser() :
     // Unary operations
 
     // todo: check the precedence of these works as expected
-
-    expr.addUnaryOp(Token_Plus, [] (Token _, Syntax* r) {
-        return new SyntaxPos(r);
-    });
-    expr.addUnaryOp(Token_Minus, [] (Token _, Syntax* r) {
-        return new SyntaxNeg(r);
-    });
-    expr.addUnaryOp(Token_Not, [] (Token _, Syntax* r) {
-        return new SyntaxInvert(r);
-    });
+    expr.createNodeForUnary<SyntaxPos>(Token_Plus);
+    expr.createNodeForUnary<SyntaxNeg>(Token_Minus);
+    expr.createNodeForUnary<SyntaxInvert>(Token_Not);
 
     // Displays
 
@@ -94,91 +87,43 @@ SyntaxParser::SyntaxParser() :
 
     // Boolean operators
 
-    expr.addBinaryOp(Token_Or, 100, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxOr(l, r);
-    });
-
-    expr.addBinaryOp(Token_And, 110, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxAnd(l, r);
-    });
+    expr.createNodeForBinary<SyntaxOr>(Token_Or, 100, Assoc_Left);
+    expr.createNodeForBinary<SyntaxAnd>(Token_And, 100, Assoc_Left);
 
     // Comparison operators
 
-    expr.addBinaryOp(Token_In, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxIn(l, r);
-    });
+    expr.createNodeForBinary<SyntaxIn>(Token_In, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxIs>(Token_Is, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxLT>(Token_LT, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxLE>(Token_LE, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxGT>(Token_GT, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxGE>(Token_GE, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxEQ>(Token_EQ, 120, Assoc_Left);
+    expr.createNodeForBinary<SyntaxNE>(Token_NE, 120, Assoc_Left);
     expr.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxNot(new SyntaxIn(l, r));
-    });
-    expr.addBinaryOp(Token_Is, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxIs(l, r);
     });
     expr.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         return new SyntaxNot(new SyntaxIs(l, r));
     });
-    expr.addBinaryOp(Token_LT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxLT(l, r);
-    });
-    expr.addBinaryOp(Token_LE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxLE(l, r);
-    });
-    expr.addBinaryOp(Token_GT, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxGT(l, r);
-    });
-    expr.addBinaryOp(Token_GE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxGE(l, r);
-    });
-    expr.addBinaryOp(Token_EQ, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxEQ(l, r);
-    });
-    expr.addBinaryOp(Token_NE, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxNE(l, r);
-    });
 
     // Bitwise binary operators
 
-    expr.addBinaryOp(Token_BitOr, 130, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxBitOr(l, r);
-    });
-    expr.addBinaryOp(Token_BitXor, 140, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxBitXor(l, r);
-    });
-    expr.addBinaryOp(Token_BitAnd, 150, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxBitAnd(l, r);
-    });
-    expr.addBinaryOp(Token_BitLeftShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxBitLeftShift(l, r);
-    });
-    expr.addBinaryOp(Token_BitRightShift, 160, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxBitRightShift(l, r);
-    });
+    expr.createNodeForBinary<SyntaxBitOr>(Token_BitOr, 130, Assoc_Left);
+    expr.createNodeForBinary<SyntaxBitXor>(Token_BitXor, 140, Assoc_Left);
+    expr.createNodeForBinary<SyntaxBitAnd>(Token_BitAnd, 150, Assoc_Left);
+    expr.createNodeForBinary<SyntaxBitLeftShift>(Token_BitLeftShift, 160, Assoc_Left);
+    expr.createNodeForBinary<SyntaxBitRightShift>(Token_BitRightShift, 160, Assoc_Left);
 
     // Arithermetic binary operators
 
-    expr.addBinaryOp(Token_Plus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxPlus(l, r);
-    });
-    expr.addBinaryOp(Token_Minus, 170, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxMinus(l, r);
-    });
-
-    expr.addBinaryOp(Token_Times, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxMultiply(l, r);
-    });
-    expr.addBinaryOp(Token_Divide, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxDivide(l, r);
-    });
-    expr.addBinaryOp(Token_IntDivide, 180, Assoc_Left, [] (Token _, Syntax* l,
-                                                           Syntax* r) {
-        return new SyntaxIntDivide(l, r);
-    });
-    expr.addBinaryOp(Token_Modulo, 180, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxModulo(l, r);
-    });
-
-    expr.addBinaryOp(Token_Power, 190, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxPower(l, r);
-    });
+    expr.createNodeForBinary<SyntaxPlus>(Token_Plus, 170, Assoc_Left);
+    expr.createNodeForBinary<SyntaxMinus>(Token_Minus, 170, Assoc_Left);
+    expr.createNodeForBinary<SyntaxMultiply>(Token_Times, 180, Assoc_Left);
+    expr.createNodeForBinary<SyntaxDivide>(Token_Divide, 180, Assoc_Left);
+    expr.createNodeForBinary<SyntaxIntDivide>(Token_IntDivide, 180, Assoc_Left);
+    expr.createNodeForBinary<SyntaxModulo>(Token_Modulo, 180, Assoc_Left);
+    expr.createNodeForBinary<SyntaxPower>(Token_Power, 180, Assoc_Left);
 
     expr.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const Actions& acts,
                                             Token _, Syntax* l) {

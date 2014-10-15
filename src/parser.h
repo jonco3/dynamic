@@ -33,24 +33,33 @@ struct Parser
     {
         Actions(unsigned maxTokenTypes);
 
-        typedef function<T (ParserT& parser, const Actions& acts, Token token)>
-        PrefixHandler;
+        typedef function<T (ParserT& parser, const Actions& acts, Token token)> PrefixHandler;
+        typedef function<T (ParserT& parser, const Actions& acts, Token token, const T leftValue)> InfixHandler;
+        typedef function<T (Token token)> WordHandler;
+        typedef function<T (Token token, const T leftValue, const T rightValue)> BinaryOpHandler;
+        typedef function<T (Token token, const T rightValue)> UnaryOpHandler;
+
+        // Add a generic handler to call for a token in prefix position
         void addPrefixHandler(TokenType type, PrefixHandler handler);
 
-        typedef function<T (ParserT& parser, const Actions& acts, Token token,
-                            const T leftValue)> InfixHandler;
+        // Add a generic handler to call for a token in infix position
         void addInfixHandler(TokenType type, unsigned bindLeft, InfixHandler handler);
 
-        typedef function<T (Token token)> WordHandler;
         void addWord(TokenType type, WordHandler handler);
 
-        typedef function<T (Token token, const T leftValue, const T rightValue)>
-        BinaryOpHandler;
         void addBinaryOp(TokenType type, unsigned bindLeft, Assoc assoc,
                          BinaryOpHandler handler);
 
-        typedef function<T (Token token, const T rightValue)> UnaryOpHandler;
         void addUnaryOp(TokenType type, UnaryOpHandler hanlder);
+
+        // Add a handler that creates a new node of type N for a token in prefix
+        // position
+        template<typename N> void createNodeForUnary(TokenType type);
+
+        // Add a handler that creates a new node of type N for a token in infix
+        // position
+        template<typename N> void createNodeForBinary(TokenType type,
+                                                      unsigned bindLeft, Assoc assoc);
 
       private:
         struct PrefixAction
@@ -108,6 +117,7 @@ template <typename T>
 void Parser<T>::Actions::addPrefixHandler(TokenType type, PrefixHandler handler)
 {
     assert(type < prefixActions.size());
+    assert(!prefixActions[type].present);
     prefixActions[type] = {true, handler};
 }
 
@@ -116,6 +126,7 @@ void Parser<T>::Actions::addInfixHandler(TokenType type, unsigned bindLeft,
                                   InfixHandler handler)
 {
     assert(type < infixActions.size());
+    assert(!infixActions[type].present);
     infixActions[type] = {true, bindLeft, handler};
 }
 
@@ -149,10 +160,41 @@ void Parser<T>::Actions::addUnaryOp(TokenType type, UnaryOpHandler handler)
 {
     addPrefixHandler(type,
                      [=] (Parser<T>& parser, Actions acts, Token token) {
+                         // todo: magic value should be constant
                          T rightValue = parser.expression(acts, 500);
                          return handler(token, rightValue);
                      });
 }
+
+template<typename T>
+template<typename N>
+void Parser<T>::Actions::createNodeForUnary(TokenType type)
+{
+    addPrefixHandler(type,
+                     [] (Parser<T>& parser, Actions acts, Token token) {
+                         // todo: magic value should be constant
+                         return new N(parser.expression(acts, 500));
+                     });
+}
+
+template<typename T>
+template<typename N>
+void Parser<T>::Actions::createNodeForBinary(TokenType type, unsigned bindLeft,
+                                             Assoc assoc)
+{
+    // calculate right binding power by addng left binding power and
+    // associativity, hence why left binding power must be a multiple
+    // of two
+    unsigned bindRight = bindLeft + assoc;
+    addInfixHandler(type,
+                    bindLeft,
+                    [=] (Parser<T>& parser, Actions acts, Token token,
+                         const T leftValue) {
+                        T rightValue = parser.expression(acts, bindRight);
+                        return new N(leftValue, rightValue);
+                    });
+}
+
 
 template <typename T>
 Parser<T>::Parser(Tokenizer& tokenizer) : tokenizer(tokenizer) {}
