@@ -139,12 +139,15 @@ struct Tokenizer
     Token nextToken();
 
 private:
-    const char* source;
+    string source;
+    unsigned index;
     TokenPos pos;
     vector<unsigned> indentStack;
     list<Token> tokenQueue;
     unordered_map<string, TokenType> keywords;
     unordered_map<string, TokenType> operators;
+
+    Token findNextToken();
 
     char peekChar();
     char nextChar();

@@ -15,8 +15,9 @@ ParseError::ParseError(string message) :
 }
 
 SyntaxParser::SyntaxParser() :
-  Parser(expr, tokenizer),
-  expr(TokenCount)
+  Parser(tokenizer),
+  expr(TokenCount),
+  statement(TokenCount)
 {
     expr.addWord(Token_Integer, [] (Token token) {
         return new SyntaxInteger(atoi(token.text.c_str()));
@@ -209,15 +210,50 @@ SyntaxParser::SyntaxParser() :
         }
         return new SyntaxReturn(expr);
     });
+
+    // Statements
+
+    statement = expr;
+
+    // todo: assignment is really a statement
+
+    statement.addPrefixHandler(Token_If, [&] (ParserT& parser, const Actions& acts,
+                                             Token _) {
+        SyntaxIf* ifStmt = new SyntaxIf;
+        do {
+            Syntax* cond = parser.expression(expr);
+            parser.match(Token_Colon);
+            parser.match(Token_Newline);  // todo: this is optional
+            SyntaxBlock* block = parseBlock();
+            ifStmt->addBranch(cond, block);
+        } while (parser.opt(Token_Elif));
+        if (parser.opt(Token_Else)) {
+            parser.match(Token_Colon);
+            parser.match(Token_Newline);  // todo: this is optional
+            ifStmt->setElse(parseBlock());
+        }
+        return ifStmt;
+    });
+}
+
+SyntaxBlock* SyntaxParser::parseTopLevel()
+{
+    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
+    while (!atEnd()) {
+        syntax->append(parseStatement());
+        if (atEnd())
+            break;
+        match(Token_Newline);
+    }
+    return syntax.release();
 }
 
 SyntaxBlock* SyntaxParser::parseBlock()
 {
     unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
-    while (!atEnd()) {
-        syntax->append(parse());
-        if (atEnd())
-            break;
+    match(Token_Indent);
+    while (!opt(Token_Dedent)) {
+        syntax->append(parseStatement());
         match(Token_Newline);
     }
     return syntax.release();
@@ -240,34 +276,34 @@ testcase(parser)
         });
 
     Tokenizer tokenizer;
-    Parser<int> parser(acts, tokenizer);
+    Parser<int> parser(tokenizer);
 
     parser.start("2 + 3 - 1");
     testFalse(parser.atEnd());
-    testEqual(parser.parse(), 4);
+    testEqual(parser.parse(acts), 4);
     testTrue(parser.atEnd());
-    testThrows(parser.parse(), ParseError);
+    testThrows(parser.parse(acts), ParseError);
 
     parser.start("1 2");
-    testEqual(parser.parse(), 1);
-    testEqual(parser.parse(), 2);
+    testEqual(parser.parse(acts), 1);
+    testEqual(parser.parse(acts), 2);
     testTrue(parser.atEnd());
-    testThrows(parser.parse(), ParseError);
+    testThrows(parser.parse(acts), ParseError);
 
     SyntaxParser sp;
     sp.start("1+2-3");
-    unique_ptr<Syntax> expr(sp.parse());
+    unique_ptr<Syntax> expr(sp.parseExpr());
     testEqual(repr(expr.get()), "1 + 2 - 3");
 
     sp.start("4 ** 5");
-    expr.reset(sp.parse());
+    expr.reset(sp.parseExpr());
     testEqual(repr(expr.get()), "4 ** 5");
 
     sp.start("f = 1 + 2");
-    expr.reset(sp.parse());
+    expr.reset(sp.parseExpr());
     testTrue(expr.get()->is<SyntaxAssignName>());
 
     sp.start("1\n2");
-    expr.reset(sp.parseBlock());
+    expr.reset(sp.parseTopLevel());
     testEqual(repr(expr.get()), "1\n2\n");
 }

@@ -92,7 +92,7 @@ struct BlockBuilder : public SyntaxVisitor
     void buildRaw(const Input& input) {
         SyntaxParser parser;
         parser.start(input);
-        unique_ptr<Syntax> syntax(parser.parseBlock());
+        unique_ptr<Syntax> syntax(parser.parseTopLevel());
         build(syntax.get());
     }
 
@@ -280,6 +280,26 @@ struct BlockBuilder : public SyntaxVisitor
         block->branchHere(altBranch);
         s.alt()->accept(*this);
         block->branchHere(endBranch);
+    }
+
+    virtual void visit(const SyntaxIf& s) {
+        auto suites = s.branches();
+        assert(suites.size() != 0);
+        vector<unsigned> branchesToEnd;
+        unsigned lastCondFailed = 0;
+        for (unsigned i = 0; i != suites.size(); ++i) {
+            if (i != 0)
+                block->branchHere(lastCondFailed);
+            suites[i].cond->accept(*this);
+            lastCondFailed = block->append(new InstrBranchIfFalse);
+            suites[i].block->accept(*this);
+            branchesToEnd.push_back(block->append(new InstrBranchAlways));
+        }
+        block->branchHere(lastCondFailed);
+        if (s.elseBranch())
+            s.elseBranch()->accept(*this);
+        for (unsigned i = 0; i < branchesToEnd.size(); ++i)
+            block->branchHere(branchesToEnd[i]);
     }
 
     virtual void visit(const SyntaxLambda& a) {

@@ -72,12 +72,12 @@ struct Parser
         friend struct Parser<T>;
     };
 
-    Parser(const Actions& acts, Tokenizer& tokenizer);
+    Parser(Tokenizer& tokenizer);
 
     void start(const Input& input);
 
     bool atEnd() { return token.type == Token_EOF; }
-    T parse() { return expression(actions); }
+    T parse(const Actions& acts) { return expression(acts); }
 
     bool notFollowedBy(TokenType type) { return token.type != type; }
     bool opt(TokenType type);
@@ -91,7 +91,6 @@ struct Parser
     T infix(const Actions& acts, Token token, const T leftValue);
 
   private:
-    const Actions& actions;
     Tokenizer& tokenizer;
     Token token;
 };
@@ -156,10 +155,7 @@ void Parser<T>::Actions::addUnaryOp(TokenType type, UnaryOpHandler handler)
 }
 
 template <typename T>
-Parser<T>::Parser(const Actions& acts, Tokenizer& tokenizer) :
-  actions(acts),
-  tokenizer(tokenizer)
-{}
+Parser<T>::Parser(Tokenizer& tokenizer) : tokenizer(tokenizer) {}
 
 template <typename T>
 void Parser<T>::nextToken()
@@ -256,10 +252,15 @@ struct SyntaxBlock;
 struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
+    Syntax* parseExpr() { return Parser::parse(expr); }
+    Syntax* parseStatement() { return Parser::parse(statement);  }
+    SyntaxBlock *parseTopLevel();
     SyntaxBlock *parseBlock();
+
   private:
     Tokenizer tokenizer;
-    Parser<Syntax*>::Actions expr;
+    Actions expr;
+    Actions statement;
 };
 
 #endif

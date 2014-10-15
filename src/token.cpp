@@ -6,6 +6,8 @@
 #include <cstring>
 #include <sstream>
 
+//#define TRACE_TOKEN
+
 struct Keyword
 {
     const char* match;
@@ -110,7 +112,7 @@ TokenError::TokenError(string message, const TokenPos& pos) :
 }
 
 Tokenizer::Tokenizer() :
-  source(nullptr)
+  index(0)
 {
     indentStack.push_back(0);
 
@@ -140,7 +142,8 @@ string Tokenizer::typeName(TokenType type)
 
 void Tokenizer::start(const Input& input)
 {
-    source = input.text.c_str();
+    source = input.text;
+    index = 0;
     pos.file = input.file;
     pos.line = 1;
     pos.column = 0;
@@ -149,12 +152,12 @@ void Tokenizer::start(const Input& input)
 
 char Tokenizer::peekChar()
 {
-    return *source;
+    return source[index];
 }
 
 char Tokenizer::nextChar()
 {
-    char c = *source++;
+    char c = source[index++];
     if (c == '\n') {
         ++pos.line;
         pos.column = 0;
@@ -168,10 +171,10 @@ char Tokenizer::nextChar()
 
 void Tokenizer::ungetChar(char c)
 {
-    assert(pos.column > 0);
-    assert(c == source[-1]);
+    assert(index != 0);
+    assert(c == source[index - 1]);
     assert(c != '\t' && c != '\n');
-    --source;
+    --index;
     --pos.column;
 }
 
@@ -222,7 +225,7 @@ unsigned Tokenizer::skipIndentation()
         nextChar();
         skipWhitespace();
     }
-    if (!peekChar())
+    if (index >= source.size())
         return 0;
     return pos.column;
 }
@@ -230,6 +233,7 @@ unsigned Tokenizer::skipIndentation()
 template <typename T>
 T popFront(list<T>& list)
 {
+    assert(!list.empty());
     T result = list.front();
     list.pop_front();
     return result;
@@ -237,9 +241,19 @@ T popFront(list<T>& list)
 
 Token Tokenizer::nextToken()
 {
+    Token result = findNextToken();
+#ifdef TRACE_TOKEN
+    cerr << "nextToken " << typeName(t) << endl;
+#endif
+    return result;
+}
+
+Token Tokenizer::findNextToken()
+{
     // Return any queued tokens
-    if (!tokenQueue.empty())
+    if (!tokenQueue.empty()) {
         return popFront(tokenQueue);
+    }
 
     // Whitespace
     TokenPos startPos = pos;
@@ -263,10 +277,10 @@ Token Tokenizer::nextToken()
     }
 
     startPos = pos;
-    const char *startText = source;
+    unsigned startIndex = index;
 
     // EOF
-    if (!peekChar())
+    if (index >= source.size())
         return {Token_EOF, string(), startPos};
 
     // Newline
@@ -281,8 +295,8 @@ Token Tokenizer::nextToken()
         do {
             nextChar();
         } while (isDigit(peekChar()));
-        size_t length = source - startText;
-        return {Token_Integer, string(startText, length), startPos};
+        size_t length = index - startIndex;
+        return {Token_Integer, string(source, startIndex, length), startPos};
     }
 
     // String literals
@@ -316,9 +330,9 @@ Token Tokenizer::nextToken()
         do {
             nextChar();
         } while (isIdentifierRest(peekChar()));
-        size_t length = source - startText;
+        size_t length = index - startIndex;
 
-        string s(startText, length);
+        string s(source, startIndex, length);
         auto k = keywords.find(s);
         if (k != keywords.end()) {
             TokenType type = (*k).second;
@@ -345,21 +359,21 @@ Token Tokenizer::nextToken()
         do {
             nextChar();
         } while (isOrdinary(peekChar()));
-        size_t length = source - startText;
+        size_t length = index - startIndex;
 
         // Return the longest valid token we can make out of what we found.
         for (; length >= 1; --length) {
-            string s(startText, length);
+            string s(source, startIndex, length);
             auto k = operators.find(s);
             if (k != operators.end())
                 return {(*k).second, s, startPos};
             ungetChar(s.back());
         }
 
-        throw TokenError("Unexpected " + string(startText, 1), startPos);
+        throw TokenError("Unexpected " + string(source, startIndex, 1), startPos);
     }
 
-    throw TokenError("Unexpected " + string(startText, 1), startPos);
+    throw TokenError("Unexpected " + string(source, startIndex, 1), startPos);
 }
 
 static void tokenize(const char *source)
@@ -498,5 +512,41 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Not);
     testEqual(tz.nextToken().type, Token_NotIn);
     testEqual(tz.nextToken().type, Token_In);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("if 1:\n"
+             "  return 2\n");
+    testEqual(tz.nextToken().type, Token_If);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Colon);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Indent);
+    testEqual(tz.nextToken().type, Token_Return);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Dedent);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("if 0:\n"
+             "  return 2\n"
+             "else:\n"
+             "  return 3\n");
+    testEqual(tz.nextToken().type, Token_If);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Colon);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Indent);
+    testEqual(tz.nextToken().type, Token_Return);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Dedent);
+    testEqual(tz.nextToken().type, Token_Else);
+    testEqual(tz.nextToken().type, Token_Colon);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Indent);
+    testEqual(tz.nextToken().type, Token_Return);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Dedent);
     testEqual(tz.nextToken().type, Token_EOF);
 }

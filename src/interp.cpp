@@ -107,4 +107,20 @@ testcase(interp)
     testInterp("return (lambda x: x + 1)(1)", "2");
     testInterp("x = 0\nreturn (lambda x: x + 1)(1)", "2");
     testInterp("x = 0\nreturn (lambda y: x + 1)(1)", "1");
+
+    testInterp("if 1:\n"
+               "  return 2\n", "2");
+    testInterp("if 0:\n"
+               "  return 2\n"
+               "else:\n"
+               "  return 3\n",
+               "3");
+    testInterp("x = 1\n"
+               "if x == 0:\n"
+               "  return 4\n"
+               "elif x == 1:\n"
+               "  return 5\n"
+               "else:\n"
+               "  return 6\n",
+               "5");
 }

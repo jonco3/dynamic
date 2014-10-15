@@ -46,7 +46,8 @@ using namespace std;
     syntax(Call)                                                              \
     syntax(Return)                                                            \
     syntax(Cond)                                                              \
-    syntax(Lambda)
+    syntax(Lambda)                                                            \
+    syntax(If)
 
 enum SyntaxType
 {
@@ -162,8 +163,13 @@ typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
 
 struct SyntaxBlock : public Syntax
 {
-    syntax_type(Syntax_Block)
-    syntax_name("block")
+    syntax_type(Syntax_Block);
+    syntax_name("block");
+
+    ~SyntaxBlock() {
+        for (auto i = statements.begin(); i != statements.end(); ++i)
+            delete *i;
+    }
 
     void append(Syntax* s) { statements.push_back(s); }
     const vector<Syntax *>& stmts() const { return statements; }
@@ -352,6 +358,55 @@ struct SyntaxLambda : public Syntax
   private:
     vector<Name> params_;
     Syntax* expr_;
+};
+
+struct SyntaxIf : public Syntax
+{
+    struct Branch
+    {
+        Syntax* cond;
+        SyntaxBlock* block;
+    };
+
+    ~SyntaxIf() {
+        for (auto i = branches_.begin(); i != branches_.end(); ++i) {
+            Branch& branch = *i;
+            delete branch.cond;
+            delete branch.block;
+        }
+    }
+
+    syntax_type(Syntax_Cond);
+    syntax_name("if");
+
+    void addBranch(Syntax* cond, SyntaxBlock* block) {
+        branches_.push_back({ cond, block });
+    }
+
+    void setElse(SyntaxBlock* block) {
+        else_.reset(block);
+    }
+
+    const vector<Branch>& branches() const { return branches_; }
+    const SyntaxBlock* elseBranch() const { return else_.get(); }
+
+    syntax_accept();
+
+    virtual void print(ostream& s) const override {
+        // todo: indentation
+        for (unsigned i = 0; i < branches_.size(); ++i) {
+            s << (i == 0 ? "if" : "elif") << " ";
+            s << branches_[i].cond << ":" << endl;
+            s << branches_[i].block << endl;
+        }
+        if (else_) {
+            s << "else:" << endl << else_.get() << endl;
+        }
+    }
+
+  private:
+    vector<Branch> branches_;
+    unique_ptr<SyntaxBlock> else_;
 };
 
 #endif
