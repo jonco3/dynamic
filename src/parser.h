@@ -31,6 +31,7 @@ struct Parser
 
     struct Actions
     {
+        Actions() {}
         Actions(unsigned maxTokenTypes);
 
         typedef function<T (ParserT& parser, const Actions& acts, Token token)> PrefixHandler;
@@ -295,14 +296,15 @@ struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
     Syntax* parseExpr() { return Parser::parse(expr); }
-    Syntax* parseStatement() { return Parser::parse(statement);  }
+    Syntax* parseStatement() { return Parser::parse(compoundStmt);  }
     SyntaxBlock *parseTopLevel();
     SyntaxBlock *parseBlock();
 
   private:
     Tokenizer tokenizer;
     Actions expr;
-    Actions statement;
+    Actions simpleStmt;
+    Actions compoundStmt;
 };
 
 #endif

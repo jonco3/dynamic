@@ -16,8 +16,7 @@ ParseError::ParseError(string message) :
 
 SyntaxParser::SyntaxParser() :
   Parser(tokenizer),
-  expr(TokenCount),
-  statement(TokenCount)
+  expr(TokenCount)
 {
     expr.addWord(Token_Integer, [] (Token token) {
         return new SyntaxInteger(atoi(token.text.c_str()));
@@ -44,18 +43,6 @@ SyntaxParser::SyntaxParser() :
         return content;
     });
 
-    // Assignments
-
-    expr.addBinaryOp(Token_Assign, 10, Assoc_Right,
-                     [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
-        if (l->is<SyntaxName>())
-            return new SyntaxAssignName(l->as<SyntaxName>(), r);
-        else if (l->is<SyntaxPropRef>())
-            return new SyntaxAssignProp(l->as<SyntaxPropRef>(), r);
-        else
-            throw ParseError("Illegal LHS for assignment");
-    });
-
     // Lambda
 
     expr.addPrefixHandler(Token_Lambda, [] (ParserT& parser, const Actions& acts,
@@ -73,6 +60,8 @@ SyntaxParser::SyntaxParser() :
         }
         return new SyntaxLambda(params, parser.expression(acts));
     });
+
+    // todo: comma operator to make tuples
 
     // Conditional expression
 
@@ -156,13 +145,27 @@ SyntaxParser::SyntaxParser() :
         return new SyntaxReturn(expr);
     });
 
-    // Statements
+    // Simple statements
 
-    statement = expr;
+    simpleStmt = expr;
 
-    // todo: assignment is really a statement
+    // Assignments
 
-    statement.addPrefixHandler(Token_If, [&] (ParserT& parser, const Actions& acts,
+    simpleStmt.addBinaryOp(Token_Assign, 10, Assoc_Right,
+                          [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
+        if (l->is<SyntaxName>())
+            return new SyntaxAssignName(l->as<SyntaxName>(), r);
+        else if (l->is<SyntaxPropRef>())
+            return new SyntaxAssignProp(l->as<SyntaxPropRef>(), r);
+        else
+            throw ParseError("Illegal LHS for assignment");
+    });
+
+    // Compount statements
+
+    compoundStmt = simpleStmt;
+
+    compoundStmt.addPrefixHandler(Token_If, [&] (ParserT& parser, const Actions& acts,
                                              Token _) {
         SyntaxIf* ifStmt = new SyntaxIf;
         do {
@@ -181,6 +184,17 @@ SyntaxParser::SyntaxParser() :
     });
 }
 
+SyntaxBlock* SyntaxParser::parseBlock()
+{
+    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
+    match(Token_Indent);
+    while (!opt(Token_Dedent)) {
+        syntax->append(parseStatement());
+        match(Token_Newline);
+    }
+    return syntax.release();
+}
+
 SyntaxBlock* SyntaxParser::parseTopLevel()
 {
     unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
@@ -188,17 +202,6 @@ SyntaxBlock* SyntaxParser::parseTopLevel()
         syntax->append(parseStatement());
         if (atEnd())
             break;
-        match(Token_Newline);
-    }
-    return syntax.release();
-}
-
-SyntaxBlock* SyntaxParser::parseBlock()
-{
-    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
-    match(Token_Indent);
-    while (!opt(Token_Dedent)) {
-        syntax->append(parseStatement());
         match(Token_Newline);
     }
     return syntax.release();
@@ -245,7 +248,7 @@ testcase(parser)
     testEqual(repr(expr.get()), "4 ** 5");
 
     sp.start("f = 1 + 2");
-    expr.reset(sp.parseExpr());
+    expr.reset(sp.parseStatement());
     testTrue(expr.get()->is<SyntaxAssignName>());
 
     sp.start("1\n2");
