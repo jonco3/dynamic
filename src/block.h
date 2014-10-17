@@ -24,16 +24,14 @@ struct Block : public Cell
     Instr* instr(unsigned i) { return instrs_.at(i); }
     Layout* layout() const { return layout_; }
 
+    unsigned nextIndex() { return instrs_.size(); }
     unsigned append(Instr* instr);
     void branchHere(unsigned source);
+    int offsetTo(unsigned dest);
 
-    Instr* lastInstr() {
+    const Instr* lastInstr() {
         assert(!instrs_.empty());
         return instrs_.back();
-    }
-
-    Instr** nextInstr() {
-        return &instrs_.back() + 1;
     }
 
     bool contains(Instr** i) const {

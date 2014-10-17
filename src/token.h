@@ -162,6 +162,8 @@ private:
     bool isIdentifierStart(char c);
     bool isIdentifierRest(char c);
     bool isOrdinary(char c);
+
+    void queueDedentsToColumn(unsigned column);
 };
 
 /*

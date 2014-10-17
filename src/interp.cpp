@@ -123,4 +123,12 @@ testcase(interp)
                "else:\n"
                "  return 6\n",
                "5");
+
+    testInterp("x = 0\n"
+               "y = 3\n"
+               "while y > 0:\n"
+               "  x = x + y\n"
+               "  y = y - 1\n"
+               "return x\n",
+               "6");
 }

@@ -15,15 +15,22 @@ Block::Block(Layout* layout)
 unsigned Block::append(Instr* instr)
 {
     assert(instr);
+    unsigned index = nextIndex();
     instrs_.push_back(instr);
-    return instrs_.size() - 1;
+    return index;
 }
 
 void Block::branchHere(unsigned source)
 {
-    assert(source < instrs_.size());
+    assert(source < instrs_.size() - 1);
     Branch* b = instrs_[source]->asBranch();
     b->setOffset(instrs_.size() - source);
+}
+
+int Block::offsetTo(unsigned dest)
+{
+    assert(dest < instrs_.size() - 1);
+    return dest - instrs_.size();
 }
 
 void Block::print(ostream& s) const {
@@ -298,8 +305,20 @@ struct BlockBuilder : public SyntaxVisitor
         block->branchHere(lastCondFailed);
         if (s.elseBranch())
             s.elseBranch()->accept(*this);
+        else
+            branchesToEnd.pop_back();
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
             block->branchHere(branchesToEnd[i]);
+    }
+
+    virtual void visit(const SyntaxWhile& s) {
+        unsigned loopHead = block->nextIndex();
+        s.cond()->accept(*this);
+        unsigned branchToEnd = block->append(new InstrBranchIfFalse);
+        s.suite()->accept(*this);
+        block->append(new InstrBranchAlways(block->offsetTo(loopHead)));
+        block->branchHere(branchToEnd);
+        // todo: else
     }
 
     virtual void visit(const SyntaxLambda& a) {

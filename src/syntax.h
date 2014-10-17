@@ -47,7 +47,8 @@ using namespace std;
     syntax(Return)                                                            \
     syntax(Cond)                                                              \
     syntax(Lambda)                                                            \
-    syntax(If)
+    syntax(If)                                                                \
+    syntax(While)
 
 enum SyntaxType
 {
@@ -376,7 +377,7 @@ struct SyntaxIf : public Syntax
         }
     }
 
-    syntax_type(Syntax_Cond);
+    syntax_type(Syntax_If);
     syntax_name("if");
 
     void addBranch(Syntax* cond, SyntaxBlock* block) {
@@ -407,6 +408,34 @@ struct SyntaxIf : public Syntax
   private:
     vector<Branch> branches_;
     unique_ptr<SyntaxBlock> else_;
+};
+
+struct SyntaxWhile : public Syntax
+{
+    SyntaxWhile(Syntax* cond, SyntaxBlock* suite, SyntaxBlock* elseSuite)
+      : cond_(cond), suite_(suite), elseSuite_(elseSuite) {}
+
+    syntax_type(Syntax_While);
+    syntax_name("while");
+
+    const Syntax* cond() const { return cond_.get(); }
+    const Syntax* suite() const { return suite_.get(); }
+    const Syntax* elseSuite() const { return elseSuite_.get(); }
+
+    syntax_accept();
+
+    virtual void print(ostream& s) const override {
+        // todo: indentation
+        s << "while " << cond() << ": " << endl;
+        s << suite() << endl;
+        if (elseSuite())
+            s << elseSuite() << endl;
+    }
+
+  private:
+    unique_ptr<Syntax> cond_;
+    unique_ptr<SyntaxBlock> suite_;
+    unique_ptr<SyntaxBlock> elseSuite_;
 };
 
 #endif

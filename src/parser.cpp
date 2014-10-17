@@ -160,28 +160,38 @@ SyntaxParser::SyntaxParser() :
         else
             throw ParseError("Illegal LHS for assignment");
     });
+}
 
-    // Compount statements
+Syntax* SyntaxParser::parseStatement()
+{
+    // Compound statements
 
-    compoundStmt = simpleStmt;
-
-    compoundStmt.addPrefixHandler(Token_If, [&] (ParserT& parser, const Actions& acts,
-                                             Token _) {
+    Syntax* stmt = nullptr;
+    if (opt(Token_If)) {
         SyntaxIf* ifStmt = new SyntaxIf;
         do {
-            Syntax* cond = parser.expression(expr);
-            parser.match(Token_Colon);
-            parser.match(Token_Newline);  // todo: this is optional
-            SyntaxBlock* block = parseBlock();
-            ifStmt->addBranch(cond, block);
-        } while (parser.opt(Token_Elif));
-        if (parser.opt(Token_Else)) {
-            parser.match(Token_Colon);
-            parser.match(Token_Newline);  // todo: this is optional
-            ifStmt->setElse(parseBlock());
+            Syntax* cond = parseExpr();
+            SyntaxBlock* suite = parseSuite();
+            ifStmt->addBranch(cond, suite);
+        } while (opt(Token_Elif));
+        if (opt(Token_Else)) {
+            ifStmt->setElse(parseSuite());
         }
-        return ifStmt;
-    });
+        stmt = ifStmt;
+    } else if (opt(Token_While)) {
+        Syntax* cond = parseExpr();
+        SyntaxBlock* suite = parseSuite();
+        SyntaxBlock* elseSuite = nullptr;
+        if (opt(Token_Else))
+            elseSuite = parseSuite();
+        stmt = new SyntaxWhile(cond, suite, elseSuite);
+    } else {
+        stmt = parse(simpleStmt);
+        if (!atEnd())
+            matchEither(Token_Newline, Token_Semicolon);
+    }
+
+    return stmt;
 }
 
 SyntaxBlock* SyntaxParser::parseBlock()
@@ -190,20 +200,35 @@ SyntaxBlock* SyntaxParser::parseBlock()
     match(Token_Indent);
     while (!opt(Token_Dedent)) {
         syntax->append(parseStatement());
-        match(Token_Newline);
     }
     return syntax.release();
+}
+
+SyntaxBlock* SyntaxParser::parseSuite()
+{
+    unique_ptr<SyntaxBlock> suite(new SyntaxBlock);
+    match(Token_Colon);
+    if (opt(Token_Newline)) {
+        match(Token_Indent);
+        while (!opt(Token_Dedent)) {
+            suite->append(parseStatement());
+        }
+    } else {
+        do {
+            suite->append(parse(simpleStmt));
+            if (opt(Token_Newline))
+                break;
+            match(Token_Semicolon);
+        } while (!opt(Token_Newline));
+    }
+    return suite.release();
 }
 
 SyntaxBlock* SyntaxParser::parseTopLevel()
 {
     unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
-    while (!atEnd()) {
+    while (!atEnd())
         syntax->append(parseStatement());
-        if (atEnd())
-            break;
-        match(Token_Newline);
-    }
     return syntax.release();
 }
 

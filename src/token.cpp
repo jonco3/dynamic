@@ -248,6 +248,14 @@ Token Tokenizer::nextToken()
     return result;
 }
 
+void Tokenizer::queueDedentsToColumn(unsigned column)
+{
+    while (column < indentStack.back()) {
+        indentStack.pop_back();
+        tokenQueue.push_back({Token_Dedent, string(), pos});
+    }
+}
+
 Token Tokenizer::findNextToken()
 {
     // Return any queued tokens
@@ -264,10 +272,7 @@ Token Tokenizer::findNextToken()
             indentStack.push_back(indent);
             return {Token_Indent, string(), pos};
         } else if (indent < indentStack.back()) {
-            while (indent < indentStack.back()) {
-                indentStack.pop_back();
-                tokenQueue.push_back({Token_Dedent, string(), pos});
-            }
+            queueDedentsToColumn(indent);
             if (indent != indentStack.back())
                 throw TokenError("Bad indentation", startPos);
             return popFront(tokenQueue);
@@ -280,8 +285,16 @@ Token Tokenizer::findNextToken()
     unsigned startIndex = index;
 
     // EOF
-    if (index >= source.size())
+    if (index >= source.size()) {
+        if (indentStack.back() != 0) {
+            // No newline after indented block - fake one and follow with dedent
+            // tokens
+            assert(pos.column > 0);
+            queueDedentsToColumn(0);
+            return {Token_Newline, string(), pos};
+        }
         return {Token_EOF, string(), startPos};
+    }
 
     // Newline
     if (peekChar() == '\n') {

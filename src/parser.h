@@ -93,6 +93,7 @@ struct Parser
     bool opt(TokenType type);
     bool opt(TokenType type, Token& tokenOut);
     Token match(TokenType type);
+    Token matchEither(TokenType type1, TokenType type2);
     T expression(const Actions& acts, unsigned bindRight = 0);
 
     void nextToken();
@@ -237,12 +238,24 @@ bool Parser<T>::opt(TokenType type, Token& tokenOut)
 template <typename T>
 Token Parser<T>::match(TokenType type)
 {
-    Token token;
-    if (!opt(type, token)) {
+    Token t;
+    if (!opt(type, t)) {
         throw ParseError("Expected " + tokenizer.typeName(type) +
                          " but found " + tokenizer.typeName(token.type));
     }
-    return token;
+    return t;
+}
+
+template <typename T>
+Token Parser<T>::matchEither(TokenType type1, TokenType type2)
+{
+    Token t;
+    if (!opt(type1, t) && !opt(type2, t)) {
+        throw ParseError("Expected " + tokenizer.typeName(type1) +
+                         " or " + tokenizer.typeName(type2) +
+                         " but found " + tokenizer.typeName(token.type));
+    }
+    return t;
 }
 
 template <typename T>
@@ -296,15 +309,15 @@ struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
     Syntax* parseExpr() { return Parser::parse(expr); }
-    Syntax* parseStatement() { return Parser::parse(compoundStmt);  }
-    SyntaxBlock *parseTopLevel();
+    Syntax* parseStatement();
     SyntaxBlock *parseBlock();
+    SyntaxBlock *parseSuite();
+    SyntaxBlock *parseTopLevel();
 
   private:
     Tokenizer tokenizer;
     Actions expr;
     Actions simpleStmt;
-    Actions compoundStmt;
 };
 
 #endif

@@ -49,7 +49,7 @@ struct Branch;
 
 struct Instr : public Cell
 {
-    template <typename T> bool is() { return type() == T::Type; }
+    template <typename T> bool is() const { return type() == T::Type; }
 
     template <typename T> T* as() {
         assert(is<T>());
@@ -389,10 +389,12 @@ inline Branch* Instr::asBranch()
 
 struct InstrBranchAlways : public Branch
 {
+    InstrBranchAlways(int offset = 0) { offset_ = offset; }
     instr_type(Instr_BranchAlways);
     instr_name("BranchAlways");
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
+        assert(offset_);
         interp.branch(offset_);
         return true;
     }
@@ -407,6 +409,7 @@ struct InstrBranchIfTrue : public Branch
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
+        assert(offset_);
         Object *x = interp.peekStack(0).toObject();
         if (x->isTrue())
             interp.branch(offset_);
@@ -423,6 +426,7 @@ struct InstrBranchIfFalse : public Branch
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
+        assert(offset_);
         Object *x = interp.peekStack(0).toObject();
         if (!x->isTrue())
             interp.branch(offset_);
