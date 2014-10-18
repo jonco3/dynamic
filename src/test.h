@@ -14,8 +14,14 @@ typedef void (*TestFunc)();
 struct TestCase
 {
     TestCase(const char* name, TestFunc body);
+    void run();
+
+    static void runAllTests();
+
+  private:
     const char *name;
     TestFunc body;
+    TestCase* next;
 };
 
 #define CPP_CONCAT_(a, b) a##b
@@ -26,7 +32,6 @@ struct TestCase
     static TestCase CPP_CONCAT(testcase_obj_, name)(#name, CPP_CONCAT(testcase_body_, name)); \
     static void CPP_CONCAT(testcase_body_, name)()
 
-extern void runTests();
 extern void abortTests();
 
 template <typename A, typename E>
