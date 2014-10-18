@@ -28,18 +28,26 @@ SRCS = \
 
 TESTSRCS = src/test.cpp $(SRCS)
 MAINSRCS = src/main.cpp $(SRCS)
-ALLSRCS = $(SRCS) src/main.cpp src/test.cpp
 
-TESTRELOBJS = $(subst src,build/rel,$(TESTSRCS:.cpp=.o))
-TESTDEBOBJS = $(subst src,build/deb,$(TESTSRCS:.cpp=.o))
+TESTRELOBJS = $(subst src,build/test/rel,$(TESTSRCS:.cpp=.o))
+TESTDEBOBJS = $(subst src,build/test/deb,$(TESTSRCS:.cpp=.o))
 
-MAINRELOBJS = $(subst src,build/rel,$(MAINSRCS:.cpp=.o))
-MAINDEBOBJS = $(subst src,build/deb,$(MAINSRCS:.cpp=.o))
-MAINPROFOBJS = $(subst src,build/prof,$(MAINSRCS:.cpp=.o))
+TESTRELDEPS = $(subst src,build/test/rel,$(TESTSRCS:.cpp=.d))
+TESTDEBDEPS = $(subst src,build/test/deb,$(TESTSRCS:.cpp=.d))
 
-ALLRELDEPS = $(subst src,build/rel,$(ALLSRCS:.cpp=.d))
-ALLDEBDEPS = $(subst src,build/deb,$(ALLSRCS:.cpp=.d))
-ALLPROFDEPS = $(subst src,build/prof,$(ALLSRCS:.cpp=.d))
+MAINRELOBJS = $(subst src,build/main/rel,$(MAINSRCS:.cpp=.o))
+MAINDEBOBJS = $(subst src,build/main/deb,$(MAINSRCS:.cpp=.o))
+MAINPROFOBJS = $(subst src,build/main/prof,$(MAINSRCS:.cpp=.o))
+
+MAINRELDEPS = $(subst src,build/main/rel,$(MAINSRCS:.cpp=.d))
+MAINDEBDEPS = $(subst src,build/main/deb,$(MAINSRCS:.cpp=.d))
+MAINPROFDEPS = $(subst src,build/main/prof,$(MAINSRCS:.cpp=.d))
+
+tests: $(TESTRELOBJS)
+	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) -o tests
+
+tests-debug: $(TESTDEBOBJS)
+	$(LD) $(TESTDEBOBJS) $(DEBFLAGS) $(LDLAGS) -o tests-debug
 
 dynamic: $(MAINRELOBJS)
 	$(LD) $(MAINRELOBJS) $(RELFLAGS) $(LDLAGS) -o dynamic
@@ -49,12 +57,6 @@ dynamic-debug: $(MAINDEBOBJS)
 
 dynamic-prof: $(MAINPROFOBJS)
 	$(LD) $(MAINPROFOBJS) $(PROFFLAGS) $(LDLAGS) -o dynamic-prof
-
-tests: $(TESTRELOBJS)
-	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) -o tests
-
-tests-debug: $(TESTDEBOBJS)
-	$(LD) $(TESTDEBOBJS) $(DEBFLAGS) $(LDLAGS) -o tests-debug
 
 .PHONY: all
 all: dynamic tests-debug
@@ -71,20 +73,30 @@ bench: dynamic
 
 .PHONY: clean
 clean:
-	rm -f build/*/* dynamic* tests*
+	rm -f build/*/*/* dynamic* tests*
 
--include $(ALLRELDEPS)
--include $(ALLDEBDEPS)
--include $(ALLPROFDEPS)
+-include $(TESTRELDEPS)
+-include $(TESTDEBDEPS)
+-include $(MAINRELDEPS)
+-include $(MAINDEBDEPS)
+-include $(MAINPROFDEPS)
 
-build/rel/%.o: src/%.cpp Makefile
-	mkdir -p build/rel
+build/test/rel/%.o: src/%.cpp Makefile
+	mkdir -p build/test/rel
 	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) $< -o $@
 
-build/deb/%.o: src/%.cpp Makefile
-	mkdir -p build/deb
+build/test/deb/%.o: src/%.cpp Makefile
+	mkdir -p build/test/deb
 	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) $< -o $@
 
-build/prof/%.o: src/%.cpp Makefile
-	mkdir -p build/prof
+build/main/rel/%.o: src/%.cpp Makefile
+	mkdir -p build/main/rel
+	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) $< -o $@
+
+build/main/deb/%.o: src/%.cpp Makefile
+	mkdir -p build/main/deb
+	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) $< -o $@
+
+build/main/prof/%.o: src/%.cpp Makefile
+	mkdir -p build/main/prof
 	$(CPP) -c -MMD $(PROFFLAGS) $(CPPFLAGS) $< -o $@
