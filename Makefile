@@ -10,8 +10,6 @@ RELFLAGS = -O3
 PROFFLAGS = $(RELFLAGS) -pg
 
 SRCS = \
-	src/main.cpp \
-	src/test.cpp \
 	src/token.cpp \
 	src/parser.cpp \
 	src/block.cpp \
@@ -25,44 +23,59 @@ SRCS = \
 	src/frame.cpp \
 	src/callable.cpp \
 	src/interp.cpp \
-	src/gc.cpp
+	src/gc.cpp \
+	src/common.cpp
 
-RELOBJS = $(subst src,build/rel,$(SRCS:.cpp=.o))
-RELDEPS = $(subst src,build/rel,$(SRCS:.cpp=.d))
-DEBOBJS = $(subst src,build/deb,$(SRCS:.cpp=.o))
-DEBDEPS = $(subst src,build/deb,$(SRCS:.cpp=.d))
-PROFOBJS = $(subst src,build/prof,$(SRCS:.cpp=.o))
-PROFDEPS = $(subst src,build/prof,$(SRCS:.cpp=.d))
+TESTSRCS = src/test.cpp $(SRCS)
+MAINSRCS = src/main.cpp $(SRCS)
+ALLSRCS = $(SRCS) src/main.cpp src/test.cpp
 
-dynamic: $(RELOBJS)
-	$(LD) $(RELOBJS) $(RELFLAGS) $(LDLAGS) -o dynamic
+TESTRELOBJS = $(subst src,build/rel,$(TESTSRCS:.cpp=.o))
+TESTDEBOBJS = $(subst src,build/deb,$(TESTSRCS:.cpp=.o))
 
-dynamic-debug: $(DEBOBJS)
-	$(LD) $(DEBOBJS) $(DEBFLAGS) $(LDLAGS) -o dynamic-debug
+MAINRELOBJS = $(subst src,build/rel,$(MAINSRCS:.cpp=.o))
+MAINDEBOBJS = $(subst src,build/deb,$(MAINSRCS:.cpp=.o))
+MAINPROFOBJS = $(subst src,build/prof,$(MAINSRCS:.cpp=.o))
 
-dynamic-prof: $(PROFOBJS)
-	$(LD) $(PROFOBJS) $(PROFFLAGS) $(LDLAGS) -o dynamic-prof
+ALLRELDEPS = $(subst src,build/rel,$(ALLSRCS:.cpp=.d))
+ALLDEBDEPS = $(subst src,build/deb,$(ALLSRCS:.cpp=.d))
+ALLPROFDEPS = $(subst src,build/prof,$(ALLSRCS:.cpp=.d))
+
+dynamic: $(MAINRELOBJS)
+	$(LD) $(MAINRELOBJS) $(RELFLAGS) $(LDLAGS) -o dynamic
+
+dynamic-debug: $(MAINDEBOBJS)
+	$(LD) $(MAINDEBOBJS) $(DEBFLAGS) $(LDLAGS) -o dynamic-debug
+
+dynamic-prof: $(MAINPROFOBJS)
+	$(LD) $(MAINPROFOBJS) $(PROFFLAGS) $(LDLAGS) -o dynamic-prof
+
+tests: $(TESTRELOBJS)
+	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) -o tests
+
+tests-debug: $(TESTDEBOBJS)
+	$(LD) $(TESTDEBOBJS) $(DEBFLAGS) $(LDLAGS) -o tests-debug
 
 .PHONY: all
-all: dynamic
+all: dynamic tests-debug
 
 WRAPPER = python test/debug-wrapper
 .PHONY: test
-test: dynamic-debug
+test: tests-debug
 	@echo "Entering directory \`src'"
-	@$(WRAPPER) dynamic-debug -t
+	@$(WRAPPER) tests-debug -t
 
 .PHONY: bench
 bench: dynamic
-	ruby benchmarks/run_benchmarks.rb
+	python benchmarks/run_benchmarks.py
 
 .PHONY: clean
 clean:
-	rm -f build/*/* dynamic*
+	rm -f build/*/* dynamic* tests*
 
--include $(RELDEPS)
--include $(DEBDEPS)
--include $(PROFDEPS)
+-include $(ALLRELDEPS)
+-include $(ALLDEBDEPS)
+-include $(ALLPROFDEPS)
 
 build/rel/%.o: src/%.cpp Makefile
 	mkdir -p build/rel

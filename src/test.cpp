@@ -1,5 +1,7 @@
 #include "test.h"
 
+#include "common.h"
+
 #include <vector>
 #include <cassert>
 #include <cstdio>
@@ -49,4 +51,11 @@ void maybeAbortTests(const runtime_error& exception)
         cerr << "Exception thrown in test: " << exception.what() << endl;
         assert(false);
     }
+}
+
+int main(int argc, char *argv[])
+{
+    init();
+    runTests();
+    return 0;
 }
