@@ -1,7 +1,6 @@
 #include "block.h"
 #include "syntax.h"
 #include "instr.h"
-#include "test.h"
 #include "repr.h"
 
 #include <memory>
@@ -339,6 +338,10 @@ Block* Block::buildTopLevel(const Input& input)
     return builder.takeBlock();
 }
 
+#ifdef BUILD_TESTS
+
+#include "test.h"
+
 void testBuildRaw(const string& input, const string& expected)
 {
     BlockBuilder bb;
@@ -394,3 +397,5 @@ testcase(block)
     testBuild("return 2 - - 1",
               "Const 2, GetMethod __sub__, Const 1, GetMethod __neg__, Call 1, Call 2, Return");
 }
+
+#endif

@@ -83,11 +83,11 @@ clean:
 
 build/test/rel/%.o: src/%.cpp Makefile
 	mkdir -p build/test/rel
-	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) $< -o $@
+	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) -DBUILD_TESTS $< -o $@
 
 build/test/deb/%.o: src/%.cpp Makefile
 	mkdir -p build/test/deb
-	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) $< -o $@
+	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) -DBUILD_TESTS $< -o $@
 
 build/main/rel/%.o: src/%.cpp Makefile
 	mkdir -p build/main/rel

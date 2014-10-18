@@ -3,7 +3,6 @@
 #include "frame.h"
 #include "block.h"
 #include "instr.h"
-#include "test.h"
 #include "repr.h"
 #include "callable.h"
 
@@ -59,6 +58,10 @@ void Interpreter::branch(int offset)
     assert(frame->block()->contains(target));
     instrp = target;
 }
+
+#ifdef BUILD_TESTS
+
+#include "test.h"
 
 static void testInterp(const string& input, const string& expected)
 {
@@ -132,3 +135,5 @@ testcase(interp)
                "return x\n",
                "6");
 }
+
+#endif

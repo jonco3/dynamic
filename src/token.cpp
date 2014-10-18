@@ -108,7 +108,9 @@ static string formatPos(const TokenPos& pos)
 TokenError::TokenError(string message, const TokenPos& pos) :
   runtime_error(message + formatPos(pos))
 {
+#ifdef BUILD_TESTS
     maybeAbortTests(*this);
+#endif
 }
 
 Tokenizer::Tokenizer() :
@@ -389,6 +391,8 @@ Token Tokenizer::findNextToken()
     throw TokenError("Unexpected " + string(source, startIndex, 1), startPos);
 }
 
+#ifdef BUILD_TESTS
+
 static void tokenize(const char *source)
 {
     Tokenizer tz;
@@ -563,3 +567,5 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Dedent);
     testEqual(tz.nextToken().type, Token_EOF);
 }
+
+#endif

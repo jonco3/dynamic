@@ -11,7 +11,9 @@
 ParseError::ParseError(string message) :
   runtime_error(message)
 {
+#ifdef BUILD_TESTS
     maybeAbortTests(*this);
+#endif
 }
 
 SyntaxParser::SyntaxParser() :
@@ -232,6 +234,8 @@ SyntaxBlock* SyntaxParser::parseTopLevel()
     return syntax.release();
 }
 
+#ifdef BUILD_TESTS
+
 testcase(parser)
 {
     Parser<int>::Actions acts(TokenCount);
@@ -287,3 +291,5 @@ testcase(parser)
     expr.reset(sp.parseTopLevel());
     testEqual(repr(expr.get()), "1\n2\n3\n");
 }
+
+#endif

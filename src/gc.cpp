@@ -1,7 +1,5 @@
 #include "gc.h"
 
-#include "test.h"
-
 #include <list>
 #include <vector>
 
@@ -196,6 +194,10 @@ size_t gc::cellCount() {
     return cells.size();
 }
 
+#ifdef BUILD_TESTS
+
+#include "test.h"
+
 struct TestCell : public Cell
 {
     virtual void traceChildren(Tracer& t) {
@@ -258,3 +260,4 @@ testcase(gc)
     testEqual(cellCount(), initCount);
 }
 
+#endif

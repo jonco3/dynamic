@@ -137,6 +137,7 @@ void Object::traceChildren(Tracer& t)
         gc::trace(t, &*i);
 }
 
+#ifdef BUILD_TESTS
 
 #include "test.h"
 #include "integer.h"
@@ -155,3 +156,5 @@ testcase(object)
     testFalse(Integer::get(0).isTrue());
     testTrue(Integer::get(1).isTrue());
 }
+
+#endif
