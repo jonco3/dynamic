@@ -20,3 +20,8 @@ void init()
     Integer::init();
     initSingletons();
 }
+
+void final()
+{
+    // todo
+}

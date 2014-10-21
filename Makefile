@@ -3,11 +3,16 @@
 CPP = ccache g++
 LD = ccache gcc
 FLAGS = -Wall -Werror --std=c++11 # --stdlib=libc++
-CPPFLAGS = $(FLAGS)  # -DUSE_READLINE -I/usr/include/gc
-LDLAGS = $(FLAGS) -lstdc++ -lm # -lgc -lreadline
+CPPFLAGS = $(FLAGS)
+LDLAGS = $(FLAGS) -lstdc++ -lm
 DEBFLAGS = -g -DDEBUG
 RELFLAGS = -O3
 PROFFLAGS = $(RELFLAGS) -pg
+
+TESTCPPFLAGS = -DBUILD_TESTS
+TESTLDFLAGS = 
+MAINCPPFLAGS = -DUSE_READLINE
+MAINLDFLAGS = -lreadline
 
 SRCS = \
 	src/token.cpp \
@@ -44,26 +49,26 @@ MAINDEBDEPS = $(subst src,build/main/deb,$(MAINSRCS:.cpp=.d))
 MAINPROFDEPS = $(subst src,build/main/prof,$(MAINSRCS:.cpp=.d))
 
 tests: $(TESTRELOBJS)
-	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) -o tests
+	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) $(TESTLDLAGS) -o tests
 
 tests-debug: $(TESTDEBOBJS)
-	$(LD) $(TESTDEBOBJS) $(DEBFLAGS) $(LDLAGS) -o tests-debug
+	$(LD) $(TESTDEBOBJS) $(DEBFLAGS) $(LDLAGS) $(TESTLDLAGS) -o tests-debug
 
 dynamic: $(MAINRELOBJS)
-	$(LD) $(MAINRELOBJS) $(RELFLAGS) $(LDLAGS) -o dynamic
+	$(LD) $(MAINRELOBJS) $(RELFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic
 
 dynamic-debug: $(MAINDEBOBJS)
-	$(LD) $(MAINDEBOBJS) $(DEBFLAGS) $(LDLAGS) -o dynamic-debug
+	$(LD) $(MAINDEBOBJS) $(DEBFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic-debug
 
 dynamic-prof: $(MAINPROFOBJS)
-	$(LD) $(MAINPROFOBJS) $(PROFFLAGS) $(LDLAGS) -o dynamic-prof
+	$(LD) $(MAINPROFOBJS) $(PROFFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic-prof
 
 .PHONY: all
 all: dynamic tests-debug
 
 WRAPPER = python test/debug-wrapper
 .PHONY: test
-test: tests-debug
+test: tests-debug dynamic-debug
 	@echo "Entering directory \`src'"
 	@$(WRAPPER) tests-debug -t
 
@@ -83,20 +88,20 @@ clean:
 
 build/test/rel/%.o: src/%.cpp Makefile
 	mkdir -p build/test/rel
-	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) -DBUILD_TESTS $< -o $@
+	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) $(TESTCPPFLAGS) $< -o $@
 
 build/test/deb/%.o: src/%.cpp Makefile
 	mkdir -p build/test/deb
-	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) -DBUILD_TESTS $< -o $@
+	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) $(TESTCPPFLAGS) $< -o $@
 
 build/main/rel/%.o: src/%.cpp Makefile
 	mkdir -p build/main/rel
-	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) $< -o $@
+	$(CPP) -c -MMD $(RELFLAGS) $(CPPFLAGS) $(MAINCPPFLAGS) $< -o $@
 
 build/main/deb/%.o: src/%.cpp Makefile
 	mkdir -p build/main/deb
-	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) $< -o $@
+	$(CPP) -c -MMD $(DEBFLAGS) $(CPPFLAGS) $(MAINCPPFLAGS) $< -o $@
 
 build/main/prof/%.o: src/%.cpp Makefile
 	mkdir -p build/main/prof
-	$(CPP) -c -MMD $(PROFFLAGS) $(CPPFLAGS) $< -o $@
+	$(CPP) -c -MMD $(PROFFLAGS) $(CPPFLAGS) $(MAINCPPFLAGS) $< -o $@

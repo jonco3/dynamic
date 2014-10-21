@@ -1,4 +1,5 @@
-#include "value.h"
+#include "value-inl.h"
+
 #include "object.h"
 
 ostream& operator<<(ostream& s, const Value& v) {

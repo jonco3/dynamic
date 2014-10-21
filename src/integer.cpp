@@ -2,6 +2,7 @@
 
 #include "bool.h"
 #include "callable.h"
+#include "value-inl.h"
 
 #include <cmath>
 #include <sstream>
