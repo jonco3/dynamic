@@ -62,6 +62,13 @@ static bool runModule(string text, string filename) {
     Root<Block*> block(Block::buildModule(Input(text, filename)));
     Value result;
     Interpreter interp;
+    return interp.interpret(block, result);
+}
+
+static bool runStatements(string text, string filename) {
+    Root<Block*> block(Block::buildStatements(Input(text, filename)));
+    Value result;
+    Interpreter interp;
     bool ok = interp.interpret(block, result);
     if (!ok)
         cout << "Error" << endl;
@@ -74,7 +81,7 @@ static int runRepl()
 {
     char* line;
     while (line = readOneLine(), line != NULL)
-        runModule(line, "<none>");
+        runStatements(line, "<none>");
     cout << endl;
     return EX_OK;
 }

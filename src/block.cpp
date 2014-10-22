@@ -95,15 +95,17 @@ struct BlockBuilder : public SyntaxVisitor
         s->accept(*this);
     }
 
-    void buildRaw(const Input& input) {
-        SyntaxParser parser;
-        parser.start(input);
-        unique_ptr<Syntax> syntax(parser.parseModule());
-        build(syntax.get());
+    void buildStatements(Syntax* s) {
+        build(s);
+        if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>())
+            block->append(new InstrReturn());
+#ifdef TRACE_BUILD
+        cerr << repr(block) << endl;
+#endif
     }
 
-    void buildFunctionBody(const Input& input) {
-        buildRaw(input);
+    void buildBody(Syntax* s) {
+        build(s);
         if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>()) {
             block->append(new InstrConst(None));
             block->append(new InstrReturn());
@@ -330,11 +332,26 @@ struct BlockBuilder : public SyntaxVisitor
     }
 };
 
+static unique_ptr<Syntax> ParseModule(const Input& input)
+{
+    SyntaxParser parser;
+    parser.start(input);
+    return unique_ptr<Syntax>(parser.parseModule());
+}
+
+Block* Block::buildStatements(const Input& input)
+{
+    unique_ptr<Syntax> syntax(ParseModule(input));
+    BlockBuilder builder;
+    builder.buildStatements(syntax.get());
+    return builder.takeBlock();
+}
 
 Block* Block::buildModule(const Input& input)
 {
+    unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    builder.buildFunctionBody(input);
+    builder.buildBody(syntax.get());
     return builder.takeBlock();
 }
 
@@ -342,20 +359,22 @@ Block* Block::buildModule(const Input& input)
 
 #include "test.h"
 
+static Block* BuildRaw(const Input& input)
+{
+    unique_ptr<Syntax> syntax(ParseModule(input));
+    BlockBuilder builder;
+    builder.build(syntax.get());
+    return builder.takeBlock();
+}
+
 void testBuildRaw(const string& input, const string& expected)
 {
-    BlockBuilder bb;
-    bb.buildRaw(input);
-    Root<Block*> block(bb.takeBlock());
-    testEqual(repr(block), expected);
+    testEqual(repr(BuildRaw(input)), expected);
 }
 
 void testBuild(const string& input, const string& expected)
 {
-    BlockBuilder bb;
-    bb.buildFunctionBody(input);
-    Root<Block*> block(bb.takeBlock());
-    testEqual(repr(block), expected);
+    testEqual(repr(Block::buildModule(input)), expected);
 }
 
 testcase(block)

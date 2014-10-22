@@ -310,14 +310,15 @@ struct SyntaxParser : public Parser<Syntax *>
     SyntaxParser();
     Syntax* parseExpr() { return Parser::parse(expr); }
     Syntax* parseStatement();
-    SyntaxBlock *parseBlock();
-    SyntaxBlock *parseSuite();
-    SyntaxBlock *parseModule();
+    SyntaxBlock* parseModule();
 
   private:
     Tokenizer tokenizer;
     Actions expr;
     Actions simpleStmt;
+
+    SyntaxBlock* parseBlock();
+    SyntaxBlock* parseSuite();
 };
 
 #endif
