@@ -24,8 +24,8 @@ using namespace std;
     instr(SetLocal)                                                          \
     instr(GetLexical)                                                        \
     instr(SetLexical)                                                        \
-    instr(GetProp)                                                           \
-    instr(SetProp)                                                           \
+    instr(GetAttr)                                                           \
+    instr(SetAttr)                                                           \
     instr(GetMethod)                                                         \
     instr(Call)                                                              \
     instr(Return)                                                            \
@@ -116,9 +116,9 @@ struct InstrGetLocal : public Instr
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        assert(frame->hasProp(localName));
+        assert(frame->hasAttr(localName));
         Value value;
-        frame->getProp(localName, value);
+        frame->getAttr(localName, value);
         interp.pushStack(value);
         return true;
     }
@@ -140,7 +140,7 @@ struct InstrSetLocal : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        frame->setProp(localName, value);
+        frame->setAttr(localName, value);
         return true;
     }
 
@@ -161,9 +161,9 @@ struct InstrGetLexical : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Frame* f = frame->ancestor(frameIndex);
-        assert(f->hasProp(lexicalName));
+        assert(f->hasAttr(lexicalName));
         Value value;
-        f->getProp(lexicalName, value);
+        f->getAttr(lexicalName, value);
         interp.pushStack(value);
         return true;
     }
@@ -186,7 +186,7 @@ struct InstrSetLexical : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        frame->ancestor(frameIndex)->setProp(lexicalName, value);
+        frame->ancestor(frameIndex)->setAttr(lexicalName, value);
         return true;
     }
 
@@ -195,12 +195,12 @@ struct InstrSetLexical : public Instr
     Name lexicalName;
 };
 
-struct InstrGetProp : public Instr
+struct InstrGetAttr : public Instr
 {
-    InstrGetProp(Name attr) : attrName(attr) {}
+    InstrGetAttr(Name attr) : attrName(attr) {}
 
-    instr_type(Instr_GetProp);
-    instr_name("GetProp");
+    instr_type(Instr_GetAttr);
+    instr_name("GetAttr");
 
     virtual void print(ostream& s) const {
         s << name() << " " << attrName;
@@ -208,7 +208,7 @@ struct InstrGetProp : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value;
-        if (!interp.popStack().toObject()->getProp(attrName, value))
+        if (!interp.popStack().toObject()->getAttr(attrName, value))
             return false;
         interp.pushStack(value);
         return true;
@@ -218,12 +218,12 @@ struct InstrGetProp : public Instr
     Name attrName;
 };
 
-struct InstrSetProp : public Instr
+struct InstrSetAttr : public Instr
 {
-    InstrSetProp(Name name) : attrName(name) {}
+    InstrSetAttr(Name name) : attrName(name) {}
 
-    instr_type(Instr_SetProp);
-    instr_name("SetProp");
+    instr_type(Instr_SetAttr);
+    instr_name("SetAttr");
 
     virtual void print(ostream& s) const {
         s << name() << " " << attrName;
@@ -231,7 +231,7 @@ struct InstrSetProp : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        interp.popStack().toObject()->setProp(attrName, value);
+        interp.popStack().toObject()->setAttr(attrName, value);
         return true;
     }
 
@@ -253,7 +253,7 @@ struct InstrGetMethod : public Instr
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Object* obj = interp.popStack().toObject();
         Value method;
-        if (!obj->getProp(methodName, method))
+        if (!obj->getAttr(methodName, method))
             return false;
         interp.pushStack(method);
         interp.pushStack(obj);
@@ -290,7 +290,7 @@ struct InstrCall : public Instr
             Frame *callFrame = interp.pushFrame(function);
             for (int i = args - 1; i >= 0; --i) {
                 Root<Value> arg(interp.popStack());
-                callFrame->setProp(function->paramName(i), arg);
+                callFrame->setAttr(function->paramName(i), arg);
             }
             interp.popStack();
             frame->setReturn(interp);

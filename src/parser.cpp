@@ -130,7 +130,7 @@ SyntaxParser::SyntaxParser() :
     expr.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
             throw ParseError("Bad property reference");
-        return new SyntaxPropRef(l, r->as<SyntaxName>());
+        return new SyntaxAttrRef(l, r->as<SyntaxName>());
     });
 
     expr.addPrefixHandler(Token_Return, [] (ParserT& parser, const Actions& acts,
@@ -157,8 +157,8 @@ SyntaxParser::SyntaxParser() :
                           [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
         if (l->is<SyntaxName>())
             return new SyntaxAssignName(l->as<SyntaxName>(), r);
-        else if (l->is<SyntaxPropRef>())
-            return new SyntaxAssignProp(l->as<SyntaxPropRef>(), r);
+        else if (l->is<SyntaxAttrRef>())
+            return new SyntaxAssignAttr(l->as<SyntaxAttrRef>(), r);
         else
             throw ParseError("Illegal LHS for assignment");
     });

@@ -61,15 +61,15 @@ void Object::initAttrs(Object* base)
         slots_[i] = UninitializedSlot;
     // todo: root outwards
     Root<Value> value(base);
-    setProp("__class__", value);
+    setAttr("__class__", value);
 }
 
-bool Object::hasProp(Name name) const
+bool Object::hasAttr(Name name) const
 {
     return layout_->lookupName(name) != -1;
 }
 
-bool Object::getProp(Name name, Value& valueOut) const
+bool Object::getAttr(Name name, Value& valueOut) const
 {
     assert(class_);
     int slot = layout_->lookupName(name);
@@ -77,11 +77,11 @@ bool Object::getProp(Name name, Value& valueOut) const
         // lookup attribute in class hierarchy
         const Object *o = this;
         Value cv;
-        while (o->getProp("__class__", cv)) {
+        while (o->getAttr("__class__", cv)) {
             o = cv.toObject();
             if (!o)
                 break;
-            if (o->getProp(name, valueOut))
+            if (o->getAttr(name, valueOut))
                 return true;
         }
 
@@ -99,7 +99,7 @@ bool Object::getProp(Name name, Value& valueOut) const
     return true;
 }
 
-void Object::setProp(Name name, Traced<Value> value)
+void Object::setAttr(Name name, Traced<Value> value)
 {
     int slot = layout_->lookupName(name);
     if (slot == -1) {
@@ -147,10 +147,10 @@ testcase(object)
     Root<Object*> o(new Object);
     Value v;
 
-    testFalse(o->getProp("foo", v));
+    testFalse(o->getAttr("foo", v));
     Root<Value> one(Integer::get(1));
-    o->setProp("foo", one);
-    testTrue(o->getProp("foo", v));
+    o->setAttr("foo", one);
+    testTrue(o->getAttr("foo", v));
 
     testFalse(None->isTrue());
     testFalse(Integer::get(0).isTrue());

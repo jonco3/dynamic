@@ -68,27 +68,27 @@ struct IntegerClass : public Class
 
     void initNatives() {
         Root<Value> value;
-        value = new Native1(int_pos);    setProp("__pos__", value);
-        value = new Native1(int_neg);    setProp("__neg__", value);
-        value = new Native1(int_invert); setProp("__invert__", value);
-        value = new Native2(int_le);     setProp("__lt__", value);
-        value = new Native2(int_le);     setProp("__le__", value);
-        value = new Native2(int_gt);     setProp("__gt__", value);
-        value = new Native2(int_ge);     setProp("__ge__", value);
-        value = new Native2(int_eq);     setProp("__eq__", value);
-        value = new Native2(int_ne);     setProp("__ne__", value);
-        value = new Native2(int_or);     setProp("__or__", value);
-        value = new Native2(int_xor);    setProp("__xor__", value);
-        value = new Native2(int_and);    setProp("__and__", value);
-        value = new Native2(int_lshift); setProp("__lshift__", value);
-        value = new Native2(int_rshift); setProp("__rshift__", value);
-        value = new Native2(int_add);    setProp("__add__", value);
-        value = new Native2(int_sub);    setProp("__sub__", value);
-        value = new Native2(int_mul);    setProp("__mul__", value);
-        value = new Native2(int_div);    setProp("__div__", value);
-        value = new Native2(int_floordiv); setProp("__floordiv__", value);
-        value = new Native2(int_mod);    setProp("__mod__", value);
-        value = new Native2(int_pow);    setProp("__pow__", value);
+        value = new Native1(int_pos);    setAttr("__pos__", value);
+        value = new Native1(int_neg);    setAttr("__neg__", value);
+        value = new Native1(int_invert); setAttr("__invert__", value);
+        value = new Native2(int_le);     setAttr("__lt__", value);
+        value = new Native2(int_le);     setAttr("__le__", value);
+        value = new Native2(int_gt);     setAttr("__gt__", value);
+        value = new Native2(int_ge);     setAttr("__ge__", value);
+        value = new Native2(int_eq);     setAttr("__eq__", value);
+        value = new Native2(int_ne);     setAttr("__ne__", value);
+        value = new Native2(int_or);     setAttr("__or__", value);
+        value = new Native2(int_xor);    setAttr("__xor__", value);
+        value = new Native2(int_and);    setAttr("__and__", value);
+        value = new Native2(int_lshift); setAttr("__lshift__", value);
+        value = new Native2(int_rshift); setAttr("__rshift__", value);
+        value = new Native2(int_add);    setAttr("__add__", value);
+        value = new Native2(int_sub);    setAttr("__sub__", value);
+        value = new Native2(int_mul);    setAttr("__mul__", value);
+        value = new Native2(int_div);    setAttr("__div__", value);
+        value = new Native2(int_floordiv); setAttr("__floordiv__", value);
+        value = new Native2(int_mod);    setAttr("__mod__", value);
+        value = new Native2(int_pow);    setAttr("__pow__", value);
     }
 };
 

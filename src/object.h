@@ -35,9 +35,9 @@ struct Object : public Cell
 
     virtual void print(ostream& os) const;
 
-    bool hasProp(Name name) const;
-    bool getProp(Name name, Value& valueOut) const;
-    void setProp(Name name, Traced<Value> value);
+    bool hasAttr(Name name) const;
+    bool getAttr(Name name, Value& valueOut) const;
+    void setAttr(Name name, Traced<Value> value);
 
     const Layout* layout() const { return layout_; }
 

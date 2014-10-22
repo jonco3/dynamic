@@ -246,23 +246,23 @@ struct BlockBuilder : public SyntaxVisitor
         }
     }
 
-    virtual void visit(const SyntaxPropRef& s) {
+    virtual void visit(const SyntaxAttrRef& s) {
         s.left()->accept(*this);
-        block->append(new InstrGetProp(s.right()->id()));
+        block->append(new InstrGetAttr(s.right()->id()));
     }
 
-    virtual void visit(const SyntaxAssignProp& s) {
+    virtual void visit(const SyntaxAssignAttr& s) {
         s.left()->left()->accept(*this);
         s.right()->accept(*this);
-        block->append(new InstrSetProp(s.left()->right()->id()));
+        block->append(new InstrSetAttr(s.left()->right()->id()));
     }
 
     virtual void visit(const SyntaxCall& s) {
         // todo: check this actually how python works
-        bool methodCall = s.left()->is<SyntaxPropRef>();
+        bool methodCall = s.left()->is<SyntaxAttrRef>();
 
         if (methodCall) {
-            const SyntaxPropRef* pr = s.left()->as<SyntaxPropRef>();
+            const SyntaxAttrRef* pr = s.left()->as<SyntaxAttrRef>();
             pr->left()->accept(*this);
             block->append(new InstrGetMethod(pr->right()->as<SyntaxName>()->id()));
         } else {
@@ -383,7 +383,7 @@ testcase(block)
     testBuildRaw("foo = 1", "Const 1, SetLocal foo");
     testBuildRaw("foo = 1\n"
                  "foo.bar",
-                 "Const 1, SetLocal foo, GetLocal foo, GetProp bar");
+                 "Const 1, SetLocal foo, GetLocal foo, GetAttr bar");
     testBuildRaw("foo = 1\n"
                  "foo()",
                  "Const 1, SetLocal foo, GetLocal foo, Call 0");
@@ -399,7 +399,7 @@ testcase(block)
     testBuildRaw("foo = 1\n"
                  "baz = 1\n"
                  "foo.bar = baz",
-                 "Const 1, SetLocal foo, Const 1, SetLocal baz, GetLocal foo, GetLocal baz, SetProp bar");
+                 "Const 1, SetLocal foo, Const 1, SetLocal baz, GetLocal foo, GetLocal baz, SetAttr bar");
     testBuildRaw("foo = 1\n"
                  "foo + 1",
                  "Const 1, SetLocal foo, GetLocal foo, GetMethod __add__, Const 1, Call 2");

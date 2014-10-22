@@ -40,9 +40,9 @@ using namespace std;
     syntax(IntDivide)                                                         \
     syntax(Modulo)                                                            \
     syntax(Power)                                                             \
-    syntax(PropRef)                                                           \
+    syntax(AttrRef)                                                           \
     syntax(AssignName)                                                        \
-    syntax(AssignProp)                                                        \
+    syntax(AssignAttr)                                                        \
     syntax(Call)                                                              \
     syntax(Return)                                                            \
     syntax(Cond)                                                              \
@@ -251,10 +251,10 @@ define_simple_binary_syntax(IntDivide, "//");
 define_simple_binary_syntax(Modulo, "%");
 define_simple_binary_syntax(Power, "**");
 
-struct SyntaxPropRef : public BinarySyntaxBase<Syntax, SyntaxName>
+struct SyntaxAttrRef : public BinarySyntaxBase<Syntax, SyntaxName>
 {
-    SyntaxPropRef(Syntax* l, SyntaxName* r) : BinarySyntaxBase(l, r) {}
-    syntax_type(Syntax_PropRef)
+    SyntaxAttrRef(Syntax* l, SyntaxName* r) : BinarySyntaxBase(l, r) {}
+    syntax_type(Syntax_AttrRef)
     syntax_name(".")
     syntax_accept()
 };
@@ -267,10 +267,10 @@ struct SyntaxAssignName : public BinarySyntaxBase<SyntaxName, Syntax>
     syntax_accept()
 };
 
-struct SyntaxAssignProp : public BinarySyntaxBase<SyntaxPropRef, Syntax>
+struct SyntaxAssignAttr : public BinarySyntaxBase<SyntaxAttrRef, Syntax>
 {
-    SyntaxAssignProp(SyntaxPropRef* l, Syntax* r) : BinarySyntaxBase(l, r) {}
-    syntax_type(Syntax_AssignProp)
+    SyntaxAssignAttr(SyntaxAttrRef* l, Syntax* r) : BinarySyntaxBase(l, r) {}
+    syntax_type(Syntax_AssignAttr)
     syntax_name("=")
     syntax_accept()
 };
