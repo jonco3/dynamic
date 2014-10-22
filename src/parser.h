@@ -312,7 +312,7 @@ struct SyntaxParser : public Parser<Syntax *>
     Syntax* parseStatement();
     SyntaxBlock *parseBlock();
     SyntaxBlock *parseSuite();
-    SyntaxBlock *parseTopLevel();
+    SyntaxBlock *parseModule();
 
   private:
     Tokenizer tokenizer;

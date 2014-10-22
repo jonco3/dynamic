@@ -58,8 +58,8 @@ static string readFile(string filename)
     return buffer.str();
 }
 
-static bool runTopLevel(string text, string filename) {
-    Root<Block*> block(Block::buildTopLevel(Input(text, filename)));
+static bool runModule(string text, string filename) {
+    Root<Block*> block(Block::buildModule(Input(text, filename)));
     Value result;
     Interpreter interp;
     bool ok = interp.interpret(block, result);
@@ -74,7 +74,7 @@ static int runRepl()
 {
     char* line;
     while (line = readOneLine(), line != NULL)
-        runTopLevel(line, "<none>");
+        runModule(line, "<none>");
     cout << endl;
     return EX_OK;
 }
@@ -85,7 +85,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     //RootVector<String> argStrings(arg_count);
     //for (unsigned i = 0 ; i < arg_count ; ++i)
     //    argStrings[i] = new String(args[i]);
-    if (!runTopLevel(readFile(filename), filename))
+    if (!runModule(readFile(filename), filename))
         return EX_SOFTWARE;
 
     return EX_OK;
@@ -95,7 +95,7 @@ static int runExprs(int count, const char* args[])
     {
     for (unsigned i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
-        if (!runTopLevel(args[i], "<none>"))
+        if (!runModule(args[i], "<none>"))
             return EX_SOFTWARE;
     }
 

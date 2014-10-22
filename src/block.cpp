@@ -98,7 +98,7 @@ struct BlockBuilder : public SyntaxVisitor
     void buildRaw(const Input& input) {
         SyntaxParser parser;
         parser.start(input);
-        unique_ptr<Syntax> syntax(parser.parseTopLevel());
+        unique_ptr<Syntax> syntax(parser.parseModule());
         build(syntax.get());
     }
 
@@ -331,7 +331,7 @@ struct BlockBuilder : public SyntaxVisitor
 };
 
 
-Block* Block::buildTopLevel(const Input& input)
+Block* Block::buildModule(const Input& input)
 {
     BlockBuilder builder;
     builder.buildFunctionBody(input);

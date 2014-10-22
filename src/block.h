@@ -16,7 +16,7 @@ struct Syntax;
 
 struct Block : public Cell
 {
-    static Block* buildTopLevel(const Input& input);
+    static Block* buildModule(const Input& input);
 
     Block(Layout* layout);
     Instr** startInstr() { return &instrs_[0]; }

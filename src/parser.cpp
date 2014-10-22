@@ -226,7 +226,7 @@ SyntaxBlock* SyntaxParser::parseSuite()
     return suite.release();
 }
 
-SyntaxBlock* SyntaxParser::parseTopLevel()
+SyntaxBlock* SyntaxParser::parseModule()
 {
     unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
     while (!atEnd())
@@ -281,14 +281,14 @@ testcase(parser)
     testTrue(expr.get()->is<SyntaxAssignName>());
 
     sp.start("1\n2");
-    expr.reset(sp.parseTopLevel());
+    expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "1\n2\n");
 
     sp.start("1; 2; 3");
-    expr.reset(sp.parseTopLevel());
+    expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "1\n2\n3\n");
     sp.start("1; 2; 3;");
-    expr.reset(sp.parseTopLevel());
+    expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "1\n2\n3\n");
 }
 
