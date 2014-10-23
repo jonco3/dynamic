@@ -236,6 +236,8 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrGetLexical(frame, name));
         else if (topLevel->hasAttr(name))
             block->append(new InstrGetGlobal(topLevel, name));
+        else if (Builtin->hasAttr(name))
+            block->append(new InstrGetGlobal(Builtin, name));
         else
             throw ParseError(string("Name is not defined: ") + name);
     }
@@ -249,6 +251,8 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrSetLexical(frame, name));
         else if (topLevel->hasAttr(name))
             block->append(new InstrSetGlobal(topLevel, name));
+        else if (Builtin->hasAttr(name))
+            block->append(new InstrSetGlobal(Builtin, name));
         else
             throw ParseError(string("Name is not defined: ") + name);
     }

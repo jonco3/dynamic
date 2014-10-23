@@ -33,7 +33,7 @@ static const Keyword keywordList[] = {
     { "break", Token_Break },
     { "except", Token_Except },
     { "import", Token_Import },
-    { "print", Token_Print },
+//    { "print", Token_Print },  todo
     { "class", Token_Class },
     { "exec", Token_Exec },
     { "in", Token_In },

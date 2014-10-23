@@ -5,6 +5,7 @@
 
 extern GlobalRoot<Object*> None;
 extern GlobalRoot<Object*> UninitializedSlot;
+extern GlobalRoot<Object*> Builtin;
 extern void initSingletons();
 
 #endif
