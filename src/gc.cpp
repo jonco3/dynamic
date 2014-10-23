@@ -2,6 +2,7 @@
 
 #include <list>
 #include <vector>
+#include <iostream>
 
 //#define TRACE_GC
 
@@ -39,6 +40,8 @@ static double scheduleFactor = 1.5;
 
 Cell::Cell()
 {
+    assert(!gc::isSweeping);
+
     if (gc::cells.size() >= gc::collectAt) {
         gc::collect();
     }
