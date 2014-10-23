@@ -187,6 +187,28 @@ Syntax* SyntaxParser::parseStatement()
         if (opt(Token_Else))
             elseSuite = parseSuite();
         stmt = new SyntaxWhile(cond, suite, elseSuite);
+    //} else if (opt(Token_For)) {
+    //} else if (opt(Token_Try)) {
+    //} else if (opt(Token_With)) {
+    } else if (opt(Token_Def)) {
+        Token name = match(Token_Identifier);
+        match(Token_Bra);
+        vector<string> params;
+        for (;;) {
+            // todo: * and **
+            Token t = match(Token_Identifier);
+            params.push_back(t.text);
+            if (opt(Token_Ket))
+                break;
+            match(Token_Comma);
+        }
+        SyntaxBlock* suite = parseSuite();
+        // In the future it might be desirable to have a syntax node for this,
+        // but for now treat |def foo...| as sugar for |foo = lambda...|
+        return new SyntaxAssignName(new SyntaxName(name.text),
+                                    new SyntaxLambda(params, suite));
+    //} else if (opt(Token_Class)) {
+    //} else if (opt(Token_With)) {
     } else {
         stmt = parse(simpleStmt);
         if (!atEnd())
