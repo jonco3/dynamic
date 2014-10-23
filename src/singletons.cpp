@@ -1,9 +1,6 @@
-#include "none.h"
+#include "singletons.h"
 
 #include "class.h"
-
-GlobalRoot<Object*> None;
-GlobalRoot<Object*> UninitializedSlot;
 
 struct NoneObject : public Object
 {
@@ -23,6 +20,8 @@ struct UninitializedSlotObject : public Object
     virtual void print(ostream& s) const { s << "UninitializedSlot"; }
 };
 
+GlobalRoot<Object*> None;
+GlobalRoot<Object*> UninitializedSlot;
 GlobalRoot<Class*> NoneObject::ObjectClass;
 GlobalRoot<Class*> UninitializedSlotObject::ObjectClass;
 

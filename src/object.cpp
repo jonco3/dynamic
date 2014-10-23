@@ -3,7 +3,7 @@
 #include "bool.h"
 #include "class.h"
 #include "integer.h"
-#include "none.h"
+#include "singletons.h"
 
 #include "value-inl.h"
 

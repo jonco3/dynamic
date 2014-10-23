@@ -1,5 +1,5 @@
-#ifndef __NONE_H__
-#define __NONE_H__
+#ifndef __SINGLETONS_H__
+#define __SINGLETONS_H__
 
 #include "object.h"
 

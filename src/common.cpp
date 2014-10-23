@@ -5,8 +5,8 @@
 #include "class.h"
 #include "frame.h"
 #include "integer.h"
-#include "none.h"
 #include "object.h"
+#include "singletons.h"
 #include "test.h"
 
 void init()

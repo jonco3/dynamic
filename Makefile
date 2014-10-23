@@ -22,7 +22,7 @@ SRCS = \
 	src/value.cpp \
 	src/object.cpp \
 	src/class.cpp \
-	src/none.cpp \
+	src/singletons.cpp \
 	src/bool.cpp \
 	src/integer.cpp \
 	src/frame.cpp \
@@ -48,19 +48,19 @@ MAINRELDEPS = $(subst src,build/main/rel,$(MAINSRCS:.cpp=.d))
 MAINDEBDEPS = $(subst src,build/main/deb,$(MAINSRCS:.cpp=.d))
 MAINPROFDEPS = $(subst src,build/main/prof,$(MAINSRCS:.cpp=.d))
 
-tests: $(TESTRELOBJS)
+tests: $(TESTRELOBJS) Makefile
 	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) $(TESTLDLAGS) -o tests
 
-tests-debug: $(TESTDEBOBJS)
+tests-debug: $(TESTDEBOBJS) Makefile
 	$(LD) $(TESTDEBOBJS) $(DEBFLAGS) $(LDLAGS) $(TESTLDLAGS) -o tests-debug
 
-dynamic: $(MAINRELOBJS)
+dynamic: $(MAINRELOBJS) Makefile
 	$(LD) $(MAINRELOBJS) $(RELFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic
 
-dynamic-debug: $(MAINDEBOBJS)
+dynamic-debug: $(MAINDEBOBJS) Makefile
 	$(LD) $(MAINDEBOBJS) $(DEBFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic-debug
 
-dynamic-prof: $(MAINPROFOBJS)
+dynamic-prof: $(MAINPROFOBJS) Makefile
 	$(LD) $(MAINPROFOBJS) $(PROFFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic-prof
 
 .PHONY: all
@@ -72,7 +72,7 @@ test: tests-debug dynamic-debug
 	@echo "Entering directory \`src'"
 	@$(WRAPPER) tests-debug -t
 
-.PHONY: bench
+.PHONY: benchz
 bench: dynamic
 	python benchmarks/run_benchmarks.py
 

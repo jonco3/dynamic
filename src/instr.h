@@ -8,9 +8,9 @@
 #include "integer.h"
 #include "interp.h"
 #include "name.h"
-#include "none.h"
 #include "object.h"
 #include "repr.h"
+#include "singletons.h"
 
 #include "value-inl.h"
 
