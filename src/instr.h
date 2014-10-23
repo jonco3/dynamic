@@ -24,6 +24,8 @@ using namespace std;
     instr(SetLocal)                                                          \
     instr(GetLexical)                                                        \
     instr(SetLexical)                                                        \
+    instr(GetGlobal)                                                         \
+    instr(SetGlobal)                                                         \
     instr(GetAttr)                                                           \
     instr(SetAttr)                                                           \
     instr(GetMethod)                                                         \
@@ -104,139 +106,169 @@ struct InstrConst : public Instr
     Value value;
 };
 
-struct InstrGetLocal : public Instr
+struct IdentInstrBase : public Instr
 {
-    InstrGetLocal(Name name) : localName(name) {}
+    IdentInstrBase(Name ident) : ident(ident) {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << ident;
+    }
+
+  protected:
+    const Name ident;
+};
+
+struct InstrGetLocal : public IdentInstrBase
+{
+    InstrGetLocal(Name ident) : IdentInstrBase(ident) {}
 
     instr_type(Instr_GetLocal);
     instr_name("GetLocal");
 
-    virtual void print(ostream& s) const {
-        s << name() << " " << localName;
-    }
-
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        assert(frame->hasAttr(localName));
+        assert(frame->hasAttr(ident));
         Value value;
-        frame->getAttr(localName, value);
+        frame->getAttr(ident, value);
         interp.pushStack(value);
         return true;
     }
-
-  private:
-    Name localName;
 };
 
-struct InstrSetLocal : public Instr
+struct InstrSetLocal : public IdentInstrBase
 {
-    InstrSetLocal(Name name) : localName(name) {}
+    InstrSetLocal(Name ident) : IdentInstrBase(ident) {}
 
     instr_type(Instr_SetLocal);
     instr_name("SetLocal");
 
-    virtual void print(ostream& s) const {
-        s << name() << " " << localName;
-    }
-
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        frame->setAttr(localName, value);
+        frame->setAttr(ident, value);
         return true;
     }
-
-  private:
-    Name localName;
 };
 
 struct InstrGetLexical : public Instr
 {
-    InstrGetLexical(int frame, Name name) : frameIndex(frame), lexicalName(name) {}
+    InstrGetLexical(int frame, Name ident) : frameIndex(frame), ident(ident) {}
 
     instr_type(Instr_GetLexical);
     instr_name("GetLexical");
 
     virtual void print(ostream& s) const {
-        s << name() << " " << frameIndex << " " << lexicalName;
+        s << name() << " " << frameIndex << " " << ident;
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Frame* f = frame->ancestor(frameIndex);
-        assert(f->hasAttr(lexicalName));
+        assert(f->hasAttr(ident));
         Value value;
-        f->getAttr(lexicalName, value);
+        f->getAttr(ident, value);
         interp.pushStack(value);
         return true;
     }
 
   private:
     int frameIndex;
-    Name lexicalName;
+    Name ident;
 };
 
 struct InstrSetLexical : public Instr
 {
-    InstrSetLexical(unsigned frame, Name name) : frameIndex(frame), lexicalName(name) {}
+    InstrSetLexical(unsigned frame, Name ident) : frameIndex(frame), ident(ident) {}
 
     instr_type(Instr_SetLexical);
     instr_name("SetLexical");
 
     virtual void print(ostream& s) const {
-        s << name() << " " << frameIndex << " " << lexicalName;
+        s << name() << " " << frameIndex << " " << ident;
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        frame->ancestor(frameIndex)->setAttr(lexicalName, value);
+        frame->ancestor(frameIndex)->setAttr(ident, value);
         return true;
     }
 
   private:
     unsigned frameIndex;
-    Name lexicalName;
+    Name ident;
 };
 
-struct InstrGetAttr : public Instr
+struct InstrGetGlobal : public IdentInstrBase
 {
-    InstrGetAttr(Name attr) : attrName(attr) {}
+    InstrGetGlobal(Object* global, Name ident)
+      : IdentInstrBase(ident), global(global) {}
 
-    instr_type(Instr_GetAttr);
-    instr_name("GetAttr");
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << attrName;
-    }
+    instr_type(Instr_GetGlobal);
+    instr_name("GetGlobal");
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Value value;
-        if (!interp.popStack().toObject()->getAttr(attrName, value))
+        if (!global->getAttr(ident, value))
             return false;
         interp.pushStack(value);
         return true;
     }
 
+    virtual void traceChildren(Tracer& t) {
+        gc::trace(t, &global);
+    }
+
   private:
-    Name attrName;
+    Object* global;
 };
 
-struct InstrSetAttr : public Instr
+struct InstrSetGlobal : public IdentInstrBase
 {
-    InstrSetAttr(Name name) : attrName(name) {}
+    InstrSetGlobal(Object* global, Name ident)
+      : IdentInstrBase(ident), global(global) {}
+
+    instr_type(Instr_SetGlobal);
+    instr_name("SetGlobal");
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Root<Value> value(interp.popStack());
+        global->setAttr(ident, value);
+        return true;
+    }
+
+    virtual void traceChildren(Tracer& t) {
+        gc::trace(t, &global);
+    }
+
+  private:
+    Object* global;
+};
+
+struct InstrGetAttr : public IdentInstrBase
+{
+    InstrGetAttr(Name ident) : IdentInstrBase(ident) {}
+
+    instr_type(Instr_GetAttr);
+    instr_name("GetAttr");
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        Value value;
+        if (!interp.popStack().toObject()->getAttr(ident, value))
+            return false;
+        interp.pushStack(value);
+        return true;
+    }
+};
+
+struct InstrSetAttr : public IdentInstrBase
+{
+    InstrSetAttr(Name ident) : IdentInstrBase(ident) {}
 
     instr_type(Instr_SetAttr);
     instr_name("SetAttr");
 
-    virtual void print(ostream& s) const {
-        s << name() << " " << attrName;
-    }
-
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        interp.popStack().toObject()->setAttr(attrName, value);
+        interp.popStack().toObject()->setAttr(ident, value);
         return true;
     }
-
-  private:
-    Name attrName;
 };
 
 struct InstrGetMethod : public Instr

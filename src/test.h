@@ -41,7 +41,7 @@ inline void testFailure(const char* testStr,
                         const char* file, unsigned line)
 {
     using namespace std;
-    cerr << file << ":" << line << ": test failed: ";
+    cerr << file << ":" << dec << line << ": test failed: ";
     cerr << actualStr << " " << testStr << " " << expectedStr << endl;
     cerr << "  got: " << actual << " " << testStr << " " << expected << endl;
     cerr << "  at: " << file << " line " << line << endl;
@@ -81,7 +81,7 @@ inline void testThrowsFailureWrongException(const char* expectedName,
                                             const char* file, unsigned line)
 {
     using namespace std;
-    cerr << file << ":" << line << ": test failed: ";
+    cerr << file << ":" << dec << line << ": test failed: ";
     cerr << actualStr << " throws " << expectedName;
     cerr << " but threw " << actual << " at " << file << " line " << line << endl;
     abortTests();
@@ -92,7 +92,7 @@ inline void testThrowsFailureWrongException(const char* expectedName,
                                             const char* file, unsigned line)
 {
     using namespace std;
-    cerr << file << ":" << line << ": test failed: ";
+    cerr << file << ":" << dec << line << ": test failed: ";
     cerr << actualStr << " throws " << expectedName;
     cerr << " but threw something else at " << file << " line " << line << endl;
     abortTests();
@@ -102,7 +102,7 @@ inline void testThrowsFailureNoException(const char* expectedName, const char* a
                                          const char* file, unsigned line)
 {
     using namespace std;
-    cerr << file << ":" << line << ": test failed: ";
+    cerr << file << ":" << dec << line << ": test failed: ";
     cerr << actualStr << " throws " << expectedName;
     cerr << " but didn't throw at " << file << " line " << line << endl;
     abortTests();
