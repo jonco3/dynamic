@@ -36,6 +36,7 @@ struct Cell
     virtual void traceChildren(Tracer& t) = 0;
     virtual size_t size() const = 0;
     virtual void print(ostream& s) const = 0;
+    virtual void sweep() {}
 
   protected:
     bool isDying() const;
@@ -46,8 +47,9 @@ struct Cell
     bool shouldMark();
     bool shouldSweep();
 
-    static bool mark(Cell** cellp);
-    static bool sweep(Cell* cell);
+    static bool maybeMark(Cell** cellp);
+    static void sweepCell(Cell* cell);
+    static void destroyCell(Cell* cell);
 
     friend struct Marker;
     friend void gc::collect();

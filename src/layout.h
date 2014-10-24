@@ -16,7 +16,6 @@ using namespace std;
 struct Layout : public Cell
 {
     Layout(Layout* parent, Name name);
-    virtual ~Layout();
 
     const Layout* parent() const { return parent_; }
     const string& name() const { return name_; }
@@ -31,6 +30,7 @@ struct Layout : public Cell
     virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
+    virtual void sweep();
 
   private:
     Layout* parent_;

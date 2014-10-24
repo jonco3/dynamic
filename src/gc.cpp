@@ -83,7 +83,7 @@ bool Cell::isDying() const
     return epoc_ != gc::currentEpoc;
 }
 
-bool Cell::mark(Cell** cellp)
+bool Cell::maybeMark(Cell** cellp)
 {
     Cell* cell = *cellp;
     if (cell->shouldMark()) {
@@ -95,23 +95,26 @@ bool Cell::mark(Cell** cellp)
     return false;
 }
 
-bool Cell::sweep(Cell* cell)
+void Cell::sweepCell(Cell* cell)
 {
-    if (cell->shouldSweep()) {
-        log("  sweeping", cell);
-#ifdef DEBUG
-        size_t cellSize = cell->size();
-#endif
-        delete cell;
-#ifdef DEBUG
-        memset(reinterpret_cast<uint8_t*>(cell) + sizeof(Cell),
-               0xff,
-               cellSize - sizeof(Cell));
-#endif
-        return true;
-    }
+    log("  sweeping", cell);
+    assert(cell->shouldSweep());
+    cell->sweep();
+}
 
-    return false;
+void Cell::destroyCell(Cell* cell)
+{
+    log("  destroy", cell);
+    assert(cell->shouldSweep());
+#ifdef DEBUG
+    size_t cellSize = cell->size();
+#endif
+    delete cell;
+#ifdef DEBUG
+    memset(reinterpret_cast<uint8_t*>(cell) + sizeof(Cell),
+           0xff,
+           cellSize - sizeof(Cell));
+#endif
 }
 
 void RootBase::insert()
@@ -146,7 +149,7 @@ void RootBase::remove()
 struct Marker : public Tracer
 {
     virtual void visit(Cell** cellp) {
-        if (*cellp && Cell::mark(cellp)) {
+        if (*cellp && Cell::maybeMark(cellp)) {
             log("  pushed", cellp, *cellp);
             stack_.push_back(*cellp);
         }
@@ -184,7 +187,12 @@ void gc::collect() {
 
     // Sweep
     isSweeping = true;
-    cells.erase(remove_if(cells.begin(), cells.end(), Cell::sweep), cells.end());
+    auto dying = partition(cells.begin(), cells.end(), [] (Cell* cell) {
+        return !cell->shouldSweep();
+    });
+    for_each(dying, cells.end(), Cell::sweepCell);
+    for_each(dying, cells.end(), Cell::destroyCell);
+    cells.erase(dying, cells.end());
     isSweeping = false;
 
     // Schedule next collection

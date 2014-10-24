@@ -7,7 +7,7 @@ Layout::Layout(Layout* parent, Name name)
   : parent_(parent), name_(name)
 {}
 
-Layout::~Layout()
+void Layout::sweep()
 {
     assert(isDying());
     if (!parent_->isDying())
