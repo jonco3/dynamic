@@ -1,5 +1,5 @@
-#ifndef __FUNCTION_H__
-#define __FUNCTION_H__
+#ifndef __CALLABLE_H__
+#define __CALLABLE_H__
 
 #include "object.h"
 #include "interp.h"

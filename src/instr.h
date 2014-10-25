@@ -63,7 +63,7 @@ struct Instr : public Cell
     virtual ~Instr() {}
     virtual InstrType type() const = 0;
     virtual string name() const = 0;
-    virtual bool execute(Interpreter& interp, Frame* frame) = 0;
+    virtual bool execute(Interpreter& interp) = 0;
 
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
@@ -93,7 +93,7 @@ struct InstrConst : public Instr
         s << name() << " " << value;
     }
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         interp.pushStack(value);
         return true;
     }
@@ -127,7 +127,8 @@ struct InstrGetLocal : public IdentInstrBase
     instr_type(Instr_GetLocal);
     instr_name("GetLocal");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
+        Frame* frame = interp.getFrame();
         assert(frame->hasAttr(ident));
         Value value;
         frame->getAttr(ident, value);
@@ -143,9 +144,9 @@ struct InstrSetLocal : public IdentInstrBase
     instr_type(Instr_SetLocal);
     instr_name("SetLocal");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Root<Value> value(interp.popStack());
-        frame->setAttr(ident, value);
+        interp.getFrame()->setAttr(ident, value);
         return true;
     }
 };
@@ -161,11 +162,11 @@ struct InstrGetLexical : public Instr
         s << name() << " " << frameIndex << " " << ident;
     }
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
-        Frame* f = interp.getFrame(frameIndex);
-        assert(f->hasAttr(ident));
+    virtual bool execute(Interpreter& interp) {
+        Frame* frame = interp.getFrame(frameIndex);
+        assert(frame->hasAttr(ident));
         Value value;
-        f->getAttr(ident, value);
+        frame->getAttr(ident, value);
         interp.pushStack(value);
         return true;
     }
@@ -186,7 +187,7 @@ struct InstrSetLexical : public Instr
         s << name() << " " << frameIndex << " " << ident;
     }
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Root<Value> value(interp.popStack());
         interp.getFrame(frameIndex)->setAttr(ident, value);
         return true;
@@ -205,7 +206,7 @@ struct InstrGetGlobal : public IdentInstrBase
     instr_type(Instr_GetGlobal);
     instr_name("GetGlobal");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Value value;
         if (!global->getAttr(ident, value))
             return false;
@@ -229,7 +230,7 @@ struct InstrSetGlobal : public IdentInstrBase
     instr_type(Instr_SetGlobal);
     instr_name("SetGlobal");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Root<Value> value(interp.popStack());
         global->setAttr(ident, value);
         return true;
@@ -250,7 +251,7 @@ struct InstrGetAttr : public IdentInstrBase
     instr_type(Instr_GetAttr);
     instr_name("GetAttr");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Value value;
         if (!interp.popStack().toObject()->getAttr(ident, value))
             return false;
@@ -266,7 +267,7 @@ struct InstrSetAttr : public IdentInstrBase
     instr_type(Instr_SetAttr);
     instr_name("SetAttr");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Root<Value> value(interp.popStack());
         interp.popStack().toObject()->setAttr(ident, value);
         return true;
@@ -284,7 +285,7 @@ struct InstrGetMethod : public Instr
         s << name() << " " << methodName;
     }
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Object* obj = interp.popStack().toObject();
         Value method;
         if (!obj->getAttr(methodName, method))
@@ -309,7 +310,7 @@ struct InstrCall : public Instr
         s << name() << " " << args;
     }
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Object* target = interp.peekStack(args).toObject();
         if (target->is<Native>()) {
             Native* native = target->as<Native>();
@@ -345,7 +346,7 @@ struct InstrReturn : public Instr
     instr_type(Instr_Return);
     instr_name("Return");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Value value = interp.popStack();
         interp.popFrame();
         interp.pushStack(value);
@@ -361,7 +362,7 @@ struct InstrIn : public Instr
     // todo: implement this
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         cerr << "not implemented" << endl;
         return false;
     }
@@ -372,7 +373,7 @@ struct InstrIs : public Instr
     instr_type(Instr_Is);
     instr_name("Is");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Value b = interp.popStack();
         Value a = interp.popStack();
         bool result = a.toObject() == b.toObject();
@@ -390,7 +391,7 @@ struct InstrNot : public Instr
     // of all types, and empty strings and containers (including strings,
     // tuples, lists, dictionaries, sets and frozensets).
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         Object* obj = interp.popStack().toObject();
         interp.pushStack(Boolean::get(!obj->isTrue()));
         return true;
@@ -427,7 +428,7 @@ struct InstrBranchAlways : public Branch
     instr_type(Instr_BranchAlways);
     instr_name("BranchAlways");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         assert(offset_);
         interp.branch(offset_);
         return true;
@@ -439,7 +440,7 @@ struct InstrBranchIfTrue : public Branch
     instr_type(Instr_BranchIfTrue);
     instr_name("BranchIfTrue");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         assert(offset_);
         Object *x = interp.popStack().toObject();
         if (x->isTrue())
@@ -453,7 +454,7 @@ struct InstrBranchIfFalse : public Branch
     instr_type(Instr_BranchIfFalse);
     instr_name("BranchIfFalse");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         assert(offset_);
         Object *x = interp.popStack().toObject();
         if (!x->isTrue())
@@ -470,7 +471,7 @@ struct InstrOr : public Branch
     // The expression |x or y| first evaluates x; if x is true, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         assert(offset_);
         Object *x = interp.peekStack(0).toObject();
         if (x->isTrue())
@@ -487,7 +488,7 @@ struct InstrAnd : public Branch
     // The expression |x and y| first evaluates x; if x is false, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
+    virtual bool execute(Interpreter& interp) {
         assert(offset_);
         Object *x = interp.peekStack(0).toObject();
         if (!x->isTrue())
@@ -504,8 +505,8 @@ struct InstrLambda : public Instr
     instr_type(Instr_Lambda);
     instr_name("Lambda");
 
-    virtual bool execute(Interpreter& interp, Frame* frame) {
-        interp.pushStack(new Function(params_, block_, frame));
+    virtual bool execute(Interpreter& interp) {
+        interp.pushStack(new Function(params_, block_, interp.getFrame(0)));
         return true;
     }
 

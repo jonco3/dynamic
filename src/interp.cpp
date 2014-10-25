@@ -19,8 +19,7 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
     pushFrame(new Frame(block));
 
     while (instrp) {
-        Frame *frame = getFrame(0);
-        assert(frame->block()->contains(instrp));
+        assert(getFrame()->block()->contains(instrp));
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
         cerr << "stack:";
@@ -29,7 +28,7 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
         cerr << endl;
         cerr << "  execute " << repr(instr) << endl;
 #endif
-        if (!instr->execute(*this, frame)) {
+        if (!instr->execute(*this)) {
             cerr << "Error" << endl;
             return false;
         }

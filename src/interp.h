@@ -50,7 +50,7 @@ struct Interpreter
     Frame* newFrame(Function* function);
     void pushFrame(Frame* frame);
     void popFrame();
-    Frame* getFrame(unsigned reverseIndex);
+    Frame* getFrame(unsigned reverseIndex = 0);
 
   private:
     Instr **instrp;
