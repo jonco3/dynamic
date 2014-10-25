@@ -50,10 +50,11 @@ struct Interpreter
     Frame* newFrame(Function* function);
     void pushFrame(Frame* frame);
     void popFrame();
+    Frame* getFrame(unsigned reverseIndex);
 
   private:
     Instr **instrp;
-    Frame *frame;
+    vector<Frame*> frames;
     RootVector<Value> stack;
 };
 

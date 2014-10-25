@@ -11,14 +11,15 @@
 //#define TRACE_INTERP
 
 Interpreter::Interpreter()
-  : instrp(nullptr), frame(nullptr) {}
+  : instrp(nullptr)
+{}
 
 bool Interpreter::interpret(Block* block, Value& valueOut)
 {
-    frame = new Frame(nullptr, block);
-    instrp = block->startInstr();
+    pushFrame(new Frame(block));
 
     while (instrp) {
+        Frame *frame = getFrame(0);
         assert(frame->block()->contains(instrp));
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
@@ -42,31 +43,39 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 Frame* Interpreter::newFrame(Function *function)
 {
     Block* block = function->block();
-    return new Frame(frame, block, instrp);
+    return new Frame(block, instrp);
 }
 
-void Interpreter::pushFrame(Frame* newFrame)
+void Interpreter::pushFrame(Frame* frame)
 {
-    newFrame->setStackPos(stack.size());
-    instrp = newFrame->block()->startInstr();
-    frame = newFrame;
+    frame->setStackPos(stack.size());
+    instrp = frame->block()->startInstr();
+    frames.push_back(frame);
 }
 
 void Interpreter::popFrame()
 {
+    assert(!frames.empty());
+    Frame* frame = frames.back();
     assert(frame->stackPos() <= stack.size());
     stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
 #ifdef TRACE_INTERP
     cout << "  return to " << (void*)instrp << endl;
 #endif
-    frame = frame->popFrame();
+    frames.pop_back();
+}
+
+Frame* Interpreter::getFrame(unsigned reverseIndex)
+{
+    assert(reverseIndex < frames.size());
+    return frames[frames.size() - 1 - reverseIndex];
 }
 
 void Interpreter::branch(int offset)
 {
     Instr** target = instrp + offset - 1;
-    assert(frame->block()->contains(target));
+    assert(frames.back()->block()->contains(target));
     instrp = target;
 }
 

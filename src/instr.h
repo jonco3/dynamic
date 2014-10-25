@@ -162,7 +162,7 @@ struct InstrGetLexical : public Instr
     }
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
-        Frame* f = frame->ancestor(frameIndex);
+        Frame* f = interp.getFrame(frameIndex);
         assert(f->hasAttr(ident));
         Value value;
         f->getAttr(ident, value);
@@ -188,7 +188,7 @@ struct InstrSetLexical : public Instr
 
     virtual bool execute(Interpreter& interp, Frame* frame) {
         Root<Value> value(interp.popStack());
-        frame->ancestor(frameIndex)->setAttr(ident, value);
+        interp.getFrame(frameIndex)->setAttr(ident, value);
         return true;
     }
 
