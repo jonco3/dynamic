@@ -37,6 +37,8 @@ using namespace std;
     instr(BranchAlways)                                                      \
     instr(BranchIfTrue)                                                      \
     instr(BranchIfFalse)                                                     \
+    instr(Or)                                                                \
+    instr(And)                                                               \
     instr(Lambda)
 
 enum InstrType
@@ -437,12 +439,9 @@ struct InstrBranchIfTrue : public Branch
     instr_type(Instr_BranchIfTrue);
     instr_name("BranchIfTrue");
 
-    // The expression x or y first evaluates x; if x is true, its value is
-    // returned; otherwise, y is evaluated and the resulting value is returned.
-
     virtual bool execute(Interpreter& interp, Frame* frame) {
         assert(offset_);
-        Object *x = interp.peekStack(0).toObject();
+        Object *x = interp.popStack().toObject();
         if (x->isTrue())
             interp.branch(offset_);
         return true;
@@ -454,7 +453,38 @@ struct InstrBranchIfFalse : public Branch
     instr_type(Instr_BranchIfFalse);
     instr_name("BranchIfFalse");
 
-    // The expression x and y first evaluates x; if x is false, its value is
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        assert(offset_);
+        Object *x = interp.popStack().toObject();
+        if (!x->isTrue())
+            interp.branch(offset_);
+        return true;
+    }
+};
+
+struct InstrOr : public Branch
+{
+    instr_type(Instr_Or);
+    instr_name("Or");
+
+    // The expression |x or y| first evaluates x; if x is true, its value is
+    // returned; otherwise, y is evaluated and the resulting value is returned.
+
+    virtual bool execute(Interpreter& interp, Frame* frame) {
+        assert(offset_);
+        Object *x = interp.peekStack(0).toObject();
+        if (x->isTrue())
+            interp.branch(offset_);
+        return true;
+    }
+};
+
+struct InstrAnd : public Branch
+{
+    instr_type(Instr_And);
+    instr_name("And");
+
+    // The expression |x and y| first evaluates x; if x is false, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     virtual bool execute(Interpreter& interp, Frame* frame) {

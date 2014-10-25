@@ -171,14 +171,14 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxOr& s) {
         s.left()->accept(*this);
-        unsigned branch = block->append(new InstrBranchIfTrue);
+        unsigned branch = block->append(new InstrOr);
         s.right()->accept(*this);
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxAnd& s) {
         s.left()->accept(*this);
-        unsigned branch = block->append(new InstrBranchIfFalse);
+        unsigned branch = block->append(new InstrAnd);
         s.right()->accept(*this);
         block->branchHere(branch);
     }

@@ -115,5 +115,5 @@ Value Integer::get(int v)
 }
 
 void Integer::print(ostream& s) const {
-    s << value_;
+    s << dec << value_;
 }
