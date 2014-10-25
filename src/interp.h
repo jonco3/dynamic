@@ -17,7 +17,7 @@ struct Function;
 
 struct Interpreter
 {
-    Interpreter() : instrp(nullptr), frame(nullptr) {}
+    Interpreter();
 
     bool interpret(Block* block, Value& valueOut);
 
@@ -47,13 +47,14 @@ struct Interpreter
     Instr** nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 
-    Frame* pushFrame(Function* function);
+    Frame* newFrame(Function* function);
+    void pushFrame(Frame* frame);
     void popFrame();
 
   private:
     Instr **instrp;
     Frame *frame;
-    vector<Value> stack;
+    RootVector<Value> stack;
 };
 
 #endif

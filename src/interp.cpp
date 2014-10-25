@@ -6,7 +6,12 @@
 #include "repr.h"
 #include "callable.h"
 
+#include "value-inl.h"
+
 //#define TRACE_INTERP
+
+Interpreter::Interpreter()
+  : instrp(nullptr), frame(nullptr) {}
 
 bool Interpreter::interpret(Block* block, Value& valueOut)
 {
@@ -34,22 +39,28 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
     return true;
 }
 
-Frame* Interpreter::pushFrame(Function *function)
+Frame* Interpreter::newFrame(Function *function)
 {
     Block* block = function->block();
-    Frame *newFrame = new Frame(frame, block);
-    instrp = block->startInstr();
+    return new Frame(frame, block, instrp);
+}
+
+void Interpreter::pushFrame(Frame* newFrame)
+{
+    newFrame->setStackPos(stack.size());
+    instrp = newFrame->block()->startInstr();
     frame = newFrame;
-    return newFrame;
 }
 
 void Interpreter::popFrame()
 {
     assert(frame->stackPos() <= stack.size());
     stack.resize(frame->stackPos());
-    instrp = frame->returnInstr();
-    Frame* oldFrame = frame;
-    frame = oldFrame->popFrame();
+    instrp = frame->returnPoint();
+#ifdef TRACE_INTERP
+    cout << "  return to " << (void*)instrp << endl;
+#endif
+    frame = frame->popFrame();
 }
 
 void Interpreter::branch(int offset)

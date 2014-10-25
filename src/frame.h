@@ -13,21 +13,21 @@ struct Frame : public Object
     static GlobalRoot<Class*> ObjectClass;
     static void init();
 
-    Frame(Frame* prev, Block* block);
-    void setReturn(Interpreter& interp);
+    Frame(Frame* prev, Block* block, Instr** returnPoint = nullptr);
+    void setStackPos(unsigned pos) { stackPos_ = pos; }
 
-    Instr** returnInstr() { return retInstr; }
-    unsigned stackPos() { return pos; }
+    Instr** returnPoint() { return returnPoint_; }
+    unsigned stackPos() { return stackPos_; }
     Frame* popFrame();
-    const Block* block() const { return block_; }
+    Block* block() { return block_; }
     Frame* ancestor(unsigned count);
 
   private:
-    Frame* prev;
-    Frame* next;
+    Frame* prev_;
+    Frame* next_;
     Block* block_;
-    Instr** retInstr;
-    unsigned pos;
+    Instr** returnPoint_;
+    unsigned stackPos_;
 };
 
 #endif

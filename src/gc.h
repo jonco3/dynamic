@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <ostream>
 #include <type_traits>
+#include <vector>
 
 using namespace std;
 
@@ -188,6 +189,17 @@ struct GlobalRoot : protected RootBase
 
   private:
     T ptr_;
+};
+
+template <typename T>
+struct RootVector : public vector<T>, private RootBase
+{
+    RootVector() { insert(); }
+    ~RootVector() { remove(); }
+    virtual void trace(Tracer& t) {
+        for (auto i = this->begin(); i != this->end(); ++i)
+            gc::trace(t, &*i);
+    }
 };
 
 // A handled to a traced location

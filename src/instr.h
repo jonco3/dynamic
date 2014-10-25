@@ -321,13 +321,13 @@ struct InstrCall : public Instr
             Function* function = target->as<Function>();
             if (function->requiredArgs() < args)
                 throw runtime_error("Not enough arguments");
-            Frame *callFrame = interp.pushFrame(function);
+            Frame *callFrame = interp.newFrame(function);
             for (int i = args - 1; i >= 0; --i) {
                 Root<Value> arg(interp.popStack());
                 callFrame->setAttr(function->paramName(i), arg);
             }
             interp.popStack();
-            frame->setReturn(interp);
+            interp.pushFrame(callFrame);
             return true;
         } else {
             throw runtime_error("Attempt to call non-callable object: " +

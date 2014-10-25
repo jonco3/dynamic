@@ -5,26 +5,20 @@
 
 #include "object.h"
 
-template <>
-struct GCTraits<Value>
+inline Value GCTraits<Value>::nullValue() {
+    return Value(nullptr);
+}
+
+inline bool GCTraits<Value>::isNonNull(Value value) {
+    return value.asObject() != nullptr;
+}
+
+inline void GCTraits<Value>::trace(Tracer& t, Value* v)
 {
-    static Value nullValue() {
-        return Value(nullptr);
-    }
-
-    static bool isNonNull(Value value) {
-        return value.asObject() != nullptr;
-    }
-
-    static void checkValid(Value value);
-
-    static void trace(Tracer& t, Value* v)
-    {
-        Object* o = v->asObject();
-        gc::trace(t, &o);
-        *const_cast<Value*>(v) = Value(o);
-    }
-};
+    Object* o = v->asObject();
+    gc::trace(t, &o);
+    *const_cast<Value*>(v) = Value(o);
+}
 
 inline bool Value::isTrue() const
 {

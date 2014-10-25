@@ -39,4 +39,16 @@ struct Value
 
 ostream& operator<<(ostream& s, const Value& v);
 
+template <>
+struct GCTraits<Value>
+{
+    static Value nullValue();
+
+    static bool isNonNull(Value value);
+
+    static void checkValid(Value value);
+
+    static void trace(Tracer& t, Value* v);
+};
+
 #endif

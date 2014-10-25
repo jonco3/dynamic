@@ -10,40 +10,35 @@ void Frame::init()
     ObjectClass.init(new Class("Frame"));
 }
 
-Frame::Frame(Frame* prev, Block* block) :
+Frame::Frame(Frame* prev, Block* block, Instr** returnPoint) :
   Object(ObjectClass, block->layout()),
-  prev(prev),
-  next(nullptr),
+  prev_(prev),
+  next_(nullptr),
   block_(block),
-  retInstr(nullptr),
-  pos(0)
+  returnPoint_(returnPoint),
+  stackPos_(0)
 {
-    if (prev) {
-        assert(!prev->next);
-        prev->next = this;
+    if (prev_) {
+        assert(!prev_->next_);
+        prev_->next_ = this;
     }
-}
-
-void Frame::setReturn(Interpreter& interp)
-{
-    assert(!retInstr);
-    retInstr = interp.nextInstr();
-    pos = interp.stackPos();
 }
 
 Frame* Frame::popFrame()
 {
-    assert(!next);
-    if (prev)
-        prev->next = nullptr;
-    return prev;
+    assert(!next_);
+    if (prev_) {
+        assert(prev_->next_ == this);
+        prev_->next_ = nullptr;
+    }
+    return prev_;
 }
 
 Frame* Frame::ancestor(unsigned count)
 {
     Frame *f = this;
     while (count--) {
-        f = f->prev;
+        f = f->prev_;
         assert(f);
     }
     return f;
