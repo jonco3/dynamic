@@ -1,17 +1,16 @@
 #ifndef __INTERP_H__
 #define __INTERP_H__
 
-#include "value.h"
+#include "frame.h"
 #include "repr.h"
+#include "value.h"
 
 #include <cassert>
 #include <vector>
-#include <iostream>
 
 using namespace std;
 
 struct Instr;
-struct Frame;
 struct Block;
 struct Function;
 
@@ -54,7 +53,7 @@ struct Interpreter
 
   private:
     Instr **instrp;
-    vector<Frame*> frames;
+    RootVector<Frame*> frames;
     RootVector<Value> stack;
 };
 

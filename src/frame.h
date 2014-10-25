@@ -20,6 +20,8 @@ struct Frame : public Object
     unsigned stackPos() { return stackPos_; }
     Block* block() { return block_; }
 
+    virtual void traceChildren(Tracer& t);
+
   private:
     Block* block_;
     Instr** returnPoint_;

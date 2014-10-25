@@ -16,3 +16,9 @@ Frame::Frame(Block* block, Instr** returnPoint) :
   returnPoint_(returnPoint),
   stackPos_(0)
 {}
+
+void Frame::traceChildren(Tracer& t)
+{
+    Object::traceChildren(t);
+    gc::trace(t, &block_);
+}
