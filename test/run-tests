@@ -1,0 +1,45 @@
+#!/bin/env python
+
+import os
+import re
+import subprocess
+
+exe = './dynamic-debug'
+testsDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
+
+def runTest(dirname, name):
+    filename = os.path.join(dirname, name)
+
+    with open(filename) as f:
+        line = f.readline().rstrip()
+    match = re.match('# (\w+): (.*)$', line)
+    if not match:
+        return 'BAD'
+    if match.group(1) != 'output':
+        return 'BAD'
+    expect = match.group(2)
+
+    try:
+        ok = True
+        output = subprocess.check_output([exe, filename], stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        ok = False
+        output = e.output
+
+    if not ok:
+        return 'FAIL'
+    if output.rstrip() != expect:
+        print(expect)
+        print(output)
+        return 'FAIL'
+
+    return 'PASS'
+
+def runTestDir(arg, dirname, names):
+    print(dirname)
+    for name in names:
+        if name.endswith('.py'):
+            result = runTest(dirname, name)
+            print('%-20s %s' % (name, result))
+
+os.path.walk(testsDir, runTestDir, None)
