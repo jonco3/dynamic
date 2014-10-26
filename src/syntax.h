@@ -47,6 +47,7 @@ using namespace std;
     syntax(Return)                                                            \
     syntax(Cond)                                                              \
     syntax(Lambda)                                                            \
+    syntax(Def)                                                               \
     syntax(If)                                                                \
     syntax(While)
 
@@ -357,6 +358,36 @@ struct SyntaxLambda : public Syntax
     }
 
   private:
+    vector<Name> params_;
+    Syntax* expr_;
+};
+
+struct SyntaxDef : public Syntax
+{
+    SyntaxDef(Name id, const vector<Name>& params, Syntax* expr)
+        : id_(id), params_(params), expr_(expr) {}
+
+    syntax_type(Syntax_Def);
+    syntax_name("def");
+    syntax_accept();
+
+    Name id() const { return id_; }
+    const vector<Name>& params() const { return params_; }
+    Syntax* expr() const { return expr_; }
+
+    virtual void print(ostream& s) const override {
+        s << "def " << id_ << "(";
+        for (auto i = params_.begin(); i != params_.end(); ++i) {
+            if (i != params_.begin())
+                s << ", ";
+            s << *i;
+        }
+        s << "):" << endl;
+        expr_->print(s);
+    }
+
+  private:
+    Name id_;
     vector<Name> params_;
     Syntax* expr_;
 };

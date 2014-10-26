@@ -203,10 +203,7 @@ Syntax* SyntaxParser::parseStatement()
             match(Token_Comma);
         }
         SyntaxBlock* suite = parseSuite();
-        // In the future it might be desirable to have a syntax node for this,
-        // but for now treat |def foo...| as sugar for |foo = lambda...|
-        return new SyntaxAssignName(new SyntaxName(name.text),
-                                    new SyntaxLambda(params, suite));
+        return new SyntaxDef(name.text, params, suite);
     //} else if (opt(Token_Class)) {
     //} else if (opt(Token_With)) {
     } else {

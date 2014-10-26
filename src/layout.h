@@ -26,6 +26,7 @@ struct Layout : public Cell
     int hasName(Name name) const { return lookupName(name) != -1; }
 
     Layout* addName(Name name);
+    Layout* maybeAddName(Name name);
 
     virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }

@@ -58,11 +58,21 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         return df.layout_;
     }
 
-    virtual void visit(const SyntaxAssignName& s) {
-        layout_ = layout_->addName(s.left()->id());
+    void addName(Name name) {
+        layout_ = layout_->maybeAddName(name);
     }
 
-    // Recurse into blocks etc.
+    // Record assignments and definintions
+
+    virtual void visit(const SyntaxAssignName& s) {
+        addName(s.left()->id());
+    }
+
+    virtual void visit(const SyntaxDef& s) {
+        addName(s.id());
+    }
+
+    // Recurse into local blocks
 
     virtual void visit(const SyntaxBlock& s) {
         for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i)
@@ -72,6 +82,19 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     virtual void visit(const SyntaxCond& s) {
         s.cons()->accept(*this);
         s.alt()->accept(*this);
+    }
+
+    virtual void visit(const SyntaxIf& s) {
+        for (auto i = s.branches().begin(); i != s.branches().end(); ++i)
+            (*i).block->accept(*this);
+        if (s.elseBranch())
+            s.elseBranch()->accept(*this);
+    }
+
+    virtual void visit(const SyntaxWhile& s) {
+        s.suite()->accept(*this);
+        if (s.elseSuite())
+            s.elseSuite()->accept(*this);
     }
 
   private:
@@ -238,8 +261,11 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrGetGlobal(topLevel, name));
         else if (Builtin->hasAttr(name))
             block->append(new InstrGetGlobal(Builtin, name));
-        else
+        else {
+            cout << block->layout() << endl;
+            cout << topLevel->layout() << endl;
             throw ParseError(string("Name is not defined: ") + name);
+        }
     }
 
     virtual void visit(const SyntaxAssignName& s) {
@@ -340,6 +366,18 @@ struct BlockBuilder : public SyntaxVisitor
         Root<Block*> exprBlock(exprBuilder.takeBlock());
         exprBlock->append(new InstrReturn);
         block->append(new InstrLambda(a.params(), exprBlock));
+    }
+
+    virtual void visit(const SyntaxDef& s) {
+        BlockBuilder exprBuilder(this);
+        exprBuilder.addParams(s.params());
+        exprBuilder.buildBody(s.expr());
+        Root<Block*> exprBlock(exprBuilder.takeBlock());
+        block->append(new InstrLambda(s.params(), exprBlock));
+        if (parent)
+            block->append(new InstrSetLocal(s.id()));
+        else
+            block->append(new InstrSetGlobal(topLevel, s.id()));
     }
 };
 

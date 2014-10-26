@@ -69,6 +69,14 @@ Layout* Layout::addName(Name name)
     return child;
 }
 
+Layout* Layout::maybeAddName(Name name)
+{
+    if (lookupName(name) != -1)
+        return this;
+
+    return addName(name);
+}
+
 void Layout::traceChildren(Tracer& t)
 {
     gc::trace(t, &parent_);
