@@ -3,7 +3,7 @@
 
 #include "frame.h"
 #include "repr.h"
-#include "value.h"
+#include "value-inl.h"
 
 #include <cassert>
 #include <vector>
