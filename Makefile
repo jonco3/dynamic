@@ -67,10 +67,12 @@ dynamic-prof: $(MAINPROFOBJS) Makefile
 all: dynamic tests-debug
 
 WRAPPER = python test/debug-wrapper
+TEST-RUNNER = python test/run-tests
 .PHONY: test
 test: tests-debug dynamic-debug
 	@echo "Entering directory \`src'"
 	@$(WRAPPER) tests-debug -t
+	@$(TEST-RUNNER) dynamic-debug
 
 .PHONY: benchz
 bench: dynamic
