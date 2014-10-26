@@ -6,13 +6,18 @@ import subprocess
 import sys
 
 if len(sys.argv) > 1:
-    exe = sys.argv[1]
+    exe = os.path.realpath(sys.argv[1])
 else:
     exe = './dynamic-debug'
 
 testsDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
 
+runCount = 0
+passCount = 0
+
 def runTest(dirname, name):
+    global runCount, passCount
+    runCount += 1
     filename = os.path.join(dirname, name)
 
     with open(filename) as f:
@@ -38,6 +43,7 @@ def runTest(dirname, name):
         print(output)
         return 'FAIL'
 
+    passCount += 1
     return 'PASS'
 
 def runTestDir(arg, dirname, names):
@@ -45,6 +51,10 @@ def runTestDir(arg, dirname, names):
     for name in names:
         if name.endswith('.py'):
             result = runTest(dirname, name)
-            print('%-20s %s' % (name, result))
+            print('  %-20s %s' % (name, result))
 
+print("Running tests...")
 os.path.walk(testsDir, runTestDir, None)
+print("%d tests passed out of %d" % (passCount, runCount))
+if passCount != runCount:
+    sys.exit(1)
