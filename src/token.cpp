@@ -218,6 +218,11 @@ void Tokenizer::skipWhitespace()
 {
     while (isWhitespace(peekChar()))
         nextChar();
+    if (peekChar() == '#') {
+        do
+            nextChar();
+        while (!isNewline(peekChar()));
+    }
 }
 
 unsigned Tokenizer::skipIndentation()
@@ -563,6 +568,46 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Indent);
     testEqual(tz.nextToken().type, Token_Return);
     testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Dedent);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("white   \nspace");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("white  \n"
+             "  space");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Indent);
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Dedent);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("# comment");
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("foo # comment");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("foo # comment\nbar");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("foo # comment\n"
+             "    # comment\n"
+             "  bar");
+    testEqual(tz.nextToken().type, Token_Identifier);
+    testEqual(tz.nextToken().type, Token_Newline);
+    testEqual(tz.nextToken().type, Token_Indent);
+    testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_Newline);
     testEqual(tz.nextToken().type, Token_Dedent);
     testEqual(tz.nextToken().type, Token_EOF);
