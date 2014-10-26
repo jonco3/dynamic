@@ -114,7 +114,7 @@ struct BlockBuilder : public SyntaxVisitor
             layout = layout->addName(*i);
     }
 
-    void build(Syntax* s) {
+    Block* build(Syntax* s) {
         assert(!block);
         assert(!topLevel);
         layout = DefinitionFinder::buildLayout(s, layout);
@@ -122,32 +122,31 @@ struct BlockBuilder : public SyntaxVisitor
         assert(topLevel);
         block = new Block(layout);
         s->accept(*this);
-    }
-
-    void buildStatements(Syntax* s) {
-        build(s);
-        if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>())
-            block->append(new InstrReturn());
-#ifdef TRACE_BUILD
-        cerr << repr(block) << endl;
-#endif
-    }
-
-    void buildBody(Syntax* s) {
-        build(s);
-        if (block->instrCount() == 0 || !block->lastInstr()->is<InstrReturn>()) {
-            block->append(new InstrConst(None));
-            block->append(new InstrReturn());
-        }
-#ifdef TRACE_BUILD
-        cerr << repr(block) << endl;
-#endif
-    }
-
-    Block* takeBlock() {
         Block* result = block;
         block = nullptr;
         return result;
+    }
+
+    Block* buildStatements(Syntax* s) {
+        Root<Block*> b(build(s));
+        if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>())
+            b->append(new InstrReturn());
+#ifdef TRACE_BUILD
+        cerr << repr(b) << endl;
+#endif
+        return b;
+    }
+
+    Block* buildBody(Syntax* s) {
+        Root<Block*> b(build(s));
+        if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>()) {
+            b->append(new InstrConst(None));
+            b->append(new InstrReturn());
+        }
+#ifdef TRACE_BUILD
+        cerr << repr(b) << endl;
+#endif
+        return b;
     }
 
   private:
@@ -362,8 +361,7 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxLambda& a) {
         BlockBuilder exprBuilder(this);
         exprBuilder.addParams(a.params());
-        exprBuilder.build(a.expr());
-        Root<Block*> exprBlock(exprBuilder.takeBlock());
+        Root<Block*> exprBlock(exprBuilder.build(a.expr()));
         exprBlock->append(new InstrReturn);
         block->append(new InstrLambda(a.params(), exprBlock));
     }
@@ -371,8 +369,7 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxDef& s) {
         BlockBuilder exprBuilder(this);
         exprBuilder.addParams(s.params());
-        exprBuilder.buildBody(s.expr());
-        Root<Block*> exprBlock(exprBuilder.takeBlock());
+        Root<Block*> exprBlock(exprBuilder.buildBody(s.expr()));
         block->append(new InstrLambda(s.params(), exprBlock));
         if (parent)
             block->append(new InstrSetLocal(s.id()));
@@ -392,16 +389,14 @@ Block* Block::buildStatements(const Input& input)
 {
     unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    builder.buildStatements(syntax.get());
-    return builder.takeBlock();
+    return builder.buildStatements(syntax.get());
 }
 
 Block* Block::buildModule(const Input& input)
 {
     unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    builder.buildBody(syntax.get());
-    return builder.takeBlock();
+    return builder.buildBody(syntax.get());
 }
 
 #ifdef BUILD_TESTS
@@ -412,8 +407,7 @@ static Block* BuildRaw(const Input& input)
 {
     unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    builder.build(syntax.get());
-    return builder.takeBlock();
+    return builder.build(syntax.get());
 }
 
 void testBuildRaw(const string& input, const string& expected)
