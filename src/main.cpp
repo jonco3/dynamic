@@ -8,7 +8,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 
 #ifdef USE_READLINE
@@ -50,33 +49,6 @@ char *readOneLine()
 }
 
 #endif
-
-static string readFile(string filename)
-{
-    ifstream file(filename);
-    stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
-}
-
-static bool runModule(string text, string filename) {
-    Root<Block*> block(Block::buildModule(Input(text, filename)));
-    Value result;
-    Interpreter interp;
-    return interp.interpret(block, result);
-}
-
-static bool runStatements(string text, string filename) {
-    Root<Block*> block(Block::buildStatements(Input(text, filename)));
-    Value result;
-    Interpreter interp;
-    bool ok = interp.interpret(block, result);
-    if (!ok)
-        cout << "Error" << endl;
-    else
-        cout << repr(result) << endl;
-    return ok;
-}
 
 static int runRepl()
 {

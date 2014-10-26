@@ -123,7 +123,7 @@ bool Object::isTrue() const
     // of all types, and empty strings and containers (including strings,
     // tuples, lists, dictionaries, sets and frozensets).
     // https://docs.python.org/2/reference/expressions.html#boolean-operations
-
+    // todo: call __nonzero__ and __empty__
     return
         this != None &&
         this != Boolean::False &&
