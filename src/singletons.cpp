@@ -1,9 +1,6 @@
 #include "singletons.h"
 
-#include "callable.h"
 #include "class.h"
-#include "integer.h"
-#include "value-inl.h"
 
 struct NoneObject : public Object
 {
@@ -41,23 +38,8 @@ void UninitializedSlotObject::init()
     UninitializedSlot.init(new UninitializedSlotObject);
 }
 
-static Value builtin_print(Value v)
-{
-    printf("%d\n", v.toObject()->as<Integer>()->value());
-    return None;
-}
-
-static void initBuiltins()
-{
-    Builtin.init(new Object);
-    Root<Value> value;
-    value = new Native1(builtin_print);
-    Builtin->setAttr("print", value);
-}
-
 void initSingletons()
 {
     NoneObject::init();
     UninitializedSlotObject::init();
-    initBuiltins();
 }

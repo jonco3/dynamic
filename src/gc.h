@@ -148,6 +148,7 @@ struct Root : protected RootBase
 
     Root& operator=(const Root& other) {
         *this = other.ptr_;
+        return *this;
     }
 
     virtual void trace(Tracer& t) {

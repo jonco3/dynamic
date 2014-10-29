@@ -1,4 +1,5 @@
 #include "block.h"
+#include "builtin.h"
 #include "syntax.h"
 #include "instr.h"
 #include "repr.h"
@@ -114,11 +115,17 @@ struct BlockBuilder : public SyntaxVisitor
             layout = layout->addName(*i);
     }
 
-    Block* build(Syntax* s) {
+    Block* build(Syntax* s, Object* globals = nullptr) {
         assert(!block);
         assert(!topLevel);
+        assert(!parent || !globals);
         layout = DefinitionFinder::buildLayout(s, layout);
-        topLevel = parent ? parent->topLevel : new Object(Object::ObjectClass, layout);
+        if (parent)
+            topLevel = parent->topLevel;
+        else if (globals)
+            topLevel = globals;
+        else
+            topLevel = new Object(Object::ObjectClass, layout);
         assert(topLevel);
         block = new Block(layout);
         s->accept(*this);
@@ -127,8 +134,8 @@ struct BlockBuilder : public SyntaxVisitor
         return result;
     }
 
-    Block* buildStatements(Syntax* s) {
-        Root<Block*> b(build(s));
+    Block* buildStatements(Syntax* s, Object* globals = nullptr) {
+        Root<Block*> b(build(s, globals));
         if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>())
             b->append(new InstrReturn());
 #ifdef TRACE_BUILD
@@ -137,8 +144,8 @@ struct BlockBuilder : public SyntaxVisitor
         return b;
     }
 
-    Block* buildBody(Syntax* s) {
-        Root<Block*> b(build(s));
+    Block* buildBody(Syntax* s, Object* globals = nullptr) {
+        Root<Block*> b(build(s, globals));
         if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>()) {
             b->append(new InstrConst(None));
             b->append(new InstrReturn());
@@ -385,18 +392,18 @@ static unique_ptr<Syntax> ParseModule(const Input& input)
     return unique_ptr<Syntax>(parser.parseModule());
 }
 
-Block* Block::buildStatements(const Input& input)
+Block* Block::buildStatements(const Input& input, Object* globals)
 {
     unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    return builder.buildStatements(syntax.get());
+    return builder.buildStatements(syntax.get(), globals);
 }
 
-Block* Block::buildModule(const Input& input)
+Block* Block::buildModule(const Input& input, Object* globals)
 {
     unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    return builder.buildBody(syntax.get());
+    return builder.buildBody(syntax.get(), globals);
 }
 
 #ifdef BUILD_TESTS

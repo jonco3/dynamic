@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include "bool.h"
+#include "builtin.h"
 #include "callable.h"
 #include "class.h"
 #include "frame.h"
@@ -22,6 +23,7 @@ void init()
     Boolean::init();
     Integer::init();
     initSingletons();
+    initBuiltins();
 }
 
 void final()
@@ -31,9 +33,17 @@ void final()
 
 string readFile(string filename)
 {
-    ifstream file(filename);
+    ifstream s(filename);
+    if (!s) {
+        cerr << "Can't open file: " << filename << endl;
+        exit(1);
+    }
     stringstream buffer;
-    buffer << file.rdbuf();
+    buffer << s.rdbuf();
+    if (!s) {
+        cerr << "Can't read file: " << filename << endl;
+        exit(1);
+    }
     return buffer.str();
 }
 

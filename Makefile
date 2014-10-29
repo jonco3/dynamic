@@ -29,7 +29,8 @@ SRCS = \
 	src/callable.cpp \
 	src/interp.cpp \
 	src/gc.cpp \
-	src/common.cpp
+	src/common.cpp \
+	src/builtin.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)
 MAINSRCS = src/main.cpp $(SRCS)
