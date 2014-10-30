@@ -8,20 +8,24 @@
 
 #include <iostream>
 
-static Value builtin_print(Value v)
+static bool builtin_print(Value v, Value& resultOut)
 {
     printf("%d\n", v.toObject()->as<Integer>()->value());
-    return None;
+    resultOut = None;
+    return true;
 }
 
 #if 0
-static Value builtin_hasattr(Value v, Value name)
+static Value builtin_hasattr(Value v, Value name, Value& resultOut)
 {
     // todo: strings!
     Object* n = name.toObject();
-    if (!n->is<String>())
-        return false; // todo: exceptions!
-    return v.toObject()->hasAttr(n->as<String>());
+    if (!n->is<String>()) {
+        resultOut = new Exception("TypeError: hasattr(): attribute name must be string");
+        return false;
+    }
+    resultOut = v.toObject()->hasAttr(n->as<String>());
+    return true;
 }
 #endif
 
@@ -38,7 +42,7 @@ void initBuiltins()
     Value result;
     Interpreter interp;
     if (!interp.interpret(block, result)) {
-        cerr << "Error loading builtins" << endl;
+        printException(result);
         exit(1);
     }
 }

@@ -2,6 +2,7 @@
 
 #include "bool.h"
 #include "class.h"
+#include "exception.h"
 #include "integer.h"
 #include "singletons.h"
 
@@ -85,14 +86,13 @@ bool Object::getAttr(Name name, Value& valueOut) const
                 return true;
         }
 
-        // todo: raise exception here
-        cerr << "Object " << this << " has no attribute '" << name << "'" << endl;
+        valueOut = new Exception("AttributeError: object has no attribute '" + name + "'");
         return false;
     }
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == UninitializedSlot) {
-        // todo: raise exception here
-        cerr << "Reference to uninitialized attribute '" << name << "'" << endl;
+        valueOut = new Exception("UnboundLocalError:: name '" +
+                                 name + "' has not been bound");
         return false;
     }
     valueOut = slots_[slot];

@@ -10,9 +10,10 @@
 struct IntegerClass : public Class
 {
 #define define_unary_int_operator(name, op)                                   \
-    static Value name(Value arg) {                                            \
+    static bool name(Value arg, Value& resultOut) {                           \
         int a = arg.toObject()->as<Integer>()->value();                       \
-        return Integer::get(op a);                                            \
+        resultOut = Integer::get(op a);                                       \
+        return true;                                                          \
     }
 
     define_unary_int_operator(int_pos, +);
@@ -22,10 +23,11 @@ struct IntegerClass : public Class
 #undef define_unary_int_operator
 
 #define define_binary_int_operator(name, op)                                  \
-    static Value name(Value arg1, Value arg2) {                               \
+    static bool name(Value arg1, Value arg2, Value& resultOut) {              \
         int a = arg1.toObject()->as<Integer>()->value();                      \
         int b = arg2.toObject()->as<Integer>()->value();                      \
-        return Integer::get(a op b);                                          \
+        resultOut = Integer::get(a op b);                                     \
+        return true;                                                          \
     }
 
     define_binary_int_operator(int_or, |);
@@ -43,10 +45,11 @@ struct IntegerClass : public Class
 #undef define_binary_int_operator
 
 #define define_binary_bool_operator(name, op)                                 \
-    static Value name(Value arg1, Value arg2) {                               \
+    static bool name(Value arg1, Value arg2, Value& resultOut) {              \
         int a = arg1.toObject()->as<Integer>()->value();                      \
         int b = arg2.toObject()->as<Integer>()->value();                      \
-        return Boolean::get(a op b);                                          \
+        resultOut = Boolean::get(a op b);                                     \
+        return true;                                                          \
     }
 
     define_binary_bool_operator(int_lt, <);
@@ -58,10 +61,11 @@ struct IntegerClass : public Class
 
 #undef define_binary_bool_operator
 
-    static Value int_pow(Value arg1, Value arg2) {
+    static bool int_pow(Value arg1, Value arg2, Value& resultOut) {
         int a = arg1.toObject()->as<Integer>()->value();
         int b = arg2.toObject()->as<Integer>()->value();
-        return Integer::get(std::pow(a, b));
+        resultOut = Integer::get(std::pow(a, b));
+        return true;
     }
 
     IntegerClass() : Class("int") {}

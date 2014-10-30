@@ -1,10 +1,11 @@
-#include "input.h"
-#include "interp.h"
-#include "frame.h"
 #include "block.h"
-#include "instr.h"
-#include "repr.h"
 #include "callable.h"
+#include "exception.h"
+#include "frame.h"
+#include "input.h"
+#include "instr.h"
+#include "interp.h"
+#include "repr.h"
 
 #include "value-inl.h"
 
@@ -29,7 +30,8 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
         cerr << "  execute " << repr(instr) << endl;
 #endif
         if (!instr->execute(*this)) {
-            cerr << "Error" << endl;
+            valueOut = popStack();
+            assert(valueOut.asObject()->is<Exception>());
             return false;
         }
     }
@@ -84,12 +86,22 @@ void Interpreter::branch(int offset)
 
 static void testInterp(const string& input, const string& expected)
 {
-    //gc::collect(); // Check necessary roots are in place
     Root<Block*> block(Block::buildModule(input));
     Interpreter interp;
     Value result;
     testTrue(interp.interpret(block, result));
     testEqual(repr(result), expected);
+}
+
+static void testException(const string& input, const string& expected)
+{
+    Root<Block*> block(Block::buildModule(input));
+    Interpreter interp;
+    Value result;
+    testFalse(interp.interpret(block, result));
+    Object *o = result.toObject();
+    testTrue(o->is<Exception>());
+    testTrue(o->as<Exception>()->message().find(expected) != string::npos);
 }
 
 testcase(interp)
@@ -153,6 +165,9 @@ testcase(interp)
                "  y = y - 1\n"
                "return x\n",
                "6");
+
+    testException("1()", "object is not callable");
+    testException("1.foo", "object has no attribute 'foo'");
 }
 
 #endif

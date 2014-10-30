@@ -4,6 +4,7 @@
 #include "builtin.h"
 #include "callable.h"
 #include "class.h"
+#include "exception.h"
 #include "frame.h"
 #include "input.h"
 #include "integer.h"
@@ -22,6 +23,7 @@ void init()
     Frame::init();
     Boolean::init();
     Integer::init();
+    Exception::init();
     initSingletons();
     initBuiltins();
 }
@@ -47,12 +49,21 @@ string readFile(string filename)
     return buffer.str();
 }
 
+void printException(Value value)
+{
+    Exception* ex = value.asObject()->as<Exception>();
+    cerr << "Error: " << ex->message() << endl;
+}
+
 bool runModule(string text, string filename)
 {
     Root<Block*> block(Block::buildModule(Input(text, filename)));
     Value result;
     Interpreter interp;
-    return interp.interpret(block, result);
+    bool ok = interp.interpret(block, result);
+    if (!ok)
+        printException(result);
+    return ok;
 }
 
 bool runStatements(string text, string filename)
@@ -62,8 +73,6 @@ bool runStatements(string text, string filename)
     Interpreter interp;
     bool ok = interp.interpret(block, result);
     if (!ok)
-        cout << "Error" << endl;
-    else
-        cout << repr(result) << endl;
+        printException(result);
     return ok;
 }

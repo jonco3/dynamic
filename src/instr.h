@@ -3,6 +3,7 @@
 
 #include "bool.h"
 #include "callable.h"
+#include "exception.h"
 #include "frame.h"
 #include "gc.h"
 #include "integer.h"
@@ -209,10 +210,9 @@ struct InstrGetGlobal : public IdentInstrBase
 
     virtual bool execute(Interpreter& interp) {
         Value value;
-        if (!global->getAttr(ident, value))
-            return false;
+        bool ok = global->getAttr(ident, value);
         interp.pushStack(value);
-        return true;
+        return ok;
     }
 
     virtual void traceChildren(Tracer& t) {
@@ -254,10 +254,9 @@ struct InstrGetAttr : public IdentInstrBase
 
     virtual bool execute(Interpreter& interp) {
         Value value;
-        if (!interp.popStack().toObject()->getAttr(ident, value))
-            return false;
+        bool ok = interp.popStack().toObject()->getAttr(ident, value);
         interp.pushStack(value);
-        return true;
+        return ok;
     }
 };
 
@@ -332,9 +331,10 @@ struct InstrCall : public Instr
             interp.pushFrame(callFrame);
             return true;
         } else {
-            throw runtime_error("Attempt to call non-callable object: " +
-                                     repr(target));
-            // todo: implement exceptions: return false and unwind
+            for (unsigned i = 0; i < args + 1; ++i)
+                interp.popStack();
+            interp.pushStack(new Exception("TypeError: object is not callable"));
+            return false;
         }
     }
 

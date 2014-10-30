@@ -16,7 +16,6 @@ struct Callable : public Object
     virtual unsigned requiredArgs() = 0;
 };
 
-// todo: natives can't throw
 struct Native : public Callable
 {
     static void init();
@@ -27,12 +26,14 @@ struct Native : public Callable
 
 struct Native0 : public Native
 {
-    typedef Value (*Func)();
+    typedef bool (*Func)(Value&);
     Native0(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 0; }
     virtual bool call(Interpreter& interp) {
-        interp.pushStack(func());
-        return true;
+        Value result;
+        bool ok = func(result);
+        interp.pushStack(result);
+        return ok;
     }
 
   private:
@@ -41,15 +42,17 @@ struct Native0 : public Native
 
 struct Native1 : public Native
 {
-    typedef Value (*Func)(Value);
+    typedef bool (*Func)(Value, Value&);
     Native1(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 1; }
 
     virtual bool call(Interpreter& interp) {
         Value arg = interp.popStack();
         interp.popStack();
-        interp.pushStack(func(arg));
-        return true;
+        Value result;
+        bool ok = func(arg, result);
+        interp.pushStack(result);
+        return ok;
     }
 
   private:
@@ -58,16 +61,17 @@ struct Native1 : public Native
 
 struct Native2 : public Native
 {
-    typedef Value (*Func)(Value, Value);
+    typedef bool (*Func)(Value, Value, Value&);
     Native2(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 2; }
 
     virtual bool call(Interpreter& interp) {
         Value arg2 = interp.popStack();
         Value arg1 = interp.popStack();
-        interp.popStack();
-        interp.pushStack(func(arg1, arg2));
-        return true;
+        Value result;
+        bool ok = func(arg1, arg2, result);
+        interp.pushStack(result);
+        return ok;
     }
 
   private:
