@@ -65,14 +65,3 @@ bool runModule(string text, string filename)
         printException(result);
     return ok;
 }
-
-bool runStatements(string text, string filename)
-{
-    Root<Block*> block(Block::buildStatements(Input(text, filename)));
-    Value result;
-    Interpreter interp;
-    bool ok = interp.interpret(block, result);
-    if (!ok)
-        printException(result);
-    return ok;
-}

@@ -17,7 +17,6 @@ struct Syntax;
 
 struct Block : public Cell
 {
-    static Block* buildStatements(const Input& input, Object* globals = nullptr);
     static Block* buildModule(const Input& input, Object* globals = nullptr);
 
     Block(Layout* layout);

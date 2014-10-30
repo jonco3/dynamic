@@ -134,16 +134,6 @@ struct BlockBuilder : public SyntaxVisitor
         return result;
     }
 
-    Block* buildStatements(Syntax* s, Object* globals = nullptr) {
-        Root<Block*> b(build(s, globals));
-        if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>())
-            b->append(new InstrReturn());
-#ifdef TRACE_BUILD
-        cerr << repr(b) << endl;
-#endif
-        return b;
-    }
-
     Block* buildBody(Syntax* s, Object* globals = nullptr) {
         Root<Block*> b(build(s, globals));
         if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>()) {
@@ -390,13 +380,6 @@ static unique_ptr<Syntax> ParseModule(const Input& input)
     SyntaxParser parser;
     parser.start(input);
     return unique_ptr<Syntax>(parser.parseModule());
-}
-
-Block* Block::buildStatements(const Input& input, Object* globals)
-{
-    unique_ptr<Syntax> syntax(ParseModule(input));
-    BlockBuilder builder;
-    return builder.buildStatements(syntax.get(), globals);
 }
 
 Block* Block::buildModule(const Input& input, Object* globals)

@@ -54,7 +54,7 @@ static int runRepl()
 {
     char* line;
     while (line = readOneLine(), line != NULL)
-        runStatements(line, "<none>");
+        runModule(line, "<none>");
     cout << endl;
     return EX_OK;
 }

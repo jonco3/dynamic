@@ -12,5 +12,4 @@ extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
 extern bool runModule(string text, string filename);
-extern bool runStatements(string text, string filename);
 #endif
