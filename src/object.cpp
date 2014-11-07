@@ -65,6 +65,23 @@ void Object::initAttrs(Object* base)
     setAttr("__class__", value);
 }
 
+void Object::extend(Layout* layout)
+{
+    assert(layout);
+    assert(layout->subsumes(layout_));
+
+    unsigned count = 0;
+    for (Layout* l = layout; l != layout_; l = l->parent()) {
+        assert(layout);
+        ++count;
+    }
+    unsigned initialSize = slots_.size();
+    slots_.resize(initialSize + count);
+    for (unsigned i = initialSize; i < layout_->slotCount(); ++i)
+        slots_[i] = UninitializedSlot;
+    layout_ = layout;
+}
+
 bool Object::hasAttr(Name name) const
 {
     return layout_->lookupName(name) != -1;
@@ -115,6 +132,17 @@ void Object::setAttr(Name name, Traced<Value> value)
 void Object::print(ostream& s) const
 {
     s << class_->name() << "@" << hex << reinterpret_cast<uintptr_t>(this);
+    s << " { ";
+    unsigned slot = slots_.size() - 1;
+    Layout* layout = layout_;
+    while (layout) {
+        s << layout->name() << ": " << slots_[slot];
+        if (slot != 0)
+            s << ", ";
+        layout = layout->parent();
+        slot--;
+    }
+    s << " } ";
 }
 
 bool Object::isTrue() const
@@ -151,6 +179,9 @@ testcase(object)
     Root<Value> one(Integer::get(1));
     o->setAttr("foo", one);
     testTrue(o->getAttr("foo", v));
+    Root<Object*> obj(v.toObject());
+    testTrue(obj->is<Integer>());
+    testEqual(obj->as<Integer>()->value(), 1);
 
     testFalse(None->isTrue());
     testFalse(Integer::get(0).isTrue());

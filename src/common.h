@@ -7,9 +7,10 @@
 
 using namespace std;
 
-extern void init();
+extern void init1();
+extern void init2();
 extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
-extern bool runModule(string text, string filename);
+extern bool runModule(string text, string filename, Object* global = nullptr);
 #endif

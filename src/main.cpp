@@ -53,8 +53,9 @@ char *readOneLine()
 static int runRepl()
 {
     char* line;
+    Root<Object*> globals(new Object);
     while (line = readOneLine(), line != NULL)
-        runModule(line, "<none>");
+        runModule(line, "<none>", globals);
     cout << endl;
     return EX_OK;
 }
@@ -116,7 +117,8 @@ int main(int argc, const char* argv[])
             badUsage();
     }
 
-    init();
+    init1();
+    init2();
 
     if (expr)
         r = runExprs(argc - pos, &argv[pos]);

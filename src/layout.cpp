@@ -14,16 +14,16 @@ void Layout::sweep()
         parent_->removeChild(this);
 }
 
-void Layout::removeChild(const Layout* child)
+void Layout::removeChild(Layout* child)
 {
     auto i = children_.find(child->name());
     assert(i != children_.end());
     children_.erase(i);
 }
 
-unsigned Layout::slotCount() const
+unsigned Layout::slotCount()
 {
-    const Layout *layout = this;
+    Layout* layout = this;
     unsigned count = 0;
     while (layout) {
         ++count;
@@ -32,11 +32,11 @@ unsigned Layout::slotCount() const
     return count;
 }
 
-bool Layout::subsumes(const Layout* other) const
+bool Layout::subsumes(Layout* other)
 {
     if (!other || this == other)
         return true;
-    const Layout *layout = this;
+    Layout* layout = this;
     while (layout) {
         if (layout == other)
             return true;
@@ -45,8 +45,8 @@ bool Layout::subsumes(const Layout* other) const
     return false;
 }
 
-int Layout::lookupName(Name name) const {
-    const Layout *layout = this;
+int Layout::lookupName(Name name) {
+    Layout* layout = this;
     while (layout) {
         if (layout->name_ == name)
             break;
@@ -85,7 +85,7 @@ void Layout::traceChildren(Tracer& t)
 void Layout::print(ostream& s) const
 {
     s << "Layout {";
-    const Layout *l = this;
+    const Layout* l = this;
     while (l) {
         s << l->name();
         l = l->parent();

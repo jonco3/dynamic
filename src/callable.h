@@ -68,6 +68,7 @@ struct Native2 : public Native
     virtual bool call(Interpreter& interp) {
         Value arg2 = interp.popStack();
         Value arg1 = interp.popStack();
+        interp.popStack();
         Value result;
         bool ok = func(arg1, arg2, result);
         interp.pushStack(result);

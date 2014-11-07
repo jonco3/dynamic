@@ -203,7 +203,10 @@ struct InstrSetLexical : public Instr
 struct InstrGetGlobal : public IdentInstrBase
 {
     InstrGetGlobal(Object* global, Name ident)
-      : IdentInstrBase(ident), global(global) {}
+      : IdentInstrBase(ident), global(global)
+    {
+        assert(global);
+    }
 
     instr_type(Instr_GetGlobal);
     instr_name("GetGlobal");
@@ -226,7 +229,10 @@ struct InstrGetGlobal : public IdentInstrBase
 struct InstrSetGlobal : public IdentInstrBase
 {
     InstrSetGlobal(Object* global, Name ident)
-      : IdentInstrBase(ident), global(global) {}
+      : IdentInstrBase(ident), global(global)
+    {
+        assert(global);
+    }
 
     instr_type(Instr_SetGlobal);
     instr_name("SetGlobal");

@@ -39,7 +39,10 @@ struct Object : public Cell
     bool getAttr(Name name, Value& valueOut) const;
     void setAttr(Name name, Traced<Value> value);
 
-    const Layout* layout() const { return layout_; }
+    // Add uninitialised attributes for all names in layout.
+    void extend(Layout* layout);
+
+    Layout* layout() { return layout_; }
 
     bool isTrue() const;
 

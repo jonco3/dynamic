@@ -14,7 +14,7 @@
 
 #include <fstream>
 
-void init()
+void init1()
 {
     Object::init();
     Class::init();
@@ -25,6 +25,10 @@ void init()
     Integer::init();
     Exception::init();
     initSingletons();
+}
+
+void init2()
+{
     initBuiltins();
 }
 
@@ -55,9 +59,9 @@ void printException(Value value)
     cerr << "Error: " << ex->message() << endl;
 }
 
-bool runModule(string text, string filename)
+bool runModule(string text, string filename, Object* globals)
 {
-    Root<Block*> block(Block::buildModule(Input(text, filename)));
+    Root<Block*> block(Block::buildModule(Input(text, filename), globals));
     Value result;
     Interpreter interp;
     bool ok = interp.interpret(block, result);

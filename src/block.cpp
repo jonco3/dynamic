@@ -110,23 +110,36 @@ struct BlockBuilder : public SyntaxVisitor
         layout(Object::InitialLayout),
         block(nullptr) {}
 
-    void addParams(const vector<Name>& params) {
+    void setParams(const vector<Name>& params) {
+        assert(parent);
+        assert(layout == Object::InitialLayout);
+        assert(!topLevel);
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(*i);
     }
 
-    Block* build(Syntax* s, Object* globals = nullptr) {
-        assert(!block);
+    void setGlobals(Object* globals) {
+        assert(globals);
+        assert(!parent);
+        assert(layout == Object::InitialLayout);
         assert(!topLevel);
-        assert(!parent || !globals);
-        layout = DefinitionFinder::buildLayout(s, layout);
-        if (parent)
+        topLevel = globals;
+        layout = topLevel->layout();
+    }
+
+    Block* build(Syntax* s) {
+        assert(!block);
+        if (parent) {
+            assert(!topLevel);
             topLevel = parent->topLevel;
-        else if (globals)
-            topLevel = globals;
-        else
-            topLevel = new Object(Object::ObjectClass, layout);
+        } else if (!topLevel) {
+            topLevel = new Object;
+        }
+        layout = DefinitionFinder::buildLayout(s, layout);
+        if (!parent)
+            topLevel->extend(layout);
         assert(topLevel);
+
         block = new Block(layout);
         s->accept(*this);
         Block* result = block;
@@ -134,8 +147,8 @@ struct BlockBuilder : public SyntaxVisitor
         return result;
     }
 
-    Block* buildBody(Syntax* s, Object* globals = nullptr) {
-        Root<Block*> b(build(s, globals));
+    Block* buildBody(Syntax* s) {
+        Root<Block*> b(build(s));
         if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>()) {
             b->append(new InstrConst(None));
             b->append(new InstrReturn());
@@ -255,7 +268,7 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrGetLexical(frame, name));
         else if (topLevel->hasAttr(name))
             block->append(new InstrGetGlobal(topLevel, name));
-        else if (Builtin->hasAttr(name))
+        else if (Builtin && Builtin->hasAttr(name))
             block->append(new InstrGetGlobal(Builtin, name));
         else {
             cout << block->layout() << endl;
@@ -273,7 +286,7 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrSetLexical(frame, name));
         else if (topLevel->hasAttr(name))
             block->append(new InstrSetGlobal(topLevel, name));
-        else if (Builtin->hasAttr(name))
+        else if (Builtin && Builtin->hasAttr(name))
             block->append(new InstrSetGlobal(Builtin, name));
         else
             throw ParseError(string("Name is not defined: ") + name);
@@ -357,7 +370,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxLambda& a) {
         BlockBuilder exprBuilder(this);
-        exprBuilder.addParams(a.params());
+        exprBuilder.setParams(a.params());
         Root<Block*> exprBlock(exprBuilder.build(a.expr()));
         exprBlock->append(new InstrReturn);
         block->append(new InstrLambda(a.params(), exprBlock));
@@ -365,7 +378,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxDef& s) {
         BlockBuilder exprBuilder(this);
-        exprBuilder.addParams(s.params());
+        exprBuilder.setParams(s.params());
         Root<Block*> exprBlock(exprBuilder.buildBody(s.expr()));
         block->append(new InstrLambda(s.params(), exprBlock));
         if (parent)
@@ -386,7 +399,9 @@ Block* Block::buildModule(const Input& input, Object* globals)
 {
     unique_ptr<Syntax> syntax(ParseModule(input));
     BlockBuilder builder;
-    return builder.buildBody(syntax.get(), globals);
+    if (globals)
+        builder.setGlobals(globals);
+    return builder.buildBody(syntax.get());
 }
 
 #ifdef BUILD_TESTS

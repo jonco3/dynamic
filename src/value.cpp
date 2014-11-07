@@ -3,7 +3,11 @@
 #include "object.h"
 
 ostream& operator<<(ostream& s, const Value& v) {
-    s << v.asObject();
+    Object* obj = v.toObject();
+    if (obj)
+        s << obj;
+    else
+        s << "(nullptr)";
     return s;
 }
 
