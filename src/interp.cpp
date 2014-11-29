@@ -89,6 +89,9 @@ void Interpreter::branch(int offset)
 
 static void testInterp(const string& input, const string& expected)
 {
+#ifdef TRACE_INTERP
+    cout << "testInterp: " << input << endl;
+#endif
     Root<Block*> block(Block::buildModule(input));
     Interpreter interp;
     Value result;
@@ -101,6 +104,9 @@ static void testInterp(const string& input, const string& expected)
 
 static void testException(const string& input, const string& expected)
 {
+#ifdef TRACE_INTERP
+    cout << "testException: " << input << endl;
+#endif
     Root<Block*> block(Block::buildModule(input));
     Interpreter interp;
     Value result;
@@ -175,8 +181,19 @@ testcase(interp)
                "return x\n",
                "6");
 
+    testInterp("def foo():\n"
+               "  return 1\n"
+               "foo()\n",
+               "1");
+
+    testInterp("def foo():\n"
+               "  1\n"
+               "foo()\n",
+               "None");
+
     testException("1()", "object is not callable");
     testException("1.foo", "object has no attribute 'foo'");
+
 }
 
 #endif

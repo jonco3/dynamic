@@ -194,13 +194,15 @@ Syntax* SyntaxParser::parseStatement()
         Token name = match(Token_Identifier);
         match(Token_Bra);
         vector<string> params;
-        for (;;) {
-            // todo: * and **
-            Token t = match(Token_Identifier);
-            params.push_back(t.text);
-            if (opt(Token_Ket))
-                break;
-            match(Token_Comma);
+        if (!opt(Token_Ket)) {
+            for (;;) {
+                Token t = match(Token_Identifier);
+                // todo: * and **
+                params.push_back(t.text);
+                if (opt(Token_Ket))
+                    break;
+                match(Token_Comma);
+            }
         }
         SyntaxBlock* suite = parseSuite();
         return new SyntaxDef(name.text, params, suite);

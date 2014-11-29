@@ -54,8 +54,12 @@ static int runRepl()
 {
     char* line;
     Root<Object*> globals(new Object);
-    while (line = readOneLine(), line != NULL)
-        runModule(line, "<none>", globals);
+    while (line = readOneLine(), line != NULL) {
+        Value result;
+        bool ok = runModule(line, "<none>", &result, globals);
+        if (ok)
+            cout << result << endl;
+    }
     cout << endl;
     return EX_OK;
 }

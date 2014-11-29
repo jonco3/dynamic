@@ -59,13 +59,15 @@ void printException(Value value)
     cerr << "Error: " << ex->message() << endl;
 }
 
-bool runModule(string text, string filename, Object* globals)
+bool runModule(string text, string filename, Value* valueOut, Object* globals)
 {
     Root<Block*> block(Block::buildModule(Input(text, filename), globals));
-    Value result;
     Interpreter interp;
+    Value result;
     bool ok = interp.interpret(block, result);
     if (!ok)
         printException(result);
+    if (valueOut)
+        *valueOut = result;
     return ok;
 }
