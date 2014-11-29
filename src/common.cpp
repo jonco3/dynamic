@@ -9,6 +9,7 @@
 #include "input.h"
 #include "integer.h"
 #include "object.h"
+#include "parser.h"
 #include "singletons.h"
 #include "test.h"
 
@@ -61,10 +62,17 @@ void printException(Value value)
 
 bool runModule(string text, string filename, Value* valueOut, Object* globals)
 {
-    Root<Block*> block(Block::buildModule(Input(text, filename), globals));
-    Interpreter interp;
     Value result;
-    bool ok = interp.interpret(block, result);
+    bool ok;
+    try {
+        Root<Block*> block(Block::buildModule(Input(text, filename), globals));
+        Interpreter interp;
+        ok = interp.interpret(block, result);
+    } catch (const ParseError& e) {
+        result = new Exception(e.what());
+        ok = false;
+    }
+
     if (!ok)
         printException(result);
     if (valueOut)
