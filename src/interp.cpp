@@ -31,6 +31,9 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
 #endif
         if (!instr->execute(*this)) {
             valueOut = popStack();
+#ifdef TRACE_INTERP
+            cerr << "Error: " << valueOut << endl;
+#endif
             assert(valueOut.asObject()->is<Exception>());
             return false;
         }
@@ -89,7 +92,10 @@ static void testInterp(const string& input, const string& expected)
     Root<Block*> block(Block::buildModule(input));
     Interpreter interp;
     Value result;
-    testTrue(interp.interpret(block, result));
+    bool ok = interp.interpret(block, result);
+    if (!ok)
+        cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
+    testTrue(ok);
     testEqual(repr(result), expected);
 }
 
@@ -118,6 +124,9 @@ testcase(interp)
     testInterp("foo = 0\n"
                "foo.bar = 1\n"
                "return foo + foo.bar", "1");
+    // todo: fails to parse with: Illegal LHS for assignment
+    //testInterp("foo = bar = 1\n"
+    //           "return foo", "1");
     testInterp("return 1 | 8", "9");
     testInterp("return 3 ^ 5", "6");
     testInterp("return 3 & 5", "1");

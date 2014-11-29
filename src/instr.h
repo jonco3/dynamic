@@ -41,7 +41,8 @@ using namespace std;
     instr(BranchIfFalse)                                                     \
     instr(Or)                                                                \
     instr(And)                                                               \
-    instr(Lambda)
+    instr(Lambda)                                                            \
+    instr(Pop)
 
 enum InstrType
 {
@@ -147,7 +148,7 @@ struct InstrSetLocal : public IdentInstrBase
     instr_name("SetLocal");
 
     virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.popStack());
+        Root<Value> value(interp.peekStack(0));
         interp.getFrame()->setAttr(ident, value);
         return true;
     }
@@ -190,7 +191,7 @@ struct InstrSetLexical : public Instr
     }
 
     virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.popStack());
+        Root<Value> value(interp.peekStack(0));
         interp.getFrame(frameIndex)->setAttr(ident, value);
         return true;
     }
@@ -238,7 +239,7 @@ struct InstrSetGlobal : public IdentInstrBase
     instr_name("SetGlobal");
 
     virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.popStack());
+        Root<Value> value(interp.peekStack(0));
         global->setAttr(ident, value);
         return true;
     }
@@ -274,7 +275,7 @@ struct InstrSetAttr : public IdentInstrBase
     instr_name("SetAttr");
 
     virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.popStack());
+        Root<Value> value(interp.peekStack(1));
         interp.popStack().toObject()->setAttr(ident, value);
         return true;
     }
@@ -370,6 +371,7 @@ struct InstrIn : public Instr
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
 
     virtual bool execute(Interpreter& interp) {
+        // todo: raise exception
         cerr << "not implemented" << endl;
         return false;
     }
@@ -531,6 +533,17 @@ struct InstrLambda : public Instr
   private:
     vector<Name> params_;
     Block* block_;
+};
+
+struct InstrPop : public Instr
+{
+    instr_type(Instr_Pop);
+    instr_name("Pop");
+
+    virtual bool execute(Interpreter& interp) {
+        interp.popStack();
+        return true;
+    }
 };
 
 #endif

@@ -150,7 +150,6 @@ struct BlockBuilder : public SyntaxVisitor
     Block* buildBody(Syntax* s) {
         Root<Block*> b(build(s));
         if (b->instrCount() == 0 || !b->lastInstr()->is<InstrReturn>()) {
-            b->append(new InstrConst(None));
             b->append(new InstrReturn());
         }
 #ifdef TRACE_BUILD
@@ -191,8 +190,13 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxBlock& s) {
-        for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i)
+        for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i) {
             (*i)->accept(*this);
+            if (!block->lastInstr()->is<InstrReturn>())
+                block->append(new InstrPop());
+        }
+        if (!block->lastInstr()->is<InstrReturn>())
+            block->append(new InstrConst(None));
     }
 
     virtual void visit(const SyntaxInteger& s) {
@@ -298,8 +302,8 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxAssignAttr& s) {
-        s.left()->left()->accept(*this);
         s.right()->accept(*this);
+        s.left()->left()->accept(*this);
         block->append(new InstrSetAttr(s.left()->right()->id()));
     }
 
@@ -388,11 +392,27 @@ struct BlockBuilder : public SyntaxVisitor
     }
 };
 
+static unique_ptr<Syntax> ParseStatement(const Input& input)
+{
+    SyntaxParser parser;
+    parser.start(input);
+    return unique_ptr<Syntax>(parser.parseStatement());
+}
+
 static unique_ptr<Syntax> ParseModule(const Input& input)
 {
     SyntaxParser parser;
     parser.start(input);
     return unique_ptr<Syntax>(parser.parseModule());
+}
+
+Block* Block::buildStatement(const Input& input, Object* globals)
+{
+    unique_ptr<Syntax> syntax(ParseStatement(input));
+    BlockBuilder builder;
+    if (globals)
+        builder.setGlobals(globals);
+    return builder.buildBody(syntax.get());
 }
 
 Block* Block::buildModule(const Input& input, Object* globals)
@@ -408,61 +428,88 @@ Block* Block::buildModule(const Input& input, Object* globals)
 
 #include "test.h"
 
-static Block* BuildRaw(const Input& input)
+void testBuildStatement(const string& input, const string& expected)
 {
-    unique_ptr<Syntax> syntax(ParseModule(input));
-    BlockBuilder builder;
-    return builder.build(syntax.get());
+    testEqual(repr(Block::buildStatement(input)), expected);
 }
 
-void testBuildRaw(const string& input, const string& expected)
-{
-    testEqual(repr(BuildRaw(input)), expected);
-}
-
-void testBuild(const string& input, const string& expected)
+void testBuildModule(const string& input, const string& expected)
 {
     testEqual(repr(Block::buildModule(input)), expected);
 }
 
 testcase(block)
 {
-    testBuildRaw("3", "Const 3");
-    testBuildRaw("foo = 1", "Const 1, SetGlobal foo");
-    testBuildRaw("foo = 1\n"
-                 "foo.bar",
-                 "Const 1, SetGlobal foo, GetGlobal foo, GetAttr bar");
-    testBuildRaw("foo = 1\n"
-                 "foo()",
-                 "Const 1, SetGlobal foo, GetGlobal foo, Call 0");
-    testBuildRaw("foo = 1\n"
-                 "bar = 1\n"
-                 "baz = 1\n"
-                 "foo(bar, baz)",
-                 "Const 1, SetGlobal foo, Const 1, SetGlobal bar, Const 1, SetGlobal baz, GetGlobal foo, GetGlobal bar, GetGlobal baz, Call 2");
-    testBuildRaw("foo = 1\n"
-                 "baz = 1\n"
-                 "foo.bar(baz)",
-                 "Const 1, SetGlobal foo, Const 1, SetGlobal baz, GetGlobal foo, GetMethod bar, GetGlobal baz, Call 2");
-    testBuildRaw("foo = 1\n"
-                 "baz = 1\n"
-                 "foo.bar = baz",
-                 "Const 1, SetGlobal foo, Const 1, SetGlobal baz, GetGlobal foo, GetGlobal baz, SetAttr bar");
-    testBuildRaw("foo = 1\n"
-                 "foo + 1",
-                 "Const 1, SetGlobal foo, GetGlobal foo, GetMethod __add__, Const 1, Call 2");
-    testBuild("1", "Const 1, Const None, Return");
-    testBuild("return 1", "Const 1, Return");
-    testBuild("foo = 1\n"
-              "bar = 1\n"
-              "return foo in bar",
-              "Const 1, SetGlobal foo, Const 1, SetGlobal bar, GetGlobal foo, GetGlobal bar, In, Return");
-    testBuild("foo = 1\n"
-              "bar = 1\n"
-              "return foo is not bar",
-              "Const 1, SetGlobal foo, Const 1, SetGlobal bar, GetGlobal foo, GetGlobal bar, Is, Not, Return");
-    testBuild("return 2 - - 1",
-              "Const 2, GetMethod __sub__, Const 1, GetMethod __neg__, Call 1, Call 2, Return");
+    testBuildStatement("3", "Const 3, Return");
+    testBuildStatement("foo = 1", "Const 1, SetGlobal foo, Return");
+
+    testBuildModule("foo = 1\n"
+                    "foo.bar",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "GetGlobal foo, GetAttr bar, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("foo = 1\n"
+                    "foo()",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "GetGlobal foo, Call 0, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("foo = 1\n"
+                    "bar = 1\n"
+                    "baz = 1\n"
+                    "foo(bar, baz)",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "Const 1, SetGlobal bar, Pop, "
+                    "Const 1, SetGlobal baz, Pop, "
+                    "GetGlobal foo, GetGlobal bar, GetGlobal baz, Call 2, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("foo = 1\n"
+                    "baz = 1\n"
+                    "foo.bar(baz)",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "Const 1, SetGlobal baz, Pop, "
+                    "GetGlobal foo, GetMethod bar, GetGlobal baz, Call 2, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("foo = 1\n"
+                    "baz = 1\n"
+                    "foo.bar = baz",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "Const 1, SetGlobal baz, Pop, "
+                    "GetGlobal baz, GetGlobal foo, SetAttr bar, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("foo = 1\n"
+                    "foo + 1",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "GetGlobal foo, GetMethod __add__, Const 1, Call 2, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("1",
+                    "Const 1, Pop, "
+                    "Const None, Return");
+
+    testBuildModule("return 1",
+                    "Const 1, Return");
+
+    testBuildModule("foo = 1\n"
+                    "bar = 1\n"
+                    "return foo in bar",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "Const 1, SetGlobal bar, Pop, "
+                    "GetGlobal foo, GetGlobal bar, In, Return");
+
+    testBuildModule("foo = 1\n"
+                    "bar = 1\n"
+                    "return foo is not bar",
+                    "Const 1, SetGlobal foo, Pop, "
+                    "Const 1, SetGlobal bar, Pop, "
+                    "GetGlobal foo, GetGlobal bar, Is, Not, Return");
+
+    testBuildModule("return 2 - - 1",
+                    "Const 2, GetMethod __sub__, Const 1, GetMethod __neg__, Call 1, Call 2, Return");
 }
 
 #endif
