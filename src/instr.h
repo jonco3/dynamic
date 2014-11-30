@@ -336,7 +336,7 @@ struct InstrCall : public Instr
             Root<Function*> function(target->as<Function>());
             if (function->requiredArgs() < args)
                 throw runtime_error("Not enough arguments");
-            Root<Frame*>callFrame(interp.newFrame(function));
+            Root<Frame*> callFrame(interp.newFrame(function));
             for (int i = args - 1; i >= 0; --i) {
                 Root<Value> arg(interp.popStack());
                 callFrame->setAttr(function->paramName(i), arg);

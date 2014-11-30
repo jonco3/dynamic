@@ -67,12 +67,6 @@ void Cell::checkValid() const
     assert(epoc_ == gc::currentEpoc || epoc_ == gc::prevEpoc);
 }
 
-void Cell::dump() const
-{
-    print(cout);
-    cout << endl;
-}
-
 bool Cell::shouldMark()
 {
     checkValid();
@@ -265,7 +259,6 @@ testcase(gc)
     testEqual(cellCount(), initCount);
 
     r = new TestCell;
-    r->dump();
     r->addChild(new TestCell);
     testEqual(cellCount(), initCount + 2);
     collect();

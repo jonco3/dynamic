@@ -2,6 +2,7 @@
 
 #include "bool.h"
 #include "callable.h"
+#include "string.h"
 #include "value-inl.h"
 
 #include <cmath>
@@ -9,6 +10,14 @@
 
 struct IntegerClass : public Class
 {
+    static bool int_str(Traced<Value> arg, Root<Value>& resultOut) {
+        int a = arg.toObject()->as<Integer>()->value();
+        ostringstream s;
+        s << dec << a;
+        resultOut = String::get(s.str());
+        return true;
+    }
+
 #define define_unary_int_operator(name, op)                                   \
     static bool name(Traced<Value> arg, Root<Value>& resultOut) {             \
         int a = arg.toObject()->as<Integer>()->value();                       \
@@ -75,6 +84,7 @@ struct IntegerClass : public Class
 
     void initNatives() {
         Root<Value> value;
+        value = new Native1(int_str);    setAttr("__str__", value);
         value = new Native1(int_pos);    setAttr("__pos__", value);
         value = new Native1(int_neg);    setAttr("__neg__", value);
         value = new Native1(int_invert); setAttr("__invert__", value);

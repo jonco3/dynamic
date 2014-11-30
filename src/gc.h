@@ -35,7 +35,6 @@ struct Cell
     virtual ~Cell();
 
     void checkValid() const;
-    void dump() const;
 
     virtual void traceChildren(Tracer& t) = 0;
     virtual size_t size() const = 0;

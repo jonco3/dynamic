@@ -97,6 +97,11 @@ struct Function : public Callable
     Block* block() const { return block_; }
     Frame* scope() const { return scope_; }
 
+    virtual void traceChildren(Tracer& t) {
+        gc::trace(t, &block_);
+        gc::trace(t, &scope_);
+    }
+
   private:
     const vector<Name>& params_;
     Block* block_;
