@@ -183,7 +183,7 @@ struct GlobalRoot : protected RootBase
 
     void init(T ptr) {
         GCTraits<T>::checkValid(ptr);
-        if (GCTraits<T>::isNonNull(ptr_))
+        if (GCTraits<T>::isNonNull(ptr))
             insert();
         ptr_ = ptr;
     }
