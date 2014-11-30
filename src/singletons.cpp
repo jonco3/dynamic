@@ -22,7 +22,6 @@ struct UninitializedSlotObject : public Object
 
 GlobalRoot<Object*> None;
 GlobalRoot<Object*> UninitializedSlot;
-GlobalRoot<Object*> Builtin;
 GlobalRoot<Class*> NoneObject::ObjectClass;
 GlobalRoot<Class*> UninitializedSlotObject::ObjectClass;
 

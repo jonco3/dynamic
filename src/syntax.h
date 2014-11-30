@@ -13,6 +13,7 @@ using namespace std;
 #define for_each_syntax(syntax)                                               \
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
+    syntax(String)                                                            \
     syntax(Name)                                                              \
     syntax(Pos)                                                               \
     syntax(Neg)                                                               \
@@ -192,7 +193,7 @@ struct SyntaxInteger : public Syntax
     SyntaxInteger(int value) : value_(value) {}
 
     syntax_type(Syntax_Integer)
-    syntax_name("number")
+    syntax_name("integer")
     int value() const { return value_; }
 
     virtual void print(ostream& s) const override {
@@ -203,6 +204,24 @@ struct SyntaxInteger : public Syntax
 
   private:
     int value_;
+};
+
+struct SyntaxString : public Syntax
+{
+    SyntaxString(const string& text) : value_(text) {}
+
+    syntax_type(Syntax_String)
+    syntax_name("string")
+    const string& value() const { return value_; }
+
+    virtual void print(ostream& s) const override {
+        s << "'" << value_ << "'";
+    }
+
+    syntax_accept()
+
+  private:
+    string value_;
 };
 
 struct SyntaxName : public Syntax

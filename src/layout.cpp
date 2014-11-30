@@ -5,11 +5,14 @@
 
 Layout::Layout(Layout* parent, Name name)
   : parent_(parent), name_(name)
-{}
+{
+    assert(parent_ != this);
+}
 
 void Layout::sweep()
 {
     assert(isDying());
+    assert(parent_ != this);
     if (!parent_->isDying())
         parent_->removeChild(this);
 }
@@ -40,6 +43,7 @@ bool Layout::subsumes(Layout* other)
     while (layout) {
         if (layout == other)
             return true;
+        assert(layout->parent_ != layout);
         layout = layout->parent_;
     }
     return false;
@@ -50,6 +54,7 @@ int Layout::lookupName(Name name) {
     while (layout) {
         if (layout->name_ == name)
             break;
+        assert(layout->parent_ != layout);
         layout = layout->parent_;
     }
     if (!layout)

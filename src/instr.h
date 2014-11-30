@@ -10,7 +10,6 @@
 #include "interp.h"
 #include "name.h"
 #include "object.h"
-#include "repr.h"
 #include "singletons.h"
 
 #include "value-inl.h"
@@ -76,6 +75,12 @@ struct Instr : public Cell
     virtual void print(ostream& s) const {
         s << name();
     }
+
+  protected:
+    bool raise(Interpreter& interp, const string& message) {
+        interp.pushStack(new Exception(message));
+        return false;
+    }
 };
 
 #define instr_type(it)                                                       \
@@ -87,7 +92,8 @@ struct Instr : public Cell
 
 struct InstrConst : public Instr
 {
-    InstrConst(Value v) : value(v) {}
+    InstrConst(Traced<Value> v) : value(v) {}
+    InstrConst(Traced<Object*> o) : value(o) {}
 
     instr_type(Instr_Const);
     instr_name("Const");
@@ -295,9 +301,10 @@ struct InstrGetMethod : public Instr
     virtual bool execute(Interpreter& interp) {
         Object* obj = interp.popStack().toObject();
         Value method;
-        if (!obj->getAttr(methodName, method))
-            return false;
+        bool ok = obj->getAttr(methodName, method);
         interp.pushStack(method);
+        if (!ok)
+            return false;
         interp.pushStack(obj);
         return true;
     }
@@ -340,8 +347,7 @@ struct InstrCall : public Instr
         } else {
             for (unsigned i = 0; i < args + 1; ++i)
                 interp.popStack();
-            interp.pushStack(new Exception("TypeError: object is not callable"));
-            return false;
+            return raise(interp, "TypeError: object is not callable");
         }
     }
 
@@ -371,9 +377,7 @@ struct InstrIn : public Instr
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
 
     virtual bool execute(Interpreter& interp) {
-        // todo: raise exception
-        cerr << "not implemented" << endl;
-        return false;
+        return raise(interp, "not implemented");
     }
 };
 

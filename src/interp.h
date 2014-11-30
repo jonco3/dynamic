@@ -2,7 +2,6 @@
 #define __INTERP_H__
 
 #include "frame.h"
-#include "repr.h"
 #include "value-inl.h"
 
 #include <cassert>
@@ -56,5 +55,10 @@ struct Interpreter
     RootVector<Frame*> frames;
     RootVector<Value> stack;
 };
+
+#ifdef BUILD_TESTS
+extern void testInterp(const string& input, const string& expected);
+extern void testException(const string& input, const string& expected);
+#endif
 
 #endif

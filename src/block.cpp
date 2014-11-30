@@ -1,8 +1,9 @@
 #include "block.h"
 #include "builtin.h"
-#include "syntax.h"
 #include "instr.h"
 #include "repr.h"
+#include "string.h"
+#include "syntax.h"
 
 #include <memory>
 
@@ -213,8 +214,12 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxInteger& s) {
-        Value v = Integer::get(s.value());
-        Root<Object*> i(v.toObject());
+        Root<Value> v(Integer::get(s.value()));
+        block->append(new InstrConst(v));
+    }
+
+    virtual void visit(const SyntaxString& s) {
+        Root<Value> v(String::get(s.value()));
         block->append(new InstrConst(v));
     }
 

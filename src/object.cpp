@@ -103,7 +103,9 @@ bool Object::getAttr(Name name, Value& valueOut) const
                 return true;
         }
 
-        valueOut = new Exception("AttributeError: object has no attribute '" + name + "'");
+        string message = "AttributeError: '" + class_->name() +
+            "' object has no attribute '" + name + "'";
+        valueOut = new Exception(message);
         return false;
     }
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());

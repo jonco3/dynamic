@@ -34,8 +34,13 @@ static int8_t prevEpoc = 0;
 static vector<Cell*> cells;
 static RootBase* rootList;
 static bool isSweeping = false;
-static size_t collectAt = 10;
+static size_t minCollectAt = 10;
+static size_t collectAt = minCollectAt;
+#ifdef BUILD_TESTS
+static double scheduleFactor = 1.1;
+#else
 static double scheduleFactor = 1.5;
+#endif
 }
 
 Cell::Cell()
@@ -60,6 +65,12 @@ Cell::~Cell()
 void Cell::checkValid() const
 {
     assert(epoc_ == gc::currentEpoc || epoc_ == gc::prevEpoc);
+}
+
+void Cell::dump() const
+{
+    print(cout);
+    cout << endl;
 }
 
 bool Cell::shouldMark()
@@ -196,7 +207,8 @@ void gc::collect() {
     isSweeping = false;
 
     // Schedule next collection
-    collectAt = static_cast<size_t>(static_cast<double>(cellCount()) * scheduleFactor);
+    collectAt = max(minCollectAt,
+        static_cast<size_t>(static_cast<double>(cellCount()) * scheduleFactor));
 
     log("< gc::collect", cellCount());
 }
@@ -253,6 +265,7 @@ testcase(gc)
     testEqual(cellCount(), initCount);
 
     r = new TestCell;
+    r->dump();
     r->addChild(new TestCell);
     testEqual(cellCount(), initCount + 2);
     collect();

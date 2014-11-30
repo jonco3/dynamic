@@ -31,7 +31,8 @@ SRCS = \
 	src/gc.cpp \
 	src/common.cpp \
 	src/builtin.cpp \
-	src/exception.cpp
+	src/exception.cpp \
+	src/string.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)
 MAINSRCS = src/main.cpp $(SRCS)

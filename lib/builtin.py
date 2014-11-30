@@ -8,3 +8,6 @@ def str(x):
 
 def repr(x):
     return x.__repr__()
+
+def print(x):
+    str(x)._print()

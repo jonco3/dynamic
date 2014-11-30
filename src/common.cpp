@@ -11,9 +11,11 @@
 #include "object.h"
 #include "parser.h"
 #include "singletons.h"
+#include "string.h"
 #include "test.h"
 
 #include <fstream>
+#include <sstream>
 
 void init1()
 {
@@ -22,9 +24,10 @@ void init1()
     Native::init();
     Function::init();
     Frame::init();
+    Exception::init();
     Boolean::init();
     Integer::init();
-    Exception::init();
+    String::init();
     initSingletons();
 }
 

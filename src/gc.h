@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <ostream>
 #include <type_traits>
 #include <vector>
@@ -34,6 +35,8 @@ struct Cell
     virtual ~Cell();
 
     void checkValid() const;
+    void dump() const;
+
     virtual void traceChildren(Tracer& t) = 0;
     virtual size_t size() const = 0;
     virtual void print(ostream& s) const = 0;

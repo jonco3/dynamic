@@ -8,12 +8,7 @@
 
 #include <iostream>
 
-static bool builtin_print(Value v, Value& resultOut)
-{
-    printf("%d\n", v.toObject()->as<Integer>()->value());
-    resultOut = None;
-    return true;
-}
+GlobalRoot<Object*> Builtin;
 
 #if 0
 static Value builtin_hasattr(Value v, Value name, Value& resultOut)
@@ -32,9 +27,9 @@ static Value builtin_hasattr(Value v, Value name, Value& resultOut)
 void initBuiltins()
 {
     Builtin.init(new Object);
-    Root<Value> value;
-    value = new Native1(builtin_print);
-    Builtin->setAttr("print", value);
+    //Root<Value> value;
+    //value = new Native1(builtin_hasattr);
+    //Builtin->setAttr("hasattr", value);
 
     string filename = "lib/builtin.py";
     string text = readFile(filename);

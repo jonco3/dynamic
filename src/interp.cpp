@@ -87,7 +87,7 @@ void Interpreter::branch(int offset)
 
 #include "test.h"
 
-static void testInterp(const string& input, const string& expected)
+void testInterp(const string& input, const string& expected)
 {
 #ifdef TRACE_INTERP
     cout << "testInterp: " << input << endl;
@@ -102,7 +102,7 @@ static void testInterp(const string& input, const string& expected)
     testEqual(repr(result), expected);
 }
 
-static void testException(const string& input, const string& expected)
+void testException(const string& input, const string& expected)
 {
 #ifdef TRACE_INTERP
     cout << "testException: " << input << endl;

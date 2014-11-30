@@ -24,6 +24,10 @@ SyntaxParser::SyntaxParser() :
         return new SyntaxInteger(atoi(token.text.c_str()));
     });
 
+    expr.addWord(Token_String, [] (Token token) {
+        return new SyntaxString(token.text);
+    });
+
     expr.addWord(Token_Identifier, [] (Token token) {
         return new SyntaxName(token.text.c_str());
     });
