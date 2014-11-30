@@ -195,6 +195,14 @@ testcase(interp)
     testException("1()", "object is not callable");
     testException("1.foo", "object has no attribute 'foo'");
 
+    testException("def foo():\n"
+                  "  return 1\n"
+                  "foo(1)\n",
+                  "Wrong number of arguments");
+    testException("def foo(a):\n"
+                  "  return 1\n"
+                  "foo()\n",
+                  "Wrong number of arguments");
 }
 
 #endif

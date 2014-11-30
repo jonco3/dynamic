@@ -324,18 +324,22 @@ struct InstrCall : public Instr
         s << name() << " " << args;
     }
 
+    bool raiseArgumentException(Interpreter& interp) {
+        return raise(interp, "Wrong number of arguments");
+    }
+
     virtual bool execute(Interpreter& interp) {
         Root<Object*> target(interp.peekStack(args).toObject());
         if (target->is<Native>()) {
             Root<Native*> native(target->as<Native>());
-            if (native->requiredArgs() < args)
-                throw runtime_error("Not enough arguments");
+            if (native->requiredArgs() != args)
+                return raiseArgumentException(interp);
             native->call(interp);
             return true;
         } else if (target->is<Function>()) {
             Root<Function*> function(target->as<Function>());
-            if (function->requiredArgs() < args)
-                throw runtime_error("Not enough arguments");
+            if (function->requiredArgs() != args)
+                return raiseArgumentException(interp);
             Root<Frame*> callFrame(interp.newFrame(function));
             for (int i = args - 1; i >= 0; --i) {
                 Root<Value> arg(interp.popStack());
