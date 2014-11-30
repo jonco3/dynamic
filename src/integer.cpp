@@ -88,7 +88,7 @@ struct IntegerClass : public Class
         value = new Native1(int_pos);    setAttr("__pos__", value);
         value = new Native1(int_neg);    setAttr("__neg__", value);
         value = new Native1(int_invert); setAttr("__invert__", value);
-        value = new Native2(int_le);     setAttr("__lt__", value);
+        value = new Native2(int_lt);     setAttr("__lt__", value);
         value = new Native2(int_le);     setAttr("__le__", value);
         value = new Native2(int_gt);     setAttr("__gt__", value);
         value = new Native2(int_ge);     setAttr("__ge__", value);
@@ -134,3 +134,17 @@ Value Integer::get(int v)
 void Integer::print(ostream& s) const {
     s << dec << value_;
 }
+
+#ifdef BUILD_TESTS
+
+#include "test.h"
+
+testcase(integer)
+{
+    testInterp("1", "1");
+    testInterp("2 + 2", "4");
+    testInterp("+3", "3");
+    testInterp("-4", "-4");
+}
+
+#endif

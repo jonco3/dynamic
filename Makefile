@@ -17,6 +17,7 @@ MAINLDFLAGS = -lreadline
 SRCS = \
 	src/token.cpp \
 	src/parser.cpp \
+	src/gc.cpp \
 	src/block.cpp \
 	src/layout.cpp \
 	src/value.cpp \
@@ -24,14 +25,13 @@ SRCS = \
 	src/class.cpp \
 	src/singletons.cpp \
 	src/bool.cpp \
-	src/integer.cpp \
 	src/frame.cpp \
 	src/callable.cpp \
 	src/interp.cpp \
-	src/gc.cpp \
 	src/common.cpp \
 	src/builtin.cpp \
 	src/exception.cpp \
+	src/integer.cpp \
 	src/string.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)
