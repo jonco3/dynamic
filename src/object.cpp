@@ -14,14 +14,16 @@
 
 GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
+GlobalRoot<Object*> Object::Null;
 
 void Object::init()
 {
     InitialLayout.init(new Layout(nullptr, "__class__"));
     ObjectClass.init(new Class("Object"));
+    Null.init(nullptr);
 }
 
-Object::Object(Class *cls, Object* base, Layout* layout)
+Object::Object(Traced<Class*> cls, Traced<Object*> base, Traced<Layout*> layout)
   : class_(cls), layout_(layout)
 {
     if (cls != Class::ObjectClass)
@@ -32,7 +34,7 @@ Object::Object(Class *cls, Object* base, Layout* layout)
         initAttrs(base);
 }
 
-Object::Object(Class *cls, Layout* layout)
+Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
   : class_(cls), layout_(layout)
 {
     assert(layout_);
@@ -45,7 +47,7 @@ Object::~Object()
 {
 }
 
-void Object::initClass(Class* cls, Object* base)
+void Object::initClass(Traced<Class*> cls, Traced<Object*> base)
 {
     assert(cls);
     assert(!class_);
@@ -65,7 +67,7 @@ void Object::initAttrs(Object* base)
     setAttr("__class__", value);
 }
 
-void Object::extend(Layout* layout)
+void Object::extend(Traced<Layout*> layout)
 {
     assert(layout);
     assert(layout->subsumes(layout_));

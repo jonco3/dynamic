@@ -17,7 +17,7 @@ struct Interpreter
 {
     Interpreter();
 
-    bool interpret(Block* block, Value& valueOut);
+    bool interpret(Traced<Block*> block, Value& valueOut);
 
     void pushStack(Value value) {
         stack.push_back(value);
@@ -45,8 +45,8 @@ struct Interpreter
     Instr** nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 
-    Frame* newFrame(Function* function);
-    void pushFrame(Frame* frame);
+    Frame* newFrame(Traced<Function*> function);
+    void pushFrame(Traced<Frame*> frame);
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
 

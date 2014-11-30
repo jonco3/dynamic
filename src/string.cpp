@@ -11,19 +11,19 @@ struct StringClass : public Class
 {
     StringClass() : Class("str") {}
 
-    static bool str_add(Value arg1, Value arg2, Value& resultOut) {
+    static bool str_add(Traced<Value> arg1, Traced<Value> arg2, Root<Value>& resultOut) {
         const string& a = arg1.toObject()->as<String>()->value();
         const string& b = arg2.toObject()->as<String>()->value();
         resultOut = String::get(a + b);
         return true;
     }
 
-    static bool str_str(Value arg, Value& resultOut) {
+    static bool str_str(Traced<Value> arg, Root<Value>& resultOut) {
         resultOut = arg;
         return true;
     }
 
-    static bool str_print(Value arg, Value& resultOut) {
+    static bool str_print(Traced<Value> arg, Root<Value>& resultOut) {
         const string& a = arg.toObject()->as<String>()->value();
         cout << a << endl;
         resultOut = None;

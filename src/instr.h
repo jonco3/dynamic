@@ -325,18 +325,18 @@ struct InstrCall : public Instr
     }
 
     virtual bool execute(Interpreter& interp) {
-        Object* target = interp.peekStack(args).toObject();
+        Root<Object*> target(interp.peekStack(args).toObject());
         if (target->is<Native>()) {
-            Native* native = target->as<Native>();
+            Root<Native*> native(target->as<Native>());
             if (native->requiredArgs() < args)
                 throw runtime_error("Not enough arguments");
             native->call(interp);
             return true;
         } else if (target->is<Function>()) {
-            Function* function = target->as<Function>();
+            Root<Function*> function(target->as<Function>());
             if (function->requiredArgs() < args)
                 throw runtime_error("Not enough arguments");
-            Frame *callFrame = interp.newFrame(function);
+            Root<Frame*>callFrame(interp.newFrame(function));
             for (int i = args - 1; i >= 0; --i) {
                 Root<Value> arg(interp.popStack());
                 callFrame->setAttr(function->paramName(i), arg);
@@ -519,7 +519,9 @@ struct InstrLambda : public Instr
     instr_name("Lambda");
 
     virtual bool execute(Interpreter& interp) {
-        interp.pushStack(new Function(params_, block_, interp.getFrame(0)));
+        Root<Block*> block(block_);
+        Root<Frame*> frame(interp.getFrame(0));
+        interp.pushStack(new Function(params_, block, frame));
         return true;
     }
 

@@ -15,9 +15,10 @@ Interpreter::Interpreter()
   : instrp(nullptr)
 {}
 
-bool Interpreter::interpret(Block* block, Value& valueOut)
+bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 {
-    pushFrame(new Frame(block));
+    Root<Frame*> frame(new Frame(block));
+    pushFrame(frame);
 
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
@@ -44,13 +45,13 @@ bool Interpreter::interpret(Block* block, Value& valueOut)
     return true;
 }
 
-Frame* Interpreter::newFrame(Function *function)
+Frame* Interpreter::newFrame(Traced<Function*> function)
 {
-    Block* block = function->block();
+    Root<Block*> block(function->block());
     return new Frame(block, instrp);
 }
 
-void Interpreter::pushFrame(Frame* frame)
+void Interpreter::pushFrame(Traced<Frame*> frame)
 {
     frame->setStackPos(stack.size());
     instrp = frame->block()->startInstr();
@@ -92,7 +93,7 @@ void testInterp(const string& input, const string& expected)
 #ifdef TRACE_INTERP
     cout << "testInterp: " << input << endl;
 #endif
-    Root<Block*> block(Block::buildModule(input));
+    Root<Block*> block(Block::buildModule(input, Object::Null));
     Interpreter interp;
     Value result;
     bool ok = interp.interpret(block, result);
@@ -107,7 +108,7 @@ void testException(const string& input, const string& expected)
 #ifdef TRACE_INTERP
     cout << "testException: " << input << endl;
 #endif
-    Root<Block*> block(Block::buildModule(input));
+    Root<Block*> block(Block::buildModule(input, Object::Null));
     Interpreter interp;
     Value result;
     testFalse(interp.interpret(block, result));

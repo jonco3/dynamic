@@ -12,6 +12,6 @@ extern void init2();
 extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
-extern bool runModule(string text, string filename, Value* valueOut = nullptr,
-                      Object* global = nullptr);
+extern bool runModule(string text, string filename, Traced<Object*> global,
+                      Value* valueOut = nullptr);
 #endif

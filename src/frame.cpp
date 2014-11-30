@@ -10,8 +10,8 @@ void Frame::init()
     ObjectClass.init(new Class("Frame"));
 }
 
-Frame::Frame(Block* block, Instr** returnPoint) :
-  Object(ObjectClass, block->layout()),
+Frame::Frame(Traced<Block*> block, Instr** returnPoint) :
+  Object(ObjectClass, Block::layout(block)),
   block_(block),
   returnPoint_(returnPoint),
   stackPos_(0)

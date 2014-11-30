@@ -17,9 +17,9 @@ struct Syntax;
 
 struct Block : public Cell
 {
-    static Block* buildModule(const Input& input, Object* globals = nullptr);
+    static Block* buildModule(const Input& input, Traced<Object*> globals);
 
-    Block(Layout* layout);
+    Block(Traced<Layout*> layout);
     Instr** startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
     Instr* instr(unsigned i) { return instrs_.at(i); }
@@ -42,6 +42,10 @@ struct Block : public Cell
     virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
+
+    static Traced<Layout*> layout(Traced<Block*> block) {
+        return Traced<Layout*>::fromTracedLocation(&block->layout_);
+    }
 
   private:
     Layout* layout_;

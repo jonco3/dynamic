@@ -20,11 +20,13 @@ struct Object : public Cell
 
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
+    static GlobalRoot<Object*> Null;
 
-    Object(Class *cls = ObjectClass, Layout *layout = InitialLayout);
+    Object(Traced<Class*> cls = ObjectClass, Traced<Layout*> layout = InitialLayout);
     virtual ~Object();
 
-    void initClass(Class* cls, Object* base); // Only for use during initialization
+    // Only for use during initialization
+    void initClass(Traced<Class*> cls, Traced<Object*> base);
 
     template <typename T> bool is() { return class_ == T::ObjectClass; }
 
@@ -40,14 +42,15 @@ struct Object : public Cell
     void setAttr(Name name, Traced<Value> value);
 
     // Add uninitialised attributes for all names in layout.
-    void extend(Layout* layout);
+    void extend(Traced<Layout*> layout);
 
     Layout* layout() { return layout_; }
 
     bool isTrue() const;
 
   protected:
-    Object(Class *cls, Object *base, Layout* layout = InitialLayout);
+    Object(Traced<Class*> cls, Traced<Object*> base,
+           Traced<Layout*> layout = InitialLayout);
 
     virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }

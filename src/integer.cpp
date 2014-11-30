@@ -10,7 +10,7 @@
 struct IntegerClass : public Class
 {
 #define define_unary_int_operator(name, op)                                   \
-    static bool name(Value arg, Value& resultOut) {                           \
+    static bool name(Traced<Value> arg, Root<Value>& resultOut) {             \
         int a = arg.toObject()->as<Integer>()->value();                       \
         resultOut = Integer::get(op a);                                       \
         return true;                                                          \
@@ -23,7 +23,8 @@ struct IntegerClass : public Class
 #undef define_unary_int_operator
 
 #define define_binary_int_operator(name, op)                                  \
-    static bool name(Value arg1, Value arg2, Value& resultOut) {              \
+    static bool name(Traced<Value> arg1, Traced<Value> arg2,                  \
+                     Root<Value>& resultOut) {                                \
         int a = arg1.toObject()->as<Integer>()->value();                      \
         int b = arg2.toObject()->as<Integer>()->value();                      \
         resultOut = Integer::get(a op b);                                     \
@@ -45,7 +46,8 @@ struct IntegerClass : public Class
 #undef define_binary_int_operator
 
 #define define_binary_bool_operator(name, op)                                 \
-    static bool name(Value arg1, Value arg2, Value& resultOut) {              \
+    static bool name(Traced<Value> arg1, Traced<Value> arg2,                  \
+                     Root<Value>& resultOut) {                                \
         int a = arg1.toObject()->as<Integer>()->value();                      \
         int b = arg2.toObject()->as<Integer>()->value();                      \
         resultOut = Boolean::get(a op b);                                     \
@@ -61,7 +63,8 @@ struct IntegerClass : public Class
 
 #undef define_binary_bool_operator
 
-    static bool int_pow(Value arg1, Value arg2, Value& resultOut) {
+    static bool int_pow(Traced<Value> arg1, Traced<Value> arg2,
+                        Root<Value>& resultOut) {
         int a = arg1.toObject()->as<Integer>()->value();
         int b = arg2.toObject()->as<Integer>()->value();
         resultOut = Integer::get(std::pow(a, b));

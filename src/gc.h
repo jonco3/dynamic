@@ -129,13 +129,18 @@ struct RootBase
 template <typename T>
 struct Root : protected RootBase
 {
-    explicit Root(T ptr = GCTraits<T>::nullValue()) {
+    Root() {
+        ptr_ = GCTraits<T>::nullValue();
+        insert();
+    }
+
+    explicit Root(T ptr) {
         *this = ptr;
         insert();
     }
 
     Root(const Root& other) {
-        *this = other.ptr;
+        *this = other.ptr_;
         insert();
     }
 
@@ -177,9 +182,9 @@ struct GlobalRoot : protected RootBase
     }
 
     void init(T ptr) {
-        assert(GCTraits<T>::isNonNull(ptr));
         GCTraits<T>::checkValid(ptr);
-        insert();
+        if (GCTraits<T>::isNonNull(ptr_))
+            insert();
         ptr_ = ptr;
     }
 
@@ -206,9 +211,12 @@ struct RootVector : public vector<T>, private RootBase
     }
 };
 
+template <typename T>
+struct TracedMixins {};
+
 // A handled to a traced location
 template <typename T>
-struct Traced
+struct Traced : public TracedMixins<T>
 {
     Traced(Root<T>& root) : handle_(&root) {}
     Traced(GlobalRoot<T>& root) : handle_(&root) {}
@@ -220,7 +228,15 @@ struct Traced
     T get() { return *handle_; }
     const T get() const { return *handle_; }
 
+    const T* location() const { return handle_; }
+
+    static Traced<T> fromTracedLocation(T* traced) {
+        return Traced(traced);
+    }
+
   private:
+    Traced(T* traced) : handle_(traced) {}
+
     T* handle_;
 };
 

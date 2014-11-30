@@ -56,7 +56,7 @@ static int runRepl()
     Root<Object*> globals(new Object);
     while (line = readOneLine(), line != NULL) {
         Value result;
-        bool ok = runModule(line, "<none>", &result, globals);
+        bool ok = runModule(line, "<none>", globals, &result);
         if (ok)
             cout << result << endl;
     }
@@ -70,7 +70,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     //RootVector<String> argStrings(arg_count);
     //for (unsigned i = 0 ; i < arg_count ; ++i)
     //    argStrings[i] = new String(args[i]);
-    if (!runModule(readFile(filename), filename))
+    if (!runModule(readFile(filename), filename, Object::Null))
         return EX_SOFTWARE;
 
     return EX_OK;
@@ -80,7 +80,7 @@ static int runExprs(int count, const char* args[])
     {
     for (unsigned i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
-        if (!runModule(args[i], "<none>"))
+        if (!runModule(args[i], "<none>", Object::Null))
             return EX_SOFTWARE;
     }
 

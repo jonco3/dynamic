@@ -9,7 +9,7 @@
 
 //#define TRACE_BUILD
 
-Block::Block(Layout* layout)
+Block::Block(Traced<Layout*> layout)
   : layout_(layout)
 {}
 
@@ -119,7 +119,7 @@ struct BlockBuilder : public SyntaxVisitor
             layout = layout->addName(*i);
     }
 
-    void setGlobals(Object* globals) {
+    void setGlobals(Traced<Object*> globals) {
         assert(globals);
         assert(!parent);
         assert(layout == Object::InitialLayout);
@@ -418,7 +418,7 @@ static unique_ptr<SyntaxBlock> ParseModule(const Input& input)
     return unique_ptr<SyntaxBlock>(parser.parseModule());
 }
 
-Block* Block::buildModule(const Input& input, Object* globals)
+Block* Block::buildModule(const Input& input, Traced<Object*> globals)
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     BlockBuilder builder;
@@ -433,7 +433,7 @@ Block* Block::buildModule(const Input& input, Object* globals)
 
 void testBuildModule(const string& input, const string& expected)
 {
-    testEqual(repr(Block::buildModule(input)), expected);
+    testEqual(repr(Block::buildModule(input, Object::Null)), expected);
 }
 
 testcase(block)

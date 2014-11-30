@@ -40,6 +40,19 @@ struct Value
 ostream& operator<<(ostream& s, const Value& v);
 
 template <>
+struct TracedMixins<Value>
+{
+    bool isObject() const { return get()->isObject(); }
+    Object *asObject() const { return get()->asObject(); }
+    Object *toObject() const { return get()->toObject(); }
+
+  private:
+    const Value* get() const {
+        return static_cast<const Traced<Value>*>(this)->location();
+    }
+};
+
+template <>
 struct GCTraits<Value>
 {
     static Value nullValue();

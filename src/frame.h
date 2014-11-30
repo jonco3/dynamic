@@ -13,7 +13,7 @@ struct Frame : public Object
     static GlobalRoot<Class*> ObjectClass;
     static void init();
 
-    Frame(Block* block, Instr** returnPoint = nullptr);
+    Frame(Traced<Block*> block, Instr** returnPoint = nullptr);
     void setStackPos(unsigned pos) { stackPos_ = pos; }
 
     Instr** returnPoint() { return returnPoint_; }

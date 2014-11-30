@@ -63,7 +63,7 @@ void printException(Value value)
     cerr << "Error: " << ex->message() << endl;
 }
 
-bool runModule(string text, string filename, Value* valueOut, Object* globals)
+bool runModule(string text, string filename, Traced<Object*> globals, Value* valueOut)
 {
     Value result;
     bool ok;
