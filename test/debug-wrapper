@@ -59,7 +59,7 @@ while process.poll() == None:
         elif crash_pattern.match(linebuffer):
             returncode = 1
             state = 'crashed'
-        elif 'Program exited normally' in linebuffer:
+        elif 'exited normally' in linebuffer:
             returncode = 0
 
         linebuffer = ''

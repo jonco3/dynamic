@@ -73,7 +73,7 @@ TEST-RUNNER = python test/run-tests
 .PHONY: test
 test: tests-debug dynamic-debug
 	@echo "Entering directory \`src'"
-	@$(WRAPPER) tests-debug -t
+	@$(WRAPPER) tests-debug
 	@$(TEST-RUNNER) dynamic-debug
 
 .PHONY: benchz
