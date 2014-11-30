@@ -138,10 +138,7 @@ struct InstrGetLocal : public IdentInstrBase
 
     virtual bool execute(Interpreter& interp) {
         Frame* frame = interp.getFrame();
-        assert(frame->hasAttr(ident));
-        Value value;
-        frame->getAttr(ident, value);
-        interp.pushStack(value);
+        interp.pushStack(frame->getAttr(ident));
         return true;
     }
 };
@@ -173,10 +170,7 @@ struct InstrGetLexical : public Instr
 
     virtual bool execute(Interpreter& interp) {
         Frame* frame = interp.getFrame(frameIndex);
-        assert(frame->hasAttr(ident));
-        Value value;
-        frame->getAttr(ident, value);
-        interp.pushStack(value);
+        interp.pushStack(frame->getAttr(ident));
         return true;
     }
 
@@ -219,10 +213,8 @@ struct InstrGetGlobal : public IdentInstrBase
     instr_name("GetGlobal");
 
     virtual bool execute(Interpreter& interp) {
-        Value value;
-        bool ok = global->getAttr(ident, value);
-        interp.pushStack(value);
-        return ok;
+        interp.pushStack(global->getAttr(ident));
+        return true;
     }
 
     virtual void traceChildren(Tracer& t) {
@@ -267,7 +259,7 @@ struct InstrGetAttr : public IdentInstrBase
 
     virtual bool execute(Interpreter& interp) {
         Value value;
-        bool ok = interp.popStack().toObject()->getAttr(ident, value);
+        bool ok = interp.popStack().toObject()->getAttrOrRaise(ident, value);
         interp.pushStack(value);
         return ok;
     }
@@ -300,13 +292,12 @@ struct InstrGetMethod : public Instr
 
     virtual bool execute(Interpreter& interp) {
         Object* obj = interp.popStack().toObject();
-        Value method;
-        bool ok = obj->getAttr(methodName, method);
-        interp.pushStack(method);
-        if (!ok)
-            return false;
-        interp.pushStack(obj);
-        return true;
+        Value value;
+        bool ok = obj->getAttrOrRaise(methodName, value);
+        interp.pushStack(value);
+        if (ok)
+            interp.pushStack(obj);
+        return ok;
     }
 
   private:

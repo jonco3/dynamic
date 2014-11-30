@@ -69,7 +69,7 @@ void maybeAbortTests(const runtime_error& exception)
 int main(int argc, char *argv[])
 {
     init1();
-    TestCase::runAllTests();
     init2();
+    TestCase::runAllTests();
     return 0;
 }

@@ -29,10 +29,10 @@ SRCS = \
 	src/callable.cpp \
 	src/interp.cpp \
 	src/common.cpp \
-	src/builtin.cpp \
 	src/exception.cpp \
 	src/integer.cpp \
-	src/string.cpp
+	src/string.cpp \
+	src/builtin.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)
 MAINSRCS = src/main.cpp $(SRCS)

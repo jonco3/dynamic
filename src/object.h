@@ -38,7 +38,9 @@ struct Object : public Cell
     virtual void print(ostream& os) const;
 
     bool hasAttr(Name name) const;
-    bool getAttr(Name name, Value& valueOut) const;
+    bool maybeGetAttr(Name name, Value& valueOut) const;
+    Value getAttr(Name name) const;
+    bool getAttrOrRaise(Name name, Value& valueOut) const;
     void setAttr(Name name, Traced<Value> value);
 
     // Add uninitialised attributes for all names in layout.
@@ -54,6 +56,10 @@ struct Object : public Cell
 
     virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
+
+    bool hasOwnAttr(Name name) const;
+    bool maybeGetOwnAttr(Name name, Value& valueOut) const;
+    bool getSlot(Name name, int slot, Value& valueOut) const;
 
   private:
     Class* class_;

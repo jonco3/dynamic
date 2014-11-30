@@ -84,32 +84,82 @@ void Object::extend(Traced<Layout*> layout)
     layout_ = layout;
 }
 
-bool Object::hasAttr(Name name) const
+bool Object::hasOwnAttr(Name name) const
 {
     return layout_->lookupName(name) != -1;
 }
 
-bool Object::getAttr(Name name, Value& valueOut) const
+bool Object::hasAttr(Name name) const
 {
-    assert(class_);
-    int slot = layout_->lookupName(name);
-    if (slot == -1) {
-        // lookup attribute in class hierarchy
-        const Object *o = this;
-        Value cv;
-        while (o->getAttr("__class__", cv)) {
-            o = cv.toObject();
-            if (!o)
-                break;
-            if (o->getAttr(name, valueOut))
-                return true;
-        }
+    if (hasOwnAttr(name))
+        return true;
 
-        string message = "AttributeError: '" + class_->name() +
-            "' object has no attribute '" + name + "'";
-        valueOut = new Exception(message);
+    // lookup attribute in class hierarchy
+    Value base;
+    if (!maybeGetOwnAttr("__class__", base))
         return false;
+
+    while (Object* obj = base.toObject()) {
+        if (obj->hasOwnAttr(name))
+            return true;
+        if (!obj->maybeGetOwnAttr("__base__", base))
+            break;
     }
+
+    return false;
+}
+
+bool Object::maybeGetOwnAttr(Name name, Value& valueOut) const
+{
+    int slot = layout_->lookupName(name);
+    if (slot == -1)
+        return false;
+    return getSlot(name, slot, valueOut);
+}
+
+bool Object::maybeGetAttr(Name name, Value& valueOut) const
+{
+    if (maybeGetOwnAttr(name, valueOut))
+        return true;
+
+    // lookup attribute in class hierarchy
+    Value base;
+    if (!maybeGetOwnAttr("__class__", base))
+        return false;
+
+    while (Object* obj = base.toObject()) {
+        if (obj->maybeGetOwnAttr(name, valueOut))
+            return true;
+        if (!obj->maybeGetOwnAttr("__base__", base))
+            break;
+    }
+
+    return false;
+}
+
+bool Object::getAttrOrRaise(Name name, Value& valueOut) const
+{
+    bool ok = maybeGetAttr(name, valueOut);
+    if (ok)
+        return true;
+
+    string message = "AttributeError: '" + class_->name() +
+        "' object has no attribute '" + name + "'";
+    valueOut = new Exception(message);
+    return false;
+}
+
+
+Value Object::getAttr(Name name) const
+{
+    Value value = None;
+    bool ok = maybeGetAttr(name, value);
+    assert(ok);
+    return value;
+}
+
+bool Object::getSlot(Name name, int slot, Value& valueOut) const
+{
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == UninitializedSlot) {
         valueOut = new Exception("UnboundLocalError:: name '" +
@@ -179,10 +229,10 @@ testcase(object)
     Root<Object*> o(new Object);
     Value v;
 
-    testFalse(o->getAttr("foo", v));
+    testFalse(o->maybeGetAttr("foo", v));
     Root<Value> one(Integer::get(1));
     o->setAttr("foo", one);
-    testTrue(o->getAttr("foo", v));
+    testTrue(o->maybeGetAttr("foo", v));
     Root<Object*> obj(v.toObject());
     testTrue(obj->is<Integer>());
     testEqual(obj->as<Integer>()->value(), 1);
