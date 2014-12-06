@@ -25,6 +25,7 @@ SyntaxParser::SyntaxParser() :
     expr.createNodeForAtom<SyntaxName>(Token_Identifier);
     expr.createNodeForAtom<SyntaxString>(Token_String);
     expr.createNodeForAtom<SyntaxInteger>(Token_Integer);
+    // todo: longinteger floatnumber imagnumber
 
     // Unary operations
 
@@ -36,11 +37,22 @@ SyntaxParser::SyntaxParser() :
     // Displays
 
     expr.addPrefixHandler(Token_Bra, [] (ParserT& parser, const Actions& acts,
-                                         Token _) {
-        Syntax* content = parser.expression(acts);
-        parser.match(Token_Ket);
-        // todo: parse tuples
-        return content;
+                                         Token _) -> Syntax* {
+        if (parser.opt(Token_Ket))
+            return new SyntaxTuple();
+        Syntax* expr = parser.expression(acts);
+        if (parser.opt(Token_Ket))
+            return expr;
+        SyntaxTuple* tuple = new SyntaxTuple();
+        tuple->append(expr);
+        for (;;) {
+            parser.match(Token_Comma);
+            if (parser.opt(Token_Ket))
+                return tuple;
+            tuple->append(parser.expression(acts));
+            if (parser.opt(Token_Ket))
+                return tuple;
+        }
     });
 
     // Lambda

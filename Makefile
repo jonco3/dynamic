@@ -32,6 +32,7 @@ SRCS = \
 	src/exception.cpp \
 	src/integer.cpp \
 	src/string.cpp \
+	src/tuple.cpp \
 	src/builtin.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)

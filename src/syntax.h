@@ -14,6 +14,7 @@ using namespace std;
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
     syntax(String)                                                            \
+    syntax(Tuple)                                                             \
     syntax(Name)                                                              \
     syntax(Pos)                                                               \
     syntax(Neg)                                                               \
@@ -242,6 +243,37 @@ struct SyntaxName : public Syntax
 
   private:
     Name id_;
+};
+
+struct SyntaxTuple : public Syntax
+{
+    syntax_type(Syntax_Tuple);
+    syntax_name("tuple");
+
+    ~SyntaxTuple() {
+        for (auto i = elements.begin(); i != elements.end(); ++i)
+            delete *i;
+    }
+
+    void append(Syntax* s) { elements.push_back(s); }
+    const vector<Syntax *>& elems() const { return elements; }
+
+    virtual void print(ostream& s) const override {
+        s << "(";
+        for (auto i = elements.begin(); i != elements.end(); ++i) {
+            if (i != elements.begin())
+                s << ", ";
+            s << (*i);
+        }
+        if (elements.size() == 1)
+                s << ",";
+        s << ")";
+    }
+
+    syntax_accept();
+
+  private:
+    vector<Syntax *> elements;
 };
 
 define_simple_unary_syntax(Neg, "-");

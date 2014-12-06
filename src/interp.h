@@ -35,6 +35,11 @@ struct Interpreter
         return stack[stack.size() - pos - 1];
     }
 
+    const Value* stackRef(unsigned pos) {
+        assert(stack.size() >= pos + 1);
+        return &stack[stack.size() - pos - 1];
+    }
+
     void swapStack() {
         assert(stack.size() >= 2);
         swap(stack[stack.size() - 1], stack[stack.size() - 2]);

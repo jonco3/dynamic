@@ -11,6 +11,7 @@
 #include "name.h"
 #include "object.h"
 #include "singletons.h"
+#include "tuple.h"
 
 #include "value-inl.h"
 
@@ -41,7 +42,8 @@ using namespace std;
     instr(Or)                                                                \
     instr(And)                                                               \
     instr(Lambda)                                                            \
-    instr(Pop)
+    instr(Pop)                                                               \
+    instr(Tuple)
 
 enum InstrType
 {
@@ -545,6 +547,25 @@ struct InstrPop : public Instr
         interp.popStack();
         return true;
     }
+};
+
+struct InstrTuple : public Instr
+{
+    instr_type(Instr_Tuple);
+    instr_name("Tuple");
+
+  InstrTuple(unsigned size) : size(size) {}
+
+    virtual bool execute(Interpreter& interp) {
+        Tuple* tuple = Tuple::get(size, interp.stackRef(size - 1));
+        for (unsigned i = 0; i < size; ++i)
+            interp.popStack();
+        interp.pushStack(tuple);
+        return true;
+    }
+
+  private:
+    unsigned size;
 };
 
 #endif

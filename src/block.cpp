@@ -223,6 +223,12 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrConst(v));
     }
 
+    virtual void visit(const SyntaxTuple& s) {
+        for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
+            (*i)->accept(*this);
+        block->append(new InstrTuple(s.elems().size()));
+    }
+
     virtual void visit(const SyntaxOr& s) {
         s.left()->accept(*this);
         unsigned branch = block->append(new InstrOr);

@@ -13,6 +13,7 @@
 #include "singletons.h"
 #include "string.h"
 #include "test.h"
+#include "tuple.h"
 
 #include <fstream>
 #include <sstream>
@@ -28,6 +29,7 @@ void init1()
     Boolean::init();
     Integer::init();
     String::init();
+    Tuple::init();
     initSingletons();
 }
 
