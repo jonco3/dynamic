@@ -20,17 +20,11 @@ SyntaxParser::SyntaxParser() :
   Parser(tokenizer),
   expr(TokenCount)
 {
-    expr.addWord(Token_Integer, [] (Token token) {
-        return new SyntaxInteger(atoi(token.text.c_str()));
-    });
+    // Atoms
 
-    expr.addWord(Token_String, [] (Token token) {
-        return new SyntaxString(token.text);
-    });
-
-    expr.addWord(Token_Identifier, [] (Token token) {
-        return new SyntaxName(token.text.c_str());
-    });
+    expr.createNodeForAtom<SyntaxName>(Token_Identifier);
+    expr.createNodeForAtom<SyntaxString>(Token_String);
+    expr.createNodeForAtom<SyntaxInteger>(Token_Integer);
 
     // Unary operations
 
@@ -139,14 +133,12 @@ SyntaxParser::SyntaxParser() :
 
     expr.addPrefixHandler(Token_Return, [] (ParserT& parser, const Actions& acts,
                                             Token _) {
-        Syntax *expr;
+        Syntax *expr = nullptr;
         if (parser.notFollowedBy(Token_EOF) &&
             parser.notFollowedBy(Token_Newline) &&
             parser.notFollowedBy(Token_Dedent))
         {
             expr = parser.expression(acts);
-        } else {
-            expr = new SyntaxInteger(0); // todo: none
         }
         return new SyntaxReturn(expr);
     });

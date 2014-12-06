@@ -53,6 +53,9 @@ struct Parser
 
         void addUnaryOp(TokenType type, UnaryOpHandler hanlder);
 
+        // Add a handler that creates a new node of type N for an atom
+        template<typename N> void createNodeForAtom(TokenType type);
+
         // Add a handler that creates a new node of type N for a token in prefix
         // position
         template<typename N> void createNodeForUnary(TokenType type);
@@ -165,6 +168,16 @@ void Parser<T>::Actions::addUnaryOp(TokenType type, UnaryOpHandler handler)
                          // todo: magic value should be constant
                          T rightValue = parser.expression(acts, 500);
                          return handler(token, rightValue);
+                     });
+}
+
+template<typename T>
+template<typename N>
+void Parser<T>::Actions::createNodeForAtom(TokenType type)
+{
+    addPrefixHandler(type,
+                     [=] (Parser<T>& parser, Actions acts, Token token) {
+                         return new N(token);
                      });
 }
 

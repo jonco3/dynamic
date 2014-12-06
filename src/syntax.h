@@ -190,7 +190,8 @@ struct SyntaxBlock : public Syntax
 
 struct SyntaxInteger : public Syntax
 {
-    SyntaxInteger(int value) : value_(value) {}
+    // todo: this probably doesn't correctly parse all python integers
+    SyntaxInteger(const Token& token) : value_(atoi(token.text.c_str())) {}
 
     syntax_type(Syntax_Integer)
     syntax_name("integer")
@@ -208,7 +209,7 @@ struct SyntaxInteger : public Syntax
 
 struct SyntaxString : public Syntax
 {
-    SyntaxString(const string& text) : value_(text) {}
+    SyntaxString(const Token& token) : value_(token.text) {}
 
     syntax_type(Syntax_String)
     syntax_name("string")
@@ -227,7 +228,7 @@ struct SyntaxString : public Syntax
 struct SyntaxName : public Syntax
 {
 
-    SyntaxName(string id) : id_(id) {}
+    SyntaxName(const Token& token) : id_(token.text) {}
 
     syntax_type(Syntax_Name)
     syntax_name("name")

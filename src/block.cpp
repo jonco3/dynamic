@@ -341,7 +341,10 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxReturn& s) {
-        s.right()->accept(*this);
+        if (s.right())
+            s.right()->accept(*this);
+        else
+            block->append(new InstrConst(None));
         block->append(new InstrReturn);
     }
 
