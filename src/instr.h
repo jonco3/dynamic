@@ -327,8 +327,7 @@ struct InstrCall : public Instr
             Root<Native*> native(target->as<Native>());
             if (native->requiredArgs() != args)
                 return raiseArgumentException(interp);
-            native->call(interp);
-            return true;
+            return native->call(interp);
         } else if (target->is<Function>()) {
             Root<Function*> function(target->as<Function>());
             if (function->requiredArgs() != args)

@@ -273,6 +273,7 @@ struct BlockBuilder : public SyntaxVisitor
     define_vist_binary_as_method_call(SyntaxIntDivide, "__floordiv__");
     define_vist_binary_as_method_call(SyntaxModulo, "__mod__");
     define_vist_binary_as_method_call(SyntaxPower, "__pow__");
+    define_vist_binary_as_method_call(SyntaxSubscript, "__getitem__");
 
 #undef define_vist_binary_as_method_call
 

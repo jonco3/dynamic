@@ -3,6 +3,7 @@
 
 #include "value.h"
 
+#include "integer.h"
 #include "object.h"
 
 inline Value GCTraits<Value>::nullValue() {
@@ -23,6 +24,26 @@ inline void GCTraits<Value>::trace(Tracer& t, Value* v)
 inline bool Value::isTrue() const
 {
     return toObject()->isTrue();
+}
+
+inline bool Value::isInt32() const
+{
+    return toObject()->is<Integer>();
+}
+
+inline int32_t Value::asInt32() const
+{
+    return toObject()->as<Integer>()->value();
+}
+
+inline bool TracedMixins<Value>::isInt32() const
+{
+    return get()->isInt32();
+}
+
+inline int32_t TracedMixins<Value>::asInt32() const
+{
+    return get()->asInt32();
 }
 
 #endif

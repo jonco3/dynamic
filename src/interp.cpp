@@ -111,10 +111,19 @@ void testException(const string& input, const string& expected)
     Root<Block*> block(Block::buildModule(input, Object::Null));
     Interpreter interp;
     Value result;
-    testFalse(interp.interpret(block, result));
+    bool ok = interp.interpret(block, result);
+    if (ok) {
+        cerr << "Expected exception but got: " << result << endl;
+        abortTests();
+    }
     Object *o = result.toObject();
     testTrue(o->is<Exception>());
-    testTrue(o->as<Exception>()->message().find(expected) != string::npos);
+    string message = o->as<Exception>()->message();
+    if (message.find(expected) == string::npos) {
+        cerr << "Expected message containing: " << expected << endl;
+        cerr << "But got: " << message << endl;
+        abortTests();
+    }
 }
 
 testcase(interp)

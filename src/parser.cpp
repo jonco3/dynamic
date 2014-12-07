@@ -126,6 +126,13 @@ SyntaxParser::SyntaxParser() :
     expr.createNodeForBinary<SyntaxModulo>(Token_Modulo, 180, Assoc_Left);
     expr.createNodeForBinary<SyntaxPower>(Token_Power, 180, Assoc_Left);
 
+    expr.addInfixHandler(Token_SBra, 200, [] (ParserT& parser, const Actions& acts,
+                                              Token _, Syntax* l) {
+        Syntax* index = parser.expression(acts);
+        parser.match(Token_SKet);
+        return new SyntaxSubscript(l, index);
+    });
+
     expr.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const Actions& acts,
                                             Token _, Syntax* l) {
         vector<Syntax*> args;

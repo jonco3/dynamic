@@ -51,7 +51,8 @@ using namespace std;
     syntax(Lambda)                                                            \
     syntax(Def)                                                               \
     syntax(If)                                                                \
-    syntax(While)
+    syntax(While)                                                             \
+    syntax(Subscript)
 
 enum SyntaxType
 {
@@ -326,6 +327,18 @@ struct SyntaxAssignAttr : public BinarySyntaxBase<SyntaxAttrRef, Syntax>
     syntax_type(Syntax_AssignAttr)
     syntax_name("=")
     syntax_accept()
+};
+
+struct SyntaxSubscript : public BinarySyntaxBase<Syntax, Syntax>
+{
+    SyntaxSubscript(Syntax* l, Syntax* r) : BinarySyntaxBase(l, r) {}
+    syntax_type(Syntax_Subscript)
+    syntax_name("subscript")
+    syntax_accept()
+
+    virtual void print(ostream& s) const override {
+        s << left() << "[" << right() << "]";
+    }
 };
 
 struct SyntaxCall : public Syntax

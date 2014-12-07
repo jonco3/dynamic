@@ -7,6 +7,7 @@
 
 using namespace std;
 
+struct Integer;
 struct Object;
 struct Tracer;
 
@@ -24,6 +25,9 @@ struct Value
     bool isObject() const { return true; }
     Object *asObject() const { return objectp; }
     Object *toObject() const { return objectp; }
+
+    inline bool isInt32() const;
+    inline int32_t asInt32() const;
 
     bool operator==(const Value& other) const { return objectp == other.objectp; }
     bool operator!=(const Value& other) const { return !(*this == other); }
@@ -45,6 +49,8 @@ struct TracedMixins<Value>
     bool isObject() const { return get()->isObject(); }
     Object *asObject() const { return get()->asObject(); }
     Object *toObject() const { return get()->toObject(); }
+    bool isInt32() const;
+    int32_t asInt32() const;
 
   private:
     const Value* get() const {

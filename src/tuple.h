@@ -14,6 +14,8 @@ struct Tuple : public Object
 
     static Tuple* get(unsigned size, const Value* values);
 
+    bool getitem(int32_t index, Root<Value>& resultOut);
+
     virtual void print(ostream& os) const;
     virtual void traceChildren(Tracer& t);
 
