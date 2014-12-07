@@ -4,6 +4,7 @@
 #include "builtin.h"
 #include "callable.h"
 #include "class.h"
+#include "dict.h"
 #include "exception.h"
 #include "frame.h"
 #include "input.h"
@@ -32,6 +33,7 @@ void init1()
     String::init();
     Tuple::init();
     List::init();
+    Dict::init();
     initSingletons();
 }
 

@@ -16,6 +16,7 @@ using namespace std;
     syntax(String)                                                            \
     syntax(Tuple)                                                             \
     syntax(List)                                                              \
+    syntax(Dict)                                                              \
     syntax(Name)                                                              \
     syntax(Pos)                                                               \
     syntax(Neg)                                                               \
@@ -311,6 +312,41 @@ struct SyntaxList : public Syntax
 
   private:
     vector<Syntax *> elements;
+};
+
+struct SyntaxDict : public Syntax
+{
+    syntax_type(Syntax_Dict);
+    syntax_name("Dict");
+
+    typedef pair<Syntax*, Syntax*> Entry;
+
+    SyntaxDict(const vector<Entry> entries)
+        : entries_(entries) {}
+
+    ~SyntaxDict() {
+        for (auto i = entries_.begin(); i != entries_.end(); ++i) {
+            delete i->first;
+            delete i->second;
+        }
+    }
+
+    const vector<Entry>& entries() const { return entries_; }
+
+    virtual void print(ostream& s) const override {
+        s << "{";
+        for (auto i = entries_.begin(); i != entries_.end(); ++i) {
+            if (i != entries_.begin())
+                s << ", ";
+            s << i->first << ": " << i->second;
+        }
+        s << "}";
+    }
+
+    syntax_accept();
+
+  private:
+    vector<Entry> entries_;
 };
 
 define_simple_unary_syntax(Neg, "-");

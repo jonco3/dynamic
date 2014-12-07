@@ -30,6 +30,11 @@ struct Interpreter
         return result;
     }
 
+    void popStack(unsigned count) {
+        assert(stack.size() >= count);
+        stack.resize(stack.size() - count);
+    }
+
     Value peekStack(unsigned pos) {
         assert(stack.size() >= pos + 1);
         return stack[stack.size() - pos - 1];

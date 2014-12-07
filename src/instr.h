@@ -3,6 +3,7 @@
 
 #include "bool.h"
 #include "callable.h"
+#include "dict.h"
 #include "exception.h"
 #include "frame.h"
 #include "gc.h"
@@ -45,7 +46,8 @@ using namespace std;
     instr(Lambda)                                                            \
     instr(Pop)                                                               \
     instr(Tuple)                                                             \
-    instr(List)
+    instr(List)                                                              \
+    instr(Dict)
 
 enum InstrType
 {
@@ -559,8 +561,7 @@ struct InstrTuple : public Instr
 
     virtual bool execute(Interpreter& interp) {
         Tuple* tuple = Tuple::get(size, interp.stackRef(size - 1));
-        for (unsigned i = 0; i < size; ++i)
-            interp.popStack();
+        interp.popStack(size);
         interp.pushStack(tuple);
         return true;
     }
@@ -578,9 +579,26 @@ struct InstrList : public Instr
 
     virtual bool execute(Interpreter& interp) {
         List* list = new List(size, interp.stackRef(size - 1));
-        for (unsigned i = 0; i < size; ++i)
-            interp.popStack();
+        interp.popStack(size);
         interp.pushStack(list);
+        return true;
+    }
+
+  private:
+    unsigned size;
+};
+
+struct InstrDict : public Instr
+{
+    instr_type(Instr_Dict);
+    instr_name("Dict");
+
+  InstrDict(unsigned size) : size(size) {}
+
+    virtual bool execute(Interpreter& interp) {
+        Dict* dict = new Dict(size, interp.stackRef(size * 2 - 1));
+        interp.popStack(size * 2);
+        interp.pushStack(dict);
         return true;
     }
 

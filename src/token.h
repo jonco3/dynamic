@@ -75,8 +75,8 @@ using namespace std;
     token(Ket)                                                                \
     token(SBra)                                                               \
     token(SKet)                                                               \
-    token(OpenBrace)                                                          \
-    token(CloseBrace)                                                         \
+    token(CBra)                                                               \
+    token(CKet)                                                               \
     token(At)                                                                 \
     token(Comma)                                                              \
     token(Colon)                                                              \

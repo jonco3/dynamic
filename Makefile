@@ -33,6 +33,7 @@ SRCS = \
 	src/integer.cpp \
 	src/string.cpp \
 	src/list.cpp \
+	src/dict.cpp \
 	src/builtin.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)

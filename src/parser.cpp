@@ -91,6 +91,21 @@ SyntaxParser::SyntaxParser() :
         return new SyntaxList(parser.exprListTrailing(acts, Token_Comma, Token_SKet));
     });
 
+    expr.addPrefixHandler(Token_CBra, [] (ParserT& parser, const Actions& acts,
+                                          Token _) -> Syntax* {
+        vector<SyntaxDict::Entry> entries;
+        while (!parser.opt(Token_CKet)) {
+            Syntax* key = parser.expression(acts);
+            parser.match(Token_Colon);
+            Syntax* value = parser.expression(acts);
+            entries.push_back(SyntaxDict::Entry(key, value));
+            if (parser.opt(Token_CKet))
+                break;
+            parser.match(Token_Comma);
+        }
+        return new SyntaxDict(entries);
+    });
+
     // Lambda
 
     expr.addPrefixHandler(Token_Lambda, [] (ParserT& parser, const Actions& acts,

@@ -70,4 +70,12 @@ struct GCTraits<Value>
     static void trace(Tracer& t, Value* v);
 };
 
+template <>
+struct std::hash<Value> {
+    size_t operator()(Value v) const {
+        return size_t(v.asObject());
+    }
+};
+
+
 #endif
