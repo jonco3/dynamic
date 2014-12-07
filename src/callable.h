@@ -79,6 +79,27 @@ struct Native2 : public Native
     Func func;
 };
 
+struct Native3 : public Native
+{
+    typedef bool (*Func)(Traced<Value>, Traced<Value>, Traced<Value>, Root<Value>&);
+    Native3(Func func) : func(func) {}
+    virtual unsigned requiredArgs() { return 3; }
+
+    virtual bool call(Interpreter& interp) {
+        Root<Value> arg3(interp.popStack());
+        Root<Value> arg2(interp.popStack());
+        Root<Value> arg1(interp.popStack());
+        interp.popStack();
+        Root<Value> result;
+        bool ok = func(arg1, arg2, arg3, result);
+        interp.pushStack(result);
+        return ok;
+    }
+
+  private:
+    Func func;
+};
+
 struct Function : public Callable
 {
     static void init();

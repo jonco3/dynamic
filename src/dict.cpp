@@ -2,17 +2,37 @@
 
 #include "callable.h"
 #include "exception.h"
+#include "repr.h"
 
 GlobalRoot<Class*> Dict::ObjectClass;
 
 struct DictClass : public Class
 {
     DictClass() : Class("dict") {}
+
+    static bool dict_getitem(Traced<Value> arg1, Traced<Value> arg2,
+                              Root<Value>& resultOut) {
+        Dict* dict = arg1.toObject()->as<Dict>();
+        return dict->getitem(arg2, resultOut);
+    }
+
+    static bool dict_setitem(Traced<Value> arg1, Traced<Value> arg2,
+                             Traced<Value> arg3, Root<Value>& resultOut) {
+        Dict* dict = arg1.toObject()->as<Dict>();
+        return dict->setitem(arg2, arg3, resultOut);
+    }
+
+    void initNatives() {
+        Root<Value> value;
+        value = new Native2(dict_getitem);  setAttr("__getitem__", value);
+        value = new Native3(dict_setitem);  setAttr("__setitem__", value);
+    }
 };
 
 void Dict::init()
 {
     Root<DictClass*> cls(new DictClass);
+    cls->initNatives();
     ObjectClass.init(cls);
 }
 
@@ -45,6 +65,25 @@ void Dict::print(ostream& s) const
     s << "}";
 }
 
+bool Dict::getitem(Traced<Value> key, Root<Value>& resultOut)
+{
+    auto i = entries_.find(key);
+    if (i == entries_.end()) {
+        resultOut = new Exception("KeyError: " + repr(key));
+        return false;
+    }
+
+    resultOut = i->second;
+    return true;
+}
+
+bool Dict::setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOut)
+{
+    entries_[key] = value;
+    resultOut = value;
+    return true;
+}
+
 #ifdef BUILD_TESTS
 
 #include "test.h"
@@ -57,6 +96,9 @@ testcase(dict)
     testInterp("{1: 2,}", "{1: 2}");
     testInterp("{'foo': 2 + 2}", "{'foo': 4}");
     testInterp("{2 + 2: 'bar'}", "{4: 'bar'}");
+
+    testException("{}[0]", "KeyError: 0");
+    testInterp("{'baz': 2}['baz']", "2");
 }
 
 #endif

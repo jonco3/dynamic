@@ -239,4 +239,9 @@ struct Traced : public TracedMixins<T>
     T* handle_;
 };
 
+template <typename T>
+struct std::hash<Traced<T>> {
+    size_t operator()(Traced<T> t) const { return std::hash<T>()(t.get()); }
+};
+
 #endif

@@ -19,6 +19,14 @@ struct String : public Object
     const string& value() { return value_; }
     virtual void print(ostream& os) const;
 
+    virtual bool equals(Object* other) override {
+        return other->is<String>() && value_ == other->as<String>()->value_;
+    }
+
+    virtual size_t hash() const override {
+        return std::hash<string>()(value_);
+    }
+
   private:
     String(const string& v);
 

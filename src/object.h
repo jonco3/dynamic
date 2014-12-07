@@ -50,6 +50,9 @@ struct Object : public Cell
 
     bool isTrue() const;
 
+    virtual bool equals(Object* other) { return this == other; }
+    virtual size_t hash() const { return size_t(this); }
+
   protected:
     Object(Traced<Class*> cls, Traced<Object*> base,
            Traced<Layout*> layout = InitialLayout);

@@ -29,8 +29,10 @@ struct Value
     inline bool isInt32() const;
     inline int32_t asInt32() const;
 
-    bool operator==(const Value& other) const { return objectp == other.objectp; }
+    bool operator==(const Value& other) const;
     bool operator!=(const Value& other) const { return !(*this == other); }
+
+    size_t hash() const;
 
     inline bool isTrue() const;
 
@@ -73,7 +75,7 @@ struct GCTraits<Value>
 template <>
 struct std::hash<Value> {
     size_t operator()(Value v) const {
-        return size_t(v.asObject());
+        return v.hash();
     }
 };
 

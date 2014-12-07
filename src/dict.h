@@ -15,6 +15,9 @@ struct Dict : public Object
     virtual void traceChildren(Tracer& t);
     virtual void print(ostream& os) const;
 
+    bool getitem(Traced<Value> key, Root<Value>& resultOut);
+    bool setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOut);
+
   private:
     unordered_map<Value, Value> entries_;
 };
