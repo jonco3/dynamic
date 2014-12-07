@@ -252,12 +252,16 @@ struct SyntaxTuple : public Syntax
     syntax_type(Syntax_Tuple);
     syntax_name("tuple");
 
+    SyntaxTuple() {}
+
+    SyntaxTuple(const vector<Syntax*> elems)
+        : elements(elems) {}
+
     ~SyntaxTuple() {
         for (auto i = elements.begin(); i != elements.end(); ++i)
             delete *i;
     }
 
-    void append(Syntax* s) { elements.push_back(s); }
     const vector<Syntax *>& elems() const { return elements; }
 
     virtual void print(ostream& s) const override {
@@ -283,12 +287,14 @@ struct SyntaxList : public Syntax
     syntax_type(Syntax_List);
     syntax_name("List");
 
+    SyntaxList(const vector<Syntax*> elems)
+        : elements(elems) {}
+
     ~SyntaxList() {
         for (auto i = elements.begin(); i != elements.end(); ++i)
             delete *i;
     }
 
-    void append(Syntax* s) { elements.push_back(s); }
     const vector<Syntax *>& elems() const { return elements; }
 
     virtual void print(ostream& s) const override {

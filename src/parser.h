@@ -98,6 +98,8 @@ struct Parser
     Token match(TokenType type);
     Token matchEither(TokenType type1, TokenType type2);
     T expression(const Actions& acts, unsigned bindRight = 0);
+    vector<T> exprList(const Actions& acts, TokenType separator, TokenType end);
+    vector<T> exprListTrailing(const Actions& acts, TokenType separator, TokenType end);
 
     void nextToken();
     T prefix(const Actions& acts, Token token);

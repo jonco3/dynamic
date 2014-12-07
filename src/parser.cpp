@@ -16,6 +16,43 @@ ParseError::ParseError(string message) :
 #endif
 }
 
+/*
+ * Match a comma separated list of expressions up to an end token.
+ */
+template <typename T>
+vector<T> Parser<T>::exprList(const Actions& acts, TokenType separator, TokenType end)
+{
+    vector<T> exprs;
+    if (opt(end))
+        return exprs;
+
+    for (;;) {
+        exprs.push_back(expression(acts));
+        if (opt(end))
+            break;
+        match(separator);
+    }
+    return exprs;
+}
+
+/*
+ * Match a comma separated list of expressions up to an end token, allowing a
+ * trailing comma.
+ */
+template <typename T>
+vector<T> Parser<T>::exprListTrailing(const Actions& acts, TokenType separator,
+                                      TokenType end)
+{
+    vector<T> exprs;
+    while (!opt(end)) {
+        exprs.push_back(expression(acts));
+        if (opt(end))
+            break;
+        match(separator);
+    }
+    return exprs;
+}
+
 SyntaxParser::SyntaxParser() :
   Parser(tokenizer),
   expr(TokenCount)
@@ -43,30 +80,15 @@ SyntaxParser::SyntaxParser() :
         Syntax* expr = parser.expression(acts);
         if (parser.opt(Token_Ket))
             return expr;
-        SyntaxTuple* tuple = new SyntaxTuple;
-        tuple->append(expr);
-        for (;;) {
-            parser.match(Token_Comma);
-            if (parser.opt(Token_Ket))
-                return tuple;
-            tuple->append(parser.expression(acts));
-            if (parser.opt(Token_Ket))
-                return tuple;
-        }
+        parser.match(Token_Comma);
+        vector<Syntax*> elements = parser.exprListTrailing(acts, Token_Comma, Token_Ket);
+        elements.insert(elements.begin(), expr);
+        return new SyntaxTuple(elements);
     });
 
     expr.addPrefixHandler(Token_SBra, [] (ParserT& parser, const Actions& acts,
                                           Token _) -> Syntax* {
-        SyntaxList* list = new SyntaxList;
-        for (;;) {
-            if (parser.opt(Token_SKet))
-                break;
-            list->append(parser.expression(acts));
-            if (parser.opt(Token_SKet))
-                break;
-            parser.match(Token_Comma);
-        }
-        return list;
+        return new SyntaxList(parser.exprListTrailing(acts, Token_Comma, Token_SKet));
     });
 
     // Lambda
