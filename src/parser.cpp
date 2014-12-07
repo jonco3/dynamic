@@ -43,7 +43,7 @@ SyntaxParser::SyntaxParser() :
         Syntax* expr = parser.expression(acts);
         if (parser.opt(Token_Ket))
             return expr;
-        SyntaxTuple* tuple = new SyntaxTuple();
+        SyntaxTuple* tuple = new SyntaxTuple;
         tuple->append(expr);
         for (;;) {
             parser.match(Token_Comma);
@@ -53,6 +53,20 @@ SyntaxParser::SyntaxParser() :
             if (parser.opt(Token_Ket))
                 return tuple;
         }
+    });
+
+    expr.addPrefixHandler(Token_SBra, [] (ParserT& parser, const Actions& acts,
+                                          Token _) -> Syntax* {
+        SyntaxList* list = new SyntaxList;
+        for (;;) {
+            if (parser.opt(Token_SKet))
+                break;
+            list->append(parser.expression(acts));
+            if (parser.opt(Token_SKet))
+                break;
+            parser.match(Token_Comma);
+        }
+        return list;
     });
 
     // Lambda

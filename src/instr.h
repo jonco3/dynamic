@@ -8,10 +8,11 @@
 #include "gc.h"
 #include "integer.h"
 #include "interp.h"
+#include "list.h"
 #include "name.h"
 #include "object.h"
 #include "singletons.h"
-#include "tuple.h"
+#include "list.h"
 
 #include "value-inl.h"
 
@@ -43,7 +44,8 @@ using namespace std;
     instr(And)                                                               \
     instr(Lambda)                                                            \
     instr(Pop)                                                               \
-    instr(Tuple)
+    instr(Tuple)                                                             \
+    instr(List)
 
 enum InstrType
 {
@@ -560,6 +562,25 @@ struct InstrTuple : public Instr
         for (unsigned i = 0; i < size; ++i)
             interp.popStack();
         interp.pushStack(tuple);
+        return true;
+    }
+
+  private:
+    unsigned size;
+};
+
+struct InstrList : public Instr
+{
+    instr_type(Instr_List);
+    instr_name("List");
+
+  InstrList(unsigned size) : size(size) {}
+
+    virtual bool execute(Interpreter& interp) {
+        List* list = new List(size, interp.stackRef(size - 1));
+        for (unsigned i = 0; i < size; ++i)
+            interp.popStack();
+        interp.pushStack(list);
         return true;
     }
 

@@ -8,12 +8,13 @@
 #include "frame.h"
 #include "input.h"
 #include "integer.h"
+#include "list.h"
 #include "object.h"
 #include "parser.h"
 #include "singletons.h"
 #include "string.h"
 #include "test.h"
-#include "tuple.h"
+#include "list.h"
 
 #include <fstream>
 #include <sstream>
@@ -30,6 +31,7 @@ void init1()
     Integer::init();
     String::init();
     Tuple::init();
+    List::init();
     initSingletons();
 }
 
