@@ -99,6 +99,10 @@ testcase(dict)
 
     testException("{}[0]", "KeyError: 0");
     testInterp("{'baz': 2}['baz']", "2");
+
+    testInterp("{}[1] = 2", "2");
+    testInterp("a = {}; a[1] = 2; a", "{1: 2}");
+    testInterp("a = {1: 2}; a[1] = 3; a", "{1: 3}");
 }
 
 #endif
