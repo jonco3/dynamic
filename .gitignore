@@ -1,0 +1,9 @@
+GPATH
+GRTAGS
+GTAGS
+build/
+dynamic
+dynamic-debug
+tests
+tests-debug
+
