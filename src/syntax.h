@@ -47,6 +47,7 @@ using namespace std;
     syntax(AttrRef)                                                           \
     syntax(AssignName)                                                        \
     syntax(AssignAttr)                                                        \
+    syntax(AssignSubscript)                                                   \
     syntax(Call)                                                              \
     syntax(Return)                                                            \
     syntax(Cond)                                                              \
@@ -389,7 +390,7 @@ struct SyntaxAssignName : public BinarySyntaxBase<SyntaxName, Syntax>
 {
     SyntaxAssignName(SyntaxName* l, Syntax* r) : BinarySyntaxBase(l, r) {}
     syntax_type(Syntax_AssignName)
-    syntax_name("=")
+    syntax_name("n=")
     syntax_accept()
 };
 
@@ -397,7 +398,15 @@ struct SyntaxAssignAttr : public BinarySyntaxBase<SyntaxAttrRef, Syntax>
 {
     SyntaxAssignAttr(SyntaxAttrRef* l, Syntax* r) : BinarySyntaxBase(l, r) {}
     syntax_type(Syntax_AssignAttr)
-    syntax_name("=")
+    syntax_name("a=")
+    syntax_accept()
+};
+
+struct SyntaxAssignSubscript : public BinarySyntaxBase<SyntaxSubscript, Syntax>
+{
+    SyntaxAssignSubscript(SyntaxSubscript* l, Syntax* r) : BinarySyntaxBase(l, r) {}
+    syntax_type(Syntax_AssignSubscript)
+    syntax_name("s=")
     syntax_accept()
 };
 

@@ -343,6 +343,14 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrSetAttr(s.left()->right()->id()));
     }
 
+    virtual void visit(const SyntaxAssignSubscript& s) {
+        s.left()->left()->accept(*this);
+        block->append(new InstrGetMethod("__setitem__"));
+        s.left()->right()->accept(*this);
+        s.right()->accept(*this);
+        block->append(new InstrCall(3));
+    }
+
     virtual void visit(const SyntaxCall& s) {
         // todo: check this actually how python works
         bool methodCall = s.left()->is<SyntaxAttrRef>();

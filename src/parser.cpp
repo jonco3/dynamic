@@ -225,6 +225,8 @@ SyntaxParser::SyntaxParser() :
             return new SyntaxAssignName(l->as<SyntaxName>(), r);
         else if (l->is<SyntaxAttrRef>())
             return new SyntaxAssignAttr(l->as<SyntaxAttrRef>(), r);
+        else if (l->is<SyntaxSubscript>())
+            return new SyntaxAssignSubscript(l->as<SyntaxSubscript>(), r);
         else
             throw ParseError("Illegal LHS for assignment");
     });
@@ -374,9 +376,14 @@ testcase(parser)
     sp.start("1; 2; 3");
     expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "1\n2\n3\n");
+
     sp.start("1; 2; 3;");
     expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "1\n2\n3\n");
+
+    sp.start("a[0] = 1");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "a[0] s= 1\n");
 }
 
 #endif

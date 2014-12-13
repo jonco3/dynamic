@@ -44,6 +44,8 @@ struct List : public ListBase
 
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
+
+    bool setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut);
 };
 
 #endif
