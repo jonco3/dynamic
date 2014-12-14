@@ -56,7 +56,9 @@ void Dict::traceChildren(Tracer& t)
 {
     for (auto i = entries_.begin(); i != entries_.end(); ++i) {
         Value key = i->first;
+#ifdef DEBUG
         Value prior = key;
+#endif
         gc::trace(t, &key);
         assert(key == prior);
         gc::trace(t, &i->second);

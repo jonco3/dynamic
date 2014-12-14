@@ -6,7 +6,7 @@ FLAGS = -Wall -Werror --std=c++11 # --stdlib=libc++
 CPPFLAGS = $(FLAGS)
 LDLAGS = $(FLAGS) -lstdc++ -lm
 DEBFLAGS = -g -DDEBUG
-RELFLAGS = -O3
+RELFLAGS = -O3 -DNDEBUG
 PROFFLAGS = $(RELFLAGS) -pg
 
 TESTCPPFLAGS = -DBUILD_TESTS
@@ -53,6 +53,9 @@ MAINRELDEPS = $(subst src,build/main/rel,$(MAINSRCS:.cpp=.d))
 MAINDEBDEPS = $(subst src,build/main/deb,$(MAINSRCS:.cpp=.d))
 MAINPROFDEPS = $(subst src,build/main/prof,$(MAINSRCS:.cpp=.d))
 
+.PHONY: all
+all: dynamic tests-debug
+
 tests: $(TESTRELOBJS) Makefile
 	$(LD) $(TESTRELOBJS) $(RELFLAGS) $(LDLAGS) $(TESTLDLAGS) -o tests
 
@@ -67,9 +70,6 @@ dynamic-debug: $(MAINDEBOBJS) Makefile
 
 dynamic-prof: $(MAINPROFOBJS) Makefile
 	$(LD) $(MAINPROFOBJS) $(PROFFLAGS) $(LDLAGS) $(MAINLDFLAGS) -o dynamic-prof
-
-.PHONY: all
-all: dynamic tests-debug
 
 WRAPPER = python test/debug-wrapper
 TEST-RUNNER = python test/run-tests

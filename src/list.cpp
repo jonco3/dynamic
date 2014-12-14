@@ -8,10 +8,12 @@ GlobalRoot<Class*> Tuple::ObjectClass;
 GlobalRoot<Tuple*> Tuple::Empty;
 GlobalRoot<Class*> List::ObjectClass;
 
+#ifdef DEBUG
 static bool isListBase(Object *o)
 {
     return o->is<Tuple>() || o->is<List>();
 }
+#endif
 
 static ListBase* asListBase(Object *o)
 {

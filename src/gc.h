@@ -236,7 +236,10 @@ struct std::hash<Traced<T>> {
 template <typename T>
 struct RootVector : public vector<T>, private RootBase
 {
-    RootVector() : useCount(0) {
+    RootVector() {
+#ifdef DEBUG
+        useCount = 0;
+#endif
         insert();
     }
 

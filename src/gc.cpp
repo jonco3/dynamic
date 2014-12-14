@@ -34,13 +34,14 @@ static int8_t prevEpoc = 0;
 static vector<Cell*> cells;
 static RootBase* rootList;
 static bool isSweeping = false;
-static size_t minCollectAt = 10;
-static size_t collectAt = minCollectAt;
 #ifdef BUILD_TESTS
+static size_t minCollectAt = 10;
 static double scheduleFactor = 1.1;
 #else
-static double scheduleFactor = 1.5;
+static size_t minCollectAt = 100;
+static double scheduleFactor = 2;
 #endif
+static size_t collectAt = minCollectAt;
 }
 
 Cell::Cell()

@@ -155,6 +155,7 @@ Value Object::getAttr(Name name) const
     Value value = None;
     bool ok = maybeGetAttr(name, value);
     assert(ok);
+    (void)ok;
     return value;
 }
 
