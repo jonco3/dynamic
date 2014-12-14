@@ -1,5 +1,6 @@
 #include "dict.h"
 
+#include "bool.h"
 #include "callable.h"
 #include "exception.h"
 #include "repr.h"
@@ -9,6 +10,12 @@ GlobalRoot<Class*> Dict::ObjectClass;
 struct DictClass : public Class
 {
     DictClass() : Class("dict") {}
+
+    static bool dict_contains(Traced<Value> arg1, Traced<Value> arg2,
+                              Root<Value>& resultOut) {
+        Dict* dict = arg1.toObject()->as<Dict>();
+        return dict->contains(arg2, resultOut);
+    }
 
     static bool dict_getitem(Traced<Value> arg1, Traced<Value> arg2,
                               Root<Value>& resultOut) {
@@ -24,6 +31,7 @@ struct DictClass : public Class
 
     void initNatives() {
         Root<Value> value;
+        value = new Native2(dict_contains);  setAttr("__contains__", value);
         value = new Native2(dict_getitem);  setAttr("__getitem__", value);
         value = new Native3(dict_setitem);  setAttr("__setitem__", value);
     }
@@ -66,6 +74,13 @@ void Dict::print(ostream& s) const
     s << "}";
 }
 
+bool Dict::contains(Traced<Value> key, Root<Value>& resultOut)
+{
+    bool found = entries_.find(key) != entries_.end();
+    resultOut = Boolean::get(found);
+    return true;
+}
+
 bool Dict::getitem(Traced<Value> key, Root<Value>& resultOut)
 {
     auto i = entries_.find(key);
@@ -97,6 +112,8 @@ testcase(dict)
     testInterp("{1: 2,}", "{1: 2}");
     testInterp("{'foo': 2 + 2}", "{'foo': 4}");
     testInterp("{2 + 2: 'bar'}", "{4: 'bar'}");
+    testInterp("1 in {1: 2}", "True");
+    testInterp("2 in {1: 2}", "False");
 
     testException("{}[0]", "KeyError: 0");
     testInterp("{'baz': 2}['baz']", "2");

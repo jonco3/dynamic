@@ -1,5 +1,6 @@
 #include "list.h"
 
+#include "bool.h"
 #include "callable.h"
 #include "exception.h"
 
@@ -7,19 +8,44 @@ GlobalRoot<Class*> Tuple::ObjectClass;
 GlobalRoot<Tuple*> Tuple::Empty;
 GlobalRoot<Class*> List::ObjectClass;
 
+static bool isListBase(Object *o)
+{
+    return o->is<Tuple>() || o->is<List>();
+}
+
+static ListBase* asListBase(Object *o)
+{
+    assert(isListBase(o));
+    return static_cast<ListBase*>(o);
+}
+
+static bool listBase_getitem(Traced<Value> arg1, Traced<Value> arg2,
+                             Root<Value>& resultOut)
+{
+    ListBase* l = asListBase(arg1.toObject());
+    return l->getitem(arg2, resultOut);
+}
+
+static bool listBase_contains(Traced<Value> arg1, Traced<Value> arg2,
+                              Root<Value>& resultOut)
+{
+    ListBase* l = asListBase(arg1.toObject());
+    return l->contains(arg2, resultOut);
+}
+
+static void listBase_initNatives(Traced<Class*> cls)
+{
+    Root<Value> value;
+    value = new Native2(listBase_getitem); cls->setAttr("__getitem__", value);
+    value = new Native2(listBase_contains); cls->setAttr("__contains__", value);
+}
+
 struct TupleClass : public Class
 {
     TupleClass() : Class("tuple") {}
 
-    static bool tuple_getitem(Traced<Value> arg1, Traced<Value> arg2,
-                              Root<Value>& resultOut) {
-        Tuple* tuple = arg1.toObject()->as<Tuple>();
-        return tuple->getitem(arg2, resultOut);
-    }
-
-    void initNatives() {
-        Root<Value> value(new Native2(tuple_getitem));
-        setAttr("__getitem__", value);
+    static void initNatives(Traced<Class*> cls) {
+        listBase_initNatives(cls);
     }
 };
 
@@ -27,22 +53,16 @@ struct ListClass : public Class
 {
     ListClass() : Class("list") {}
 
-    static bool list_getitem(Traced<Value> arg1, Traced<Value> arg2,
-                              Root<Value>& resultOut) {
-        List* list = arg1.toObject()->as<List>();
-        return list->getitem(arg2, resultOut);
-    }
-
     static bool list_setitem(Traced<Value> arg1, Traced<Value> arg2, Traced<Value> arg3,
                               Root<Value>& resultOut) {
         List* list = arg1.toObject()->as<List>();
         return list->setitem(arg2, arg3, resultOut);
     }
 
-    void initNatives() {
+    static void initNatives(Traced<Class*> cls) {
+        listBase_initNatives(cls);
         Root<Value> value;
-        value = new Native2(list_getitem); setAttr("__getitem__", value);
-        value = new Native3(list_setitem); setAttr("__setitem__", value);
+        value = new Native3(list_setitem); cls->setAttr("__setitem__", value);
     }
 };
 
@@ -78,10 +98,17 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     return true;
 }
 
+bool ListBase::contains(Traced<Value> element, Root<Value>& resultOut)
+{
+    bool found = find(elements_.begin(), elements_.end(), element) != elements_.end();
+    resultOut = Boolean::get(found);
+    return true;
+}
+
 void Tuple::init()
 {
-    Root<TupleClass*> cls(new TupleClass);
-    cls->initNatives();
+    Root<Class*> cls(new TupleClass);
+    TupleClass::initNatives(cls);
     ObjectClass.init(cls);
     RootVector<Value> contents;
     Empty.init(new Tuple(contents));
@@ -118,8 +145,8 @@ void Tuple::print(ostream& s) const
 
 void List::init()
 {
-    Root<ListClass*> cls(new ListClass);
-    cls->initNatives();
+    Root<Class*> cls(new ListClass);
+    ListClass::initNatives(cls);
     ObjectClass.init(cls);
 }
 
@@ -179,12 +206,16 @@ testcase(tuple)
     testInterp("(1,)[0]", "1");
     testInterp("(1,2)[1]", "2");
     testInterp("(1,2)[-1]", "2");
+    testInterp("2 in (1,)", "False");
+    testInterp("2 in (1, 2, 3)", "True");
 
     testException("1[0]", "'int' object has no attribute '__getitem__'");
     testException("()[0]", "tuple index out of range");
     testException("(1,)[1]", "tuple index out of range");
     // todo: should be TypeError: 'tuple' object does not support item assignment
     testException("(1,)[0] = 2", "'tuple' object has no attribute '__setitem__'");
+    // todo: should be TypeError: argument of type 'int' is not iterable
+    testException("(1,) in 1", "TypeError: Argument is not iterable");
 }
 
 testcase(list)
@@ -199,6 +230,8 @@ testcase(list)
     testInterp("[1,2][-1]", "2");
     testInterp("[1][0] = 2", "2");
     testInterp("a = [1]; a[0] = 3; a", "[3]");
+    testInterp("2 in [1]", "False");
+    testInterp("2 in [1, 2, 3]", "True");
 
     testException("1[0]", "'int' object has no attribute '__getitem__'");
     testException("[][0]", "list index out of range");

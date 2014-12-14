@@ -348,8 +348,8 @@ struct InstrIn : public Instr
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
 
     virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.popStack());
         Root<Object*> container(interp.popStack().toObject());
+        Root<Value> value(interp.popStack());
         Value contains; // todo: root
         bool hasContains = container->maybeGetAttr("__contains__", contains);
         if (hasContains) {
@@ -360,7 +360,7 @@ struct InstrIn : public Instr
             return interp.startCall(rootedContains, args);
         }
 
-        interp.pushStack(new Exception("not implemented"));
+        interp.pushStack(new Exception("TypeError: Argument is not iterable"));
         return false;
     }
 };
