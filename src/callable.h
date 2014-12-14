@@ -21,7 +21,7 @@ struct Native : public Callable
     static void init();
     static GlobalRoot<Class*> ObjectClass;
     Native() : Callable(ObjectClass) {}
-    virtual bool call(Interpreter& interp) = 0;
+    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) = 0;
 };
 
 struct Native0 : public Native
@@ -29,11 +29,9 @@ struct Native0 : public Native
     typedef bool (*Func)(Root<Value>&);
     Native0(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 0; }
-    virtual bool call(Interpreter& interp) {
-        Root<Value> result;
-        bool ok = func(result);
-        interp.pushStack(result);
-        return ok;
+    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
+        assert(args.size() == 0);
+        return func(resultOut);
     }
 
   private:
@@ -46,13 +44,9 @@ struct Native1 : public Native
     Native1(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 1; }
 
-    virtual bool call(Interpreter& interp) {
-        Root<Value> arg(interp.popStack());
-        interp.popStack();
-        Root<Value> result;
-        bool ok = func(arg, result);
-        interp.pushStack(result);
-        return ok;
+    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
+        assert(args.size() == 1);
+        return func(args[0], resultOut);
     }
 
   private:
@@ -65,14 +59,9 @@ struct Native2 : public Native
     Native2(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 2; }
 
-    virtual bool call(Interpreter& interp) {
-        Root<Value> arg2(interp.popStack());
-        Root<Value> arg1(interp.popStack());
-        interp.popStack();
-        Root<Value> result;
-        bool ok = func(arg1, arg2, result);
-        interp.pushStack(result);
-        return ok;
+    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
+        assert(args.size() == 2);
+        return func(args[0], args[1], resultOut);
     }
 
   private:
@@ -85,15 +74,9 @@ struct Native3 : public Native
     Native3(Func func) : func(func) {}
     virtual unsigned requiredArgs() { return 3; }
 
-    virtual bool call(Interpreter& interp) {
-        Root<Value> arg3(interp.popStack());
-        Root<Value> arg2(interp.popStack());
-        Root<Value> arg1(interp.popStack());
-        interp.popStack();
-        Root<Value> result;
-        bool ok = func(arg1, arg2, arg3, result);
-        interp.pushStack(result);
-        return ok;
+    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
+        assert(args.size() == 3);
+        return func(args[0], args[1], args[2], resultOut);
     }
 
   private:

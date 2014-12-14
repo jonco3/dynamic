@@ -81,12 +81,6 @@ struct Instr : public Cell
     virtual void print(ostream& s) const {
         s << name();
     }
-
-  protected:
-    bool raise(Interpreter& interp, const string& message) {
-        interp.pushStack(new Exception(message));
-        return false;
-    }
 };
 
 #define instr_type(it)                                                       \
@@ -312,47 +306,24 @@ struct InstrGetMethod : public Instr
 
 struct InstrCall : public Instr
 {
-    InstrCall(unsigned args) : args(args) {}
+    InstrCall(unsigned count) : count(count) {}
 
     instr_type(Instr_Call);
     instr_name("Call");
 
     virtual void print(ostream& s) const {
-        s << name() << " " << args;
-    }
-
-    bool raiseArgumentException(Interpreter& interp) {
-        return raise(interp, "Wrong number of arguments");
+        s << name() << " " << count;
     }
 
     virtual bool execute(Interpreter& interp) {
-        Root<Object*> target(interp.peekStack(args).toObject());
-        if (target->is<Native>()) {
-            Root<Native*> native(target->as<Native>());
-            if (native->requiredArgs() != args)
-                return raiseArgumentException(interp);
-            return native->call(interp);
-        } else if (target->is<Function>()) {
-            Root<Function*> function(target->as<Function>());
-            if (function->requiredArgs() != args)
-                return raiseArgumentException(interp);
-            Root<Frame*> callFrame(interp.newFrame(function));
-            for (int i = args - 1; i >= 0; --i) {
-                Root<Value> arg(interp.popStack());
-                callFrame->setAttr(function->paramName(i), arg);
-            }
-            interp.popStack();
-            interp.pushFrame(callFrame);
-            return true;
-        } else {
-            for (unsigned i = 0; i < args + 1; ++i)
-                interp.popStack();
-            return raise(interp, "TypeError: object is not callable");
-        }
+        Root<Value> target(interp.peekStack(count));
+        TracedVector<Value> args = interp.stackSlice(count - 1, count);
+        interp.popStack(count + 1);
+        return interp.startCall(target, args);
     }
 
   private:
-    unsigned args;
+    unsigned count;
 };
 
 struct InstrReturn : public Instr
@@ -377,7 +348,20 @@ struct InstrIn : public Instr
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
 
     virtual bool execute(Interpreter& interp) {
-        return raise(interp, "not implemented");
+        Root<Value> value(interp.popStack());
+        Root<Object*> container(interp.popStack().toObject());
+        Value contains; // todo: root
+        bool hasContains = container->maybeGetAttr("__contains__", contains);
+        if (hasContains) {
+            RootVector<Value> args;
+            args.push_back(container);
+            args.push_back(value);
+            Root<Value> rootedContains(contains);
+            return interp.startCall(rootedContains, args);
+        }
+
+        interp.pushStack(new Exception("not implemented"));
+        return false;
     }
 };
 
@@ -487,8 +471,11 @@ struct InstrOr : public Branch
     virtual bool execute(Interpreter& interp) {
         assert(offset_);
         Object *x = interp.peekStack(0).toObject();
-        if (x->isTrue())
+        if (x->isTrue()) {
             interp.branch(offset_);
+            return true;
+        }
+        interp.popStack();
         return true;
     }
 };
@@ -504,8 +491,11 @@ struct InstrAnd : public Branch
     virtual bool execute(Interpreter& interp) {
         assert(offset_);
         Object *x = interp.peekStack(0).toObject();
-        if (!x->isTrue())
+        if (!x->isTrue()) {
             interp.branch(offset_);
+            return true;
+        }
+        interp.popStack();
         return true;
     }
 };
@@ -560,7 +550,7 @@ struct InstrTuple : public Instr
   InstrTuple(unsigned size) : size(size) {}
 
     virtual bool execute(Interpreter& interp) {
-        Tuple* tuple = Tuple::get(size, interp.stackRef(size - 1));
+        Tuple* tuple = Tuple::get(interp.stackSlice(size - 1, size));
         interp.popStack(size);
         interp.pushStack(tuple);
         return true;
@@ -578,7 +568,7 @@ struct InstrList : public Instr
   InstrList(unsigned size) : size(size) {}
 
     virtual bool execute(Interpreter& interp) {
-        List* list = new List(size, interp.stackRef(size - 1));
+        List* list = new List(interp.stackSlice(size - 1, size));
         interp.popStack(size);
         interp.pushStack(list);
         return true;
@@ -596,7 +586,7 @@ struct InstrDict : public Instr
   InstrDict(unsigned size) : size(size) {}
 
     virtual bool execute(Interpreter& interp) {
-        Dict* dict = new Dict(size, interp.stackRef(size * 2 - 1));
+        Dict* dict = new Dict(interp.stackSlice(size * 2 - 1, size * 2));
         interp.popStack(size * 2);
         interp.pushStack(dict);
         return true;

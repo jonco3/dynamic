@@ -12,7 +12,7 @@
 //#define TRACE_INTERP
 
 Interpreter::Interpreter()
-  : instrp(nullptr)
+  : instrp(nullptr), pos(0)
 {}
 
 bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
@@ -25,8 +25,8 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
         cerr << "stack:";
-        for (auto i = stack.begin(); i != stack.end(); ++i)
-            cerr << " " << *i;
+        for (unsigned i = 0; i < pos; ++i)
+            cerr << " " << stack[i];
         cerr << endl;
         cerr << "  execute " << repr(instr) << endl;
 #endif
@@ -40,7 +40,7 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
         }
     }
 
-    assert(stack.size() == 1);
+    assert(stackPos() == 1);
     valueOut = popStack();
     return true;
 }
@@ -53,7 +53,7 @@ Frame* Interpreter::newFrame(Traced<Function*> function)
 
 void Interpreter::pushFrame(Traced<Frame*> frame)
 {
-    frame->setStackPos(stack.size());
+    frame->setStackPos(pos);
     instrp = frame->block()->startInstr();
     frames.push_back(frame);
 }
@@ -62,7 +62,7 @@ void Interpreter::popFrame()
 {
     assert(!frames.empty());
     Frame* frame = frames.back();
-    assert(frame->stackPos() <= stack.size());
+    assert(frame->stackPos() <= pos);
     stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
 #ifdef TRACE_INTERP
@@ -82,6 +82,37 @@ void Interpreter::branch(int offset)
     Instr** target = instrp + offset - 1;
     assert(frames.back()->block()->contains(target));
     instrp = target;
+}
+
+
+bool Interpreter::raise(string message) {
+    pushStack(new Exception(message));
+    return false;
+}
+
+bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>& args)
+{
+    Root<Object*> target(targetValue.toObject());
+    if (target->is<Native>()) {
+        Root<Native*> native(target->as<Native>());
+        if (native->requiredArgs() != args.size())
+            return raise("Wrong number of arguments");
+        Root<Value> result;
+        bool ok = native->call(args, result);
+        pushStack(result);
+        return ok;
+    } else if (target->is<Function>()) {
+        Root<Function*> function(target->as<Function>());
+        if (function->requiredArgs() != args.size())
+            return raise("Wrong number of arguments");
+        Root<Frame*> callFrame(newFrame(function));
+        for (int i = args.size() - 1; i >= 0; --i)
+            callFrame->setAttr(function->paramName(i), args[i]);
+        pushFrame(callFrame);
+        return true;
+    } else {
+        return raise("TypeError: object is not callable");
+    }
 }
 
 #ifdef BUILD_TESTS
@@ -128,6 +159,19 @@ void testException(const string& input, const string& expected)
 
 testcase(interp)
 {
+    Interpreter i;
+    testEqual(i.stackPos(), 0);
+    i.pushStack(None);
+    testEqual(i.stackPos(), 1);
+    Root<Value> v(None);
+    testEqual(i.peekStack(0), v);
+    testEqual(i.stackRef(0).get(), v);
+    TracedVector<Value> slice = i.stackSlice(0, 1);
+    testEqual(slice.size(), 1);
+    testEqual(slice[0].get(), v.get());
+    testEqual(i.popStack(), v);
+    testEqual(i.stackPos(), 0);
+
     testInterp("return 3", "3");
     testInterp("return 2 + 2", "4");
     testInterp("return 2 ** 4 - 1", "15");

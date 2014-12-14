@@ -6,7 +6,7 @@
 
 struct ListBase : public Object
 {
-    ListBase(Traced<Class*> cls, unsigned size, const Value* values);
+    ListBase(Traced<Class*> cls, const TracedVector<Value>& values);
 
     bool getitem(Traced<Value> index, Root<Value>& resultOut);
 
@@ -25,13 +25,13 @@ struct Tuple : public ListBase
 
     static GlobalRoot<Tuple*> Empty;
 
-    static Tuple* get(unsigned size, const Value* values);
+    static Tuple* get(const TracedVector<Value>& values);
 
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
 
   private:
-    Tuple(unsigned size, const Value* values);
+    Tuple(const TracedVector<Value>& values);
 };
 
 struct List : public ListBase
@@ -40,7 +40,7 @@ struct List : public ListBase
 
     static GlobalRoot<Class*> ObjectClass;
 
-    List(unsigned size, const Value* values);
+    List(const TracedVector<Value>& values);
 
     virtual const string& listName() const;
     virtual void print(ostream& os) const;

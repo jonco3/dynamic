@@ -200,20 +200,9 @@ struct GlobalRoot : protected RootBase
 };
 
 template <typename T>
-struct RootVector : public vector<T>, private RootBase
-{
-    RootVector() { insert(); }
-    ~RootVector() { remove(); }
-    virtual void trace(Tracer& t) {
-        for (auto i = this->begin(); i != this->end(); ++i)
-            gc::trace(t, &*i);
-    }
-};
-
-template <typename T>
 struct TracedMixins {};
 
-// A handled to a traced location
+// A handle to a traced location
 template <typename T>
 struct Traced : public TracedMixins<T>
 {
@@ -242,6 +231,88 @@ struct Traced : public TracedMixins<T>
 template <typename T>
 struct std::hash<Traced<T>> {
     size_t operator()(Traced<T> t) const { return std::hash<T>()(t.get()); }
+};
+
+template <typename T>
+struct RootVector : public vector<T>, private RootBase
+{
+    RootVector() : useCount(0) {
+        insert();
+    }
+
+    ~RootVector() {
+        assert(useCount == 0);
+        remove();
+    }
+
+    Traced<T> ref(unsigned index) {
+        assert(index < this->size());
+        return Traced<T>::fromTracedLocation(&(*this)[index]);
+    }
+
+    virtual void trace(Tracer& t) {
+        for (auto i = this->begin(); i != this->end(); ++i)
+            gc::trace(t, &*i);
+    }
+
+
+    void addUse() {
+#ifdef DEBUG
+        ++useCount;
+#endif
+    }
+
+    void removeUse() {
+#ifdef DEBUG
+        assert(useCount > 0);
+        --useCount;
+#endif
+    }
+
+  private:
+#ifdef DEBUG
+    unsigned useCount;
+#endif
+};
+
+template <typename T>
+struct TracedVector
+{
+    TracedVector(RootVector<T>& source)
+      : source_(source), offset_(0), size_(source.size()) {
+        source_.addUse();
+    }
+
+    TracedVector(RootVector<T>& source, unsigned offset, unsigned size)
+      : source_(source), offset_(offset), size_(size) {
+        assert(offset_ + size_ <= source_.size());
+        source_.addUse();
+    }
+
+    TracedVector(const TracedVector& other)
+      : source_(other.source_), offset_(other.offset_), size_(other.size_) {
+        source_.addUse();
+      }
+
+    ~TracedVector() {
+        source_.removeUse();
+    }
+
+    size_t size() const {
+        return size_;
+    }
+
+    Traced<T> operator[](unsigned index) const {
+        assert(index < size_);
+        return Traced<T>::fromTracedLocation(&source_[index + offset_]);
+    }
+
+  private:
+    RootVector<T>& source_;
+    unsigned offset_;
+    unsigned size_;
+
+    TracedVector& operator=(const TracedVector& other) = delete;
 };
 
 #endif

@@ -46,11 +46,10 @@ struct ListClass : public Class
     }
 };
 
-ListBase::ListBase(Traced<Class*> cls, unsigned size, const Value* values)
-  : Object(cls), elements_(size)
+ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
+  : Object(cls), elements_(values.size())
 {
-    // todo: use vector constructor for this
-    for (unsigned i = 0; i < size; ++i)
+    for (unsigned i = 0; i < values.size(); ++i)
         elements_[i] = values[i];
 }
 
@@ -84,18 +83,19 @@ void Tuple::init()
     Root<TupleClass*> cls(new TupleClass);
     cls->initNatives();
     ObjectClass.init(cls);
-    Empty.init(new Tuple(0, nullptr));
+    RootVector<Value> contents;
+    Empty.init(new Tuple(contents));
 }
 
-/* static */ Tuple* Tuple::get(unsigned size, const Value* values)
+/* static */ Tuple* Tuple::get(const TracedVector<Value>& values)
 {
-    if (size == 0)
+    if (values.size() == 0)
         return Empty;
-    return new Tuple(size, values);
+    return new Tuple(values);
 }
 
-Tuple::Tuple(unsigned size, const Value* values)
-  : ListBase(ObjectClass, size, values) {}
+Tuple::Tuple(const TracedVector<Value>& values)
+  : ListBase(ObjectClass, values) {}
 
 const string& Tuple::listName() const
 {
@@ -123,8 +123,8 @@ void List::init()
     ObjectClass.init(cls);
 }
 
-List::List(unsigned size, const Value* values)
-  : ListBase(ObjectClass, size, values)
+List::List(const TracedVector<Value>& values)
+  : ListBase(ObjectClass, values)
 {}
 
 const string& List::listName() const

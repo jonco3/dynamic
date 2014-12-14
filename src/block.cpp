@@ -414,8 +414,10 @@ struct BlockBuilder : public SyntaxVisitor
         s.cond()->accept(*this);
         unsigned branchToEnd = block->append(new InstrBranchIfFalse);
         s.suite()->accept(*this);
+        block->append(new InstrPop());
         block->append(new InstrBranchAlways(block->offsetTo(loopHead)));
         block->branchHere(branchToEnd);
+        block->append(new InstrConst(None));
         // todo: else
     }
 

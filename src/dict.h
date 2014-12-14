@@ -10,7 +10,7 @@ struct Dict : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    Dict(unsigned size, const Value* values);
+    Dict(const TracedVector<Value>& values);
 
     virtual void traceChildren(Tracer& t);
     virtual void print(ostream& os) const;

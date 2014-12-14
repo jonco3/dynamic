@@ -20,43 +20,56 @@ struct Interpreter
     bool interpret(Traced<Block*> block, Value& valueOut);
 
     void pushStack(Value value) {
-        stack.push_back(value);
+        stack.resize(pos + 1);
+        stack[pos] = value;
+        ++pos;
     }
 
     Value popStack() {
-        assert(!stack.empty());
-        Value result = stack[stack.size() - 1];
-        stack.pop_back();
+        assert(pos >= 1);
+        assert(pos <= stack.size());
+        --pos;
+        Value result = stack[pos];
         return result;
     }
 
     void popStack(unsigned count) {
-        assert(stack.size() >= count);
-        stack.resize(stack.size() - count);
+        assert(pos >= count);
+        assert(pos <= stack.size());
+        pos -= count;
     }
 
-    Value peekStack(unsigned pos) {
-        assert(stack.size() >= pos + 1);
-        return stack[stack.size() - pos - 1];
+    Value peekStack(unsigned offset) {
+        assert(pos >= offset + 1);
+        assert(pos <= stack.size());
+        return stack[pos - offset - 1];
     }
 
-    const Value* stackRef(unsigned pos) {
-        assert(stack.size() >= pos + 1);
-        return &stack[stack.size() - pos - 1];
+    Traced<Value> stackRef(unsigned offset) {
+        assert(pos >= offset + 1);
+        assert(pos <= stack.size());
+        return stack.ref(pos - offset - 1);
+    }
+
+    TracedVector<Value> stackSlice(unsigned offset, unsigned size) {
+        assert(pos >= offset + 1);
+        assert(pos <= stack.size());
+        return TracedVector<Value>(stack, pos - offset - 1, size);
     }
 
     void swapStack() {
-        assert(stack.size() >= 2);
-        swap(stack[stack.size() - 1], stack[stack.size() - 2]);
+        assert(pos >= 2);
+        assert(pos <= stack.size());
+        swap(stack[pos - 1], stack[pos - 2]);
     }
 
     void branch(int offset);
 
     Instr** nextInstr() { return instrp; }
-    unsigned stackPos() { return stack.size(); }
+    unsigned stackPos() { return pos; }
 
-    Frame* newFrame(Traced<Function*> function);
-    void pushFrame(Traced<Frame*> frame);
+    bool startCall(Traced<Value> target, const TracedVector<Value>& args);
+
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
 
@@ -64,6 +77,11 @@ struct Interpreter
     Instr **instrp;
     RootVector<Frame*> frames;
     RootVector<Value> stack;
+    unsigned pos;
+
+    bool raise(string message);
+    Frame* newFrame(Traced<Function*> function);
+    void pushFrame(Traced<Frame*> frame);
 };
 
 #ifdef BUILD_TESTS

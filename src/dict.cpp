@@ -36,10 +36,11 @@ void Dict::init()
     ObjectClass.init(cls);
 }
 
-Dict::Dict(unsigned size, const Value* values)
-  : Object(ObjectClass), entries_(size)
+Dict::Dict(const TracedVector<Value>& values)
+  : Object(ObjectClass), entries_(values.size() / 2)
 {
-    for (unsigned i = 0; i < size; ++i)
+    unsigned entryCount = values.size() / 2;
+    for (unsigned i = 0; i < entryCount; ++i)
         entries_[values[i * 2]] = values[i * 2 + 1];
 }
 
