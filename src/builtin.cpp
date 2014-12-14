@@ -28,8 +28,11 @@ void initBuiltins()
 {
     Builtin.init(new Object);
     Root<Value> value;
-    value = new Native2(builtin_hasattr);
-    Builtin->setAttr("hasattr", value);
+    value = new Native2(builtin_hasattr); Builtin->setAttr("hasattr", value);
+
+    value = Boolean::True; Builtin->setAttr("True", value);
+    value = Boolean::False; Builtin->setAttr("False", value);
+    value = None; Builtin->setAttr("None", value);
 
     string filename = "lib/builtin.py";
     string text = readFile(filename);

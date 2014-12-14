@@ -63,7 +63,8 @@ void Interpreter::popFrame()
     assert(!frames.empty());
     Frame* frame = frames.back();
     assert(frame->stackPos() <= pos);
-    stack.resize(frame->stackPos());
+    pos = frame->stackPos();
+    stack.resize(pos);
     instrp = frame->returnPoint();
 #ifdef TRACE_INTERP
     cout << "  return to " << (void*)instrp << endl;
@@ -210,6 +211,8 @@ testcase(interp)
     testInterp("return (lambda x: x + 1)(1)", "2");
     testInterp("x = 0\nreturn (lambda x: x + 1)(1)", "2");
     testInterp("x = 0\nreturn (lambda y: x + 1)(1)", "1");
+    testInterp("return not 1", "False");
+    testInterp("return not 0", "True");
 
     testInterp("if 1:\n"
                "  return 2\n", "2");

@@ -398,15 +398,15 @@ struct BlockBuilder : public SyntaxVisitor
             suites[i].cond->accept(*this);
             lastCondFailed = block->append(new InstrBranchIfFalse);
             suites[i].block->accept(*this);
-            branchesToEnd.push_back(block->append(new InstrBranchAlways));
+            if (s.elseBranch() || i != suites.size() - 1)
+                branchesToEnd.push_back(block->append(new InstrBranchAlways));
         }
         block->branchHere(lastCondFailed);
         if (s.elseBranch())
             s.elseBranch()->accept(*this);
-        else
-            branchesToEnd.pop_back();
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
             block->branchHere(branchesToEnd[i]);
+        block->append(new InstrConst(None));
     }
 
     virtual void visit(const SyntaxWhile& s) {

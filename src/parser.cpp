@@ -69,7 +69,8 @@ SyntaxParser::SyntaxParser() :
     // todo: check the precedence of these works as expected
     expr.createNodeForUnary<SyntaxPos>(Token_Plus);
     expr.createNodeForUnary<SyntaxNeg>(Token_Minus);
-    expr.createNodeForUnary<SyntaxInvert>(Token_Not);
+    expr.createNodeForUnary<SyntaxNot>(Token_Not, 0);
+    expr.createNodeForUnary<SyntaxInvert>(Token_BitNot);
 
     // Displays
 
@@ -384,6 +385,13 @@ testcase(parser)
     sp.start("a[0] = 1");
     expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "a[0] s= 1\n");
+
+    // test this parses as "not (a in b)" not "(not a) in b"
+    sp.start("not a in b");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "not a in b\n");
+    testTrue(expr->is<SyntaxBlock>());
+    testTrue(expr->as<SyntaxBlock>()->stmts()[0]->is<SyntaxNot>());
 }
 
 #endif

@@ -58,7 +58,7 @@ struct Parser
 
         // Add a handler that creates a new node of type N for a token in prefix
         // position
-        template<typename N> void createNodeForUnary(TokenType type);
+        template<typename N> void createNodeForUnary(TokenType type, unsigned bindRight = 500);  // todo: hardcoded constant
 
         // Add a handler that creates a new node of type N for a token in infix
         // position
@@ -185,12 +185,11 @@ void Parser<T>::Actions::createNodeForAtom(TokenType type)
 
 template<typename T>
 template<typename N>
-void Parser<T>::Actions::createNodeForUnary(TokenType type)
+void Parser<T>::Actions::createNodeForUnary(TokenType type, unsigned bindRight)
 {
     addPrefixHandler(type,
-                     [] (Parser<T>& parser, Actions acts, Token token) {
-                         // todo: magic value should be constant
-                         return new N(parser.expression(acts, 500));
+                     [=] (Parser<T>& parser, Actions acts, Token token) {
+                         return new N(parser.expression(acts, bindRight));
                      });
 }
 
