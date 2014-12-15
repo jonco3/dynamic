@@ -36,7 +36,8 @@ void initBuiltins()
 
     string filename = "lib/builtin.py";
     string text = readFile(filename);
-    Root<Block*> block(Block::buildModule(Input(text, filename), Builtin));
+    Root<Block*> block;
+    Block::buildModule(Input(text, filename), Builtin, block);
     Value result;
     Interpreter interp;
     if (!interp.interpret(block, result)) {

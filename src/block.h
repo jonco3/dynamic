@@ -17,7 +17,8 @@ struct Syntax;
 
 struct Block : public Cell
 {
-    static Block* buildModule(const Input& input, Traced<Object*> globals);
+    static void buildModule(const Input& input, Traced<Object*> globals,
+                            Root<Block*>& blockOut);
 
     Block(Traced<Layout*> layout);
     Instr** startInstr() { return &instrs_[0]; }

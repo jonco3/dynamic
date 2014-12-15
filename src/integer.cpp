@@ -11,7 +11,7 @@
 struct IntegerClass : public Class
 {
     static bool int_str(Traced<Value> arg, Root<Value>& resultOut) {
-        int a = arg.toObject()->as<Integer>()->value();
+        int a = arg.asInt32();
         ostringstream s;
         s << dec << a;
         resultOut = String::get(s.str());
@@ -20,7 +20,7 @@ struct IntegerClass : public Class
 
 #define define_unary_int_operator(name, op)                                   \
     static bool name(Traced<Value> arg, Root<Value>& resultOut) {             \
-        int a = arg.toObject()->as<Integer>()->value();                       \
+        int a = arg.asInt32();                                                \
         resultOut = Integer::get(op a);                                       \
         return true;                                                          \
     }
@@ -34,8 +34,8 @@ struct IntegerClass : public Class
 #define define_binary_int_operator(name, op)                                  \
     static bool name(Traced<Value> arg1, Traced<Value> arg2,                  \
                      Root<Value>& resultOut) {                                \
-        int a = arg1.toObject()->as<Integer>()->value();                      \
-        int b = arg2.toObject()->as<Integer>()->value();                      \
+        int a = arg1.asInt32();                                               \
+        int b = arg2.asInt32();                                               \
         resultOut = Integer::get(a op b);                                     \
         return true;                                                          \
     }
@@ -57,8 +57,8 @@ struct IntegerClass : public Class
 #define define_binary_bool_operator(name, op)                                 \
     static bool name(Traced<Value> arg1, Traced<Value> arg2,                  \
                      Root<Value>& resultOut) {                                \
-        int a = arg1.toObject()->as<Integer>()->value();                      \
-        int b = arg2.toObject()->as<Integer>()->value();                      \
+        int a = arg1.asInt32();                                               \
+        int b = arg2.asInt32();                                               \
         resultOut = Boolean::get(a op b);                                     \
         return true;                                                          \
     }
@@ -74,8 +74,8 @@ struct IntegerClass : public Class
 
     static bool int_pow(Traced<Value> arg1, Traced<Value> arg2,
                         Root<Value>& resultOut) {
-        int a = arg1.toObject()->as<Integer>()->value();
-        int b = arg2.toObject()->as<Integer>()->value();
+        int a = arg1.asInt32();
+        int b = arg2.asInt32();
         resultOut = Integer::get(std::pow(a, b));
         return true;
     }
@@ -111,6 +111,7 @@ struct IntegerClass : public Class
 
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Integer*> Integer::Zero;
+GlobalRoot<Integer*> Integer::Proto;
 
 void Integer::init()
 {
@@ -118,6 +119,7 @@ void Integer::init()
     cls->initNatives();
     ObjectClass.init(cls);
     Zero.init(new Integer(0));
+    Proto.init(new Integer(INT16_MAX + 1));
 }
 
 Integer::Integer(int v)
@@ -128,6 +130,14 @@ Value Integer::get(int v)
 {
     if (v == 0)
         return Zero;
+    else if (v >= INT16_MIN && v <= INT16_MAX)
+        return Value(v);
+    else
+        return getObject(v);
+}
+
+Object* Integer::getObject(int v)
+{
     return new Integer(v);
 }
 
@@ -141,10 +151,18 @@ void Integer::print(ostream& s) const {
 
 testcase(integer)
 {
+    testFalse(Integer::get(1).isObject());
+    testFalse(Integer::get(32767).isObject());
+    testTrue(Integer::get(32768).isObject());
+
     testInterp("1", "1");
     testInterp("2 + 2", "4");
+    testInterp("5 - 2", "3");
+    testInterp("1 + 0", "1");
     testInterp("+3", "3");
     testInterp("-4", "-4");
+    testInterp("32767 + 1", "32768");
+    testInterp("32768 - 1", "32767");
 }
 
 #endif

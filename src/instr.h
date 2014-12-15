@@ -291,12 +291,12 @@ struct InstrGetMethod : public Instr
     }
 
     virtual bool execute(Interpreter& interp) {
-        Object* obj = interp.popStack().toObject();
-        Value value;
-        bool ok = obj->getAttrOrRaise(methodName, value);
-        interp.pushStack(value);
+        Value value = interp.popStack();
+        Value result;
+        bool ok = value.getAttrOrRaise(methodName, result);
+        interp.pushStack(result);
         if (ok)
-            interp.pushStack(obj);
+            interp.pushStack(value);
         return ok;
     }
 

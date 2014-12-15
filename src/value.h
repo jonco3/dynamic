@@ -2,6 +2,7 @@
 #define __VALUE_H__
 
 #include "gc.h"
+#include "name.h"
 
 #include <ostream>
 
@@ -15,6 +16,7 @@ struct Value
 {
     Value() : objectp(nullptr) {}
     Value(Object* o) : objectp(o) {}
+    inline Value(int16_t i);
 
     // todo
     template <typename T>
@@ -22,12 +24,20 @@ struct Value
     template <typename T>
     Value(GlobalRoot<T>& o) : objectp(o.get()) {}
 
-    bool isObject() const { return true; }
-    Object *asObject() const { return objectp; }
-    Object *toObject() const { return objectp; }
+    bool isObject() const {
+        return type() == ObjectType;
+    }
 
+    Object *asObject() const {
+        assert(isObject());
+        return objectp;
+    }
+
+    inline Object *toObject() const;
     inline bool isInt32() const;
     inline int32_t asInt32() const;
+
+    inline bool getAttrOrRaise(Name name, Value& valueOut);
 
     bool operator==(const Value& other) const;
     bool operator!=(const Value& other) const { return !(*this == other); }
@@ -37,10 +47,23 @@ struct Value
     inline bool isTrue() const;
 
   private:
+    enum Type
+    {
+        ObjectType = 0,
+        IntType = 1,
+
+        PayloadShift = 1,
+        TypeMask = (1 << PayloadShift) - 1
+    };
+
     union
     {
         Object* objectp;
+        int32_t bits;
     };
+
+    int32_t type() const { return bits & TypeMask; }
+    int32_t payload() const { return bits >> PayloadShift; }
 };
 
 ostream& operator<<(ostream& s, const Value& v);
@@ -48,11 +71,11 @@ ostream& operator<<(ostream& s, const Value& v);
 template <>
 struct TracedMixins<Value>
 {
-    bool isObject() const { return get()->isObject(); }
-    Object *asObject() const { return get()->asObject(); }
-    Object *toObject() const { return get()->toObject(); }
-    bool isInt32() const;
-    int32_t asInt32() const;
+    inline bool isObject() const;
+    inline Object *asObject() const;
+    inline Object *toObject() const;
+    inline bool isInt32() const;
+    inline int32_t asInt32() const;
 
   private:
     const Value* get() const {

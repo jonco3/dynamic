@@ -74,7 +74,8 @@ bool runModule(string text, string filename, Traced<Object*> globals, Value* val
     Value result;
     bool ok;
     try {
-        Root<Block*> block(Block::buildModule(Input(text, filename), globals));
+        Root<Block*> block;
+        Block::buildModule(Input(text, filename), globals, block);
         Interpreter interp;
         ok = interp.interpret(block, result);
     } catch (const ParseError& e) {

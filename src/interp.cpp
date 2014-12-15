@@ -125,7 +125,8 @@ void testInterp(const string& input, const string& expected)
 #ifdef TRACE_INTERP
     cout << "testInterp: " << input << endl;
 #endif
-    Root<Block*> block(Block::buildModule(input, Object::Null));
+    Root<Block*> block;
+    Block::buildModule(input, Object::Null, block);
     Interpreter interp;
     Value result;
     bool ok = interp.interpret(block, result);
@@ -140,7 +141,8 @@ void testException(const string& input, const string& expected)
 #ifdef TRACE_INTERP
     cout << "testException: " << input << endl;
 #endif
-    Root<Block*> block(Block::buildModule(input, Object::Null));
+    Root<Block*> block;
+    Block::buildModule(input, Object::Null, block);
     Interpreter interp;
     Value result;
     bool ok = interp.interpret(block, result);

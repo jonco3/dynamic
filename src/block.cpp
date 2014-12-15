@@ -452,13 +452,14 @@ static unique_ptr<SyntaxBlock> ParseModule(const Input& input)
     return unique_ptr<SyntaxBlock>(parser.parseModule());
 }
 
-Block* Block::buildModule(const Input& input, Traced<Object*> globals)
+void Block::buildModule(const Input& input, Traced<Object*> globals,
+                        Root<Block*>& blockOut)
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     BlockBuilder builder;
     if (globals)
         builder.setGlobals(globals);
-    return builder.buildModule(syntax.get());
+    blockOut = builder.buildModule(syntax.get());
 }
 
 #ifdef BUILD_TESTS
@@ -467,7 +468,9 @@ Block* Block::buildModule(const Input& input, Traced<Object*> globals)
 
 void testBuildModule(const string& input, const string& expected)
 {
-    testEqual(repr(Block::buildModule(input, Object::Null)), expected);
+    Root<Block*> block;
+    Block::buildModule(input, Object::Null, block);
+    testEqual(repr(block), expected);
 }
 
 testcase(block)

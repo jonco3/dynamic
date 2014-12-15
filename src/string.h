@@ -19,7 +19,7 @@ struct String : public Object
     const string& value() { return value_; }
     virtual void print(ostream& os) const;
 
-    virtual bool equals(Object* other) override {
+    virtual bool equals(Object* other) const override {
         return other->is<String>() && value_ == other->as<String>()->value_;
     }
 

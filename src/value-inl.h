@@ -16,9 +16,24 @@ inline bool GCTraits<Value>::isNonNull(Value value) {
 
 inline void GCTraits<Value>::trace(Tracer& t, Value* v)
 {
-    Object* o = v->asObject();
-    gc::trace(t, &o);
-    *const_cast<Value*>(v) = Value(o);
+    if (v->isObject()) {
+        Object* o = v->asObject();
+        gc::trace(t, &o);
+        *const_cast<Value*>(v) = Value(o);
+    }
+}
+
+inline Value::Value(int16_t i)
+  : bits((i << PayloadShift) | IntType)
+{
+    assert(i >= INT16_MIN && i <= INT16_MAX);
+}
+
+inline Object* Value::toObject() const {
+    if (isObject())
+        return asObject();
+    else
+        return Integer::getObject(asInt32());
 }
 
 inline bool Value::isTrue() const
@@ -28,12 +43,43 @@ inline bool Value::isTrue() const
 
 inline bool Value::isInt32() const
 {
-    return toObject()->is<Integer>();
+    if (type() == IntType)
+        return true;
+    Object* obj = asObject();
+    if (!obj)
+        return false;
+    return obj->is<Integer>();
 }
 
 inline int32_t Value::asInt32() const
 {
-    return toObject()->as<Integer>()->value();
+    if (type() == IntType)
+        return payload();
+    else
+        return asObject()->as<Integer>()->value();
+}
+
+inline bool Value::getAttrOrRaise(Name name, Value& valueOut)
+{
+    if (type() == IntType)
+        return Integer::Proto->getAttrOrRaise(name, valueOut);
+    else
+        return asObject()->getAttrOrRaise(name, valueOut);
+}
+
+inline bool TracedMixins<Value>::isObject() const
+{
+    return get()->isObject();
+}
+
+inline Object* TracedMixins<Value>::asObject() const
+{
+    return get()->asObject();
+}
+
+inline Object* TracedMixins<Value>::toObject() const
+{
+    return get()->toObject();
 }
 
 inline bool TracedMixins<Value>::isInt32() const
