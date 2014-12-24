@@ -323,7 +323,8 @@ struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
     Syntax* parseExpr() { return Parser::parse(expr); }
-    Syntax* parseStatement();
+    Syntax* parseSimpleStatement();
+    Syntax* parseCompoundStatement();
     SyntaxBlock* parseModule();
 
   private:

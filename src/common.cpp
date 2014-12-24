@@ -20,6 +20,8 @@
 #include <fstream>
 #include <sstream>
 
+bool debugMode = true;
+
 void init1()
 {
     Object::init();
@@ -66,7 +68,7 @@ string readFile(string filename)
 void printException(Value value)
 {
     Exception* ex = value.asObject()->as<Exception>();
-    cerr << "Error: " << ex->message() << endl;
+    cerr << ex->fullMessage() << endl;
 }
 
 bool runModule(string text, string filename, Traced<Object*> globals, Value* valueOut)

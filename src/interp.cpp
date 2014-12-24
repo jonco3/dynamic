@@ -152,7 +152,7 @@ void testException(const string& input, const string& expected)
     }
     Object *o = result.toObject();
     testTrue(o->is<Exception>());
-    string message = o->as<Exception>()->message();
+    string message = o->as<Exception>()->fullMessage();
     if (message.find(expected) == string::npos) {
         cerr << "Expected message containing: " << expected << endl;
         cerr << "But got: " << message << endl;
@@ -249,6 +249,11 @@ testcase(interp)
                "  1\n"
                "foo()\n",
                "None");
+
+    testInterp("assert True", "None");
+    testInterp("assert 2 + 2, 'ok'\n", "None");
+    testException("assert False", "AssertionError");
+    testException("assert 0, 'bad'", "AssertionError: bad");
 
     testException("1()", "object is not callable");
     testException("1.foo", "object has no attribute 'foo'");

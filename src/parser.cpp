@@ -233,10 +233,21 @@ SyntaxParser::SyntaxParser() :
     });
 }
 
-Syntax* SyntaxParser::parseStatement()
+Syntax* SyntaxParser::parseSimpleStatement()
 {
-    // Compound statements
+    if (opt(Token_Assert)) {
+        Syntax* cond = parseExpr();
+        Syntax* message = nullptr;
+        if (opt(Token_Comma))
+            message = parseExpr();
+        return new SyntaxAssert(cond, message);
+    } else {
+        return parse(simpleStmt);
+    }
+}
 
+Syntax* SyntaxParser::parseCompoundStatement()
+{
     Syntax* stmt = nullptr;
     if (opt(Token_If)) {
         SyntaxIf* ifStmt = new SyntaxIf;
@@ -278,7 +289,7 @@ Syntax* SyntaxParser::parseStatement()
     //} else if (opt(Token_Class)) {
     //} else if (opt(Token_With)) {
     } else {
-        stmt = parse(simpleStmt);
+        stmt = parseSimpleStatement();
         if (!atEnd())
             matchEither(Token_Newline, Token_Semicolon);
     }
@@ -291,7 +302,7 @@ SyntaxBlock* SyntaxParser::parseBlock()
     unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
     match(Token_Indent);
     while (!opt(Token_Dedent)) {
-        syntax->append(parseStatement());
+        syntax->append(parseCompoundStatement());
     }
     return syntax.release();
 }
@@ -303,11 +314,11 @@ SyntaxBlock* SyntaxParser::parseSuite()
     if (opt(Token_Newline)) {
         match(Token_Indent);
         while (!opt(Token_Dedent)) {
-            suite->append(parseStatement());
+            suite->append(parseCompoundStatement());
         }
     } else {
         do {
-            suite->append(parse(simpleStmt));
+            suite->append(parseSimpleStatement());
             if (opt(Token_Newline))
                 break;
             match(Token_Semicolon);
@@ -320,7 +331,7 @@ SyntaxBlock* SyntaxParser::parseModule()
 {
     unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
     while (!atEnd())
-        syntax->append(parseStatement());
+        syntax->append(parseCompoundStatement());
     return syntax.release();
 }
 
@@ -367,7 +378,7 @@ testcase(parser)
     testEqual(repr(expr.get()), "4 ** 5");
 
     sp.start("f = 1 + 2");
-    expr.reset(sp.parseStatement());
+    expr.reset(sp.parseCompoundStatement());
     testTrue(expr.get()->is<SyntaxAssignName>());
 
     sp.start("1\n2");

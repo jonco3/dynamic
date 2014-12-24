@@ -13,6 +13,7 @@
 #include "name.h"
 #include "object.h"
 #include "singletons.h"
+#include "string.h"
 #include "list.h"
 
 #include "value-inl.h"
@@ -583,7 +584,7 @@ struct InstrDict : public Instr
     instr_type(Instr_Dict);
     instr_name("Dict");
 
-  InstrDict(unsigned size) : size(size) {}
+    InstrDict(unsigned size) : size(size) {}
 
     virtual bool execute(Interpreter& interp) {
         Dict* dict = new Dict(interp.stackSlice(size * 2 - 1, size * 2));
@@ -594,6 +595,20 @@ struct InstrDict : public Instr
 
   private:
     unsigned size;
+};
+
+struct InstrAssertionFailed : public Instr
+{
+    instr_type(Instr_Dict);
+    instr_name("AssertionFailed");
+
+    virtual bool execute(Interpreter& interp) {
+        Object* obj = interp.popStack().toObject();
+        assert(obj->is<String>() || obj == None);
+        string message = obj != None ? obj->as<String>()->value() : "";
+        interp.pushStack(new Exception("AssertionError", message));
+        return false;
+    }
 };
 
 #endif

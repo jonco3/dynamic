@@ -55,7 +55,8 @@ using namespace std;
     syntax(Def)                                                               \
     syntax(If)                                                                \
     syntax(While)                                                             \
-    syntax(Subscript)
+    syntax(Subscript)                                                         \
+    syntax(Assert)
 
 enum SyntaxType
 {
@@ -613,6 +614,29 @@ struct SyntaxWhile : public Syntax
     unique_ptr<Syntax> cond_;
     unique_ptr<SyntaxBlock> suite_;
     unique_ptr<SyntaxBlock> elseSuite_;
+};
+
+struct SyntaxAssert : public Syntax
+{
+    SyntaxAssert(Syntax* cond, Syntax* message)
+      : cond_(cond), message_(message) {}
+    syntax_type(Syntax_Assert)
+    syntax_name("assert")
+
+    const Syntax* cond() const { return cond_.get(); }
+    const Syntax* message() const { return message_.get(); }
+
+    syntax_accept();
+
+    virtual void print(ostream& s) const override {
+        s << "assert " << cond();
+        if (message_)
+            s << ", " << message();
+    }
+
+  private:
+    unique_ptr<Syntax> cond_;
+    unique_ptr<Syntax> message_;
 };
 
 #endif

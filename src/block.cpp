@@ -1,5 +1,6 @@
 #include "block.h"
 #include "builtin.h"
+#include "common.h"
 #include "instr.h"
 #include "repr.h"
 #include "string.h"
@@ -442,6 +443,23 @@ struct BlockBuilder : public SyntaxVisitor
             block->append(new InstrSetLocal(s.id()));
         else
             block->append(new InstrSetGlobal(topLevel, s.id()));
+    }
+
+    virtual void visit(const SyntaxAssert& s) {
+        if (debugMode) {
+            s.cond()->accept(*this);
+            unsigned endBranch = block->append(new InstrBranchIfTrue);
+            if (s.message()) {
+                s.message()->accept(*this);
+                block->append(new InstrGetMethod("__str__"));
+                block->append(new InstrCall(1));
+            } else {
+                block->append(new InstrConst(None));
+            }
+            block->append(new InstrAssertionFailed());
+            block->branchHere(endBranch);
+        }
+        block->append(new InstrConst(None));
     }
 };
 
