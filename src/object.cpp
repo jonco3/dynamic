@@ -84,9 +84,14 @@ void Object::extend(Traced<Layout*> layout)
     layout_ = layout;
 }
 
+int Object::findOwnAttr(Name name) const
+{
+    return layout_->lookupName(name);
+}
+
 bool Object::hasOwnAttr(Name name) const
 {
-    return layout_->lookupName(name) != -1;
+    return findOwnAttr(name) != -1;
 }
 
 bool Object::hasAttr(Name name) const
@@ -107,6 +112,33 @@ bool Object::hasAttr(Name name) const
     }
 
     return false;
+}
+
+int Object::findAttr(Name name, Root<Class*>& classOut) const
+{
+    int slot = findOwnAttr(name);
+    if (slot != -1) {
+        classOut = nullptr;
+        return slot;
+    }
+
+    // lookup attribute in class hierarchy
+    Value base;
+    if (!maybeGetOwnAttr("__class__", base))
+        return false;
+
+    while (Class* cls = base.toObject()->as<Class>()) {
+        slot = cls->findOwnAttr(name);
+        if (slot != -1) {
+            classOut = cls;
+            return slot;
+        }
+        if (!cls->maybeGetOwnAttr("__base__", base))
+            break;
+    }
+
+    classOut = nullptr;
+    return -1;
 }
 
 bool Object::maybeGetOwnAttr(Name name, Value& valueOut) const
@@ -137,17 +169,21 @@ bool Object::maybeGetAttr(Name name, Value& valueOut) const
     return false;
 }
 
-bool Object::getAttrOrRaise(Name name, Value& valueOut) const
+bool Object::raiseAttrError(Name name, Value& valueOut) const
 {
-    bool ok = maybeGetAttr(name, valueOut);
-    if (ok)
-        return true;
-
     string message = "'" + class_->name() + "' object has no attribute '" + name + "'";
     valueOut = new Exception("AttributeError", message);
     return false;
 }
 
+bool Object::getAttrOrRaise(Name name, Value& valueOut) const
+{
+    bool ok = maybeGetAttr(name, valueOut);
+    if (!ok)
+        return raiseAttrError(name, valueOut);
+
+    return true;
+}
 
 Value Object::getAttr(Name name) const
 {

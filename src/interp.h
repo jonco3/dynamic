@@ -73,6 +73,8 @@ struct Interpreter
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
 
+    void replaceInstr(Instr* instr, Instr* prev);
+
   private:
     Instr **instrp;
     RootVector<Frame*> frames;

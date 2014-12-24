@@ -48,6 +48,10 @@ struct Block : public Cell
         return Traced<Layout*>::fromTracedLocation(&block->layout_);
     }
 
+#ifdef BUILD_TESTS
+    Instr** findInstr(unsigned type);
+#endif
+
   private:
     Layout* layout_;
     vector<Instr*> instrs_;

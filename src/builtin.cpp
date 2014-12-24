@@ -27,6 +27,7 @@ static bool builtin_hasattr(Traced<Value> v, Traced<Value> name, Root<Value>& re
 
 static bool builtin_object(Root<Value>& resultOut)
 {
+    // todo: the returned object should not allow attributes to be set on it
     resultOut = new Object();
     return true;
 }

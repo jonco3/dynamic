@@ -50,6 +50,17 @@ void Block::traceChildren(Tracer& t)
         gc::trace(t, &*i);
 }
 
+#ifdef BUILD_TESTS
+Instr** Block::findInstr(unsigned type)
+{
+    for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
+        if ((*i)->type() == type)
+            return &(*i);
+    }
+    return nullptr;
+}
+#endif
+
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {

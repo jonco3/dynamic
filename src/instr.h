@@ -34,6 +34,8 @@ using namespace std;
     instr(GetAttr)                                                           \
     instr(SetAttr)                                                           \
     instr(GetMethod)                                                         \
+    instr(GetMethodInt)                                                      \
+    instr(GetMethodFallback)                                                 \
     instr(Call)                                                              \
     instr(Return)                                                            \
     instr(In)                                                                \
@@ -110,7 +112,7 @@ struct InstrConst : public Instr
 
     Value getValue() { return value; }
 
-    virtual void traceChildren(Tracer& t) {
+    virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &value);
     }
 
@@ -218,7 +220,7 @@ struct InstrGetGlobal : public IdentInstrBase
         return true;
     }
 
-    virtual void traceChildren(Tracer& t) {
+    virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &global);
     }
 
@@ -243,7 +245,7 @@ struct InstrSetGlobal : public IdentInstrBase
         return true;
     }
 
-    virtual void traceChildren(Tracer& t) {
+    virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &global);
     }
 
@@ -280,30 +282,95 @@ struct InstrSetAttr : public IdentInstrBase
     }
 };
 
-struct InstrGetMethod : public Instr
+struct InstrGetMethod : public IdentInstrBase
 {
-    InstrGetMethod(Name name) : methodName(name) {}
+    InstrGetMethod(Name name) : IdentInstrBase(name) {}
 
     instr_type(Instr_GetMethod);
     instr_name("GetMethod");
 
-    virtual void print(ostream& s) const {
-        s << name() << " " << methodName;
-    }
+    virtual bool execute(Interpreter& interp) override;
+};
 
-    virtual bool execute(Interpreter& interp) {
-        Value value = interp.popStack();
-        Value result;
-        bool ok = value.getAttrOrRaise(methodName, result);
-        interp.pushStack(result);
-        if (ok)
-            interp.pushStack(value);
-        return ok;
+struct InstrGetMethodInt : public IdentInstrBase
+{
+    InstrGetMethodInt(Name name, Traced<Value> result)
+      : IdentInstrBase(name), result_(result) {}
+
+    instr_type(Instr_GetMethodInt);
+    instr_name("GetMethodInt");
+
+    virtual bool execute(Interpreter& interp);
+
+    virtual void traceChildren(Tracer& t) override {
+        gc::trace(t, &result_);
     }
 
   private:
-    Name methodName;
+    Value result_;
 };
+
+struct InstrGetMethodFallback : public IdentInstrBase
+{
+    InstrGetMethodFallback(Name name) : IdentInstrBase(name) {}
+
+    instr_type(Instr_GetMethodFallback);
+    instr_name("GetMethodFallback");
+
+    virtual bool execute(Interpreter& interp);
+};
+
+inline bool InstrGetMethod::execute(Interpreter& interp)
+{
+    Value value(interp.popStack());
+    Value result;
+    bool ok = value.getAttrOrRaise(ident, result);
+    interp.pushStack(result);
+    if (!ok)
+        return false;
+
+    interp.pushStack(value);
+
+    if (value.isInt32()) {
+        Root<Value> rootedResult(result);
+        interp.replaceInstr(new InstrGetMethodInt(ident, rootedResult), this);
+    } else {
+        interp.replaceInstr(new InstrGetMethodFallback(ident), this);
+    }
+
+    return ok;
+}
+
+inline bool InstrGetMethodInt::execute(Interpreter& interp)
+{
+    Value value = interp.popStack();
+    if (!value.isInt32()) {
+        interp.replaceInstr(new InstrGetMethodFallback(ident), this);
+        Value result;
+        bool ok = value.getAttrOrRaise(ident, result);
+        interp.pushStack(result);
+        if (!ok)
+            return false;
+    } else {
+        interp.pushStack(result_);
+    }
+
+    interp.pushStack(value);
+    return true;
+}
+
+inline bool InstrGetMethodFallback::execute(Interpreter& interp)
+{
+    Value value = interp.popStack();
+    Value result;
+    bool ok = value.getAttrOrRaise(ident, result);
+    interp.pushStack(result);
+    if (!ok)
+        return false;
+
+    interp.pushStack(value);
+    return true;
+}
 
 struct InstrCall : public Instr
 {
@@ -509,6 +576,8 @@ struct InstrLambda : public Instr
     instr_type(Instr_Lambda);
     instr_name("Lambda");
 
+    Block* block() const { return block_; }
+
     virtual bool execute(Interpreter& interp) {
         Root<Block*> block(block_);
         Root<Frame*> frame(interp.getFrame(0));
@@ -516,7 +585,7 @@ struct InstrLambda : public Instr
         return true;
     }
 
-    virtual void traceChildren(Tracer& t) {
+    virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &block_);
     }
 

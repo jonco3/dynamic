@@ -38,9 +38,16 @@ struct Object : public Cell
     virtual void print(ostream& os) const;
 
     bool hasAttr(Name name) const;
+    int findOwnAttr(Name name) const;
+
     bool maybeGetAttr(Name name, Value& valueOut) const;
     Value getAttr(Name name) const;
+    bool raiseAttrError(Name name, Value& valueOut) const;
     bool getAttrOrRaise(Name name, Value& valueOut) const;
+
+    // Get the slot of and optionally the class containing the named attribute
+    int findAttr(Name name, Root<Class*>& classOut) const;
+
     void setAttr(Name name, Traced<Value> value);
 
     // Add uninitialised attributes for all names in layout.

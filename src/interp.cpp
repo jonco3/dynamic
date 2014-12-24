@@ -116,6 +116,12 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
     }
 }
 
+void Interpreter::replaceInstr(Instr* instr, Instr* prev)
+{
+    assert(instrp[-1] == prev);
+    instrp[-1] = instr;
+}
+
 #ifdef BUILD_TESTS
 
 #include "test.h"
@@ -158,6 +164,29 @@ void testException(const string& input, const string& expected)
         cerr << "But got: " << message << endl;
         abortTests();
     }
+}
+
+void testReplacement(const string& input, const string& expected, InstrType initial,
+                     InstrType replacement)
+{
+    Root<Block*> block;
+    Block::buildModule(input, Object::Null, block);
+
+    Instr** instrp = block->findInstr(Instr_Lambda);
+    assert(instrp);
+    InstrLambda* lambda = (*instrp)->as<InstrLambda>();
+    instrp = lambda->block()->findInstr(initial);
+    assert(instrp);
+
+    Interpreter interp;
+    Value result;
+    bool ok = interp.interpret(block, result);
+    if (!ok)
+        cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
+    testTrue(ok);
+    testEqual(repr(result), expected);
+
+    testEqual((*instrp)->type(), replacement);
 }
 
 testcase(interp)
@@ -266,6 +295,36 @@ testcase(interp)
                   "  return 1\n"
                   "foo()\n",
                   "Wrong number of arguments");
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo('a', 'b')\n",
+                    "'ab'",
+                    Instr_GetMethod,
+                    Instr_GetMethodFallback);
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo(1, 2)\n",
+                    "3",
+                    Instr_GetMethod,
+                    Instr_GetMethodInt);
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo(1, 2)\n"
+                    "foo('a', 'b')\n",
+                    "'ab'",
+                    Instr_GetMethod,
+                    Instr_GetMethodFallback);
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo('a', 'b')\n"
+                    "foo(1, 2)\n",
+                    "3",
+                    Instr_GetMethod,
+                    Instr_GetMethodFallback);
 }
 
 #endif
