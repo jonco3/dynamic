@@ -143,9 +143,8 @@ bool Object::getAttrOrRaise(Name name, Value& valueOut) const
     if (ok)
         return true;
 
-    string message = "AttributeError: '" + class_->name() +
-        "' object has no attribute '" + name + "'";
-    valueOut = new Exception(message);
+    string message = "'" + class_->name() + "' object has no attribute '" + name + "'";
+    valueOut = new Exception("AttributeError", message);
     return false;
 }
 
@@ -163,8 +162,8 @@ bool Object::getSlot(Name name, int slot, Value& valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == UninitializedSlot) {
-        valueOut = new Exception("UnboundLocalError:: name '" +
-                                 name + "' has not been bound");
+        valueOut = new Exception("UnboundLocalError",
+                                 "name '" + name + "' has not been bound");
         return false;
     }
     valueOut = slots_[slot];

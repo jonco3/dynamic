@@ -81,7 +81,7 @@ bool runModule(string text, string filename, Traced<Object*> globals, Value* val
         Interpreter interp;
         ok = interp.interpret(block, result);
     } catch (const ParseError& e) {
-        result = new Exception(e.what());
+        result = new Exception("SyntaxError", e.what());
         ok = false;
     }
 

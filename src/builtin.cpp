@@ -17,10 +17,17 @@ static bool builtin_hasattr(Traced<Value> v, Traced<Value> name, Root<Value>& re
 {
     Object* n = name.toObject();
     if (!n->is<String>()) {
-        resultOut = new Exception("TypeError: hasattr(): attribute name must be string");
+        resultOut = new Exception("TypeError",
+                                  "hasattr(): attribute name must be string");
         return false;
     }
     resultOut = Boolean::get(v.toObject()->hasAttr(n->as<String>()->value()));
+    return true;
+}
+
+static bool builtin_object(Root<Value>& resultOut)
+{
+    resultOut = new Object();
     return true;
 }
 
@@ -29,6 +36,7 @@ void initBuiltins()
     Builtin.init(new Object);
     Root<Value> value;
     value = new Native2(builtin_hasattr); Builtin->setAttr("hasattr", value);
+    value = new Native0(builtin_object); Builtin->setAttr("object", value);
 
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);
@@ -54,6 +62,10 @@ testcase(builtin)
 {
     testInterp("hasattr(1, 'foo')", "False");
     testInterp("hasattr(1, '__str__')", "True");
+    testInterp("a = object()\n"
+               "a.foo = 1\n"
+               "a.foo",
+               "1");
 }
 
 #endif

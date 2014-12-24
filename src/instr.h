@@ -361,7 +361,7 @@ struct InstrIn : public Instr
             return interp.startCall(rootedContains, args);
         }
 
-        interp.pushStack(new Exception("TypeError: Argument is not iterable"));
+        interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
         return false;
     }
 };

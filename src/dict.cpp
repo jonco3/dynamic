@@ -87,7 +87,7 @@ bool Dict::getitem(Traced<Value> key, Root<Value>& resultOut)
 {
     auto i = entries_.find(key);
     if (i == entries_.end()) {
-        resultOut = new Exception("KeyError: " + repr(key));
+        resultOut = new Exception("KeyError", repr(key));
         return false;
     }
 
