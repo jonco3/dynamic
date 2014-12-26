@@ -13,7 +13,7 @@ assert C2.static == 1
 
 class C3:
   def set(self, x):
-    self.x = 1
+    self.x = x
 
   def get(self):
     return self.x
