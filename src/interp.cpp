@@ -211,6 +211,7 @@ testcase(interp)
     testEqual(i.popStack(), v);
     testEqual(i.stackPos(), 0);
 
+    testInterp("pass", "None");
     testInterp("return 3", "3");
     testInterp("return 2 + 2", "4");
     testInterp("return 2 ** 4 - 1", "15");

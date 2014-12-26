@@ -228,6 +228,10 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrCall(2));
     }
 
+    virtual void visit(const SyntaxPass& s) {
+        block->append(new InstrConst(None));
+    }
+
     virtual void visit(const SyntaxBlock& s) {
         for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i) {
             if (i != s.stmts().begin())

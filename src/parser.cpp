@@ -241,6 +241,8 @@ Syntax* SyntaxParser::parseSimpleStatement()
         if (opt(Token_Comma))
             message = parseExpr();
         return new SyntaxAssert(cond, message);
+    } else if (opt(Token_Pass)) {
+        return new SyntaxPass;
     } else {
         return parse(simpleStmt);
     }

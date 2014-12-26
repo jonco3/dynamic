@@ -11,6 +11,7 @@
 using namespace std;
 
 #define for_each_syntax(syntax)                                               \
+    syntax(Pass)                                                              \
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
     syntax(String)                                                            \
@@ -170,6 +171,18 @@ typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
         syntax_name(nameStr)                                                  \
         syntax_accept()                                                       \
     }
+
+struct SyntaxPass : public Syntax
+{
+    syntax_type(Syntax_Pass)
+    syntax_name("pass")
+
+    virtual void print(ostream& s) const override {
+        s << "pass";
+    }
+
+    syntax_accept()
+};
 
 struct SyntaxBlock : public Syntax
 {
