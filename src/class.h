@@ -11,7 +11,7 @@ struct Class : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    Class(string name);
+    Class(string name, Traced<Layout*> initialLayout = Object::InitialLayout);
 
     const string& name() const { return name_; }
 

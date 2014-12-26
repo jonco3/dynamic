@@ -286,8 +286,12 @@ Syntax* SyntaxParser::parseCompoundStatement()
         }
         SyntaxBlock* suite = parseSuite();
         return new SyntaxDef(name.text, params, suite);
-    //} else if (opt(Token_Class)) {
-    //} else if (opt(Token_With)) {
+    } else if (opt(Token_Class)) {
+        Token name = match(Token_Identifier);
+        vector<Syntax*> bases;
+        if (opt(Token_Bra))
+            bases = exprListTrailing(expr, Token_Comma, Token_Ket);
+        return new SyntaxClass(name.text, new SyntaxTuple(bases), parseSuite());
     } else {
         stmt = parseSimpleStatement();
         if (!atEnd())

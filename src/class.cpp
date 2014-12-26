@@ -9,8 +9,8 @@ void Class::init()
     Object::ObjectClass->initClass(Class::ObjectClass, Object::Null);
 }
 
-Class::Class(string name) :
-  Object(ObjectClass, Object::Null, Object::InitialLayout), name_(name)
+Class::Class(string name, Traced<Layout*> initialLayout) :
+  Object(ObjectClass, initialLayout), name_(name)
 {}
 
 void Class::print(ostream& s) const

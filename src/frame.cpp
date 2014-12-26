@@ -4,10 +4,12 @@
 #include "interp.h"
 
 GlobalRoot<Class*> Frame::ObjectClass;
+GlobalRoot<Layout*> Frame::InitialLayout;
 
 void Frame::init()
 {
     ObjectClass.init(new Class("Frame"));
+    InitialLayout.init(Object::InitialLayout);
 }
 
 Frame::Frame(Traced<Block*> block, Instr** returnPoint) :

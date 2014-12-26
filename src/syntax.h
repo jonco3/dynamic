@@ -56,7 +56,8 @@ using namespace std;
     syntax(If)                                                                \
     syntax(While)                                                             \
     syntax(Subscript)                                                         \
-    syntax(Assert)
+    syntax(Assert)                                                            \
+    syntax(Class)
 
 enum SyntaxType
 {
@@ -637,6 +638,34 @@ struct SyntaxAssert : public Syntax
   private:
     unique_ptr<Syntax> cond_;
     unique_ptr<Syntax> message_;
+};
+
+struct SyntaxClass : public Syntax
+{
+    SyntaxClass(Name id, SyntaxTuple* bases, SyntaxBlock* suite)
+      : id_(id), bases_(bases), suite_(suite) {}
+
+    syntax_type(Syntax_Class);
+    syntax_name("class");
+
+    Name id() const { return id_; }
+    const SyntaxTuple* bases() const { return bases_.get(); }
+    const Syntax* suite() const { return suite_.get(); }
+
+    syntax_accept();
+
+    virtual void print(ostream& s) const override {
+        // todo: indentation
+        s << "class " << id();
+        if (!bases_->elems().empty())
+            s << bases() << " ";
+        s << ":" << endl << suite() << endl;
+    }
+
+  private:
+    Name id_;
+    unique_ptr<SyntaxTuple> bases_;
+    unique_ptr<SyntaxBlock> suite_;
 };
 
 #endif

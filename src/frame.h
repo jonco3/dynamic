@@ -11,6 +11,7 @@ struct Interpreter;
 struct Frame : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
+    static GlobalRoot<Layout*> InitialLayout;
     static void init();
 
     Frame(Traced<Block*> block, Instr** returnPoint = nullptr);

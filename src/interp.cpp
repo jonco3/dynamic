@@ -111,8 +111,15 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
             callFrame->setAttr(function->paramName(i), args[i]);
         pushFrame(callFrame);
         return true;
+    } else if (target->is<Class>()) {
+        Root<Class*> cls(target->as<Class>());
+        if (args.size() != 0)
+            return raise("Constructor arguments not supported");
+        Root<Object*> obj(new Object(cls));
+        pushStack(obj);
+        return true;
     } else {
-        return raise("TypeError: object is not callable");
+        return raise("TypeError: object is not callable:" + repr(target));
     }
 }
 
@@ -278,6 +285,11 @@ testcase(interp)
                "  1\n"
                "foo()\n",
                "None");
+
+    testInterp("class Foo:\n"
+               "  a = 1\n"
+               "Foo().a",
+               "1");
 
     testInterp("assert True", "None");
     testInterp("assert 2 + 2, 'ok'\n", "None");

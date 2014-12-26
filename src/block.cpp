@@ -66,7 +66,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 {
     DefinitionFinder(Layout* layout) : layout_(layout) {}
 
-    static Layout* buildLayout(Syntax *s, Layout* layout) {
+    static Layout* buildLayout(const Syntax *s, Layout* layout) {
         DefinitionFinder df(layout);
         s->accept(df);
         return df.layout_;
@@ -83,6 +83,10 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     virtual void visit(const SyntaxDef& s) {
+        addName(s.id());
+    }
+
+    virtual void visit(const SyntaxClass& s) {
         addName(s.id());
     }
 
@@ -120,12 +124,14 @@ struct BlockBuilder : public SyntaxVisitor
     BlockBuilder(BlockBuilder* parent = nullptr)
       : parent(parent),
         topLevel(nullptr),
-        layout(Object::InitialLayout),
-        block(nullptr) {}
+        layout(Frame::InitialLayout),
+        block(nullptr),
+        classBlock(false)
+    {}
 
     void setParams(const vector<Name>& params) {
         assert(parent);
-        assert(layout == Object::InitialLayout);
+        assert(layout == Frame::InitialLayout);
         assert(!topLevel);
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(*i);
@@ -134,13 +140,17 @@ struct BlockBuilder : public SyntaxVisitor
     void setGlobals(Traced<Object*> globals) {
         assert(globals);
         assert(!parent);
-        assert(layout == Object::InitialLayout);
+        assert(layout == Frame::InitialLayout);
         assert(!topLevel);
         topLevel = globals;
         layout = topLevel->layout();
     }
 
-    Block* build(Syntax* s) {
+    void setClassBlock(bool isClassBlock) {
+        classBlock = isClassBlock;
+    }
+
+    Block* build(const Syntax* s) {
         assert(!block);
         if (parent) {
             assert(!topLevel);
@@ -160,7 +170,7 @@ struct BlockBuilder : public SyntaxVisitor
         return result;
     }
 
-    Block* buildBody(Syntax* s) {
+    Block* buildBody(const Syntax* s) {
         Root<Block*> b(build(s));
         assert(b->instrCount() != 0);
         if (!b->lastInstr()->is<InstrReturn>()) {
@@ -174,7 +184,7 @@ struct BlockBuilder : public SyntaxVisitor
         return b;
     }
 
-    Block* buildModule(Syntax* s) {
+    Block* buildModule(const Syntax* s) {
         Root<Block*> b(build(s));
         assert(b->instrCount() != 0);
         if (!b->lastInstr()->is<InstrReturn>()) {
@@ -191,6 +201,7 @@ struct BlockBuilder : public SyntaxVisitor
     Root<Object*> topLevel;
     Root<Layout*> layout;
     Root<Block*> block;
+    bool classBlock;
 
     int lookupLexical(Name name) {
         int count = 1;
@@ -382,6 +393,8 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxReturn& s) {
+        if (classBlock)
+            throw ParseError("Return statement not allowed in class body");
         if (s.right())
             s.right()->accept(*this);
         else
@@ -450,6 +463,25 @@ struct BlockBuilder : public SyntaxVisitor
             exprBlock->append(new InstrConst(None));
         }
         block->append(new InstrLambda(s.params(), exprBlock));
+        if (parent)
+            block->append(new InstrSetLocal(s.id()));
+        else
+            block->append(new InstrSetGlobal(topLevel, s.id()));
+    }
+
+    virtual void visit(const SyntaxClass& s) {
+        vector<Name> params = { "__bases__" };
+        BlockBuilder exprBuilder(this);
+        exprBuilder.setClassBlock(true);
+        exprBuilder.setParams(params);
+        Root<Block*> suite(exprBuilder.build(s.suite()));
+        suite->append(new InstrPop());
+        suite->append(new InstrMakeClassFromFrame(s.id()));
+        suite->append(new InstrReturn());
+
+        block->append(new InstrLambda(params, suite));
+        s.bases()->accept(*this);
+        block->append(new InstrCall(1));
         if (parent)
             block->append(new InstrSetLocal(s.id()));
         else

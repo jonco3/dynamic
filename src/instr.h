@@ -50,7 +50,8 @@ using namespace std;
     instr(Pop)                                                               \
     instr(Tuple)                                                             \
     instr(List)                                                              \
-    instr(Dict)
+    instr(Dict)                                                              \
+    instr(MakeClassFromFrame)
 
 enum InstrType
 {
@@ -677,6 +678,32 @@ struct InstrAssertionFailed : public Instr
         string message = obj != None ? obj->as<String>()->value() : "";
         interp.pushStack(new Exception("AssertionError", message));
         return false;
+    }
+};
+
+struct InstrMakeClassFromFrame : public IdentInstrBase
+{
+    InstrMakeClassFromFrame(Name id) : IdentInstrBase(id) {}
+
+    instr_type(Instr_MakeClassFromFrame);
+    instr_name("MakeClassFromFrame");
+
+    virtual bool execute(Interpreter& interp) {
+        Root<Frame*> frame(interp.getFrame());
+        vector<Name> names;
+        for (Layout* l = frame->layout(); l != Frame::InitialLayout; l = l->parent())
+            names.push_back(l->name());
+        Root<Layout*> layout(Object::InitialLayout);
+        for (auto i = names.begin(); i != names.end(); i++)
+            layout = layout->addName(*i);
+        Class* cls = new Class(ident, layout);
+        Root<Value> value;
+        for (auto i = names.begin(); i != names.end(); i++) {
+            value = frame->getAttr(*i);
+            cls->setAttr(*i, value);
+        }
+        interp.pushStack(cls);
+        return true;
     }
 };
 
