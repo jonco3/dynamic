@@ -10,6 +10,12 @@ assert c1.instance == 1
 class C2:
   static = 1
 assert C2.static == 1
+c2 = C2()
+assert c2.static == 1
+c2.static = 2
+assert c2.static == 2
+c2 = C2()
+assert c2.static == 1
 
 class C3:
   def set(self, x):
