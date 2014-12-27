@@ -48,8 +48,7 @@ void initBuiltins()
     Root<Block*> block;
     Block::buildModule(Input(text, filename), Builtin, block);
     Value result;
-    Interpreter interp;
-    if (!interp.interpret(block, result)) {
+    if (!Interpreter::exec(block, result)) {
         printException(result);
         exit(1);
     }

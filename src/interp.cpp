@@ -11,6 +11,20 @@
 
 //#define TRACE_INTERP
 
+Interpreter* Interpreter::instance_ = nullptr;
+
+/* static */ void Interpreter::init()
+{
+    assert(!instance_);
+    instance_ = new Interpreter;
+}
+
+/* static */ bool Interpreter::exec(Traced<Block*> block, Value& valueOut)
+{
+    assert(instance_);
+    return instance_->interpret(block, valueOut);
+}
+
 Interpreter::Interpreter()
   : instrp(nullptr), pos(0)
 {}
@@ -140,9 +154,8 @@ void testInterp(const string& input, const string& expected)
 #endif
     Root<Block*> block;
     Block::buildModule(input, Object::Null, block);
-    Interpreter interp;
     Value result;
-    bool ok = interp.interpret(block, result);
+    bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -156,9 +169,8 @@ void testException(const string& input, const string& expected)
 #endif
     Root<Block*> block;
     Block::buildModule(input, Object::Null, block);
-    Interpreter interp;
     Value result;
-    bool ok = interp.interpret(block, result);
+    bool ok = Interpreter::exec(block, result);
     if (ok) {
         cerr << "Expected exception but got: " << result << endl;
         abortTests();
@@ -185,9 +197,8 @@ void testReplacement(const string& input, const string& expected, InstrType init
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
 
-    Interpreter interp;
     Value result;
-    bool ok = interp.interpret(block, result);
+    bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -198,7 +209,7 @@ void testReplacement(const string& input, const string& expected, InstrType init
 
 testcase(interp)
 {
-    Interpreter i;
+    Interpreter& i = Interpreter::instance();
     testEqual(i.stackPos(), 0);
     i.pushStack(None);
     testEqual(i.stackPos(), 1);

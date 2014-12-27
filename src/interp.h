@@ -15,7 +15,11 @@ struct Function;
 
 struct Interpreter
 {
-    Interpreter();
+    static void init();
+    static bool exec(Traced<Block*> block, Value& valueOut);
+#ifdef BUILD_TESTS
+    static Interpreter& instance() { return *instance_; }
+#endif
 
     bool interpret(Traced<Block*> block, Value& valueOut);
 
@@ -76,11 +80,14 @@ struct Interpreter
     void replaceInstr(Instr* instr, Instr* prev);
 
   private:
+    static Interpreter* instance_;
+
     Instr **instrp;
     RootVector<Frame*> frames;
     RootVector<Value> stack;
     unsigned pos;
 
+    Interpreter();
     bool raise(string message);
     Frame* newFrame(Traced<Function*> function);
     void pushFrame(Traced<Frame*> frame);

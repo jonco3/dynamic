@@ -37,6 +37,7 @@ void init1()
     List::init();
     Dict::init();
     initSingletons();
+    Interpreter::init();
 }
 
 void init2()
@@ -78,8 +79,7 @@ bool runModule(string text, string filename, Traced<Object*> globals, Value* val
     try {
         Root<Block*> block;
         Block::buildModule(Input(text, filename), globals, block);
-        Interpreter interp;
-        ok = interp.interpret(block, result);
+        ok = Interpreter::exec(block, result);
     } catch (const ParseError& e) {
         result = new Exception("SyntaxError", e.what());
         ok = false;
