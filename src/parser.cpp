@@ -75,25 +75,26 @@ SyntaxParser::SyntaxParser() :
     // Displays
 
     expr.addPrefixHandler(Token_Bra, [] (ParserT& parser, const Actions& acts,
-                                         Token _) -> Syntax* {
+                                         Token token) -> Syntax* {
         if (parser.opt(Token_Ket))
-            return new SyntaxTuple();
+            return new SyntaxTuple(token);
         Syntax* expr = parser.expression(acts);
         if (parser.opt(Token_Ket))
             return expr;
         parser.match(Token_Comma);
         vector<Syntax*> elements = parser.exprListTrailing(acts, Token_Comma, Token_Ket);
         elements.insert(elements.begin(), expr);
-        return new SyntaxTuple(elements);
+        return new SyntaxTuple(token, elements);
     });
 
     expr.addPrefixHandler(Token_SBra, [] (ParserT& parser, const Actions& acts,
-                                          Token _) -> Syntax* {
-        return new SyntaxList(parser.exprListTrailing(acts, Token_Comma, Token_SKet));
+                                          Token token) -> Syntax* {
+        return new SyntaxList(token,
+                              parser.exprListTrailing(acts, Token_Comma, Token_SKet));
     });
 
     expr.addPrefixHandler(Token_CBra, [] (ParserT& parser, const Actions& acts,
-                                          Token _) -> Syntax* {
+                                          Token token) -> Syntax* {
         vector<SyntaxDict::Entry> entries;
         while (!parser.opt(Token_CKet)) {
             Syntax* key = parser.expression(acts);
@@ -104,13 +105,13 @@ SyntaxParser::SyntaxParser() :
                 break;
             parser.match(Token_Comma);
         }
-        return new SyntaxDict(entries);
+        return new SyntaxDict(token, entries);
     });
 
     // Lambda
 
     expr.addPrefixHandler(Token_Lambda, [] (ParserT& parser, const Actions& acts,
-                                            Token _) {
+                                            Token token) {
         vector<string> params;
         if (!parser.opt(Token_Colon)) {
             for (;;) {
@@ -122,7 +123,7 @@ SyntaxParser::SyntaxParser() :
                 parser.match(Token_Comma);
             }
         }
-        return new SyntaxLambda(params, parser.expression(acts));
+        return new SyntaxLambda(token, params, parser.expression(acts));
     });
 
     // todo: comma operator to make tuples
@@ -130,12 +131,13 @@ SyntaxParser::SyntaxParser() :
     // Conditional expression
 
     expr.addInfixHandler(Token_If, 90,
-                         [] (ParserT& parser, const Actions& acts, Token _, Syntax* cond)
+                         [] (ParserT& parser, const Actions& acts, Token token,
+                             Syntax* cond)
     {
         Syntax* cons = parser.expression(acts);
         parser.match(Token_Else);
         Syntax* alt = parser.expression(acts);
-        return new SyntaxCond(cond, cons, alt);
+        return new SyntaxCond(token, cond, cons, alt);
     });
 
     // Boolean operators
@@ -153,11 +155,13 @@ SyntaxParser::SyntaxParser() :
     expr.createNodeForBinary<SyntaxGE>(Token_GE, 120, Assoc_Left);
     expr.createNodeForBinary<SyntaxEQ>(Token_EQ, 120, Assoc_Left);
     expr.createNodeForBinary<SyntaxNE>(Token_NE, 120, Assoc_Left);
-    expr.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxNot(new SyntaxIn(l, r));
+    expr.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token token, Syntax* l,
+                                                       Syntax* r) {
+        return new SyntaxNot(token, new SyntaxIn(token, l, r));
     });
-    expr.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
-        return new SyntaxNot(new SyntaxIs(l, r));
+    expr.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token token, Syntax* l,
+                                                       Syntax* r) {
+        return new SyntaxNot(token, new SyntaxIs(token, l, r));
     });
 
     // Bitwise binary operators
@@ -179,31 +183,31 @@ SyntaxParser::SyntaxParser() :
     expr.createNodeForBinary<SyntaxPower>(Token_Power, 180, Assoc_Left);
 
     expr.addInfixHandler(Token_SBra, 200, [] (ParserT& parser, const Actions& acts,
-                                              Token _, Syntax* l) {
+                                              Token token, Syntax* l) {
         Syntax* index = parser.expression(acts);
         parser.match(Token_SKet);
-        return new SyntaxSubscript(l, index);
+        return new SyntaxSubscript(token, l, index);
     });
 
     expr.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const Actions& acts,
-                                            Token _, Syntax* l) {
+                                            Token token, Syntax* l) {
         vector<Syntax*> args;
         while (!parser.opt(Token_Ket)) {
             if (!args.empty())
                 parser.match(Token_Comma);
             args.push_back(parser.expression(acts));
         }
-        return new SyntaxCall(l, args);
+        return new SyntaxCall(token, l, args);
     });
 
-    expr.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token _, Syntax* l, Syntax* r) {
+    expr.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
             throw ParseError("Bad property reference");
-        return new SyntaxAttrRef(l, r->as<SyntaxName>());
+        return new SyntaxAttrRef(token, l, r->as<SyntaxName>());
     });
 
     expr.addPrefixHandler(Token_Return, [] (ParserT& parser, const Actions& acts,
-                                            Token _) {
+                                            Token token) {
         Syntax *expr = nullptr;
         if (parser.notFollowedBy(Token_EOF) &&
             parser.notFollowedBy(Token_Newline) &&
@@ -211,7 +215,7 @@ SyntaxParser::SyntaxParser() :
         {
             expr = parser.expression(acts);
         }
-        return new SyntaxReturn(expr);
+        return new SyntaxReturn(token, expr);
     });
 
     // Simple statements
@@ -221,13 +225,13 @@ SyntaxParser::SyntaxParser() :
     // Assignments
 
     simpleStmt.addBinaryOp(Token_Assign, 10, Assoc_Right,
-                          [] (Token _, Syntax* l, Syntax* r) -> Syntax* {
+                          [] (Token token, Syntax* l, Syntax* r) -> Syntax* {
         if (l->is<SyntaxName>())
-            return new SyntaxAssignName(l->as<SyntaxName>(), r);
+            return new SyntaxAssignName(token, l->as<SyntaxName>(), r);
         else if (l->is<SyntaxAttrRef>())
-            return new SyntaxAssignAttr(l->as<SyntaxAttrRef>(), r);
+            return new SyntaxAssignAttr(token, l->as<SyntaxAttrRef>(), r);
         else if (l->is<SyntaxSubscript>())
-            return new SyntaxAssignSubscript(l->as<SyntaxSubscript>(), r);
+            return new SyntaxAssignSubscript(token, l->as<SyntaxSubscript>(), r);
         else
             throw ParseError("Illegal LHS for assignment");
     });
@@ -235,14 +239,15 @@ SyntaxParser::SyntaxParser() :
 
 Syntax* SyntaxParser::parseSimpleStatement()
 {
+    Token token = currentToken();
     if (opt(Token_Assert)) {
         Syntax* cond = parseExpr();
         Syntax* message = nullptr;
         if (opt(Token_Comma))
             message = parseExpr();
-        return new SyntaxAssert(cond, message);
+        return new SyntaxAssert(token, cond, message);
     } else if (opt(Token_Pass)) {
-        return new SyntaxPass;
+        return new SyntaxPass(token);
     } else {
         return parse(simpleStmt);
     }
@@ -250,9 +255,10 @@ Syntax* SyntaxParser::parseSimpleStatement()
 
 Syntax* SyntaxParser::parseCompoundStatement()
 {
+    Token token = currentToken();
     Syntax* stmt = nullptr;
     if (opt(Token_If)) {
-        SyntaxIf* ifStmt = new SyntaxIf;
+        SyntaxIf* ifStmt = new SyntaxIf(token);
         do {
             Syntax* cond = parseExpr();
             SyntaxBlock* suite = parseSuite();
@@ -268,7 +274,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
         SyntaxBlock* elseSuite = nullptr;
         if (opt(Token_Else))
             elseSuite = parseSuite();
-        stmt = new SyntaxWhile(cond, suite, elseSuite);
+        stmt = new SyntaxWhile(token, cond, suite, elseSuite);
     //} else if (opt(Token_For)) {
     //} else if (opt(Token_Try)) {
     //} else if (opt(Token_With)) {
@@ -287,13 +293,13 @@ Syntax* SyntaxParser::parseCompoundStatement()
             }
         }
         SyntaxBlock* suite = parseSuite();
-        return new SyntaxDef(name.text, params, suite);
+        return new SyntaxDef(token, name.text, params, suite);
     } else if (opt(Token_Class)) {
         Token name = match(Token_Identifier);
         vector<Syntax*> bases;
         if (opt(Token_Bra))
             bases = exprListTrailing(expr, Token_Comma, Token_Ket);
-        return new SyntaxClass(name.text, new SyntaxTuple(bases), parseSuite());
+        return new SyntaxClass(token, name.text, new SyntaxTuple(token, bases), parseSuite());
     } else {
         stmt = parseSimpleStatement();
         if (!atEnd())
@@ -305,7 +311,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
 
 SyntaxBlock* SyntaxParser::parseBlock()
 {
-    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
+    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock(currentToken()));
     match(Token_Indent);
     while (!opt(Token_Dedent)) {
         syntax->append(parseCompoundStatement());
@@ -315,7 +321,7 @@ SyntaxBlock* SyntaxParser::parseBlock()
 
 SyntaxBlock* SyntaxParser::parseSuite()
 {
-    unique_ptr<SyntaxBlock> suite(new SyntaxBlock);
+    unique_ptr<SyntaxBlock> suite(new SyntaxBlock(currentToken()));
     match(Token_Colon);
     if (opt(Token_Newline)) {
         match(Token_Indent);
@@ -335,7 +341,7 @@ SyntaxBlock* SyntaxParser::parseSuite()
 
 SyntaxBlock* SyntaxParser::parseModule()
 {
-    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock);
+    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock(currentToken()));
     while (!atEnd())
         syntax->append(parseCompoundStatement());
     return syntax.release();
@@ -347,17 +353,17 @@ testcase(parser)
 {
     Parser<int>::Actions acts(TokenCount);
     acts.addWord(Token_Integer, [] (Token token) {
-            return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
-        });
+        return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
+    });
     acts.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
-            return l + r;
-        });
+        return l + r;
+    });
     acts.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {
-            return l - r;
-        });
+        return l - r;
+    });
     acts.addUnaryOp(Token_Minus, [] (Token _, int r) {
-            return -r;
-        });
+        return -r;
+    });
 
     Tokenizer tokenizer;
     Parser<int> parser(tokenizer);

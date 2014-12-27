@@ -89,6 +89,8 @@ struct DefaultSyntaxVisitor : public SyntaxVisitor
 
 struct Syntax
 {
+    Syntax(const Token& token) : pos_(token.pos) {}
+
     template <typename T> bool is() const { return type() == T::Type; }
 
     template <typename T> T* as() {
@@ -106,6 +108,9 @@ struct Syntax
     virtual string name() const = 0;
     virtual void print(ostream& s) const = 0;
     virtual void accept(SyntaxVisitor& v) const = 0;
+
+  private:
+    TokenPos pos_;
 };
 
 inline ostream& operator<<(ostream& s, const Syntax* syntax) {
@@ -125,7 +130,7 @@ inline ostream& operator<<(ostream& s, const Syntax* syntax) {
 
 struct UnarySyntax : public Syntax
 {
-    UnarySyntax(Syntax* r) : right_(r) {}
+    UnarySyntax(const Token& token, Syntax* r) : Syntax(token), right_(r) {}
     const Syntax* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
@@ -137,9 +142,12 @@ struct UnarySyntax : public Syntax
 };
 
 template <typename L, typename R>
-struct BinarySyntaxBase : public Syntax
+struct BinarySyntax : public Syntax
 {
-    BinarySyntaxBase(L* l, R* r) : left_(l), right_(r) {}
+    BinarySyntax(const Token& token, L* l, R* r)
+      : Syntax(token), left_(l), right_(r)
+    {}
+
     const L* left() const { return left_.get(); }
     const R* right() const { return right_.get(); }
 
@@ -152,21 +160,26 @@ struct BinarySyntaxBase : public Syntax
     unique_ptr<R> right_;
 };
 
-typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
-
-#define define_simple_binary_syntax(name, nameStr)                            \
-    struct Syntax##name : public BinarySyntax                                 \
+#define define_binary_syntax(LeftType, RightType, name, nameStr)              \
+    struct Syntax##name : public BinarySyntax<LeftType, RightType>            \
     {                                                                         \
-        Syntax##name(Syntax* l, Syntax* r) : BinarySyntax(l, r) {}            \
+        Syntax##name(const Token& token, LeftType* l, RightType* r)           \
+          : BinarySyntax<LeftType, RightType>(token, l, r)                    \
+        {}                                                                    \
         syntax_type(Syntax_##name)                                            \
         syntax_name(nameStr)                                                  \
         syntax_accept()                                                       \
     }
 
-#define define_simple_unary_syntax(name, nameStr)                             \
+#define define_simple_binary_syntax(name, nameStr)                            \
+    define_binary_syntax(Syntax, Syntax, name, nameStr)
+
+#define define_unary_syntax(name, nameStr)                                    \
     struct Syntax##name : public UnarySyntax                                  \
     {                                                                         \
-        Syntax##name(Syntax* r) : UnarySyntax(r) {}                           \
+        Syntax##name(const Token& token, Syntax* r)                           \
+          : UnarySyntax(token, r)                                             \
+        {}                                                                    \
         syntax_type(Syntax_##name)                                            \
         syntax_name(nameStr)                                                  \
         syntax_accept()                                                       \
@@ -174,6 +187,8 @@ typedef BinarySyntaxBase<Syntax, Syntax> BinarySyntax;
 
 struct SyntaxPass : public Syntax
 {
+    SyntaxPass(const Token& token) : Syntax(token) {}
+
     syntax_type(Syntax_Pass)
     syntax_name("pass")
 
@@ -186,13 +201,15 @@ struct SyntaxPass : public Syntax
 
 struct SyntaxBlock : public Syntax
 {
-    syntax_type(Syntax_Block);
-    syntax_name("block");
+    SyntaxBlock(const Token& token) : Syntax(token) {}
 
     ~SyntaxBlock() {
         for (auto i = statements.begin(); i != statements.end(); ++i)
             delete *i;
     }
+
+    syntax_type(Syntax_Block);
+    syntax_name("block");
 
     void append(Syntax* s) { statements.push_back(s); }
     const vector<Syntax *>& stmts() const { return statements; }
@@ -211,7 +228,9 @@ struct SyntaxBlock : public Syntax
 struct SyntaxInteger : public Syntax
 {
     // todo: this probably doesn't correctly parse all python integers
-    SyntaxInteger(const Token& token) : value_(atoi(token.text.c_str())) {}
+    SyntaxInteger(const Token& token)
+      : Syntax(token), value_(atoi(token.text.c_str()))
+    {}
 
     syntax_type(Syntax_Integer)
     syntax_name("integer")
@@ -229,7 +248,7 @@ struct SyntaxInteger : public Syntax
 
 struct SyntaxString : public Syntax
 {
-    SyntaxString(const Token& token) : value_(token.text) {}
+    SyntaxString(const Token& token) : Syntax(token), value_(token.text) {}
 
     syntax_type(Syntax_String)
     syntax_name("string")
@@ -247,8 +266,7 @@ struct SyntaxString : public Syntax
 
 struct SyntaxName : public Syntax
 {
-
-    SyntaxName(const Token& token) : id_(token.text) {}
+    SyntaxName(const Token& token) : Syntax(token), id_(token.text) {}
 
     syntax_type(Syntax_Name)
     syntax_name("name")
@@ -269,10 +287,11 @@ struct SyntaxTuple : public Syntax
     syntax_type(Syntax_Tuple);
     syntax_name("tuple");
 
-    SyntaxTuple() {}
+    SyntaxTuple(const Token& token) : Syntax(token) {}
 
-    SyntaxTuple(const vector<Syntax*> elems)
-        : elements(elems) {}
+    SyntaxTuple(const Token& token, const vector<Syntax*> elems)
+      : Syntax(token), elements(elems)
+    {}
 
     ~SyntaxTuple() {
         for (auto i = elements.begin(); i != elements.end(); ++i)
@@ -301,16 +320,16 @@ struct SyntaxTuple : public Syntax
 
 struct SyntaxList : public Syntax
 {
-    syntax_type(Syntax_List);
-    syntax_name("List");
-
-    SyntaxList(const vector<Syntax*> elems)
-        : elements(elems) {}
+    SyntaxList(const Token& token, const vector<Syntax*> elems)
+      : Syntax(token), elements(elems) {}
 
     ~SyntaxList() {
         for (auto i = elements.begin(); i != elements.end(); ++i)
             delete *i;
     }
+
+    syntax_type(Syntax_List);
+    syntax_name("List");
 
     const vector<Syntax *>& elems() const { return elements; }
 
@@ -332,13 +351,10 @@ struct SyntaxList : public Syntax
 
 struct SyntaxDict : public Syntax
 {
-    syntax_type(Syntax_Dict);
-    syntax_name("Dict");
-
     typedef pair<Syntax*, Syntax*> Entry;
 
-    SyntaxDict(const vector<Entry> entries)
-        : entries_(entries) {}
+    SyntaxDict(const Token& token, const vector<Entry>& entries)
+      : Syntax(token), entries_(entries) {}
 
     ~SyntaxDict() {
         for (auto i = entries_.begin(); i != entries_.end(); ++i) {
@@ -346,6 +362,9 @@ struct SyntaxDict : public Syntax
             delete i->second;
         }
     }
+
+    syntax_type(Syntax_Dict);
+    syntax_name("Dict");
 
     const vector<Entry>& entries() const { return entries_; }
 
@@ -365,10 +384,10 @@ struct SyntaxDict : public Syntax
     vector<Entry> entries_;
 };
 
-define_simple_unary_syntax(Neg, "-");
-define_simple_unary_syntax(Pos, "+");
-define_simple_unary_syntax(Invert, "~");
-define_simple_unary_syntax(Not, "not");
+define_unary_syntax(Neg, "-");
+define_unary_syntax(Pos, "+");
+define_unary_syntax(Invert, "~");
+define_unary_syntax(Not, "not");
 
 define_simple_binary_syntax(Or, "or");
 define_simple_binary_syntax(And, "and");
@@ -393,41 +412,26 @@ define_simple_binary_syntax(IntDivide, "//");
 define_simple_binary_syntax(Modulo, "%");
 define_simple_binary_syntax(Power, "**");
 
-struct SyntaxAttrRef : public BinarySyntaxBase<Syntax, SyntaxName>
-{
-    SyntaxAttrRef(Syntax* l, SyntaxName* r) : BinarySyntaxBase(l, r) {}
-    syntax_type(Syntax_AttrRef)
-    syntax_name(".")
-    syntax_accept()
-};
+define_binary_syntax(Syntax, SyntaxName, AttrRef, ".");
+define_binary_syntax(SyntaxName, Syntax, AssignName, "n=");
+define_binary_syntax(SyntaxAttrRef, Syntax, AssignAttr, "a=");
 
-struct SyntaxAssignName : public BinarySyntaxBase<SyntaxName, Syntax>
+struct SyntaxAssignSubscript : public BinarySyntax<SyntaxSubscript, Syntax>
 {
-    SyntaxAssignName(SyntaxName* l, Syntax* r) : BinarySyntaxBase(l, r) {}
-    syntax_type(Syntax_AssignName)
-    syntax_name("n=")
-    syntax_accept()
-};
+    SyntaxAssignSubscript(const Token& token, SyntaxSubscript* l, Syntax* r)
+      : BinarySyntax<SyntaxSubscript, Syntax>(token, l, r)
+    {}
 
-struct SyntaxAssignAttr : public BinarySyntaxBase<SyntaxAttrRef, Syntax>
-{
-    SyntaxAssignAttr(SyntaxAttrRef* l, Syntax* r) : BinarySyntaxBase(l, r) {}
-    syntax_type(Syntax_AssignAttr)
-    syntax_name("a=")
-    syntax_accept()
-};
-
-struct SyntaxAssignSubscript : public BinarySyntaxBase<SyntaxSubscript, Syntax>
-{
-    SyntaxAssignSubscript(SyntaxSubscript* l, Syntax* r) : BinarySyntaxBase(l, r) {}
     syntax_type(Syntax_AssignSubscript)
     syntax_name("s=")
     syntax_accept()
 };
 
-struct SyntaxSubscript : public BinarySyntaxBase<Syntax, Syntax>
+struct SyntaxSubscript : public BinarySyntax<Syntax, Syntax>
 {
-    SyntaxSubscript(Syntax* l, Syntax* r) : BinarySyntaxBase(l, r) {}
+    SyntaxSubscript(const Token& token, Syntax* l, Syntax* r)
+      : BinarySyntax<Syntax, Syntax>(token, l, r)
+    {}
     syntax_type(Syntax_Subscript)
     syntax_name("subscript")
     syntax_accept()
@@ -439,7 +443,10 @@ struct SyntaxSubscript : public BinarySyntaxBase<Syntax, Syntax>
 
 struct SyntaxCall : public Syntax
 {
-    SyntaxCall(Syntax* l, const vector<Syntax *>& r) : left_(l), right_(r) {}
+    SyntaxCall(const Token& token, Syntax* l, const vector<Syntax *>& r)
+      : Syntax(token), left_(l), right_(r)
+    {}
+
     ~SyntaxCall() {
         for (auto i = right_.begin(); i != right_.end(); ++i)
             delete *i;
@@ -469,7 +476,7 @@ struct SyntaxCall : public Syntax
 
 struct SyntaxReturn : public UnarySyntax
 {
-    SyntaxReturn(Syntax* right) : UnarySyntax(right) {}
+    SyntaxReturn(const Token& token, Syntax* right) : UnarySyntax(token, right) {}
     syntax_type(Syntax_Return)
     syntax_name("return")
     syntax_accept()
@@ -477,8 +484,8 @@ struct SyntaxReturn : public UnarySyntax
 
 struct SyntaxCond : public Syntax
 {
-    SyntaxCond(Syntax* cons, Syntax* cond, Syntax* alt)
-      : cons_(cons), cond_(cond), alt_(alt) {}
+    SyntaxCond(const Token& token, Syntax* cons, Syntax* cond, Syntax* alt)
+      : Syntax(token), cons_(cons), cond_(cond), alt_(alt) {}
     syntax_type(Syntax_Cond)
     syntax_name("cond")
 
@@ -500,8 +507,9 @@ struct SyntaxCond : public Syntax
 
 struct SyntaxLambda : public Syntax
 {
-    SyntaxLambda(const vector<Name>& params, Syntax* expr)
-      : params_(params), expr_(expr) {}
+    SyntaxLambda(const Token& token, const vector<Name>& params, Syntax* expr)
+      : Syntax(token), params_(params), expr_(expr)
+    {}
 
     syntax_type(Syntax_Lambda);
     syntax_name("lambda");
@@ -525,8 +533,9 @@ struct SyntaxLambda : public Syntax
 
 struct SyntaxDef : public Syntax
 {
-    SyntaxDef(Name id, const vector<Name>& params, Syntax* expr)
-        : id_(id), params_(params), expr_(expr) {}
+    SyntaxDef(const Token& token, Name id, const vector<Name>& params, Syntax* expr)
+        : Syntax(token), id_(id), params_(params), expr_(expr)
+    {}
 
     syntax_type(Syntax_Def);
     syntax_name("def");
@@ -560,6 +569,8 @@ struct SyntaxIf : public Syntax
         Syntax* cond;
         SyntaxBlock* block;
     };
+
+    SyntaxIf(const Token& token) : Syntax(token) {}
 
     ~SyntaxIf() {
         for (auto i = branches_.begin(); i != branches_.end(); ++i) {
@@ -604,8 +615,10 @@ struct SyntaxIf : public Syntax
 
 struct SyntaxWhile : public Syntax
 {
-    SyntaxWhile(Syntax* cond, SyntaxBlock* suite, SyntaxBlock* elseSuite)
-      : cond_(cond), suite_(suite), elseSuite_(elseSuite) {}
+    SyntaxWhile(const Token& token, Syntax* cond, SyntaxBlock* suite,
+              SyntaxBlock* elseSuite)
+      : Syntax(token), cond_(cond), suite_(suite), elseSuite_(elseSuite)
+    {}
 
     syntax_type(Syntax_While);
     syntax_name("while");
@@ -632,8 +645,10 @@ struct SyntaxWhile : public Syntax
 
 struct SyntaxAssert : public Syntax
 {
-    SyntaxAssert(Syntax* cond, Syntax* message)
-      : cond_(cond), message_(message) {}
+    SyntaxAssert(const Token& token, Syntax* cond, Syntax* message)
+      : Syntax(token), cond_(cond), message_(message)
+    {}
+
     syntax_type(Syntax_Assert)
     syntax_name("assert")
 
@@ -655,8 +670,9 @@ struct SyntaxAssert : public Syntax
 
 struct SyntaxClass : public Syntax
 {
-    SyntaxClass(Name id, SyntaxTuple* bases, SyntaxBlock* suite)
-      : id_(id), bases_(bases), suite_(suite) {}
+    SyntaxClass(const Token& token, Name id, SyntaxTuple* bases, SyntaxBlock* suite)
+      : Syntax(token), id_(id), bases_(bases), suite_(suite)
+    {}
 
     syntax_type(Syntax_Class);
     syntax_name("class");

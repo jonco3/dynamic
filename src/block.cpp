@@ -221,7 +221,7 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrCall(1));
     }
 
-    void callBinaryMethod(const BinarySyntax& s, string name) {
+    void callBinaryMethod(const BinarySyntax<Syntax, Syntax>& s, string name) {
         s.left()->accept(*this);
         block->append(new InstrGetMethod(name));
         s.right()->accept(*this);

@@ -101,6 +101,7 @@ struct Parser
     vector<T> exprList(const Actions& acts, TokenType separator, TokenType end);
     vector<T> exprListTrailing(const Actions& acts, TokenType separator, TokenType end);
 
+    const Token& currentToken() { return token; }
     void nextToken();
     T prefix(const Actions& acts, Token token);
     unsigned getBindLeft(const Actions& acts, Token token);
@@ -189,7 +190,7 @@ void Parser<T>::Actions::createNodeForUnary(TokenType type, unsigned bindRight)
 {
     addPrefixHandler(type,
                      [=] (Parser<T>& parser, Actions acts, Token token) {
-                         return new N(parser.expression(acts, bindRight));
+                         return new N(token, parser.expression(acts, bindRight));
                      });
 }
 
@@ -207,7 +208,7 @@ void Parser<T>::Actions::createNodeForBinary(TokenType type, unsigned bindLeft,
                     [=] (Parser<T>& parser, Actions acts, Token token,
                          const T leftValue) {
                         T rightValue = parser.expression(acts, bindRight);
-                        return new N(leftValue, rightValue);
+                        return new N(token, leftValue, rightValue);
                     });
 }
 
