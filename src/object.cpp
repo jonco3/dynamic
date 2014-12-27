@@ -169,22 +169,6 @@ bool Object::maybeGetAttr(Name name, Value& valueOut) const
     return false;
 }
 
-bool Object::raiseAttrError(Name name, Value& valueOut) const
-{
-    string message = "'" + class_->name() + "' object has no attribute '" + name + "'";
-    valueOut = new Exception("AttributeError", message);
-    return false;
-}
-
-bool Object::getAttrOrRaise(Name name, Value& valueOut) const
-{
-    bool ok = maybeGetAttr(name, valueOut);
-    if (!ok)
-        return raiseAttrError(name, valueOut);
-
-    return true;
-}
-
 Value Object::getAttr(Name name) const
 {
     Value value = None;

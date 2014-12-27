@@ -129,6 +129,13 @@ struct IdentInstrBase : public Instr
         s << name() << " " << ident;
     }
 
+    bool raiseAttrError(Value value, Interpreter& interp) {
+        const Class* cls = value.toObject()->getClass();
+        string message = "'" + cls->name() + "' object has no attribute '" + ident + "'";
+        interp.pushStack(new Exception("AttributeError", message));
+        return false;
+    }
+
   protected:
     const Name ident;
 };
@@ -262,10 +269,13 @@ struct InstrGetAttr : public IdentInstrBase
     instr_name("GetAttr");
 
     virtual bool execute(Interpreter& interp) {
-        Value value;
-        bool ok = interp.popStack().toObject()->getAttrOrRaise(ident, value);
-        interp.pushStack(value);
-        return ok;
+        Value value = interp.popStack();
+        Value result;
+        if (!value.maybeGetAttr(ident, result))
+            return raiseAttrError(value, interp);
+        assert(result != UninitializedSlot);
+        interp.pushStack(result);
+        return true;
     }
 };
 
@@ -325,11 +335,10 @@ inline bool InstrGetMethod::execute(Interpreter& interp)
 {
     Value value(interp.popStack());
     Value result;
-    bool ok = value.getAttrOrRaise(ident, result);
+    if (!value.maybeGetAttr(ident, result))
+        return raiseAttrError(value, interp);
+    assert(result != UninitializedSlot);
     interp.pushStack(result);
-    if (!ok)
-        return false;
-
     interp.pushStack(value);
 
     if (value.isInt32()) {
@@ -339,7 +348,7 @@ inline bool InstrGetMethod::execute(Interpreter& interp)
         interp.replaceInstr(new InstrGetMethodFallback(ident), this);
     }
 
-    return ok;
+    return true;
 }
 
 inline bool InstrGetMethodInt::execute(Interpreter& interp)
@@ -348,10 +357,10 @@ inline bool InstrGetMethodInt::execute(Interpreter& interp)
     if (!value.isInt32()) {
         interp.replaceInstr(new InstrGetMethodFallback(ident), this);
         Value result;
-        bool ok = value.getAttrOrRaise(ident, result);
+        if (!value.maybeGetAttr(ident, result))
+            return raiseAttrError(value, interp);
+        assert(result != UninitializedSlot);
         interp.pushStack(result);
-        if (!ok)
-            return false;
     } else {
         interp.pushStack(result_);
     }
@@ -364,11 +373,10 @@ inline bool InstrGetMethodFallback::execute(Interpreter& interp)
 {
     Value value = interp.popStack();
     Value result;
-    bool ok = value.getAttrOrRaise(ident, result);
+    if (!value.maybeGetAttr(ident, result))
+        return raiseAttrError(value, interp);
+    assert(result != UninitializedSlot);
     interp.pushStack(result);
-    if (!ok)
-        return false;
-
     interp.pushStack(value);
     return true;
 }

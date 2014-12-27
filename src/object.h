@@ -37,13 +37,14 @@ struct Object : public Cell
 
     virtual void print(ostream& os) const;
 
+    const Class* getClass() const { return class_; }
+    Layout* layout() { return layout_; }
+
     bool hasAttr(Name name) const;
     int findOwnAttr(Name name) const;
 
     bool maybeGetAttr(Name name, Value& valueOut) const;
     Value getAttr(Name name) const;
-    bool raiseAttrError(Name name, Value& valueOut) const;
-    bool getAttrOrRaise(Name name, Value& valueOut) const;
 
     // Get the slot of and optionally the class containing the named attribute
     int findAttr(Name name, Root<Class*>& classOut) const;
@@ -52,8 +53,6 @@ struct Object : public Cell
 
     // Add uninitialised attributes for all names in layout.
     void extend(Traced<Layout*> layout);
-
-    Layout* layout() { return layout_; }
 
     bool isTrue() const;
 

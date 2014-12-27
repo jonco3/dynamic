@@ -59,12 +59,12 @@ inline int32_t Value::asInt32() const
         return asObject()->as<Integer>()->value();
 }
 
-inline bool Value::getAttrOrRaise(Name name, Value& valueOut)
+inline bool Value::maybeGetAttr(Name name, Value& valueOut)
 {
     if (type() == IntType)
-        return Integer::Proto->getAttrOrRaise(name, valueOut);
+        return Integer::Proto->maybeGetAttr(name, valueOut);
     else
-        return asObject()->getAttrOrRaise(name, valueOut);
+        return asObject()->maybeGetAttr(name, valueOut);
 }
 
 inline bool TracedMixins<Value>::isObject() const
