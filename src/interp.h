@@ -88,7 +88,7 @@ struct Interpreter
     unsigned pos;
 
     Interpreter();
-    bool raise(string message);
+    bool raise(string className, string message);
     Frame* newFrame(Traced<Function*> function);
     void pushFrame(Traced<Frame*> frame);
 };

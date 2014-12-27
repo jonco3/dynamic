@@ -99,9 +99,8 @@ void Interpreter::branch(int offset)
     instrp = target;
 }
 
-
-bool Interpreter::raise(string message) {
-    pushStack(new Exception(message));
+bool Interpreter::raise(string className, string message) {
+    pushStack(new Exception(className, message));
     return false;
 }
 
@@ -111,7 +110,7 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
     if (target->is<Native>()) {
         Root<Native*> native(target->as<Native>());
         if (native->requiredArgs() != args.size())
-            return raise("Wrong number of arguments");
+            return raise("TypeError", "Wrong number of arguments");
         Root<Value> result;
         bool ok = native->call(args, result);
         pushStack(result);
@@ -119,7 +118,7 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
     } else if (target->is<Function>()) {
         Root<Function*> function(target->as<Function>());
         if (function->requiredArgs() != args.size())
-            return raise("Wrong number of arguments");
+            return raise("TypeError", "Wrong number of arguments");
         Root<Frame*> callFrame(newFrame(function));
         for (int i = args.size() - 1; i >= 0; --i)
             callFrame->setAttr(function->paramName(i), args[i]);
@@ -128,12 +127,12 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
     } else if (target->is<Class>()) {
         Root<Class*> cls(target->as<Class>());
         if (args.size() != 0)
-            return raise("Constructor arguments not supported");
+            return raise("ToDo", "Constructor arguments not supported");
         Root<Object*> obj(new Object(cls));
         pushStack(obj);
         return true;
     } else {
-        return raise("TypeError: object is not callable:" + repr(target));
+        return raise("TypeError", "object is not callable:" + repr(target));
     }
 }
 

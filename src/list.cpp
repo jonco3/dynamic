@@ -84,7 +84,8 @@ void ListBase::traceChildren(Tracer& t)
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = new Exception("Type error on index");
+        resultOut = new Exception("TypeError",
+                                  listName() + " indices must be integers");
         return false;
     }
 
@@ -92,7 +93,7 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || i >= elements_.size()) {
-        resultOut = new Exception(listName() + " index out of range");
+        resultOut = new Exception("IndexError", listName() + " index out of range");
         return false;
     }
 
@@ -176,7 +177,8 @@ void List::print(ostream& s) const
 bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = new Exception("Type error on index");
+        resultOut = new Exception("TypeError",
+                                  listName() + " indices must be integers");
         return false;
     }
 
@@ -184,7 +186,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || i >= elements_.size()) {
-        resultOut = new Exception(listName() + " index out of range");
+        resultOut = new Exception("IndexError", listName() + " index out of range");
         return false;
     }
 
