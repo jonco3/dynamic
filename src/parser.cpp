@@ -211,24 +211,6 @@ SyntaxParser::SyntaxParser() :
         }
         return new SyntaxReturn(token, expr);
     });
-
-    // Simple statements
-
-    simpleStmt = expr;
-
-    // Assignments
-
-    simpleStmt.addBinaryOp(Token_Assign, 10, Assoc_Right,
-                          [] (Token token, Syntax* l, Syntax* r) -> Syntax* {
-        if (l->is<SyntaxName>())
-            return new SyntaxAssignName(token, l->as<SyntaxName>(), r);
-        else if (l->is<SyntaxAttrRef>())
-            return new SyntaxAssignAttr(token, l->as<SyntaxAttrRef>(), r);
-        else if (l->is<SyntaxSubscript>())
-            return new SyntaxAssignSubscript(token, l->as<SyntaxSubscript>(), r);
-        else
-            throw ParseError("Illegal LHS for assignment");
-    });
 }
 
 bool SyntaxParser::maybeExprToken()

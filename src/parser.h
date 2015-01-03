@@ -331,7 +331,6 @@ struct SyntaxParser : public Parser<Syntax *>
   private:
     Tokenizer tokenizer;
     Actions expr;
-    Actions simpleStmt;
 
     bool maybeExprToken();
     Syntax* parseExprOrExprList();
