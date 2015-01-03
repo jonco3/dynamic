@@ -54,7 +54,7 @@ vector<T> Parser<T>::exprListTrailing(TokenType separator,
 }
 
 SyntaxParser::SyntaxParser()
-  : Parser(tokenizer, TokenCount)
+  : Parser(tokenizer)
 {
     // Atoms
 
@@ -382,7 +382,7 @@ SyntaxBlock* SyntaxParser::parseModule()
 testcase(parser)
 {
     Tokenizer tokenizer;
-    Parser<int> parser(tokenizer, TokenCount);
+    Parser<int> parser(tokenizer);
     parser.addWord(Token_Integer, [] (Token token) {
         return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
     });

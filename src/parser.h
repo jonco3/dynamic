@@ -10,9 +10,6 @@
 
 using namespace std;
 
-template <typename T>
-struct Parser;
-
 enum Assoc
 {
     Assoc_Left,
@@ -27,7 +24,7 @@ struct ParseError : public runtime_error
 template <typename T>
 struct Parser
 {
-    Parser(Tokenizer& tokenizer, unsigned maxTokenTypes);
+    Parser(Tokenizer& tokenizer);
 
     void start(const Input& input);
     bool atEnd() { return token.type == Token_EOF; }
@@ -193,10 +190,10 @@ void Parser<T>::createNodeForBinary(TokenType type, unsigned bindLeft,
 
 
 template <typename T>
-Parser<T>::Parser(Tokenizer& tokenizer, unsigned maxTokenTypes)
+Parser<T>::Parser(Tokenizer& tokenizer)
   : tokenizer(tokenizer)
 {
-    for (unsigned i = 0; i < maxTokenTypes; ++i) {
+    for (unsigned i = 0; i < tokenizer.numTypes(); ++i) {
         prefixActions.push_back({false});
         infixActions.push_back({false});
     }
