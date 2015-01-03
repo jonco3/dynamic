@@ -250,7 +250,7 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrConst(v));
     }
 
-    virtual void visit(const SyntaxTuple& s) {
+    virtual void visit(const SyntaxExprList& s) {
         for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
             (*i)->accept(*this);
         block->append(new InstrTuple(s.elems().size()));

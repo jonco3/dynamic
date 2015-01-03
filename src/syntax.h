@@ -15,7 +15,7 @@ using namespace std;
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
     syntax(String)                                                            \
-    syntax(Tuple)                                                             \
+    syntax(ExprList)                                                          \
     syntax(List)                                                              \
     syntax(Dict)                                                              \
     syntax(Name)                                                              \
@@ -282,18 +282,18 @@ struct SyntaxName : public Syntax
     Name id_;
 };
 
-struct SyntaxTuple : public Syntax
+struct SyntaxExprList : public Syntax
 {
-    syntax_type(Syntax_Tuple);
-    syntax_name("tuple");
+    syntax_type(Syntax_ExprList);
+    syntax_name("exprList");
 
-    SyntaxTuple(const Token& token) : Syntax(token) {}
+    SyntaxExprList(const Token& token) : Syntax(token) {}
 
-    SyntaxTuple(const Token& token, const vector<Syntax*> elems)
+    SyntaxExprList(const Token& token, const vector<Syntax*> elems)
       : Syntax(token), elements(elems)
     {}
 
-    ~SyntaxTuple() {
+    ~SyntaxExprList() {
         for (auto i = elements.begin(); i != elements.end(); ++i)
             delete *i;
     }
@@ -670,7 +670,7 @@ struct SyntaxAssert : public Syntax
 
 struct SyntaxClass : public Syntax
 {
-    SyntaxClass(const Token& token, Name id, SyntaxTuple* bases, SyntaxBlock* suite)
+    SyntaxClass(const Token& token, Name id, SyntaxExprList* bases, SyntaxBlock* suite)
       : Syntax(token), id_(id), bases_(bases), suite_(suite)
     {}
 
@@ -678,7 +678,7 @@ struct SyntaxClass : public Syntax
     syntax_name("class");
 
     Name id() const { return id_; }
-    const SyntaxTuple* bases() const { return bases_.get(); }
+    const SyntaxExprList* bases() const { return bases_.get(); }
     const Syntax* suite() const { return suite_.get(); }
 
     syntax_accept();
@@ -693,7 +693,7 @@ struct SyntaxClass : public Syntax
 
   private:
     Name id_;
-    unique_ptr<SyntaxTuple> bases_;
+    unique_ptr<SyntaxExprList> bases_;
     unique_ptr<SyntaxBlock> suite_;
 };
 

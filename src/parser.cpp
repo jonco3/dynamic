@@ -74,17 +74,13 @@ SyntaxParser::SyntaxParser() :
 
     // Displays
 
-    expr.addPrefixHandler(Token_Bra, [] (ParserT& parser, const Actions& acts,
+    expr.addPrefixHandler(Token_Bra, [=] (ParserT& parser, const Actions& acts,
                                          Token token) -> Syntax* {
         if (parser.opt(Token_Ket))
-            return new SyntaxTuple(token);
-        Syntax* expr = parser.expression(acts);
-        if (parser.opt(Token_Ket))
-            return expr;
-        parser.match(Token_Comma);
-        vector<Syntax*> elements = parser.exprListTrailing(acts, Token_Comma, Token_Ket);
-        elements.insert(elements.begin(), expr);
-        return new SyntaxTuple(token, elements);
+            return new SyntaxExprList(token);
+        Syntax* result = parseExprOrExprList();
+        parser.match(Token_Ket);
+        return result;
     });
 
     expr.addPrefixHandler(Token_SBra, [] (ParserT& parser, const Actions& acts,
@@ -125,8 +121,6 @@ SyntaxParser::SyntaxParser() :
         }
         return new SyntaxLambda(token, params, parser.expression(acts));
     });
-
-    // todo: comma operator to make tuples
 
     // Conditional expression
 
@@ -237,6 +231,35 @@ SyntaxParser::SyntaxParser() :
     });
 }
 
+bool SyntaxParser::maybeExprToken()
+{
+    // Return whether the next token can be the start of an expression.
+    TokenType t = currentToken().type;
+    return t == Token_Identifier ||
+        t == Token_Integer || t == Token_String ||
+        t == Token_Bra || t == Token_SBra || t == Token_CBra ||
+        t == Token_Minus || t == Token_Plus || t == Token_BitNot ||
+        t == Token_Not || t == Token_Lambda || t == Token_Yield ||
+        t == Token_Backtick;
+}
+
+Syntax* SyntaxParser::parseExprOrExprList()
+{
+    Token startToken = currentToken();
+    vector<Syntax*> exprs;
+    exprs.push_back(parseExpr());
+    bool singleExpr = true;
+    while (opt(Token_Comma)) {
+        singleExpr = false;
+        if (!maybeExprToken())
+            break;
+        exprs.push_back(parseExpr());
+    }
+    if (singleExpr)
+        return exprs[0];
+    return new SyntaxExprList(startToken, exprs);
+}
+
 Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -248,9 +271,23 @@ Syntax* SyntaxParser::parseSimpleStatement()
         return new SyntaxAssert(token, cond, message);
     } else if (opt(Token_Pass)) {
         return new SyntaxPass(token);
-    } else {
-        return parse(simpleStmt);
     }
+
+    Syntax* expr = parseExprOrExprList();
+    if (opt(Token_Assign)) {
+        Syntax *l = expr;
+        Syntax *r = parseExpr();
+        if (l->is<SyntaxName>())
+            return new SyntaxAssignName(token, l->as<SyntaxName>(), r);
+        else if (l->is<SyntaxAttrRef>())
+            return new SyntaxAssignAttr(token, l->as<SyntaxAttrRef>(), r);
+        else if (l->is<SyntaxSubscript>())
+            return new SyntaxAssignSubscript(token, l->as<SyntaxSubscript>(), r);
+        else
+            throw ParseError("Illegal LHS for assignment");
+    }
+
+    return expr;
 }
 
 Syntax* SyntaxParser::parseCompoundStatement()
@@ -299,7 +336,10 @@ Syntax* SyntaxParser::parseCompoundStatement()
         vector<Syntax*> bases;
         if (opt(Token_Bra))
             bases = exprListTrailing(expr, Token_Comma, Token_Ket);
-        return new SyntaxClass(token, name.text, new SyntaxTuple(token, bases), parseSuite());
+        return new SyntaxClass(token,
+                               name.text,
+                               new SyntaxExprList(token, bases),
+                               parseSuite());
     } else {
         stmt = parseSimpleStatement();
         if (!atEnd())
@@ -415,6 +455,30 @@ testcase(parser)
     testEqual(repr(expr.get()), "not a in b\n");
     testTrue(expr->is<SyntaxBlock>());
     testTrue(expr->as<SyntaxBlock>()->stmts()[0]->is<SyntaxNot>());
+
+    sp.start("(1)");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "1\n");
+
+    sp.start("()");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "()\n");
+
+    sp.start("(1,)");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "(1,)\n");
+
+    sp.start("(1,2)");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "(1, 2)\n");
+
+    sp.start("foo(bar)");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "foo(bar)\n");
+
+    sp.start("foo(bar, baz)");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "foo(bar, baz)\n");
 }
 
 #endif

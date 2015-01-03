@@ -333,6 +333,8 @@ struct SyntaxParser : public Parser<Syntax *>
     Actions expr;
     Actions simpleStmt;
 
+    bool maybeExprToken();
+    Syntax* parseExprOrExprList();
     SyntaxBlock* parseBlock();
     SyntaxBlock* parseSuite();
 };
