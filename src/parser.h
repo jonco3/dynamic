@@ -336,6 +336,8 @@ struct SyntaxParser : public Parser<Syntax *>
     Syntax* parseExprOrExprList();
     SyntaxBlock* parseBlock();
     SyntaxBlock* parseSuite();
+
+    void checkAssignTarget(Syntax* s);
 };
 
 #endif

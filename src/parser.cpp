@@ -242,6 +242,25 @@ Syntax* SyntaxParser::parseExprOrExprList()
     return new SyntaxExprList(startToken, exprs);
 }
 
+void SyntaxParser::checkAssignTarget(Syntax* target)
+{
+    if (target->is<SyntaxExprList>()) {
+        SyntaxExprList* exprs = target->as<SyntaxExprList>();
+        const vector<Syntax*>& targets = exprs->elems();
+        for (auto i = targets.begin(); i != targets.end(); i++)
+            checkAssignTarget(*i);
+    } else if (target->is<SyntaxList>()) {
+        SyntaxList* list = target->as<SyntaxList>();
+        const vector<Syntax*>& targets = list->elems();
+        for (auto i = targets.begin(); i != targets.end(); i++)
+            checkAssignTarget(*i);
+    } else if (!target->is<SyntaxName>() &&
+               !target->is<SyntaxAttrRef>() &&
+               !target->is<SyntaxSubscript>()) {
+        throw ParseError("Illegal target for assignment");
+    }
+}
+
 Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -257,16 +276,17 @@ Syntax* SyntaxParser::parseSimpleStatement()
 
     Syntax* expr = parseExprOrExprList();
     if (opt(Token_Assign)) {
-        Syntax *l = expr;
-        Syntax *r = parseExpr();
-        if (l->is<SyntaxName>())
-            return new SyntaxAssignName(token, l->as<SyntaxName>(), r);
-        else if (l->is<SyntaxAttrRef>())
-            return new SyntaxAssignAttr(token, l->as<SyntaxAttrRef>(), r);
-        else if (l->is<SyntaxSubscript>())
-            return new SyntaxAssignSubscript(token, l->as<SyntaxSubscript>(), r);
+        checkAssignTarget(expr);
+        Syntax *target = expr;
+        expr = parseExpr();
+        if (target->is<SyntaxName>())
+            return new SyntaxAssignName(token, target->as<SyntaxName>(), expr);
+        else if (target->is<SyntaxAttrRef>())
+            return new SyntaxAssignAttr(token, target->as<SyntaxAttrRef>(), expr);
+        else if (target->is<SyntaxSubscript>())
+            return new SyntaxAssignSubscript(token, target->as<SyntaxSubscript>(), expr);
         else
-            throw ParseError("Illegal LHS for assignment");
+            throw ParseError("Assignment to target list not implemented");
     }
 
     return expr;
