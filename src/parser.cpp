@@ -20,14 +20,14 @@ ParseError::ParseError(string message) :
  * Match a comma separated list of expressions up to an end token.
  */
 template <typename T>
-vector<T> Parser<T>::exprList(const Actions& acts, TokenType separator, TokenType end)
+vector<T> Parser<T>::exprList(TokenType separator, TokenType end)
 {
     vector<T> exprs;
     if (opt(end))
         return exprs;
 
     for (;;) {
-        exprs.push_back(expression(acts));
+        exprs.push_back(expression());
         if (opt(end))
             break;
         match(separator);
@@ -40,12 +40,12 @@ vector<T> Parser<T>::exprList(const Actions& acts, TokenType separator, TokenTyp
  * trailing comma.
  */
 template <typename T>
-vector<T> Parser<T>::exprListTrailing(const Actions& acts, TokenType separator,
+vector<T> Parser<T>::exprListTrailing(TokenType separator,
                                       TokenType end)
 {
     vector<T> exprs;
     while (!opt(end)) {
-        exprs.push_back(expression(acts));
+        exprs.push_back(expression());
         if (opt(end))
             break;
         match(separator);
@@ -53,29 +53,27 @@ vector<T> Parser<T>::exprListTrailing(const Actions& acts, TokenType separator,
     return exprs;
 }
 
-SyntaxParser::SyntaxParser() :
-  Parser(tokenizer),
-  expr(TokenCount)
+SyntaxParser::SyntaxParser()
+  : Parser(tokenizer, TokenCount)
 {
     // Atoms
 
-    expr.createNodeForAtom<SyntaxName>(Token_Identifier);
-    expr.createNodeForAtom<SyntaxString>(Token_String);
-    expr.createNodeForAtom<SyntaxInteger>(Token_Integer);
+    createNodeForAtom<SyntaxName>(Token_Identifier);
+    createNodeForAtom<SyntaxString>(Token_String);
+    createNodeForAtom<SyntaxInteger>(Token_Integer);
     // todo: longinteger floatnumber imagnumber
 
     // Unary operations
 
     // todo: check the precedence of these works as expected
-    expr.createNodeForUnary<SyntaxPos>(Token_Plus);
-    expr.createNodeForUnary<SyntaxNeg>(Token_Minus);
-    expr.createNodeForUnary<SyntaxNot>(Token_Not, 0);
-    expr.createNodeForUnary<SyntaxInvert>(Token_BitNot);
+    createNodeForUnary<SyntaxPos>(Token_Plus);
+    createNodeForUnary<SyntaxNeg>(Token_Minus);
+    createNodeForUnary<SyntaxNot>(Token_Not, 0);
+    createNodeForUnary<SyntaxInvert>(Token_BitNot);
 
     // Displays
 
-    expr.addPrefixHandler(Token_Bra, [=] (ParserT& parser, const Actions& acts,
-                                         Token token) -> Syntax* {
+    addPrefixHandler(Token_Bra, [=] (ParserT& parser, Token token) -> Syntax* {
         if (parser.opt(Token_Ket))
             return new SyntaxExprList(token);
         Syntax* result = parseExprOrExprList();
@@ -83,19 +81,17 @@ SyntaxParser::SyntaxParser() :
         return result;
     });
 
-    expr.addPrefixHandler(Token_SBra, [] (ParserT& parser, const Actions& acts,
-                                          Token token) -> Syntax* {
+    addPrefixHandler(Token_SBra, [] (ParserT& parser, Token token) -> Syntax* {
         return new SyntaxList(token,
-                              parser.exprListTrailing(acts, Token_Comma, Token_SKet));
+                              parser.exprListTrailing(Token_Comma, Token_SKet));
     });
 
-    expr.addPrefixHandler(Token_CBra, [] (ParserT& parser, const Actions& acts,
-                                          Token token) -> Syntax* {
+    addPrefixHandler(Token_CBra, [] (ParserT& parser, Token token) -> Syntax* {
         vector<SyntaxDict::Entry> entries;
         while (!parser.opt(Token_CKet)) {
-            Syntax* key = parser.expression(acts);
+            Syntax* key = parser.expression();
             parser.match(Token_Colon);
-            Syntax* value = parser.expression(acts);
+            Syntax* value = parser.expression();
             entries.push_back(SyntaxDict::Entry(key, value));
             if (parser.opt(Token_CKet))
                 break;
@@ -106,8 +102,7 @@ SyntaxParser::SyntaxParser() :
 
     // Lambda
 
-    expr.addPrefixHandler(Token_Lambda, [] (ParserT& parser, const Actions& acts,
-                                            Token token) {
+    addPrefixHandler(Token_Lambda, [] (ParserT& parser, Token token) {
         vector<string> params;
         if (!parser.opt(Token_Colon)) {
             for (;;) {
@@ -119,95 +114,88 @@ SyntaxParser::SyntaxParser() :
                 parser.match(Token_Comma);
             }
         }
-        return new SyntaxLambda(token, params, parser.expression(acts));
+        return new SyntaxLambda(token, params, parser.expression());
     });
 
     // Conditional expression
 
-    expr.addInfixHandler(Token_If, 90,
-                         [] (ParserT& parser, const Actions& acts, Token token,
-                             Syntax* cond)
-    {
-        Syntax* cons = parser.expression(acts);
+    addInfixHandler(Token_If, 90, [] (ParserT& parser, Token token, Syntax* cond) {
+        Syntax* cons = parser.expression();
         parser.match(Token_Else);
-        Syntax* alt = parser.expression(acts);
+        Syntax* alt = parser.expression();
         return new SyntaxCond(token, cond, cons, alt);
     });
 
     // Boolean operators
 
-    expr.createNodeForBinary<SyntaxOr>(Token_Or, 100, Assoc_Left);
-    expr.createNodeForBinary<SyntaxAnd>(Token_And, 100, Assoc_Left);
+    createNodeForBinary<SyntaxOr>(Token_Or, 100, Assoc_Left);
+    createNodeForBinary<SyntaxAnd>(Token_And, 100, Assoc_Left);
 
     // Comparison operators
 
-    expr.createNodeForBinary<SyntaxIn>(Token_In, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxIs>(Token_Is, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxLT>(Token_LT, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxLE>(Token_LE, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxGT>(Token_GT, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxGE>(Token_GE, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxEQ>(Token_EQ, 120, Assoc_Left);
-    expr.createNodeForBinary<SyntaxNE>(Token_NE, 120, Assoc_Left);
-    expr.addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token token, Syntax* l,
-                                                       Syntax* r) {
+    createNodeForBinary<SyntaxIn>(Token_In, 120, Assoc_Left);
+    createNodeForBinary<SyntaxIs>(Token_Is, 120, Assoc_Left);
+    createNodeForBinary<SyntaxLT>(Token_LT, 120, Assoc_Left);
+    createNodeForBinary<SyntaxLE>(Token_LE, 120, Assoc_Left);
+    createNodeForBinary<SyntaxGT>(Token_GT, 120, Assoc_Left);
+    createNodeForBinary<SyntaxGE>(Token_GE, 120, Assoc_Left);
+    createNodeForBinary<SyntaxEQ>(Token_EQ, 120, Assoc_Left);
+    createNodeForBinary<SyntaxNE>(Token_NE, 120, Assoc_Left);
+    addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         return new SyntaxNot(token, new SyntaxIn(token, l, r));
     });
-    expr.addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token token, Syntax* l,
-                                                       Syntax* r) {
+    addBinaryOp(Token_IsNot, 120, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         return new SyntaxNot(token, new SyntaxIs(token, l, r));
     });
 
     // Bitwise binary operators
 
-    expr.createNodeForBinary<SyntaxBitOr>(Token_BitOr, 130, Assoc_Left);
-    expr.createNodeForBinary<SyntaxBitXor>(Token_BitXor, 140, Assoc_Left);
-    expr.createNodeForBinary<SyntaxBitAnd>(Token_BitAnd, 150, Assoc_Left);
-    expr.createNodeForBinary<SyntaxBitLeftShift>(Token_BitLeftShift, 160, Assoc_Left);
-    expr.createNodeForBinary<SyntaxBitRightShift>(Token_BitRightShift, 160, Assoc_Left);
+    createNodeForBinary<SyntaxBitOr>(Token_BitOr, 130, Assoc_Left);
+    createNodeForBinary<SyntaxBitXor>(Token_BitXor, 140, Assoc_Left);
+    createNodeForBinary<SyntaxBitAnd>(Token_BitAnd, 150, Assoc_Left);
+    createNodeForBinary<SyntaxBitLeftShift>(Token_BitLeftShift, 160, Assoc_Left);
+    createNodeForBinary<SyntaxBitRightShift>(Token_BitRightShift, 160, Assoc_Left);
 
     // Arithermetic binary operators
 
-    expr.createNodeForBinary<SyntaxPlus>(Token_Plus, 170, Assoc_Left);
-    expr.createNodeForBinary<SyntaxMinus>(Token_Minus, 170, Assoc_Left);
-    expr.createNodeForBinary<SyntaxMultiply>(Token_Times, 180, Assoc_Left);
-    expr.createNodeForBinary<SyntaxDivide>(Token_Divide, 180, Assoc_Left);
-    expr.createNodeForBinary<SyntaxIntDivide>(Token_IntDivide, 180, Assoc_Left);
-    expr.createNodeForBinary<SyntaxModulo>(Token_Modulo, 180, Assoc_Left);
-    expr.createNodeForBinary<SyntaxPower>(Token_Power, 180, Assoc_Left);
+    createNodeForBinary<SyntaxPlus>(Token_Plus, 170, Assoc_Left);
+    createNodeForBinary<SyntaxMinus>(Token_Minus, 170, Assoc_Left);
+    createNodeForBinary<SyntaxMultiply>(Token_Times, 180, Assoc_Left);
+    createNodeForBinary<SyntaxDivide>(Token_Divide, 180, Assoc_Left);
+    createNodeForBinary<SyntaxIntDivide>(Token_IntDivide, 180, Assoc_Left);
+    createNodeForBinary<SyntaxModulo>(Token_Modulo, 180, Assoc_Left);
+    createNodeForBinary<SyntaxPower>(Token_Power, 180, Assoc_Left);
 
-    expr.addInfixHandler(Token_SBra, 200, [] (ParserT& parser, const Actions& acts,
-                                              Token token, Syntax* l) {
-        Syntax* index = parser.expression(acts);
+    addInfixHandler(Token_SBra, 200, [] (ParserT& parser, Token token, Syntax* l) {
+        Syntax* index = parser.expression();
         parser.match(Token_SKet);
         return new SyntaxSubscript(token, l, index);
     });
 
-    expr.addInfixHandler(Token_Bra, 200, [] (ParserT& parser, const Actions& acts,
-                                            Token token, Syntax* l) {
+    addInfixHandler(Token_Bra, 200, [] (ParserT& parser, Token token, Syntax* l) {
         vector<Syntax*> args;
         while (!parser.opt(Token_Ket)) {
             if (!args.empty())
                 parser.match(Token_Comma);
-            args.push_back(parser.expression(acts));
+            args.push_back(parser.expression());
         }
         return new SyntaxCall(token, l, args);
     });
 
-    expr.addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
+    addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
             throw ParseError("Bad property reference");
         return new SyntaxAttrRef(token, l, r->as<SyntaxName>());
     });
 
-    expr.addPrefixHandler(Token_Return, [] (ParserT& parser, const Actions& acts,
+    addPrefixHandler(Token_Return, [] (ParserT& parser,
                                             Token token) {
         Syntax *expr = nullptr;
         if (parser.notFollowedBy(Token_EOF) &&
             parser.notFollowedBy(Token_Newline) &&
             parser.notFollowedBy(Token_Dedent))
         {
-            expr = parser.expression(acts);
+            expr = parser.expression();
         }
         return new SyntaxReturn(token, expr);
     });
@@ -229,13 +217,13 @@ Syntax* SyntaxParser::parseExprOrExprList()
 {
     Token startToken = currentToken();
     vector<Syntax*> exprs;
-    exprs.push_back(parseExpr());
+    exprs.push_back(expression());
     bool singleExpr = true;
     while (opt(Token_Comma)) {
         singleExpr = false;
         if (!maybeExprToken())
             break;
-        exprs.push_back(parseExpr());
+        exprs.push_back(expression());
     }
     if (singleExpr)
         return exprs[0];
@@ -265,10 +253,10 @@ Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
     if (opt(Token_Assert)) {
-        Syntax* cond = parseExpr();
+        Syntax* cond = expression();
         Syntax* message = nullptr;
         if (opt(Token_Comma))
-            message = parseExpr();
+            message = expression();
         return new SyntaxAssert(token, cond, message);
     } else if (opt(Token_Pass)) {
         return new SyntaxPass(token);
@@ -278,7 +266,7 @@ Syntax* SyntaxParser::parseSimpleStatement()
     if (opt(Token_Assign)) {
         checkAssignTarget(expr);
         Syntax *target = expr;
-        expr = parseExpr();
+        expr = expression();
         if (target->is<SyntaxName>())
             return new SyntaxAssignName(token, target->as<SyntaxName>(), expr);
         else if (target->is<SyntaxAttrRef>())
@@ -299,7 +287,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
     if (opt(Token_If)) {
         SyntaxIf* ifStmt = new SyntaxIf(token);
         do {
-            Syntax* cond = parseExpr();
+            Syntax* cond = expression();
             SyntaxBlock* suite = parseSuite();
             ifStmt->addBranch(cond, suite);
         } while (opt(Token_Elif));
@@ -308,7 +296,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
         }
         stmt = ifStmt;
     } else if (opt(Token_While)) {
-        Syntax* cond = parseExpr();
+        Syntax* cond = expression();
         SyntaxBlock* suite = parseSuite();
         SyntaxBlock* elseSuite = nullptr;
         if (opt(Token_Else))
@@ -337,7 +325,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
         Token name = match(Token_Identifier);
         vector<Syntax*> bases;
         if (opt(Token_Bra))
-            bases = exprListTrailing(expr, Token_Comma, Token_Ket);
+            bases = exprListTrailing(Token_Comma, Token_Ket);
         return new SyntaxClass(token,
                                name.text,
                                new SyntaxExprList(token, bases),
@@ -393,42 +381,40 @@ SyntaxBlock* SyntaxParser::parseModule()
 
 testcase(parser)
 {
-    Parser<int>::Actions acts(TokenCount);
-    acts.addWord(Token_Integer, [] (Token token) {
+    Tokenizer tokenizer;
+    Parser<int> parser(tokenizer, TokenCount);
+    parser.addWord(Token_Integer, [] (Token token) {
         return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
     });
-    acts.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
+    parser.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
         return l + r;
     });
-    acts.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {
+    parser.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {
         return l - r;
     });
-    acts.addUnaryOp(Token_Minus, [] (Token _, int r) {
+    parser.addUnaryOp(Token_Minus, [] (Token _, int r) {
         return -r;
     });
 
-    Tokenizer tokenizer;
-    Parser<int> parser(tokenizer);
-
     parser.start("2 + 3 - 1");
     testFalse(parser.atEnd());
-    testEqual(parser.parse(acts), 4);
+    testEqual(parser.parse(), 4);
     testTrue(parser.atEnd());
-    testThrows(parser.parse(acts), ParseError);
+    testThrows(parser.parse(), ParseError);
 
     parser.start("1 2");
-    testEqual(parser.parse(acts), 1);
-    testEqual(parser.parse(acts), 2);
+    testEqual(parser.parse(), 1);
+    testEqual(parser.parse(), 2);
     testTrue(parser.atEnd());
-    testThrows(parser.parse(acts), ParseError);
+    testThrows(parser.parse(), ParseError);
 
     SyntaxParser sp;
     sp.start("1+2-3");
-    unique_ptr<Syntax> expr(sp.parseExpr());
+    unique_ptr<Syntax> expr(sp.expression());
     testEqual(repr(expr.get()), "1 + 2 - 3");
 
     sp.start("4 ** 5");
-    expr.reset(sp.parseExpr());
+    expr.reset(sp.expression());
     testEqual(repr(expr.get()), "4 ** 5");
 
     sp.start("f = 1 + 2");
