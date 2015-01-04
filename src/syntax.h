@@ -46,9 +46,8 @@ using namespace std;
     syntax(Modulo)                                                            \
     syntax(Power)                                                             \
     syntax(AttrRef)                                                           \
-    syntax(AssignName)                                                        \
-    syntax(AssignAttr)                                                        \
-    syntax(AssignSubscript)                                                   \
+    syntax(Assign)                                                            \
+    syntax(TargetList)                                                        \
     syntax(Call)                                                              \
     syntax(Return)                                                            \
     syntax(Cond)                                                              \
@@ -89,7 +88,7 @@ struct DefaultSyntaxVisitor : public SyntaxVisitor
 
 struct Syntax
 {
-    Syntax(const Token& token) : pos_(token.pos) {}
+    Syntax(const Token& token) : token_(token) {}
 
     template <typename T> bool is() const { return type() == T::Type; }
 
@@ -103,6 +102,8 @@ struct Syntax
         return static_cast<const T*>(this);
     }
 
+    const Token& token() const { return token_; }
+
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
     virtual string name() const = 0;
@@ -110,7 +111,7 @@ struct Syntax
     virtual void accept(SyntaxVisitor& v) const = 0;
 
   private:
-    TokenPos pos_;
+    Token token_;
 };
 
 inline ostream& operator<<(ostream& s, const Syntax* syntax) {
@@ -141,18 +142,18 @@ struct UnarySyntax : public Syntax
     unique_ptr<Syntax> right_;
 };
 
-template <typename L, typename R>
-struct BinarySyntax : public Syntax
+template <typename Base, typename L, typename R>
+struct BinarySyntax : public Base
 {
     BinarySyntax(const Token& token, L* l, R* r)
-      : Syntax(token), left_(l), right_(r)
+      : Base(token), left_(l), right_(r)
     {}
 
     const L* left() const { return left_.get(); }
     const R* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
-        s << left() << " " << name() << " " << right();
+        s << left() << " " << this->name() << " " << right();
     }
 
   private:
@@ -160,11 +161,11 @@ struct BinarySyntax : public Syntax
     unique_ptr<R> right_;
 };
 
-#define define_binary_syntax(LeftType, RightType, name, nameStr)              \
-    struct Syntax##name : public BinarySyntax<LeftType, RightType>            \
+#define define_binary_syntax(BaseType, LeftType, RightType, name, nameStr)    \
+    struct Syntax##name : public BinarySyntax<BaseType, LeftType, RightType>  \
     {                                                                         \
         Syntax##name(const Token& token, LeftType* l, RightType* r)           \
-          : BinarySyntax<LeftType, RightType>(token, l, r)                    \
+          : BinarySyntax<BaseType, LeftType, RightType>(token, l, r)          \
         {}                                                                    \
         syntax_type(Syntax_##name)                                            \
         syntax_name(nameStr)                                                  \
@@ -172,7 +173,7 @@ struct BinarySyntax : public Syntax
     }
 
 #define define_simple_binary_syntax(name, nameStr)                            \
-    define_binary_syntax(Syntax, Syntax, name, nameStr)
+    define_binary_syntax(Syntax, Syntax, Syntax, name, nameStr)
 
 #define define_unary_syntax(name, nameStr)                                    \
     struct Syntax##name : public UnarySyntax                                  \
@@ -184,6 +185,11 @@ struct BinarySyntax : public Syntax
         syntax_name(nameStr)                                                  \
         syntax_accept()                                                       \
     }
+
+struct SyntaxTarget : Syntax
+{
+  SyntaxTarget(const Token& token) : Syntax(token) {}
+};
 
 struct SyntaxPass : public Syntax
 {
@@ -264,9 +270,9 @@ struct SyntaxString : public Syntax
     string value_;
 };
 
-struct SyntaxName : public Syntax
+struct SyntaxName : public SyntaxTarget
 {
-    SyntaxName(const Token& token) : Syntax(token), id_(token.text) {}
+    SyntaxName(const Token& token) : SyntaxTarget(token), id_(token.text) {}
 
     syntax_type(Syntax_Name)
     syntax_name("name")
@@ -300,6 +306,8 @@ struct SyntaxExprList : public Syntax
 
     const vector<Syntax *>& elems() const { return elements; }
 
+    void release() { elements.clear(); }
+
     virtual void print(ostream& s) const override {
         s << "(";
         for (auto i = elements.begin(); i != elements.end(); ++i) {
@@ -332,6 +340,8 @@ struct SyntaxList : public Syntax
     syntax_name("List");
 
     const vector<Syntax *>& elems() const { return elements; }
+
+    void release() { elements.clear(); }
 
     virtual void print(ostream& s) const override {
         s << "[";
@@ -412,25 +422,40 @@ define_simple_binary_syntax(IntDivide, "//");
 define_simple_binary_syntax(Modulo, "%");
 define_simple_binary_syntax(Power, "**");
 
-define_binary_syntax(Syntax, SyntaxName, AttrRef, ".");
-define_binary_syntax(SyntaxName, Syntax, AssignName, "n=");
-define_binary_syntax(SyntaxAttrRef, Syntax, AssignAttr, "a=");
+define_binary_syntax(SyntaxTarget, Syntax, SyntaxName, AttrRef, ".");
 
-struct SyntaxAssignSubscript : public BinarySyntax<SyntaxSubscript, Syntax>
+struct SyntaxTargetList : SyntaxTarget
 {
-    SyntaxAssignSubscript(const Token& token, SyntaxSubscript* l, Syntax* r)
-      : BinarySyntax<SyntaxSubscript, Syntax>(token, l, r)
+    SyntaxTargetList(const Token& token, const vector<SyntaxTarget*>& targets)
+      : SyntaxTarget(token), targets_(targets)
     {}
 
-    syntax_type(Syntax_AssignSubscript)
-    syntax_name("s=")
-    syntax_accept()
+    syntax_type(Syntax_TargetList);
+    syntax_name("targetList");
+    syntax_accept();
+
+    const vector<SyntaxTarget*>& targets() const { return targets_; }
+
+    virtual void print(ostream& s) const override {
+        s << "(";
+        for (auto i = targets_.begin(); i != targets_.end(); i++) {
+            if (i != targets_.begin())
+                s << ", ";
+            s << *i;
+        }
+        s << ")";
+    }
+
+  private:
+    vector<SyntaxTarget*> targets_;
 };
 
-struct SyntaxSubscript : public BinarySyntax<Syntax, Syntax>
+define_binary_syntax(Syntax, SyntaxTarget, Syntax, Assign, "=");
+
+struct SyntaxSubscript : public BinarySyntax<SyntaxTarget, Syntax, Syntax>
 {
     SyntaxSubscript(const Token& token, Syntax* l, Syntax* r)
-      : BinarySyntax<Syntax, Syntax>(token, l, r)
+      : BinarySyntax<SyntaxTarget, Syntax, Syntax>(token, l, r)
     {}
     syntax_type(Syntax_Subscript)
     syntax_name("subscript")

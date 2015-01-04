@@ -64,7 +64,7 @@ Instr** Block::findInstr(unsigned type)
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
-    DefinitionFinder(Layout* layout) : layout_(layout) {}
+    DefinitionFinder(Layout* layout) : inAssignTarget_(false), layout_(layout) {}
 
     static Layout* buildLayout(const Syntax *s, Layout* layout) {
         DefinitionFinder df(layout);
@@ -78,8 +78,24 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     // Record assignments and definintions
 
-    virtual void visit(const SyntaxAssignName& s) {
-        addName(s.left()->id());
+    virtual void visit(const SyntaxAssign& s) {
+        assert(!inAssignTarget_);
+        inAssignTarget_ = true;
+        s.left()->accept(*this);
+        inAssignTarget_ = false;
+    }
+
+    virtual void visit(const SyntaxTargetList& s) {
+        assert(inAssignTarget_);
+        const auto& targets = s.targets();
+        for (auto i = targets.begin(); i != targets.end(); i++)
+            (*i)->accept(*this);
+    }
+
+    virtual void visit(const SyntaxName& s) {
+        // todo: check this is not a global ref
+        if (inAssignTarget_)
+            addName(s.id());
     }
 
     virtual void visit(const SyntaxDef& s) {
@@ -116,6 +132,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
   private:
+    bool inAssignTarget_;
     Root<Layout*> layout_;
 };
 
@@ -221,7 +238,8 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(new InstrCall(1));
     }
 
-    void callBinaryMethod(const BinarySyntax<Syntax, Syntax>& s, string name) {
+    template <typename BaseType>
+    void callBinaryMethod(const BinarySyntax<BaseType, Syntax, Syntax>& s, string name) {
         s.left()->accept(*this);
         block->append(new InstrGetMethod(name));
         s.right()->accept(*this);
@@ -344,38 +362,51 @@ struct BlockBuilder : public SyntaxVisitor
             throw ParseError(string("Name is not defined: ") + name);
     }
 
-    virtual void visit(const SyntaxAssignName& s) {
+    virtual void visit(const SyntaxAssign& s) {
+        const SyntaxTarget* target = s.left();
+
+        if (target->is<SyntaxSubscript>()) {
+            // todo: do this after evaluating the RHS
+            const SyntaxSubscript* subs = target->as<SyntaxSubscript>();
+            subs->left()->accept(*this);
+            block->append(new InstrGetMethod("__setitem__"));
+            subs->right()->accept(*this);
+        }
+
         s.right()->accept(*this);
-        Name name = s.left()->id();
-        if (parent && block->layout()->hasName(name))
-            block->append(new InstrSetLocal(name));
-        else if (int frame = lookupLexical(name))
-            block->append(new InstrSetLexical(frame, name));
-        else if (topLevel->hasAttr(name))
-            block->append(new InstrSetGlobal(topLevel, name));
-        else if (Builtin && Builtin->hasAttr(name))
-            block->append(new InstrSetGlobal(Builtin, name));
-        else
-            throw ParseError(string("Name is not defined: ") + name);
+
+        // todo: do this recursively
+        if (target->is<SyntaxName>()) {
+            Name name = target->as<SyntaxName>()->id();
+            if (parent && block->layout()->hasName(name))
+                block->append(new InstrSetLocal(name));
+            else if (int frame = lookupLexical(name))
+                block->append(new InstrSetLexical(frame, name));
+            else if (topLevel->hasAttr(name))
+                block->append(new InstrSetGlobal(topLevel, name));
+            else if (Builtin && Builtin->hasAttr(name))
+                block->append(new InstrSetGlobal(Builtin, name));
+            else
+                throw ParseError(string("Name is not defined: ") + name);
+        } else if (target->is<SyntaxAttrRef>()) {
+            const SyntaxAttrRef* ref = target->as<SyntaxAttrRef>();
+            ref->left()->accept(*this);
+            block->append(new InstrSetAttr(ref->right()->id()));
+        } else if (target->is<SyntaxSubscript>()) {
+            block->append(new InstrCall(3));
+        } else {
+            assert(target->is<SyntaxTargetList>());
+            assert(false); // not implemented
+        }
+    }
+
+    virtual void visit(const SyntaxTargetList& s) {
+        assert(false);
     }
 
     virtual void visit(const SyntaxAttrRef& s) {
         s.left()->accept(*this);
         block->append(new InstrGetAttr(s.right()->id()));
-    }
-
-    virtual void visit(const SyntaxAssignAttr& s) {
-        s.right()->accept(*this);
-        s.left()->left()->accept(*this);
-        block->append(new InstrSetAttr(s.left()->right()->id()));
-    }
-
-    virtual void visit(const SyntaxAssignSubscript& s) {
-        s.left()->left()->accept(*this);
-        block->append(new InstrGetMethod("__setitem__"));
-        s.left()->right()->accept(*this);
-        s.right()->accept(*this);
-        block->append(new InstrCall(3));
     }
 
     virtual void visit(const SyntaxCall& s) {

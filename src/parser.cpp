@@ -230,22 +230,36 @@ Syntax* SyntaxParser::parseExprOrExprList()
     return new SyntaxExprList(startToken, exprs);
 }
 
-void SyntaxParser::checkAssignTarget(Syntax* target)
+SyntaxTarget* SyntaxParser::makeAssignTarget(Syntax* target)
 {
     if (target->is<SyntaxExprList>()) {
         SyntaxExprList* exprs = target->as<SyntaxExprList>();
-        const vector<Syntax*>& targets = exprs->elems();
-        for (auto i = targets.begin(); i != targets.end(); i++)
-            checkAssignTarget(*i);
+        const vector<Syntax*>& elems = exprs->elems();
+        vector<SyntaxTarget*> targets(elems.size());
+        for (unsigned i = 0; i < elems.size(); i++)
+            targets[i] = makeAssignTarget(elems[i]);
+        SyntaxTargetList* result = new SyntaxTargetList(exprs->token(), targets);
+        exprs->release();
+        delete exprs;
+        return result;
     } else if (target->is<SyntaxList>()) {
         SyntaxList* list = target->as<SyntaxList>();
-        const vector<Syntax*>& targets = list->elems();
-        for (auto i = targets.begin(); i != targets.end(); i++)
-            checkAssignTarget(*i);
-    } else if (!target->is<SyntaxName>() &&
-               !target->is<SyntaxAttrRef>() &&
-               !target->is<SyntaxSubscript>()) {
-        throw ParseError("Illegal target for assignment");
+        const vector<Syntax*>& elems = list->elems();
+        vector<SyntaxTarget*> targets(elems.size());
+        for (unsigned i = 0; i < elems.size(); i++)
+            targets[i] = makeAssignTarget(elems[i]);
+        SyntaxTargetList* result = new SyntaxTargetList(list->token(), targets);
+        list->release();
+        delete list;
+        return result;
+    } else if (target->is<SyntaxName>()) {
+        return target->as<SyntaxName>();
+    } else if (target->is<SyntaxAttrRef>()) {
+        return target->as<SyntaxAttrRef>();
+    } else if (target->is<SyntaxSubscript>()) {
+        return target->as<SyntaxSubscript>();
+    } else {
+        throw ParseError("Illegal target for assignment: " + target->name());
     }
 }
 
@@ -264,17 +278,8 @@ Syntax* SyntaxParser::parseSimpleStatement()
 
     Syntax* expr = parseExprOrExprList();
     if (opt(Token_Assign)) {
-        checkAssignTarget(expr);
-        Syntax *target = expr;
-        expr = expression();
-        if (target->is<SyntaxName>())
-            return new SyntaxAssignName(token, target->as<SyntaxName>(), expr);
-        else if (target->is<SyntaxAttrRef>())
-            return new SyntaxAssignAttr(token, target->as<SyntaxAttrRef>(), expr);
-        else if (target->is<SyntaxSubscript>())
-            return new SyntaxAssignSubscript(token, target->as<SyntaxSubscript>(), expr);
-        else
-            throw ParseError("Assignment to target list not implemented");
+        SyntaxTarget* target = makeAssignTarget(expr);
+        return new SyntaxAssign(token, target, expression());
     }
 
     return expr;
@@ -419,7 +424,8 @@ testcase(parser)
 
     sp.start("f = 1 + 2");
     expr.reset(sp.parseCompoundStatement());
-    testTrue(expr.get()->is<SyntaxAssignName>());
+    testTrue(expr.get()->is<SyntaxAssign>());
+    testTrue(expr.get()->as<SyntaxAssign>()->left()->is<SyntaxName>());
 
     sp.start("1\n2");
     expr.reset(sp.parseModule());
@@ -435,7 +441,7 @@ testcase(parser)
 
     sp.start("a[0] = 1");
     expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "a[0] s= 1\n");
+    testEqual(repr(expr.get()), "a[0] = 1\n");
 
     // test this parses as "not (a in b)" not "(not a) in b"
     sp.start("not a in b");

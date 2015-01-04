@@ -10,6 +10,8 @@
 
 using namespace std;
 
+struct SyntaxTarget;
+
 enum Assoc
 {
     Assoc_Left,
@@ -318,7 +320,7 @@ struct SyntaxParser : public Parser<Syntax *>
     SyntaxBlock* parseBlock();
     SyntaxBlock* parseSuite();
 
-    void checkAssignTarget(Syntax* s);
+    SyntaxTarget* makeAssignTarget(Syntax* s);
 };
 
 #endif
