@@ -53,7 +53,8 @@ using namespace std;
     instr(Tuple)                                                             \
     instr(List)                                                              \
     instr(Dict)                                                              \
-    instr(MakeClassFromFrame)
+    instr(MakeClassFromFrame)                                                \
+    instr(Destructure)
 
 enum InstrType
 {
@@ -430,17 +431,16 @@ struct InstrIn : public Instr
         Root<Object*> container(interp.popStack().toObject());
         Root<Value> value(interp.popStack());
         Value contains; // todo: root
-        bool hasContains = container->maybeGetAttr("__contains__", contains);
-        if (hasContains) {
-            RootVector<Value> args;
-            args.push_back(container);
-            args.push_back(value);
-            Root<Value> rootedContains(contains);
-            return interp.startCall(rootedContains, args);
+        if (!container->maybeGetAttr("__contains__", contains)) {
+            interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
+            return false;
         }
 
-        interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
-        return false;
+        RootVector<Value> args;
+        args.push_back(container);
+        args.push_back(value);
+        Root<Value> rootedContains(contains);
+        return interp.startCall(rootedContains, args);
     }
 };
 
@@ -745,6 +745,64 @@ struct InstrMakeClassFromFrame : public IdentInstrBase
         interp.pushStack(cls);
         return true;
     }
+};
+
+struct InstrDestructure : public Instr
+{
+    InstrDestructure(unsigned count) : count_(count) {}
+
+    instr_type(Instr_Destructure);
+    instr_name("Destructure");
+
+    virtual bool execute(Interpreter& interp) {
+        Root<Value> seq(interp.popStack());
+        Value attr; // todo: root
+        if (!seq.get().maybeGetAttr("__len__", attr)) {
+            interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
+            return false;
+        }
+        Root<Value> lenFunc(attr);
+
+        if (!seq.get().maybeGetAttr("__getitem__", attr)) {
+            interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
+            return false;
+        }
+        Root<Value> getitemFunc(attr);
+
+        RootVector<Value> args;
+        args.push_back(seq);
+        Root<Value> result;
+        if (!interp.call(lenFunc, args, result)) {
+            interp.pushStack(result);
+            return false;
+        }
+
+        if (!result.get().isInt32()) {
+            interp.pushStack(new Exception("TypeError",
+                                           "__len__ didn't return an integer"));
+            return false;
+        }
+
+        if (result.get().asInt32() != count_) {
+            interp.pushStack(new Exception("ValueError",
+                                           "too many values to unpack"));
+            return false;
+        }
+
+        args.resize(2);
+        for (unsigned i = count_; i != 0; i--) {
+            args[1] = Integer::get(i - 1);
+            bool ok = interp.call(getitemFunc, args, result);
+            interp.pushStack(result);
+            if (!ok)
+                return false;
+        }
+
+        return true;
+    }
+
+  private:
+    unsigned count_;
 };
 
 #endif

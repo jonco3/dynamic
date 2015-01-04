@@ -279,7 +279,8 @@ Syntax* SyntaxParser::parseSimpleStatement()
     Syntax* expr = parseExprOrExprList();
     if (opt(Token_Assign)) {
         SyntaxTarget* target = makeAssignTarget(expr);
-        return new SyntaxAssign(token, target, expression());
+        // todo: should admit yield statement too but we haven't implemented that yet
+        return new SyntaxAssign(token, target, parseExprOrExprList());
     }
 
     return expr;
@@ -473,6 +474,10 @@ testcase(parser)
     sp.start("foo(bar, baz)");
     expr.reset(sp.parseModule());
     testEqual(repr(expr.get()), "foo(bar, baz)\n");
+
+    sp.start("a, b = 1, 2");
+    expr.reset(sp.parseModule());
+    testEqual(repr(expr.get()), "(a, b) = (1, 2)\n");
 }
 
 #endif

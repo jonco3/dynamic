@@ -21,6 +21,12 @@ static ListBase* asListBase(Object *o)
     return static_cast<ListBase*>(o);
 }
 
+static bool listBase_len(Traced<Value> arg, Root<Value>& resultOut)
+{
+    ListBase* l = asListBase(arg.toObject());
+    return l->len(resultOut);
+}
+
 static bool listBase_getitem(Traced<Value> arg1, Traced<Value> arg2,
                              Root<Value>& resultOut)
 {
@@ -38,6 +44,7 @@ static bool listBase_contains(Traced<Value> arg1, Traced<Value> arg2,
 static void listBase_initNatives(Traced<Class*> cls)
 {
     Root<Value> value;
+    value = new Native1(listBase_len); cls->setAttr("__len__", value);
     value = new Native2(listBase_getitem); cls->setAttr("__getitem__", value);
     value = new Native2(listBase_contains); cls->setAttr("__contains__", value);
 }
@@ -79,6 +86,12 @@ void ListBase::traceChildren(Tracer& t)
 {
     for (unsigned i = 0; i < elements_.size(); ++i)
         gc::trace(t, &elements_[i]);
+}
+
+bool ListBase::len(Root<Value>& resultOut)
+{
+    resultOut = Integer::get(elements_.size());
+    return true;
 }
 
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)

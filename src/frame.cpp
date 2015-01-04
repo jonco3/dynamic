@@ -12,10 +12,10 @@ void Frame::init()
     InitialLayout.init(Object::InitialLayout);
 }
 
-Frame::Frame(Traced<Block*> block, Instr** returnPoint) :
+Frame::Frame(Traced<Block*> block) :
   Object(ObjectClass, Block::layout(block)),
   block_(block),
-  returnPoint_(returnPoint),
+  returnPoint_(nullptr),
   stackPos_(0)
 {}
 

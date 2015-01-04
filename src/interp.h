@@ -72,7 +72,9 @@ struct Interpreter
     Instr** nextInstr() { return instrp; }
     unsigned stackPos() { return pos; }
 
-    bool startCall(Traced<Value> target, const TracedVector<Value>& args);
+    bool call(Traced<Value> callable, const TracedVector<Value>& args,
+              Root<Value>& resultOut);
+    bool startCall(Traced<Value> callable, const TracedVector<Value>& args);
 
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
@@ -88,9 +90,20 @@ struct Interpreter
     unsigned pos;
 
     Interpreter();
-    bool raise(string className, string message);
     Frame* newFrame(Traced<Function*> function);
     void pushFrame(Traced<Frame*> frame);
+
+    bool run(Value& valueOut);
+
+    enum CallStatus {
+        CallError,
+        CallStarted,
+        CallFinished
+    };
+
+    CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
+                         Root<Value>& resultOut);
+    CallStatus raise(string className, string message, Root<Value>& resultOut);
 };
 
 #ifdef BUILD_TESTS

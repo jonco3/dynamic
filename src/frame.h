@@ -14,8 +14,9 @@ struct Frame : public Object
     static GlobalRoot<Layout*> InitialLayout;
     static void init();
 
-    Frame(Traced<Block*> block, Instr** returnPoint = nullptr);
+    Frame(Traced<Block*> block);
     void setStackPos(unsigned pos) { stackPos_ = pos; }
+    void setReturnPoint(Instr** instrp) { returnPoint_ = instrp; }
 
     Instr** returnPoint() { return returnPoint_; }
     unsigned stackPos() { return stackPos_; }

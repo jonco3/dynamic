@@ -34,7 +34,11 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
     assert(stackPos() == 0);
     Root<Frame*> frame(new Frame(block));
     pushFrame(frame);
+    return run(valueOut);
+}
 
+bool Interpreter::run(Value& valueOut)
+{
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
         Instr *instr = *instrp++;
@@ -65,7 +69,7 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 Frame* Interpreter::newFrame(Traced<Function*> function)
 {
     Root<Block*> block(function->block());
-    return new Frame(block, instrp);
+    return new Frame(block);
 }
 
 void Interpreter::pushFrame(Traced<Frame*> frame)
@@ -102,41 +106,80 @@ void Interpreter::branch(int offset)
     instrp = target;
 }
 
-bool Interpreter::raise(string className, string message) {
-    pushStack(new Exception(className, message));
-    return false;
+bool Interpreter::call(Traced<Value> targetValue, const TracedVector<Value>& args,
+                       Root<Value>& resultOut)
+{
+    Instr** oldInstrp = instrp;
+    CallStatus status = setupCall(targetValue, args, resultOut);
+    if (status == CallError)
+        return false;
+
+    if (status == CallFinished)
+        return true;
+
+    Value result; // todo: root out param
+    bool ok = run(result);
+    resultOut = result;
+    instrp = oldInstrp;
+    return ok;
 }
 
 bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>& args)
+{
+    Instr** returnPoint = instrp;
+    Root<Value> result;
+    CallStatus status = setupCall(targetValue, args, result);
+    if (status == CallError) {
+        pushStack(result);
+        return false;
+    }
+
+    if (status == CallFinished) {
+        pushStack(result);
+        return true;
+    }
+
+    assert(status == CallStarted);
+    getFrame()->setReturnPoint(returnPoint);
+    return true;
+}
+
+Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
+                                               const TracedVector<Value>& args,
+                                               Root<Value>& resultOut)
 {
     Root<Object*> target(targetValue.toObject());
     if (target->is<Native>()) {
         Root<Native*> native(target->as<Native>());
         if (native->requiredArgs() != args.size())
-            return raise("TypeError", "Wrong number of arguments");
-        Root<Value> result;
-        bool ok = native->call(args, result);
-        pushStack(result);
-        return ok;
+            return raise("TypeError", "Wrong number of arguments", resultOut);
+        bool ok = native->call(args, resultOut);
+        return ok ? CallFinished : CallError;
     } else if (target->is<Function>()) {
         Root<Function*> function(target->as<Function>());
         if (function->requiredArgs() != args.size())
-            return raise("TypeError", "Wrong number of arguments");
+            return raise("TypeError", "Wrong number of arguments", resultOut);
         Root<Frame*> callFrame(newFrame(function));
         for (int i = args.size() - 1; i >= 0; --i)
             callFrame->setAttr(function->paramName(i), args[i]);
         pushFrame(callFrame);
-        return true;
+        return CallStarted;
     } else if (target->is<Class>()) {
         Root<Class*> cls(target->as<Class>());
         if (args.size() != 0)
-            return raise("ToDo", "Constructor arguments not supported");
-        Root<Object*> obj(new Object(cls));
-        pushStack(obj);
-        return true;
+            return raise("ToDo", "Constructor arguments not supported", resultOut);
+        resultOut = new Object(cls);
+        return CallFinished;
     } else {
-        return raise("TypeError", "object is not callable:" + repr(target));
+        return raise("TypeError", "object is not callable:" + repr(target), resultOut);
     }
+}
+
+Interpreter::CallStatus Interpreter::raise(string className, string message,
+                                           Root<Value>& resultOut)
+{
+    resultOut = new Exception(className, message);
+    return CallError;
 }
 
 void Interpreter::replaceInstr(Instr* instr, Instr* prev)
@@ -351,6 +394,9 @@ testcase(interp)
                     "3",
                     Instr_GetMethod,
                     Instr_GetMethodFallback);
+
+    testInterp("a, b = 1, 2\na", "1");
+    testInterp("a, b = 1, 2\nb", "2");
 }
 
 #endif

@@ -420,7 +420,13 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxTargetList& s) {
         assert(inAssignTarget);
-        assert(false); // todo
+        const auto& targets = s.targets();
+        block->append(new InstrDestructure(targets.size()));
+        for (unsigned i = 0; i < targets.size(); i++) {
+            targets[i]->accept(*this);
+            if (i != targets.size() - 1)
+                block->append(new InstrPop());
+        }
     }
 
     virtual void visit(const SyntaxCall& s) {

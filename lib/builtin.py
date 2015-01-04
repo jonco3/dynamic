@@ -1,7 +1,7 @@
 # Some self-hosted builtins
 
 def len(x):
-    return x.__length__()
+    return x.__len__()
 
 def str(x):
     return x.__str__()

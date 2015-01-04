@@ -8,6 +8,7 @@ struct ListBase : public Object
 {
     ListBase(Traced<Class*> cls, const TracedVector<Value>& values);
 
+    bool len(Root<Value>& resultOut);
     bool getitem(Traced<Value> index, Root<Value>& resultOut);
     bool contains(Traced<Value> element, Root<Value>& resultOut);
 
