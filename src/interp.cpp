@@ -31,6 +31,7 @@ Interpreter::Interpreter()
 
 bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 {
+    assert(stackPos() == 0);
     Root<Frame*> frame(new Frame(block));
     pushFrame(frame);
 
@@ -50,6 +51,8 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
             cerr << "Error: " << valueOut << endl;
 #endif
             assert(valueOut.asObject()->is<Exception>());
+            while (instrp)
+                popFrame();
             return false;
         }
     }

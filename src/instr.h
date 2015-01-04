@@ -47,7 +47,9 @@ using namespace std;
     instr(Or)                                                                \
     instr(And)                                                               \
     instr(Lambda)                                                            \
+    instr(Dup)                                                               \
     instr(Pop)                                                               \
+    instr(Swap)                                                              \
     instr(Tuple)                                                             \
     instr(List)                                                              \
     instr(Dict)                                                              \
@@ -610,6 +612,25 @@ struct InstrLambda : public Instr
     Block* block_;
 };
 
+struct InstrDup : public Instr
+{
+    InstrDup(unsigned index) : index_(index) {}
+    instr_type(Instr_Dup);
+    instr_name("Dup");
+
+    virtual bool execute(Interpreter& interp) {
+        interp.pushStack(interp.peekStack(index_));
+        return true;
+    }
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << index_;
+    }
+
+  private:
+    unsigned index_;
+};
+
 struct InstrPop : public Instr
 {
     instr_type(Instr_Pop);
@@ -617,6 +638,17 @@ struct InstrPop : public Instr
 
     virtual bool execute(Interpreter& interp) {
         interp.popStack();
+        return true;
+    }
+};
+
+struct InstrSwap : public Instr
+{
+    instr_type(Instr_Swap);
+    instr_name("Swap");
+
+    virtual bool execute(Interpreter& interp) {
+        interp.swapStack();
         return true;
     }
 };

@@ -143,7 +143,8 @@ struct BlockBuilder : public SyntaxVisitor
         topLevel(nullptr),
         layout(Frame::InitialLayout),
         block(nullptr),
-        classBlock(false)
+        inClassBlock(false),
+        inAssignTarget(false)
     {}
 
     void setParams(const vector<Name>& params) {
@@ -164,7 +165,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     void setClassBlock(bool isClassBlock) {
-        classBlock = isClassBlock;
+        inClassBlock = isClassBlock;
     }
 
     Block* build(const Syntax* s) {
@@ -218,7 +219,14 @@ struct BlockBuilder : public SyntaxVisitor
     Root<Object*> topLevel;
     Root<Layout*> layout;
     Root<Block*> block;
-    bool classBlock;
+    bool inClassBlock;
+    bool inAssignTarget;
+
+    bool setInAssignTarget(bool newValue) {
+        bool oldValue = inAssignTarget;
+        inAssignTarget = newValue;
+        return oldValue;
+    }
 
     int lookupLexical(Name name) {
         int count = 1;
@@ -332,7 +340,6 @@ struct BlockBuilder : public SyntaxVisitor
     define_vist_binary_as_method_call(SyntaxIntDivide, "__floordiv__");
     define_vist_binary_as_method_call(SyntaxModulo, "__mod__");
     define_vist_binary_as_method_call(SyntaxPower, "__pow__");
-    define_vist_binary_as_method_call(SyntaxSubscript, "__getitem__");
 
 #undef define_vist_binary_as_method_call
 
@@ -348,36 +355,17 @@ struct BlockBuilder : public SyntaxVisitor
 
 #undef define_vist_binary_instr
 
-    virtual void visit(const SyntaxName& s) {
-        Name name = s.id();
-        if (parent && block->layout()->hasName(name))
-            block->append(new InstrGetLocal(name));
-        else if (int frame = lookupLexical(name))
-            block->append(new InstrGetLexical(frame, name));
-        else if (topLevel->hasAttr(name))
-            block->append(new InstrGetGlobal(topLevel, name));
-        else if (Builtin && Builtin->hasAttr(name))
-            block->append(new InstrGetGlobal(Builtin, name));
-        else
-            throw ParseError(string("Name is not defined: ") + name);
+    virtual void visit(const SyntaxAssign& s) {
+        s.right()->accept(*this);
+        assert(!inAssignTarget);
+        inAssignTarget = true;
+        s.left()->accept(*this);
+        inAssignTarget = false;
     }
 
-    virtual void visit(const SyntaxAssign& s) {
-        const SyntaxTarget* target = s.left();
-
-        if (target->is<SyntaxSubscript>()) {
-            // todo: do this after evaluating the RHS
-            const SyntaxSubscript* subs = target->as<SyntaxSubscript>();
-            subs->left()->accept(*this);
-            block->append(new InstrGetMethod("__setitem__"));
-            subs->right()->accept(*this);
-        }
-
-        s.right()->accept(*this);
-
-        // todo: do this recursively
-        if (target->is<SyntaxName>()) {
-            Name name = target->as<SyntaxName>()->id();
+    virtual void visit(const SyntaxName& s) {
+        Name name = s.id();
+        if (inAssignTarget) {
             if (parent && block->layout()->hasName(name))
                 block->append(new InstrSetLocal(name));
             else if (int frame = lookupLexical(name))
@@ -388,25 +376,51 @@ struct BlockBuilder : public SyntaxVisitor
                 block->append(new InstrSetGlobal(Builtin, name));
             else
                 throw ParseError(string("Name is not defined: ") + name);
-        } else if (target->is<SyntaxAttrRef>()) {
-            const SyntaxAttrRef* ref = target->as<SyntaxAttrRef>();
-            ref->left()->accept(*this);
-            block->append(new InstrSetAttr(ref->right()->id()));
-        } else if (target->is<SyntaxSubscript>()) {
-            block->append(new InstrCall(3));
         } else {
-            assert(target->is<SyntaxTargetList>());
-            assert(false); // not implemented
+            if (parent && block->layout()->hasName(name))
+                block->append(new InstrGetLocal(name));
+            else if (int frame = lookupLexical(name))
+                block->append(new InstrGetLexical(frame, name));
+            else if (topLevel->hasAttr(name))
+                block->append(new InstrGetGlobal(topLevel, name));
+            else if (Builtin && Builtin->hasAttr(name))
+                block->append(new InstrGetGlobal(Builtin, name));
+            else
+                throw ParseError(string("Name is not defined: ") + name);
         }
     }
 
-    virtual void visit(const SyntaxTargetList& s) {
-        assert(false);
+    virtual void visit(const SyntaxAttrRef& s) {
+        bool wasInAssignTarget = setInAssignTarget(false);
+        s.left()->accept(*this);
+        Name id = s.right()->id();
+        if (wasInAssignTarget)
+            block->append(new InstrSetAttr(id));
+        else
+            block->append(new InstrGetAttr(id));
+        setInAssignTarget(wasInAssignTarget);
     }
 
-    virtual void visit(const SyntaxAttrRef& s) {
-        s.left()->accept(*this);
-        block->append(new InstrGetAttr(s.right()->id()));
+    virtual void visit(const SyntaxSubscript& s) {
+        bool wasInAssignTarget = setInAssignTarget(false);
+        if (wasInAssignTarget) {
+            s.left()->accept(*this);
+            block->append(new InstrGetMethod("__setitem__"));
+            s.right()->accept(*this);
+            // todo: there may be a better way than this stack manipulation
+            block->append(new InstrDup(3));
+            block->append(new InstrCall(3));
+            block->append(new InstrSwap());
+            block->append(new InstrPop());
+        } else {
+            callBinaryMethod(s, "__getitem__");
+        }
+        setInAssignTarget(wasInAssignTarget);
+    }
+
+    virtual void visit(const SyntaxTargetList& s) {
+        assert(inAssignTarget);
+        assert(false); // todo
     }
 
     virtual void visit(const SyntaxCall& s) {
@@ -428,7 +442,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxReturn& s) {
-        if (classBlock)
+        if (inClassBlock)
             throw ParseError("Return statement not allowed in class body");
         if (s.right())
             s.right()->accept(*this);

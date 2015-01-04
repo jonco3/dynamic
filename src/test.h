@@ -43,7 +43,8 @@ inline void testFailure(const char* testStr,
     using namespace std;
     cerr << file << ":" << dec << line << ": test failed: ";
     cerr << actualStr << " " << testStr << " " << expectedStr << endl;
-    cerr << "  got: " << actual << " " << testStr << " " << expected << endl;
+    cerr << "  got: " << actual << " " << endl;
+    cerr << "    " << testStr << " " << expected << endl;
     cerr << "  at: " << file << " line " << line << endl;
     abortTests();
 }
