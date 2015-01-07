@@ -7,44 +7,35 @@
 
 #include <iostream>
 
-struct StringClass : public Class
-{
-    StringClass() : Class("str") {}
+static bool str_add(Traced<Value> arg1, Traced<Value> arg2, Root<Value>& resultOut) {
+    const string& a = arg1.toObject()->as<String>()->value();
+    const string& b = arg2.toObject()->as<String>()->value();
+    resultOut = String::get(a + b);
+    return true;
+}
 
-    static bool str_add(Traced<Value> arg1, Traced<Value> arg2, Root<Value>& resultOut) {
-        const string& a = arg1.toObject()->as<String>()->value();
-        const string& b = arg2.toObject()->as<String>()->value();
-        resultOut = String::get(a + b);
-        return true;
-    }
+static bool str_str(Traced<Value> arg, Root<Value>& resultOut) {
+    resultOut = arg;
+    return true;
+}
 
-    static bool str_str(Traced<Value> arg, Root<Value>& resultOut) {
-        resultOut = arg;
-        return true;
-    }
-
-    static bool str_print(Traced<Value> arg, Root<Value>& resultOut) {
-        const string& a = arg.toObject()->as<String>()->value();
-        cout << a << endl;
-        resultOut = None;
-        return true;
-    }
-
-    void initNatives() {
-        Root<Value> value;
-        value = new Native2(str_add);    setAttr("__add__", value);
-        value = new Native1(str_str);    setAttr("__str__", value);
-        value = new Native1(str_print);  setAttr("_print", value);
-    }
-};
+static bool str_print(Traced<Value> arg, Root<Value>& resultOut) {
+    const string& a = arg.toObject()->as<String>()->value();
+    cout << a << endl;
+    resultOut = None;
+    return true;
+}
 
 GlobalRoot<Class*> String::ObjectClass;
 GlobalRoot<String*> String::EmptyString;
 
 void String::init()
 {
-    Root<StringClass*> cls(new StringClass);
-    cls->initNatives();
+    Root<Class*> cls(new Class("str"));
+    Root<Value> value;
+    value = new Native2(str_add);    cls->setAttr("__add__", value);
+    value = new Native1(str_str);    cls->setAttr("__str__", value);
+    value = new Native1(str_print);  cls->setAttr("_print", value);
     ObjectClass.init(cls);
     EmptyString.init(new String(""));
 }

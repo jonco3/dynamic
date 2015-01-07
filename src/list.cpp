@@ -49,31 +49,11 @@ static void listBase_initNatives(Traced<Class*> cls)
     value = new Native2(listBase_contains); cls->setAttr("__contains__", value);
 }
 
-struct TupleClass : public Class
-{
-    TupleClass() : Class("tuple") {}
-
-    static void initNatives(Traced<Class*> cls) {
-        listBase_initNatives(cls);
-    }
-};
-
-struct ListClass : public Class
-{
-    ListClass() : Class("list") {}
-
-    static bool list_setitem(Traced<Value> arg1, Traced<Value> arg2, Traced<Value> arg3,
-                              Root<Value>& resultOut) {
-        List* list = arg1.toObject()->as<List>();
-        return list->setitem(arg2, arg3, resultOut);
-    }
-
-    static void initNatives(Traced<Class*> cls) {
-        listBase_initNatives(cls);
-        Root<Value> value;
-        value = new Native3(list_setitem); cls->setAttr("__setitem__", value);
-    }
-};
+static bool list_setitem(Traced<Value> arg1, Traced<Value> arg2, Traced<Value> arg3,
+                         Root<Value>& resultOut) {
+    List* list = arg1.toObject()->as<List>();
+    return list->setitem(arg2, arg3, resultOut);
+}
 
 ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
   : Object(cls), elements_(values.size())
@@ -123,8 +103,8 @@ bool ListBase::contains(Traced<Value> element, Root<Value>& resultOut)
 
 void Tuple::init()
 {
-    Root<Class*> cls(new TupleClass);
-    TupleClass::initNatives(cls);
+    Root<Class*> cls(new Class("tuple"));
+    listBase_initNatives(cls);
     ObjectClass.init(cls);
     RootVector<Value> contents;
     Empty.init(new Tuple(contents));
@@ -161,8 +141,10 @@ void Tuple::print(ostream& s) const
 
 void List::init()
 {
-    Root<Class*> cls(new ListClass);
-    ListClass::initNatives(cls);
+    Root<Class*> cls(new Class("list"));
+    listBase_initNatives(cls);
+    Root<Value> value;
+    value = new Native3(list_setitem); cls->setAttr("__setitem__", value);
     ObjectClass.init(cls);
 }
 

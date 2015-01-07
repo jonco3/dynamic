@@ -2,18 +2,13 @@
 
 #include "class.h"
 
-struct BooleanClass : public Class
-{
-    BooleanClass() : Class("bool") {}
-};
-
 GlobalRoot<Class*> Boolean::ObjectClass;
 GlobalRoot<Boolean*> Boolean::True;
 GlobalRoot<Boolean*> Boolean::False;
 
 void Boolean::init()
 {
-    ObjectClass.init(new BooleanClass);
+    ObjectClass.init(new Class("bool"));
     True.init(new Boolean(true));
     False.init(new Boolean(false));
 }

@@ -7,40 +7,31 @@
 
 GlobalRoot<Class*> Dict::ObjectClass;
 
-struct DictClass : public Class
-{
-    DictClass() : Class("dict") {}
+static bool dict_contains(Traced<Value> arg1, Traced<Value> arg2,
+                          Root<Value>& resultOut) {
+    Dict* dict = arg1.toObject()->as<Dict>();
+    return dict->contains(arg2, resultOut);
+}
 
-    static bool dict_contains(Traced<Value> arg1, Traced<Value> arg2,
-                              Root<Value>& resultOut) {
-        Dict* dict = arg1.toObject()->as<Dict>();
-        return dict->contains(arg2, resultOut);
-    }
+static bool dict_getitem(Traced<Value> arg1, Traced<Value> arg2,
+                          Root<Value>& resultOut) {
+    Dict* dict = arg1.toObject()->as<Dict>();
+    return dict->getitem(arg2, resultOut);
+}
 
-    static bool dict_getitem(Traced<Value> arg1, Traced<Value> arg2,
-                              Root<Value>& resultOut) {
-        Dict* dict = arg1.toObject()->as<Dict>();
-        return dict->getitem(arg2, resultOut);
-    }
-
-    static bool dict_setitem(Traced<Value> arg1, Traced<Value> arg2,
-                             Traced<Value> arg3, Root<Value>& resultOut) {
-        Dict* dict = arg1.toObject()->as<Dict>();
-        return dict->setitem(arg2, arg3, resultOut);
-    }
-
-    void initNatives() {
-        Root<Value> value;
-        value = new Native2(dict_contains);  setAttr("__contains__", value);
-        value = new Native2(dict_getitem);  setAttr("__getitem__", value);
-        value = new Native3(dict_setitem);  setAttr("__setitem__", value);
-    }
-};
+static bool dict_setitem(Traced<Value> arg1, Traced<Value> arg2,
+                         Traced<Value> arg3, Root<Value>& resultOut) {
+    Dict* dict = arg1.toObject()->as<Dict>();
+    return dict->setitem(arg2, arg3, resultOut);
+}
 
 void Dict::init()
 {
-    Root<DictClass*> cls(new DictClass);
-    cls->initNatives();
+    Root<Class*> cls(new Class("dict"));
+    Root<Value> value;
+    value = new Native2(dict_contains);  cls->setAttr("__contains__", value);
+    value = new Native2(dict_getitem);   cls->setAttr("__getitem__", value);
+    value = new Native3(dict_setitem);   cls->setAttr("__setitem__", value);
     ObjectClass.init(cls);
 }
 
