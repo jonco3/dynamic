@@ -48,6 +48,7 @@ struct List : public ListBase
     virtual void print(ostream& os) const;
 
     bool setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut);
+    bool append(Traced<Value> element, Root<Value>& resultOut);
 };
 
 #endif

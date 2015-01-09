@@ -274,6 +274,11 @@ Syntax* SyntaxParser::parseSimpleStatement()
         return new SyntaxAssert(token, cond, message);
     } else if (opt(Token_Pass)) {
         return new SyntaxPass(token);
+    } else if (opt(Token_Raise)) {
+        Syntax* expr = expression();
+        if (opt(Token_Comma))
+            throw ParseError("Multiple exressions for raise not supported"); // todo
+        return new SyntaxRaise(token, expr);
     }
 
     Syntax* expr = parseExprOrExprList();

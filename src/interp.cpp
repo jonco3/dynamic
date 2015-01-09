@@ -166,9 +166,27 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return CallStarted;
     } else if (target->is<Class>()) {
         Root<Class*> cls(target->as<Class>());
-        if (args.size() != 0)
-            return raise("ToDo", "Constructor arguments not supported", resultOut);
-        resultOut = new Object(cls);
+        Root<Object*> instance(new Object(cls));  // todo: maybe call __new__
+        Value attr; // todo: root
+        if (!target->maybeGetAttr("__init__", attr)) {
+            if (args.size() != 0)
+                return raise("TypeError", "this constructor takes no arguments", resultOut);
+            resultOut = instance;
+            return CallFinished;
+        }
+        Root<Value> initFunc(attr);
+
+        RootVector<Value> initArgs;
+        initArgs.push_back(instance);
+        for (unsigned i = 0; i < args.size(); i++)
+            initArgs.push_back(args[i]);
+        if (!call(initFunc, initArgs, resultOut))
+            return CallError;
+
+        if (resultOut.get().toObject() != None)
+            return raise("TypeError", "__init__() should return None", resultOut);
+
+        resultOut = instance;
         return CallFinished;
     } else {
         return raise("TypeError", "object is not callable:" + repr(target), resultOut);
@@ -397,6 +415,8 @@ testcase(interp)
 
     testInterp("a, b = 1, 2\na", "1");
     testInterp("a, b = 1, 2\nb", "2");
+
+    testException("raise Exception('an exception')", "an exception");
 }
 
 #endif

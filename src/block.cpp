@@ -559,6 +559,11 @@ struct BlockBuilder : public SyntaxVisitor
         }
         block->append(new InstrConst(None));
     }
+
+    virtual void visit(const SyntaxRaise& s) {
+        s.right()->accept(*this);
+        block->append(new InstrRaise);
+    }
 };
 
 static unique_ptr<SyntaxBlock> ParseModule(const Input& input)

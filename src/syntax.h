@@ -57,7 +57,8 @@ using namespace std;
     syntax(While)                                                             \
     syntax(Subscript)                                                         \
     syntax(Assert)                                                            \
-    syntax(Class)
+    syntax(Class)                                                             \
+    syntax(Raise)
 
 enum SyntaxType
 {
@@ -720,6 +721,14 @@ struct SyntaxClass : public Syntax
     Name id_;
     unique_ptr<SyntaxExprList> bases_;
     unique_ptr<SyntaxBlock> suite_;
+};
+
+struct SyntaxRaise : public UnarySyntax
+{
+    SyntaxRaise(const Token& token, Syntax* right) : UnarySyntax(token, right) {}
+    syntax_type(Syntax_Raise)
+    syntax_name("raise")
+    syntax_accept()
 };
 
 #endif

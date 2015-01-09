@@ -54,7 +54,8 @@ using namespace std;
     instr(List)                                                              \
     instr(Dict)                                                              \
     instr(MakeClassFromFrame)                                                \
-    instr(Destructure)
+    instr(Destructure)                                                       \
+    instr(Raise)
 
 enum InstrType
 {
@@ -803,6 +804,17 @@ struct InstrDestructure : public Instr
 
   private:
     unsigned count_;
+};
+
+struct InstrRaise : public Instr
+{
+    instr_type(Instr_Raise);
+    instr_name("Raise");
+
+    virtual bool execute(Interpreter& interp) {
+        // todo: exceptions must be old-style classes or derived from BaseException
+        return false;
+    }
 };
 
 #endif

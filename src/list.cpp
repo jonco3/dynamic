@@ -3,6 +3,7 @@
 #include "bool.h"
 #include "callable.h"
 #include "exception.h"
+#include "singletons.h"
 
 GlobalRoot<Class*> Tuple::ObjectClass;
 GlobalRoot<Tuple*> Tuple::Empty;
@@ -53,6 +54,11 @@ static bool list_setitem(Traced<Value> arg1, Traced<Value> arg2, Traced<Value> a
                          Root<Value>& resultOut) {
     List* list = arg1.toObject()->as<List>();
     return list->setitem(arg2, arg3, resultOut);
+}
+
+static bool list_append(Traced<Value> arg1, Traced<Value> arg2, Root<Value>& resultOut) {
+    List* list = arg1.toObject()->as<List>();
+    return list->append(arg2, resultOut);
 }
 
 ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
@@ -145,6 +151,7 @@ void List::init()
     listBase_initNatives(cls);
     Root<Value> value;
     value = new Native3(list_setitem); cls->setAttr("__setitem__", value);
+    value = new Native2(list_append); cls->setAttr("append", value);
     ObjectClass.init(cls);
 }
 
@@ -190,6 +197,13 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     return true;
 }
 
+bool List::append(Traced<Value> element, Root<Value>& resultOut)
+{
+    elements_.push_back(element);
+    resultOut = None;
+    return true;
+}
+
 #ifdef BUILD_TESTS
 
 #include "test.h"
@@ -231,6 +245,8 @@ testcase(list)
     testInterp("a = [1]; a[0] = 3; a", "[3]");
     testInterp("2 in [1]", "False");
     testInterp("2 in [1, 2, 3]", "True");
+    testInterp("[1].append(2)", "None");
+    testInterp("a = [1]; a.append(2); a", "[1, 2]");
 
     testException("1[0]", "'int' object has no attribute '__getitem__'");
     testException("[][0]", "list index out of range");

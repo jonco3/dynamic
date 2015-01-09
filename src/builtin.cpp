@@ -43,6 +43,8 @@ void initBuiltins()
     value = Boolean::False; Builtin->setAttr("False", value);
     value = None; Builtin->setAttr("None", value);
 
+    value = Exception::ObjectClass; Builtin->setAttr("Exception", value);
+
     string filename = "lib/builtin.py";
     string text = readFile(filename);
     Root<Block*> block;
@@ -66,6 +68,7 @@ testcase(builtin)
                "a.foo = 1\n"
                "a.foo",
                "1");
+    testInterp("range(4, 7)", "[4, 5, 6]");
 }
 
 #endif

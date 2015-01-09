@@ -2,23 +2,23 @@
 #define __EXCEPTION_H__
 
 #include "class.h"
+#include "string.h"
 
 struct Exception : public Object
 {
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    Exception(const string& className, const string& message)
-      : Object(ObjectClass), className_(className), message_(message) {}
+    Exception(const string& className, const string& message);
+
+    void __init__(Traced<Value> className, Traced<Value> message);
 
     string fullMessage() const;
-    string message() { return message_; }
+
+    string className() const;
+    string message() const;
 
     virtual void print(ostream& os) const;
-
-  private:
-    string className_;
-    string message_;
 };
 
 #endif
