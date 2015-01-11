@@ -77,7 +77,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
 }
 
 static int runExprs(int count, const char* args[])
-    {
+{
     for (unsigned i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
         if (!runModule(args[i], "<none>", Object::Null))
@@ -85,28 +85,22 @@ static int runExprs(int count, const char* args[])
     }
 
     return EX_OK;
-    }
+}
 
-const char* usageMessage[] =
-    {
-    "usage:",
-    "",
-    "  dynamic            -- enter the REPL",
-    "  dynamic FILE ARG*  -- run script from file",
-    "  dynamic -e EXPRS   -- execute expressions from commandline",
-    NULL
-    };
+const char* usageMessage =
+    "usage:\n"
+    "  dynamic            -- enter the REPL\n"
+    "  dynamic FILE ARG*  -- run script from file\n"
+    "  dynamic -e EXPRS   -- execute expressions from commandline";
 
 static void badUsage()
-    {
-    const char** ptr = usageMessage;
-    while (*ptr)
-        cerr << *ptr << endl;
+{
+    cerr << usageMessage << endl;
     exit(EX_USAGE);
-    }
+}
 
 int main(int argc, const char* argv[])
-    {
+{
     int r = 0;
     int pos = 1;
 
@@ -134,4 +128,4 @@ int main(int argc, const char* argv[])
     final();
 
     return r;
-    }
+}
