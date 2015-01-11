@@ -54,4 +54,6 @@ struct List : public ListBase
     bool append(Traced<Value> element, Root<Value>& resultOut);
 };
 
+extern void initList();
+
 #endif

@@ -27,6 +27,13 @@ GlobalRoot<Tuple*> Tuple::Empty;
 GlobalRoot<Class*> List::ObjectClass;
 GlobalRoot<Class*> ListIter::ObjectClass;
 
+void initList()
+{
+    List::init();
+    Tuple::init();
+    ListIter::init();
+}
+
 #ifdef DEBUG
 static bool isListBase(Object *o)
 {
@@ -185,8 +192,6 @@ void List::init()
     value = gc::create<Native3>(list_setitem); cls->setAttr("__setitem__", value);
     value = gc::create<Native2>(list_append); cls->setAttr("append", value);
     ObjectClass.init(cls);
-
-    ListIter::init();  // todo: have a single static init function per file
 }
 
 List::List(const TracedVector<Value>& values)

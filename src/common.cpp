@@ -33,8 +33,7 @@ void init1()
     Boolean::init();
     Integer::init();
     String::init();
-    Tuple::init();
-    List::init();
+    initList();
     Dict::init();
     initSingletons();
     Interpreter::init();
