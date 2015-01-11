@@ -55,7 +55,8 @@ using namespace std;
     instr(Dict)                                                              \
     instr(MakeClassFromFrame)                                                \
     instr(Destructure)                                                       \
-    instr(Raise)
+    instr(Raise)                                                             \
+    instr(IteratorNext)
 
 enum InstrType
 {
@@ -814,6 +815,31 @@ struct InstrRaise : public Instr
     virtual bool execute(Interpreter& interp) {
         // todo: exceptions must be old-style classes or derived from BaseException
         return false;
+    }
+};
+
+struct InstrIteratorNext : public Instr
+{
+    instr_type(Instr_IteratorNext);
+    instr_name("IteratorNext");
+
+    virtual bool execute(Interpreter& interp) {
+        // The stack is already set up with next method and target on top
+        Root<Value> target(interp.peekStack(1));
+        TracedVector<Value> args = interp.stackSlice(0, 1);
+        Root<Value> result;
+        bool ok = interp.call(target, args, result);
+        if (!ok) {
+            Root<Object*> exc(result.get().toObject());
+            if (exc->is<StopIteration>()) {
+                interp.pushStack(Boolean::False);
+                return true;
+            }
+        }
+        interp.pushStack(result);
+        if (ok)
+            interp.pushStack(Boolean::True);
+        return ok;
     }
 };
 

@@ -131,6 +131,16 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
             s.elseSuite()->accept(*this);
     }
 
+    virtual void visit(const SyntaxFor& s) {
+        assert(!inAssignTarget_);
+        inAssignTarget_ = true;
+        s.targets()->accept(*this);
+        inAssignTarget_ = false;
+        s.suite()->accept(*this);
+        if (s.elseSuite())
+            s.elseSuite()->accept(*this);
+    }
+
   private:
     bool inAssignTarget_;
     Root<Layout*> layout_;
@@ -499,6 +509,38 @@ struct BlockBuilder : public SyntaxVisitor
         block->branchHere(branchToEnd);
         block->append(new InstrConst(None));
         // todo: else
+    }
+
+    virtual void visit(const SyntaxFor& s) {
+        // 1. Get iterator
+        s.exprs()->accept(*this);
+        block->append(new InstrGetMethod("__iter__"));
+        block->append(new InstrCall(1));
+        block->append(new InstrGetMethod("next"));
+
+        // 2. Call next on iterator and break if end (loop heap)
+        unsigned loopHead = block->append(new InstrIteratorNext);
+        unsigned exitBranch = block->append(new InstrBranchIfFalse);
+
+        // 3. Assign results
+        assert(!inAssignTarget);
+        inAssignTarget = true;
+        s.targets()->accept(*this);
+        inAssignTarget = false;
+        block->append(new InstrPop());
+
+        // 4. Execute loop body
+        s.suite()->accept(*this);
+        block->append(new InstrPop());
+        block->append(new InstrBranchAlways(block->offsetTo(loopHead)));
+
+        // 5. Exit
+        block->branchHere(exitBranch);
+        block->append(new InstrPop());
+        block->append(new InstrPop());
+        block->append(new InstrConst(None));
+
+        // todo: else clause
     }
 
     virtual void visit(const SyntaxLambda& a) {

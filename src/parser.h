@@ -321,6 +321,9 @@ struct SyntaxParser : public Parser<Syntax *>
     SyntaxBlock* parseSuite();
 
     SyntaxTarget* makeAssignTarget(Syntax* s);
+
+    SyntaxTarget* parseTarget();
+    SyntaxTarget* parseTargetList();
 };
 
 #endif

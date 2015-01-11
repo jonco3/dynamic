@@ -5,6 +5,7 @@
 #include "string.h"
 
 GlobalRoot<Class*> Exception::ObjectClass;
+GlobalRoot<Class*> StopIteration::ObjectClass;
 
 static bool exception_init(Traced<Value> arg1, Traced<Value> arg2,
                            Root<Value>& resultOut)
@@ -23,6 +24,27 @@ void Exception::init()
     Root<Value> value;
     value = new Native2(exception_init); cls->setAttr("__init__", value);
     ObjectClass.init(cls);
+
+    StopIteration::init();
+}
+
+void StopIteration::init()
+{
+    Root<Class*> cls(new Class("StopIterator"));
+    // todo: make this derive Exception
+    ObjectClass.init(cls);
+}
+
+Exception::Exception(Traced<Class*> cls, const string& className, const string& message)
+  : Object(cls)
+{
+    // todo: this really needs a whole new approach to allocating objects sadly
+    Root<Exception*> self(this);
+
+    Root<Value> classNameValue, messageValue;
+    classNameValue = String::get(className);
+    messageValue = String::get(message);
+    __init__(classNameValue, messageValue);
 }
 
 Exception::Exception(const string& className, const string& message)

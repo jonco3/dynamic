@@ -417,6 +417,12 @@ testcase(interp)
     testInterp("a, b = 1, 2\nb", "2");
 
     testException("raise Exception('an exception')", "an exception");
+
+    testInterp("a = []\n"
+               "for i in (1, 2, 3):\n"
+               "  a.append(i + 1)\n"
+               "a\n",
+               "[2, 3, 4]");
 }
 
 #endif

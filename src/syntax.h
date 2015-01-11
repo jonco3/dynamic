@@ -58,7 +58,8 @@ using namespace std;
     syntax(Subscript)                                                         \
     syntax(Assert)                                                            \
     syntax(Class)                                                             \
-    syntax(Raise)
+    syntax(Raise)                                                             \
+    syntax(For)
 
 enum SyntaxType
 {
@@ -423,7 +424,27 @@ define_simple_binary_syntax(IntDivide, "//");
 define_simple_binary_syntax(Modulo, "%");
 define_simple_binary_syntax(Power, "**");
 
-define_binary_syntax(SyntaxTarget, Syntax, SyntaxName, AttrRef, ".");
+struct SyntaxAttrRef : public BinarySyntax<SyntaxTarget, Syntax, SyntaxName>
+{
+    SyntaxAttrRef(const Token& token, Syntax* l, SyntaxName* r)
+      : BinarySyntax<SyntaxTarget, Syntax, SyntaxName>(token, l, r)
+    {}
+
+    syntax_type(Syntax_AttrRef);
+    syntax_name(".");
+    syntax_accept();
+
+    virtual void print(ostream& s) const override {
+        if (left()->is<SyntaxName>() || left()->is<SyntaxExprList>() ||
+            left()->is<SyntaxAttrRef>())
+        {
+            s << left();
+        } else {
+            s << "(" << left() << ")";
+        }
+        s << "." << right();
+    }
+};
 
 struct SyntaxTargetList : SyntaxTarget
 {
@@ -729,6 +750,41 @@ struct SyntaxRaise : public UnarySyntax
     syntax_type(Syntax_Raise)
     syntax_name("raise")
     syntax_accept()
+};
+
+struct SyntaxFor : public Syntax
+{
+    SyntaxFor(const Token& token, SyntaxTarget* targets, Syntax* exprs,
+              SyntaxBlock* suite, SyntaxBlock* elseSuite)
+      : Syntax(token), targets_(targets), exprs_(exprs), suite_(suite),
+        elseSuite_(elseSuite)
+    {}
+
+    syntax_type(Syntax_For);
+    syntax_name("for");
+
+    const SyntaxTarget* targets() const { return targets_.get(); }
+    const Syntax* exprs() const { return exprs_.get(); }
+    const SyntaxBlock* suite() const { return suite_.get(); }
+    const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
+
+    syntax_accept();
+
+    virtual void print(ostream& s) const override {
+        // todo: indentation
+        s << "for " << targets() << " in " << exprs() << ":" << endl;
+        s << suite();
+        if (elseSuite()) {
+            s << endl << "else: " << endl;
+            s << elseSuite();
+        }
+    }
+
+  private:
+    unique_ptr<SyntaxTarget> targets_;
+    unique_ptr<Syntax> exprs_;
+    unique_ptr<SyntaxBlock> suite_;
+    unique_ptr<SyntaxBlock> elseSuite_;
 };
 
 #endif

@@ -4,6 +4,8 @@
 #include "object.h"
 #include "class.h"
 
+struct ListIter;
+
 struct ListBase : public Object
 {
     ListBase(Traced<Class*> cls, const TracedVector<Value>& values);
@@ -11,12 +13,14 @@ struct ListBase : public Object
     bool len(Root<Value>& resultOut);
     bool getitem(Traced<Value> index, Root<Value>& resultOut);
     bool contains(Traced<Value> element, Root<Value>& resultOut);
+    bool iter(Root<Value>& resultOut);
 
     virtual const string& listName() const = 0;
     virtual void traceChildren(Tracer& t);
 
   protected:
     vector<Value> elements_;
+    friend struct ListIter;
 };
 
 struct Tuple : public ListBase

@@ -184,7 +184,7 @@ SyntaxParser::SyntaxParser()
 
     addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
-            throw ParseError("Bad property reference");
+            throw ParseError("Bad attribute reference");
         return new SyntaxAttrRef(token, l, r->as<SyntaxName>());
     });
 
@@ -263,6 +263,56 @@ SyntaxTarget* SyntaxParser::makeAssignTarget(Syntax* target)
     }
 }
 
+SyntaxTarget* SyntaxParser::parseTarget()
+{
+    // Unfortunately we have two different paths for parsing assignment targets.
+    // This is called when we know we have to match a target, but the main
+    // expression patch can also match an expression which is later
+    // checked/converted by makeAssignTarget() above.
+
+    Token token = currentToken();
+    Syntax* syn = nullptr;
+    if (opt(Token_Bra) | opt(Token_SBra)) {
+        // Might be an expression before period or it might be a target list
+        syn = parseExprOrExprList();
+        match(token.type == Token_Bra ? Token_Ket : Token_SKet);
+    } else {
+        match(Token_Identifier);
+        syn = new SyntaxName(token);
+    }
+
+    for (;;) {
+        if (opt(Token_Period)) {
+            Token attr = match(Token_Identifier);
+            syn = new SyntaxAttrRef(token, syn, new SyntaxName(attr));
+        } else if (opt(Token_SBra)) {
+            Syntax* index = expression();
+            match(Token_SKet);
+            syn = new SyntaxSubscript(token, syn, index);
+        } else {
+            return makeAssignTarget(syn);
+        }
+    }
+}
+
+SyntaxTarget* SyntaxParser::parseTargetList()
+{
+    Token startToken = currentToken();
+    vector<SyntaxTarget*> targets;
+    targets.push_back(parseTarget());
+    bool singleTarget = true;
+    while (opt(Token_Comma)) {
+        singleTarget = false;
+        if (!maybeExprToken())
+            break;
+        targets.push_back(parseTarget());
+    }
+    if (singleTarget)
+        return targets[0];
+    return new SyntaxTargetList(startToken, targets);
+}
+
+
 Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -294,7 +344,6 @@ Syntax* SyntaxParser::parseSimpleStatement()
 Syntax* SyntaxParser::parseCompoundStatement()
 {
     Token token = currentToken();
-    Syntax* stmt = nullptr;
     if (opt(Token_If)) {
         SyntaxIf* ifStmt = new SyntaxIf(token);
         do {
@@ -305,15 +354,23 @@ Syntax* SyntaxParser::parseCompoundStatement()
         if (opt(Token_Else)) {
             ifStmt->setElse(parseSuite());
         }
-        stmt = ifStmt;
+        return ifStmt;
     } else if (opt(Token_While)) {
         Syntax* cond = expression();
         SyntaxBlock* suite = parseSuite();
         SyntaxBlock* elseSuite = nullptr;
         if (opt(Token_Else))
             elseSuite = parseSuite();
-        stmt = new SyntaxWhile(token, cond, suite, elseSuite);
-    //} else if (opt(Token_For)) {
+        return new SyntaxWhile(token, cond, suite, elseSuite);
+    } else if (opt(Token_For)) {
+        SyntaxTarget* targets = parseTargetList();
+        match(Token_In);
+        Syntax* exprs = parseExprOrExprList();
+        SyntaxBlock* suite = parseSuite();
+        SyntaxBlock* elseSuite = nullptr;
+        if (opt(Token_Else))
+            elseSuite = parseSuite();
+        return new SyntaxFor(token, targets, exprs, suite, elseSuite);
     //} else if (opt(Token_Try)) {
     //} else if (opt(Token_With)) {
     } else if (opt(Token_Def)) {
@@ -342,12 +399,11 @@ Syntax* SyntaxParser::parseCompoundStatement()
                                new SyntaxExprList(token, bases),
                                parseSuite());
     } else {
-        stmt = parseSimpleStatement();
+        Syntax* stmt = parseSimpleStatement();
         if (!atEnd())
             matchEither(Token_Newline, Token_Semicolon);
+        return stmt;
     }
-
-    return stmt;
 }
 
 SyntaxBlock* SyntaxParser::parseBlock()
@@ -390,6 +446,29 @@ SyntaxBlock* SyntaxParser::parseModule()
 
 #ifdef BUILD_TESTS
 
+static void testParseExpression(const string& input, const string& expected)
+{
+    SyntaxParser sp;
+    sp.start(input);
+    unique_ptr<Syntax> expr(sp.expression());
+    testEqual(repr(expr.get()), expected);
+}
+
+static void testParseModule(const string& input, const string& expected)
+{
+    SyntaxParser sp;
+    sp.start(input);
+    unique_ptr<Syntax> expr(sp.parseModule());
+    testEqual(repr(expr.get()), expected);
+}
+
+static void testParseException(const char* input)
+{
+    SyntaxParser sp;
+    sp.start(input);
+    testThrows(sp.parseModule(), ParseError);
+}
+
 testcase(parser)
 {
     Tokenizer tokenizer;
@@ -419,35 +498,20 @@ testcase(parser)
     testTrue(parser.atEnd());
     testThrows(parser.parse(), ParseError);
 
+    testParseExpression("1+2-3", "1 + 2 - 3");
+
+    testParseExpression("4 ** 5", "4 ** 5");
+
     SyntaxParser sp;
-    sp.start("1+2-3");
-    unique_ptr<Syntax> expr(sp.expression());
-    testEqual(repr(expr.get()), "1 + 2 - 3");
-
-    sp.start("4 ** 5");
-    expr.reset(sp.expression());
-    testEqual(repr(expr.get()), "4 ** 5");
-
     sp.start("f = 1 + 2");
-    expr.reset(sp.parseCompoundStatement());
+    unique_ptr<Syntax> expr(sp.parseCompoundStatement());
     testTrue(expr.get()->is<SyntaxAssign>());
     testTrue(expr.get()->as<SyntaxAssign>()->left()->is<SyntaxName>());
 
-    sp.start("1\n2");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "1\n2\n");
-
-    sp.start("1; 2; 3");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "1\n2\n3\n");
-
-    sp.start("1; 2; 3;");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "1\n2\n3\n");
-
-    sp.start("a[0] = 1");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "a[0] = 1\n");
+    testParseModule("1\n2", "1\n2\n");
+    testParseModule("1; 2; 3", "1\n2\n3\n");
+    testParseModule("1; 2; 3;", "1\n2\n3\n");
+    testParseModule("a[0] = 1", "a[0] = 1\n");
 
     // test this parses as "not (a in b)" not "(not a) in b"
     sp.start("not a in b");
@@ -456,33 +520,26 @@ testcase(parser)
     testTrue(expr->is<SyntaxBlock>());
     testTrue(expr->as<SyntaxBlock>()->stmts()[0]->is<SyntaxNot>());
 
-    sp.start("(1)");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "1\n");
+    testParseExpression("a.x", "a.x");
+    testParseExpression("(a + 1).x", "(a + 1).x");
 
-    sp.start("()");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "()\n");
+    testParseModule("(1)", "1\n");
+    testParseModule("()", "()\n");
+    testParseModule("(1,)", "(1,)\n");
+    testParseModule("(1,2)", "(1, 2)\n");
+    testParseModule("foo(bar)", "foo(bar)\n");
+    testParseModule("foo(bar, baz)", "foo(bar, baz)\n");
+    testParseModule("a, b = 1, 2", "(a, b) = (1, 2)\n");
 
-    sp.start("(1,)");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "(1,)\n");
-
-    sp.start("(1,2)");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "(1, 2)\n");
-
-    sp.start("foo(bar)");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "foo(bar)\n");
-
-    sp.start("foo(bar, baz)");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "foo(bar, baz)\n");
-
-    sp.start("a, b = 1, 2");
-    expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "(a, b) = (1, 2)\n");
+    testParseModule("for x in []:\n  pass", "for x in []:\npass\n\n");
+    testParseModule("for a.x in []:\n  pass", "for a.x in []:\npass\n\n");
+    testParseModule("for (a + 1).x in []:\n  pass", "for (a + 1).x in []:\npass\n\n");
+    testParseModule("for (a, b) in []:\n  pass", "for (a, b) in []:\npass\n\n");
+    testParseModule("for (a, b).x in []:\n  pass", "for (a, b).x in []:\npass\n\n");
+    testParseModule("for a[0][0] in []:\n  pass", "for a[0][0] in []:\npass\n\n");
+    testParseModule("for a.b.c in []:\n  pass", "for a.b.c in []:\npass\n\n");
+    testParseException("for 1 in []: pass");
+    testParseException("for (a + 1) in []: pass");
 }
 
 #endif
