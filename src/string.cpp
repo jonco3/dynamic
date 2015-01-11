@@ -31,13 +31,13 @@ GlobalRoot<String*> String::EmptyString;
 
 void String::init()
 {
-    Root<Class*> cls(new Class("str"));
+    Root<Class*> cls(gc::create<Class>("str"));
     Root<Value> value;
-    value = new Native2(str_add);    cls->setAttr("__add__", value);
-    value = new Native1(str_str);    cls->setAttr("__str__", value);
-    value = new Native1(str_print);  cls->setAttr("_print", value);
+    value = gc::create<Native2>(str_add);    cls->setAttr("__add__", value);
+    value = gc::create<Native1>(str_str);    cls->setAttr("__str__", value);
+    value = gc::create<Native1>(str_print);  cls->setAttr("_print", value);
     ObjectClass.init(cls);
-    EmptyString.init(new String(""));
+    EmptyString.init(gc::create<String>(""));
 }
 
 String::String(const string& v)
@@ -49,7 +49,7 @@ Value String::get(const string& v)
     if (v == "")
         return EmptyString;
     // todo: can intern short strings here
-    return new String(v);
+    return gc::create<String>(v);
 }
 
 void String::print(ostream& s) const {

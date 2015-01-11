@@ -18,8 +18,8 @@ GlobalRoot<Object*> Object::Null;
 
 void Object::init()
 {
-    InitialLayout.init(new Layout(nullptr, "__class__"));
-    ObjectClass.init(new Class("Object"));
+    InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
+    ObjectClass.init(gc::create<Class>("Object"));
     Null.init(nullptr);
 }
 
@@ -182,7 +182,7 @@ bool Object::getSlot(Name name, int slot, Value& valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == UninitializedSlot) {
-        valueOut = new Exception("UnboundLocalError",
+        valueOut = gc::create<Exception>("UnboundLocalError",
                                  "name '" + name + "' has not been bound");
         return false;
     }
@@ -246,7 +246,7 @@ void Object::traceChildren(Tracer& t)
 
 testcase(object)
 {
-    Root<Object*> o(new Object);
+    Root<Object*> o(gc::create<Object>());
     Value v;
 
     testFalse(o->maybeGetAttr("foo", v));

@@ -4,7 +4,7 @@ GlobalRoot<Class*> Class::ObjectClass;
 
 void Class::init()
 {
-    ObjectClass.init(new Class("Class"));
+    ObjectClass.init(gc::create<Class>("Class"));
     Class::ObjectClass->initClass(Class::ObjectClass, Object::Null);
     Object::ObjectClass->initClass(Class::ObjectClass, Object::Null);
 }

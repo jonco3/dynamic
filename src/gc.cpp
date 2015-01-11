@@ -16,24 +16,25 @@ static inline void log(const char* s, void *p) {
 static inline void log(const char* s, void *p, void *p2) {
     cerr << s << " " << p << " " << p2 << endl;
 }
-static inline void log(const char* s, size_t i) {
-    cerr << s << " " << dec << i << endl;
+static inline void log(const char* s, size_t i, int j) {
+    cerr << s << " " << dec << i << " " << j << endl;
 }
 #else
 static inline void log(const char* s) {}
 static inline void log(const char* s, void *p) {}
 static inline void log(const char* s, void *p, void *p2) {}
-static inline void log(const char* s, size_t i) {}
+static inline void log(const char* s, size_t i, int j) {}
 #endif
 
 namespace gc {
 static const int8_t epocs = 2;
 static const int8_t invalidEpoc = -1;
-static int8_t currentEpoc = 0;
-static int8_t prevEpoc = 0;
+static int8_t currentEpoc = 1;
+static int8_t prevEpoc = 2;
 static vector<Cell*> cells;
 static RootBase* rootList;
 static bool isSweeping = false;
+static bool isAllocating = false;
 #ifdef BUILD_TESTS
 static size_t minCollectAt = 10;
 static double scheduleFactor = 1.1;
@@ -46,11 +47,8 @@ static size_t collectAt = minCollectAt;
 
 Cell::Cell()
 {
+    assert(gc::isAllocating);
     assert(!gc::isSweeping);
-
-    if (gc::cells.size() >= gc::collectAt) {
-        gc::collect();
-    }
 
     log("created", this);
     epoc_ = gc::currentEpoc;
@@ -115,7 +113,8 @@ void Cell::destroyCell(Cell* cell)
 #ifdef DEBUG
     size_t cellSize = cell->size();
 #endif
-    delete cell;
+    cell->~Cell();
+    free(cell);
 #ifdef DEBUG
     memset(reinterpret_cast<uint8_t*>(cell) + sizeof(Cell),
            0xff,
@@ -174,12 +173,30 @@ struct Marker : public Tracer
     vector<Cell*> stack_;
 };
 
+bool gc::setAllocating(bool state)
+{
+    bool oldState = isAllocating;
+    isAllocating = state;
+    return oldState;
+}
+
+void gc::maybeCollect()
+{
+    if (cells.size() >= collectAt)
+        collect();
+}
+
 void gc::collect() {
-    log("> gc::collect", cellCount());
+    assert(!isSweeping);
+
+    log("> gc::collect", cellCount(), currentEpoc);
 
     // Begin new epoc
     prevEpoc = currentEpoc;
-    currentEpoc = (currentEpoc + 1) % epocs;
+    currentEpoc++;
+    if (currentEpoc == epocs + 1)
+        currentEpoc = 1;
+    assert(currentEpoc >= 1 && currentEpoc <= epocs);
 
     // Mark roots
     log("- marking roots");
@@ -192,6 +209,7 @@ void gc::collect() {
     marker.markRecursively();
 
     // Sweep
+    log("- sweeping");
     isSweeping = true;
     auto dying = partition(cells.begin(), cells.end(), [] (Cell* cell) {
         return !cell->shouldSweep();
@@ -205,7 +223,7 @@ void gc::collect() {
     collectAt = max(minCollectAt,
         static_cast<size_t>(static_cast<double>(cellCount()) * scheduleFactor));
 
-    log("< gc::collect", cellCount());
+    log("< gc::collect", cellCount(), currentEpoc);
 }
 
 size_t gc::cellCount() {
@@ -251,7 +269,7 @@ testcase(gc)
     Root<TestCell*> r;
     collect();
     testEqual(cellCount(), initCount);
-    r = new TestCell;
+    r = gc::create<TestCell>();
     testEqual(cellCount(), initCount + 1);
     collect();
     testEqual(cellCount(), initCount + 1);
@@ -259,8 +277,8 @@ testcase(gc)
     collect();
     testEqual(cellCount(), initCount);
 
-    r = new TestCell;
-    r->addChild(new TestCell);
+    r = gc::create<TestCell>();
+    r->addChild(gc::create<TestCell>());
     testEqual(cellCount(), initCount + 2);
     collect();
     testEqual(cellCount(), initCount + 2);
@@ -268,8 +286,8 @@ testcase(gc)
     collect();
     testEqual(cellCount(), initCount);
 
-    r = new TestCell;
-    TestCell* b = new TestCell;
+    r = gc::create<TestCell>();
+    TestCell* b = gc::create<TestCell>();
     r->addChild(b);
     b->addChild(r);
     testEqual(cellCount(), initCount + 2);

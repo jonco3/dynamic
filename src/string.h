@@ -27,9 +27,9 @@ struct String : public Object
         return std::hash<string>()(value_);
     }
 
-  private:
     String(const string& v);
 
+  private:
     string value_;
 };
 

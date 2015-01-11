@@ -8,7 +8,7 @@ GlobalRoot<Layout*> Frame::InitialLayout;
 
 void Frame::init()
 {
-    ObjectClass.init(new Class("Frame"));
+    ObjectClass.init(gc::create<Class>("Frame"));
     InitialLayout.init(Object::InitialLayout);
 }
 

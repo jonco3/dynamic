@@ -6,14 +6,14 @@ GlobalRoot<Class*> Native::ObjectClass;
 
 void Native::init()
 {
-    ObjectClass.init(new Class("Native"));
+    ObjectClass.init(gc::create<Class>("Native"));
 }
 
 GlobalRoot<Class*> Function::ObjectClass;
 
 void Function::init()
 {
-    ObjectClass.init(new Class("Function"));
+    ObjectClass.init(gc::create<Class>("Function"));
 }
 
 //here

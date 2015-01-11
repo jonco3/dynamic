@@ -27,11 +27,11 @@ static bool dict_setitem(Traced<Value> arg1, Traced<Value> arg2,
 
 void Dict::init()
 {
-    Root<Class*> cls(new Class("dict"));
+    Root<Class*> cls(gc::create<Class>("dict"));
     Root<Value> value;
-    value = new Native2(dict_contains);  cls->setAttr("__contains__", value);
-    value = new Native2(dict_getitem);   cls->setAttr("__getitem__", value);
-    value = new Native3(dict_setitem);   cls->setAttr("__setitem__", value);
+    value = gc::create<Native2>(dict_contains);  cls->setAttr("__contains__", value);
+    value = gc::create<Native2>(dict_getitem);   cls->setAttr("__getitem__", value);
+    value = gc::create<Native3>(dict_setitem);   cls->setAttr("__setitem__", value);
     ObjectClass.init(cls);
 }
 
@@ -78,7 +78,7 @@ bool Dict::getitem(Traced<Value> key, Root<Value>& resultOut)
 {
     auto i = entries_.find(key);
     if (i == entries_.end()) {
-        resultOut = new Exception("KeyError", repr(key));
+        resultOut = gc::create<Exception>("KeyError", repr(key));
         return false;
     }
 

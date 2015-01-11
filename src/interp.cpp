@@ -32,7 +32,7 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 {
     assert(stackPos() == 0);
-    Root<Frame*> frame(new Frame(block));
+    Root<Frame*> frame(gc::create<Frame>(block));
     pushFrame(frame);
     return run(valueOut);
 }
@@ -69,7 +69,7 @@ bool Interpreter::run(Value& valueOut)
 Frame* Interpreter::newFrame(Traced<Function*> function)
 {
     Root<Block*> block(function->block());
-    return new Frame(block);
+    return gc::create<Frame>(block);
 }
 
 void Interpreter::pushFrame(Traced<Frame*> frame)
@@ -166,7 +166,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return CallStarted;
     } else if (target->is<Class>()) {
         Root<Class*> cls(target->as<Class>());
-        Root<Object*> instance(new Object(cls));  // todo: maybe call __new__
+        Root<Object*> instance(gc::create<Object>(cls));  // todo: maybe call __new__
         Value attr; // todo: root
         if (!target->maybeGetAttr("__init__", attr)) {
             if (args.size() != 0)
@@ -196,7 +196,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 Interpreter::CallStatus Interpreter::raise(string className, string message,
                                            Root<Value>& resultOut)
 {
-    resultOut = new Exception(className, message);
+    resultOut = gc::create<Exception>(className, message);
     return CallError;
 }
 

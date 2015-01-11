@@ -69,10 +69,10 @@ static bool listBase_iter(Traced<Value> arg, Root<Value>& resultOut)
 static void listBase_initNatives(Traced<Class*> cls)
 {
     Root<Value> value;
-    value = new Native1(listBase_len); cls->setAttr("__len__", value);
-    value = new Native2(listBase_getitem); cls->setAttr("__getitem__", value);
-    value = new Native2(listBase_contains); cls->setAttr("__contains__", value);
-    value = new Native1(listBase_iter); cls->setAttr("__iter__", value);
+    value = gc::create<Native1>(listBase_len); cls->setAttr("__len__", value);
+    value = gc::create<Native2>(listBase_getitem); cls->setAttr("__getitem__", value);
+    value = gc::create<Native2>(listBase_contains); cls->setAttr("__contains__", value);
+    value = gc::create<Native1>(listBase_iter); cls->setAttr("__iter__", value);
 }
 
 static bool list_setitem(Traced<Value> arg1, Traced<Value> arg2, Traced<Value> arg3,
@@ -108,7 +108,7 @@ bool ListBase::len(Root<Value>& resultOut)
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = new Exception("TypeError",
+        resultOut = gc::create<Exception>("TypeError",
                                   listName() + " indices must be integers");
         return false;
     }
@@ -117,7 +117,7 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || i >= elements_.size()) {
-        resultOut = new Exception("IndexError", listName() + " index out of range");
+        resultOut = gc::create<Exception>("IndexError", listName() + " index out of range");
         return false;
     }
 
@@ -135,24 +135,24 @@ bool ListBase::contains(Traced<Value> element, Root<Value>& resultOut)
 bool ListBase::iter(Root<Value>& resultOut)
 {
     Root<ListBase*> self(this);
-    resultOut = new ListIter(self);
+    resultOut = gc::create<ListIter>(self);
     return true;
 }
 
 void Tuple::init()
 {
-    Root<Class*> cls(new Class("tuple"));
+    Root<Class*> cls(gc::create<Class>("tuple"));
     listBase_initNatives(cls);
     ObjectClass.init(cls);
     RootVector<Value> contents;
-    Empty.init(new Tuple(contents));
+    Empty.init(gc::create<Tuple>(contents));
 }
 
 /* static */ Tuple* Tuple::get(const TracedVector<Value>& values)
 {
     if (values.size() == 0)
         return Empty;
-    return new Tuple(values);
+    return gc::create<Tuple>(values);
 }
 
 Tuple::Tuple(const TracedVector<Value>& values)
@@ -179,11 +179,11 @@ void Tuple::print(ostream& s) const
 
 void List::init()
 {
-    Root<Class*> cls(new Class("list"));
+    Root<Class*> cls(gc::create<Class>("list"));
     listBase_initNatives(cls);
     Root<Value> value;
-    value = new Native3(list_setitem); cls->setAttr("__setitem__", value);
-    value = new Native2(list_append); cls->setAttr("append", value);
+    value = gc::create<Native3>(list_setitem); cls->setAttr("__setitem__", value);
+    value = gc::create<Native2>(list_append); cls->setAttr("append", value);
     ObjectClass.init(cls);
 
     ListIter::init();  // todo: have a single static init function per file
@@ -213,7 +213,7 @@ void List::print(ostream& s) const
 bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = new Exception("TypeError",
+        resultOut = gc::create<Exception>("TypeError",
                                   listName() + " indices must be integers");
         return false;
     }
@@ -222,7 +222,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || i >= elements_.size()) {
-        resultOut = new Exception("IndexError", listName() + " index out of range");
+        resultOut = gc::create<Exception>("IndexError", listName() + " index out of range");
         return false;
     }
 
@@ -252,10 +252,10 @@ static bool listIter_next(Traced<Value> arg, Root<Value>& resultOut)
 
 void ListIter::init()
 {
-    Root<Class*> cls(new Class("listiterator"));
+    Root<Class*> cls(gc::create<Class>("listiterator"));
     Root<Value> value;
-    value = new Native1(listIter_iter); cls->setAttr("__iter__", value);
-    value = new Native1(listIter_next); cls->setAttr("next", value);
+    value = gc::create<Native1>(listIter_iter); cls->setAttr("__iter__", value);
+    value = gc::create<Native1>(listIter_next); cls->setAttr("next", value);
     ObjectClass.init(cls);
 }
 
@@ -280,7 +280,7 @@ bool ListIter::next(Root<Value>& resultOut)
 {
     if (index_ == -1 || index_ >= list_->elements_.size()) {
         index_ = -1;
-        resultOut = new StopIteration;
+        resultOut = gc::create<StopIteration>();
         return false;
     }
 

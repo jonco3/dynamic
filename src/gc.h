@@ -7,6 +7,7 @@
 #include <iostream>
 #include <ostream>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 using namespace std;
@@ -17,6 +18,7 @@ struct Cell;
 struct Marker;
 
 namespace gc {
+extern void maybeCollect();
 extern void collect();
 extern size_t cellCount();
 extern bool isDying(const Cell* cell);
@@ -317,5 +319,47 @@ struct TracedVector
 
     TracedVector& operator=(const TracedVector& other) = delete;
 };
+
+namespace gc {
+
+extern bool setAllocating(bool state);
+
+// Root used in allocation that doesn't check its (uninitialised) pointer.
+template <typename T>
+struct AllocRoot : protected RootBase
+{
+    explicit AllocRoot(T ptr) {
+        ptr_ = ptr;
+        insert();
+    }
+
+    ~AllocRoot() { remove(); }
+
+    define_smart_ptr_getters;
+
+    virtual void trace(Tracer& t) {
+        gc::trace(t, &ptr_);
+    }
+
+  private:
+    T ptr_;
+};
+
+template <typename T, typename... Args>
+T* create(Args&&... args) {
+    static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+    maybeCollect();
+    AllocRoot<T*> t(static_cast<T*>(malloc(sizeof(T))));
+#ifdef DEBUG
+    bool oldAllocState = setAllocating(true);
+#endif
+    new (t.get()) T(std::forward<Args>(args)...);
+#ifdef DEBUG
+    setAllocating(oldAllocState);
+#endif
+    return t;
+}
+
+} // namespace gc
 
 #endif

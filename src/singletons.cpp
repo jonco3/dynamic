@@ -27,14 +27,14 @@ GlobalRoot<Class*> UninitializedSlotObject::ObjectClass;
 
 void NoneObject::init()
 {
-    ObjectClass.init(new Class("None"));
-    None.init(new NoneObject);
+    ObjectClass.init(gc::create<Class>("None"));
+    None.init(gc::create<NoneObject>());
 }
 
 void UninitializedSlotObject::init()
 {
-    ObjectClass.init(new Class("UninitializedSlot"));
-    UninitializedSlot.init(new UninitializedSlotObject);
+    ObjectClass.init(gc::create<Class>("UninitializedSlot"));
+    UninitializedSlot.init(gc::create<UninitializedSlotObject>());
 }
 
 void initSingletons()

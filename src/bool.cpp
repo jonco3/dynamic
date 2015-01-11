@@ -8,9 +8,9 @@ GlobalRoot<Boolean*> Boolean::False;
 
 void Boolean::init()
 {
-    ObjectClass.init(new Class("bool"));
-    True.init(new Boolean(true));
-    False.init(new Boolean(false));
+    ObjectClass.init(gc::create<Class>("bool"));
+    True.init(gc::create<Boolean>(true));
+    False.init(gc::create<Boolean>(false));
 }
 
 Boolean::Boolean(bool v)

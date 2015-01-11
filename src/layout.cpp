@@ -69,7 +69,7 @@ Layout* Layout::addName(Name name)
     if (i != children_.end())
         return i->second;
 
-    Layout* child = new Layout(this, name);
+    Layout* child = gc::create<Layout>(this, name);
     children_.emplace(name, child);
     return child;
 }

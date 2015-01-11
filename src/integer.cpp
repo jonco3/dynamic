@@ -84,34 +84,34 @@ GlobalRoot<Integer*> Integer::Proto;
 
 void Integer::init()
 {
-    Root<Class*> cls(new Class("int"));
+    Root<Class*> cls(gc::create<Class>("int"));
     Root<Value> value;
-    value = new Native1(int_str);    cls->setAttr("__str__", value);
-    value = new Native1(int_pos);    cls->setAttr("__pos__", value);
-    value = new Native1(int_neg);    cls->setAttr("__neg__", value);
-    value = new Native1(int_invert); cls->setAttr("__invert__", value);
-    value = new Native2(int_lt);     cls->setAttr("__lt__", value);
-    value = new Native2(int_le);     cls->setAttr("__le__", value);
-    value = new Native2(int_gt);     cls->setAttr("__gt__", value);
-    value = new Native2(int_ge);     cls->setAttr("__ge__", value);
-    value = new Native2(int_eq);     cls->setAttr("__eq__", value);
-    value = new Native2(int_ne);     cls->setAttr("__ne__", value);
-    value = new Native2(int_or);     cls->setAttr("__or__", value);
-    value = new Native2(int_xor);    cls->setAttr("__xor__", value);
-    value = new Native2(int_and);    cls->setAttr("__and__", value);
-    value = new Native2(int_lshift); cls->setAttr("__lshift__", value);
-    value = new Native2(int_rshift); cls->setAttr("__rshift__", value);
-    value = new Native2(int_add);    cls->setAttr("__add__", value);
-    value = new Native2(int_sub);    cls->setAttr("__sub__", value);
-    value = new Native2(int_mul);    cls->setAttr("__mul__", value);
-    value = new Native2(int_div);    cls->setAttr("__div__", value);
-    value = new Native2(int_floordiv); cls->setAttr("__floordiv__", value);
-    value = new Native2(int_mod);    cls->setAttr("__mod__", value);
-    value = new Native2(int_pow);    cls->setAttr("__pow__", value);
+    value = gc::create<Native1>(int_str);    cls->setAttr("__str__", value);
+    value = gc::create<Native1>(int_pos);    cls->setAttr("__pos__", value);
+    value = gc::create<Native1>(int_neg);    cls->setAttr("__neg__", value);
+    value = gc::create<Native1>(int_invert); cls->setAttr("__invert__", value);
+    value = gc::create<Native2>(int_lt);     cls->setAttr("__lt__", value);
+    value = gc::create<Native2>(int_le);     cls->setAttr("__le__", value);
+    value = gc::create<Native2>(int_gt);     cls->setAttr("__gt__", value);
+    value = gc::create<Native2>(int_ge);     cls->setAttr("__ge__", value);
+    value = gc::create<Native2>(int_eq);     cls->setAttr("__eq__", value);
+    value = gc::create<Native2>(int_ne);     cls->setAttr("__ne__", value);
+    value = gc::create<Native2>(int_or);     cls->setAttr("__or__", value);
+    value = gc::create<Native2>(int_xor);    cls->setAttr("__xor__", value);
+    value = gc::create<Native2>(int_and);    cls->setAttr("__and__", value);
+    value = gc::create<Native2>(int_lshift); cls->setAttr("__lshift__", value);
+    value = gc::create<Native2>(int_rshift); cls->setAttr("__rshift__", value);
+    value = gc::create<Native2>(int_add);    cls->setAttr("__add__", value);
+    value = gc::create<Native2>(int_sub);    cls->setAttr("__sub__", value);
+    value = gc::create<Native2>(int_mul);    cls->setAttr("__mul__", value);
+    value = gc::create<Native2>(int_div);    cls->setAttr("__div__", value);
+    value = gc::create<Native2>(int_floordiv); cls->setAttr("__floordiv__", value);
+    value = gc::create<Native2>(int_mod);    cls->setAttr("__mod__", value);
+    value = gc::create<Native2>(int_pow);    cls->setAttr("__pow__", value);
     ObjectClass.init(cls);
 
-    Zero.init(new Integer(0));
-    Proto.init(new Integer(INT16_MAX + 1));
+    Zero.init(gc::create<Integer>(0));
+    Proto.init(gc::create<Integer>(INT16_MAX + 1));
 }
 
 Integer::Integer(int v)
@@ -130,7 +130,7 @@ Value Integer::get(int v)
 
 Object* Integer::getObject(int v)
 {
-    return new Integer(v);
+    return gc::create<Integer>(v);
 }
 
 void Integer::print(ostream& s) const {

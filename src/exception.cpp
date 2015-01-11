@@ -20,9 +20,9 @@ static bool exception_init(Traced<Value> arg1, Traced<Value> arg2,
 
 void Exception::init()
 {
-    Root<Class*> cls(new Class("Exception"));  // todo: whatever this is really called
+    Root<Class*> cls(gc::create<Class>("Exception"));  // todo: whatever this is really called
     Root<Value> value;
-    value = new Native2(exception_init); cls->setAttr("__init__", value);
+    value = gc::create<Native2>(exception_init); cls->setAttr("__init__", value);
     ObjectClass.init(cls);
 
     StopIteration::init();
@@ -30,7 +30,7 @@ void Exception::init()
 
 void StopIteration::init()
 {
-    Root<Class*> cls(new Class("StopIterator"));
+    Root<Class*> cls(gc::create<Class>("StopIterator"));
     // todo: make this derive Exception
     ObjectClass.init(cls);
 }
@@ -38,9 +38,6 @@ void StopIteration::init()
 Exception::Exception(Traced<Class*> cls, const string& className, const string& message)
   : Object(cls)
 {
-    // todo: this really needs a whole new approach to allocating objects sadly
-    Root<Exception*> self(this);
-
     Root<Value> classNameValue, messageValue;
     classNameValue = String::get(className);
     messageValue = String::get(message);
@@ -50,9 +47,6 @@ Exception::Exception(Traced<Class*> cls, const string& className, const string& 
 Exception::Exception(const string& className, const string& message)
   : Object(ObjectClass)
 {
-    // todo: this really needs a whole new approach to allocating objects sadly
-    Root<Exception*> self(this);
-
     Root<Value> classNameValue, messageValue;
     classNameValue = String::get(className);
     messageValue = String::get(message);
@@ -100,7 +94,7 @@ void Exception::print(ostream& os) const
 testcase(exception)
 {
     Root<Exception*> exc;
-    exc = new Exception("foo", "bar");
+    exc = gc::create<Exception>("foo", "bar");
     testEqual(exc->className(), "foo");
     testEqual(exc->message(), "bar");
     testEqual(exc->fullMessage(), "foo: bar");

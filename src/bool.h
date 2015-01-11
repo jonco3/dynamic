@@ -18,9 +18,9 @@ struct Boolean : public Object
     bool value() { return value_; }
     virtual void print(ostream& os) const;
 
-  private:
     Boolean(bool v);
 
+  private:
     bool value_;
 };
 

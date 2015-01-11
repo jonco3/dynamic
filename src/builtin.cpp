@@ -17,7 +17,7 @@ static bool builtin_hasattr(Traced<Value> v, Traced<Value> name, Root<Value>& re
 {
     Object* n = name.toObject();
     if (!n->is<String>()) {
-        resultOut = new Exception("TypeError",
+        resultOut = gc::create<Exception>("TypeError",
                                   "hasattr(): attribute name must be string");
         return false;
     }
@@ -28,16 +28,16 @@ static bool builtin_hasattr(Traced<Value> v, Traced<Value> name, Root<Value>& re
 static bool builtin_object(Root<Value>& resultOut)
 {
     // todo: the returned object should not allow attributes to be set on it
-    resultOut = new Object();
+    resultOut = gc::create<Object>();
     return true;
 }
 
 void initBuiltins()
 {
-    Builtin.init(new Object);
+    Builtin.init(gc::create<Object>());
     Root<Value> value;
-    value = new Native2(builtin_hasattr); Builtin->setAttr("hasattr", value);
-    value = new Native0(builtin_object); Builtin->setAttr("object", value);
+    value = gc::create<Native2>(builtin_hasattr); Builtin->setAttr("hasattr", value);
+    value = gc::create<Native0>(builtin_object); Builtin->setAttr("object", value);
 
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);

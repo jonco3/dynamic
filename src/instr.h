@@ -137,7 +137,7 @@ struct IdentInstrBase : public Instr
     bool raiseAttrError(Value value, Interpreter& interp) {
         const Class* cls = value.toObject()->getClass();
         string message = "'" + cls->name() + "' object has no attribute '" + ident + "'";
-        interp.pushStack(new Exception("AttributeError", message));
+        interp.pushStack(gc::create<Exception>("AttributeError", message));
         return false;
     }
 
@@ -348,9 +348,9 @@ inline bool InstrGetMethod::execute(Interpreter& interp)
 
     if (value.isInt32()) {
         Root<Value> rootedResult(result);
-        interp.replaceInstr(new InstrGetMethodInt(ident, rootedResult), this);
+        interp.replaceInstr(gc::create<InstrGetMethodInt>(ident, rootedResult), this);
     } else {
-        interp.replaceInstr(new InstrGetMethodFallback(ident), this);
+        interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
     }
 
     return true;
@@ -360,7 +360,7 @@ inline bool InstrGetMethodInt::execute(Interpreter& interp)
 {
     Value value = interp.popStack();
     if (!value.isInt32()) {
-        interp.replaceInstr(new InstrGetMethodFallback(ident), this);
+        interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
         Value result;
         if (!value.maybeGetAttr(ident, result))
             return raiseAttrError(value, interp);
@@ -434,7 +434,7 @@ struct InstrIn : public Instr
         Root<Value> value(interp.popStack());
         Value contains; // todo: root
         if (!container->maybeGetAttr("__contains__", contains)) {
-            interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
+            interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
             return false;
         }
 
@@ -594,7 +594,7 @@ struct InstrLambda : public Instr
     virtual bool execute(Interpreter& interp) {
         Root<Block*> block(block_);
         Root<Frame*> frame(interp.getFrame(0));
-        interp.pushStack(new Function(params_, block, frame));
+        interp.pushStack(gc::create<Function>(params_, block, frame));
         return true;
     }
 
@@ -681,7 +681,7 @@ struct InstrList : public Instr
   InstrList(unsigned size) : size(size) {}
 
     virtual bool execute(Interpreter& interp) {
-        List* list = new List(interp.stackSlice(size - 1, size));
+        List* list = gc::create<List>(interp.stackSlice(size - 1, size));
         interp.popStack(size);
         interp.pushStack(list);
         return true;
@@ -699,7 +699,7 @@ struct InstrDict : public Instr
     InstrDict(unsigned size) : size(size) {}
 
     virtual bool execute(Interpreter& interp) {
-        Dict* dict = new Dict(interp.stackSlice(size * 2 - 1, size * 2));
+        Dict* dict = gc::create<Dict>(interp.stackSlice(size * 2 - 1, size * 2));
         interp.popStack(size * 2);
         interp.pushStack(dict);
         return true;
@@ -718,7 +718,7 @@ struct InstrAssertionFailed : public Instr
         Object* obj = interp.popStack().toObject();
         assert(obj->is<String>() || obj == None);
         string message = obj != None ? obj->as<String>()->value() : "";
-        interp.pushStack(new Exception("AssertionError", message));
+        interp.pushStack(gc::create<Exception>("AssertionError", message));
         return false;
     }
 };
@@ -738,7 +738,7 @@ struct InstrMakeClassFromFrame : public IdentInstrBase
         Root<Layout*> layout(Object::InitialLayout);
         for (auto i = names.begin(); i != names.end(); i++)
             layout = layout->addName(*i);
-        Class* cls = new Class(ident, layout);
+        Class* cls = gc::create<Class>(ident, layout);
         Root<Value> value;
         for (auto i = names.begin(); i != names.end(); i++) {
             value = frame->getAttr(*i);
@@ -760,13 +760,13 @@ struct InstrDestructure : public Instr
         Root<Value> seq(interp.popStack());
         Value attr; // todo: root
         if (!seq.get().maybeGetAttr("__len__", attr)) {
-            interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
+            interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
             return false;
         }
         Root<Value> lenFunc(attr);
 
         if (!seq.get().maybeGetAttr("__getitem__", attr)) {
-            interp.pushStack(new Exception("TypeError", "Argument is not iterable"));
+            interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
             return false;
         }
         Root<Value> getitemFunc(attr);
@@ -780,13 +780,13 @@ struct InstrDestructure : public Instr
         }
 
         if (!result.get().isInt32()) {
-            interp.pushStack(new Exception("TypeError",
+            interp.pushStack(gc::create<Exception>("TypeError",
                                            "__len__ didn't return an integer"));
             return false;
         }
 
         if (result.get().asInt32() != count_) {
-            interp.pushStack(new Exception("ValueError",
+            interp.pushStack(gc::create<Exception>("ValueError",
                                            "too many values to unpack"));
             return false;
         }

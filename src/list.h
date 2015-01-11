@@ -36,7 +36,6 @@ struct Tuple : public ListBase
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
 
-  private:
     Tuple(const TracedVector<Value>& values);
 };
 
