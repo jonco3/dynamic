@@ -451,7 +451,7 @@ static void testParseExpression(const string& input, const string& expected)
     SyntaxParser sp;
     sp.start(input);
     unique_ptr<Syntax> expr(sp.expression());
-    testEqual(repr(expr.get()), expected);
+    testEqual(repr(*expr.get()), expected);
 }
 
 static void testParseModule(const string& input, const string& expected)
@@ -459,7 +459,7 @@ static void testParseModule(const string& input, const string& expected)
     SyntaxParser sp;
     sp.start(input);
     unique_ptr<Syntax> expr(sp.parseModule());
-    testEqual(repr(expr.get()), expected);
+    testEqual(repr(*expr.get()), expected);
 }
 
 static void testParseException(const char* input)
@@ -516,7 +516,7 @@ testcase(parser)
     // test this parses as "not (a in b)" not "(not a) in b"
     sp.start("not a in b");
     expr.reset(sp.parseModule());
-    testEqual(repr(expr.get()), "not a in b\n");
+    testEqual(repr(*expr.get()), "not a in b\n");
     testTrue(expr->is<SyntaxBlock>());
     testTrue(expr->as<SyntaxBlock>()->stmts()[0]->is<SyntaxNot>());
 

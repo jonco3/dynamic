@@ -41,12 +41,4 @@ struct Layout : public Cell
     void removeChild(Layout* child);
 };
 
-inline ostream& operator<<(ostream& s, Layout* layout) {
-    if (layout)
-        layout->print(s);
-    else
-        s << "Layout {}";
-    return s;
-}
-
 #endif

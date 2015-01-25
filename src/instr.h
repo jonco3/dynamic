@@ -606,7 +606,7 @@ struct InstrLambda : public Instr
         s << name();
         for (auto i = params_.begin(); i != params_.end(); ++i)
             s << " " << *i;
-        s << ": { " << block_ << " }";
+        s << ": { " << *block_ << " }";
     }
 
   private:

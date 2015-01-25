@@ -60,9 +60,8 @@ struct Cell
     friend void gc::collect();
 };
 
-// todo: should be Cell&
-inline ostream& operator<<(ostream& s, const Cell* cell) {
-    cell->print(s);
+inline ostream& operator<<(ostream& s, const Cell& cell) {
+    cell.print(s);
     return s;
 }
 

@@ -5,7 +5,7 @@
 ostream& operator<<(ostream& s, const Value& v) {
     Object* obj = v.toObject();
     if (obj)
-        s << obj;
+        s << *obj;
     else
         s << "(nullptr)";
     return s;

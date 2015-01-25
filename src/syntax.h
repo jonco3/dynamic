@@ -116,8 +116,8 @@ struct Syntax
     Token token_;
 };
 
-inline ostream& operator<<(ostream& s, const Syntax* syntax) {
-    syntax->print(s);
+inline ostream& operator<<(ostream& s, const Syntax& syntax) {
+    syntax.print(s);
     return s;
 }
 
@@ -137,7 +137,7 @@ struct UnarySyntax : public Syntax
     const Syntax* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
-        s << name() << " " << right();
+        s << name() << " " << *right();
     }
 
   private:
@@ -155,7 +155,7 @@ struct BinarySyntax : public Base
     const R* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
-        s << left() << " " << this->name() << " " << right();
+        s << *left() << " " << this->name() << " " << *right();
     }
 
   private:
@@ -224,7 +224,7 @@ struct SyntaxBlock : public Syntax
 
     virtual void print(ostream& s) const override {
         for (auto i = statements.begin(); i != statements.end(); ++i)
-            s << (*i) << endl;
+            s << **i << endl;
     }
 
     syntax_accept();
@@ -315,7 +315,7 @@ struct SyntaxExprList : public Syntax
         for (auto i = elements.begin(); i != elements.end(); ++i) {
             if (i != elements.begin())
                 s << ", ";
-            s << (*i);
+            s << **i;
         }
         if (elements.size() == 1)
                 s << ",";
@@ -350,7 +350,7 @@ struct SyntaxList : public Syntax
         for (auto i = elements.begin(); i != elements.end(); ++i) {
             if (i != elements.begin())
                 s << ", ";
-            s << (*i);
+            s << **i;
         }
         s << "]";
     }
@@ -385,7 +385,7 @@ struct SyntaxDict : public Syntax
         for (auto i = entries_.begin(); i != entries_.end(); ++i) {
             if (i != entries_.begin())
                 s << ", ";
-            s << i->first << ": " << i->second;
+            s << *i->first << ": " << *i->second;
         }
         s << "}";
     }
@@ -438,11 +438,11 @@ struct SyntaxAttrRef : public BinarySyntax<SyntaxTarget, Syntax, SyntaxName>
         if (left()->is<SyntaxName>() || left()->is<SyntaxExprList>() ||
             left()->is<SyntaxAttrRef>())
         {
-            s << left();
+            s << *left();
         } else {
-            s << "(" << left() << ")";
+            s << "(" << *left() << ")";
         }
-        s << "." << right();
+        s << "." << *right();
     }
 };
 
@@ -463,7 +463,7 @@ struct SyntaxTargetList : SyntaxTarget
         for (auto i = targets_.begin(); i != targets_.end(); i++) {
             if (i != targets_.begin())
                 s << ", ";
-            s << *i;
+            s << **i;
         }
         s << ")";
     }
@@ -484,7 +484,7 @@ struct SyntaxSubscript : public BinarySyntax<SyntaxTarget, Syntax, Syntax>
     syntax_accept()
 
     virtual void print(ostream& s) const override {
-        s << left() << "[" << right() << "]";
+        s << *left() << "[" << *right() << "]";
     }
 };
 
@@ -507,11 +507,11 @@ struct SyntaxCall : public Syntax
     syntax_accept()
 
     virtual void print(ostream& s) const override {
-        s << left() << "(";
+        s << *left() << "(";
         for (auto i = right_.begin(); i != right_.end(); ++i) {
             if (i != right_.begin())
                 s << ", ";
-            s << *i;
+            s << **i;
         }
         s << ")";
     }
@@ -543,7 +543,7 @@ struct SyntaxCond : public Syntax
     syntax_accept()
 
     virtual void print(ostream& s) const override {
-        s << cons() << " if " << cond() << " else " << alt();
+        s << *cons() << " if " << *cond() << " else " << *alt();
     }
 
   private:
@@ -772,11 +772,11 @@ struct SyntaxFor : public Syntax
 
     virtual void print(ostream& s) const override {
         // todo: indentation
-        s << "for " << targets() << " in " << exprs() << ":" << endl;
-        s << suite();
+        s << "for " << *targets() << " in " << *exprs() << ":" << endl;
+        s << *suite();
         if (elseSuite()) {
             s << endl << "else: " << endl;
-            s << elseSuite();
+            s << *elseSuite();
         }
     }
 

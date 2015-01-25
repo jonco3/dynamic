@@ -207,7 +207,7 @@ struct BlockBuilder : public SyntaxVisitor
             b->append(gc::create<InstrReturn>());
         }
 #ifdef TRACE_BUILD
-        cerr << repr(b) << endl;
+        cerr << repr(*b) << endl;
 #endif
         return b;
     }
@@ -219,7 +219,7 @@ struct BlockBuilder : public SyntaxVisitor
             b->append(gc::create<InstrReturn>());
         }
 #ifdef TRACE_BUILD
-        cerr << repr(b) << endl;
+        cerr << repr(*b) << endl;
 #endif
         return b;
     }
@@ -633,7 +633,7 @@ void testBuildModule(const string& input, const string& expected)
 {
     Root<Block*> block;
     Block::buildModule(input, Object::Null, block);
-    testEqual(repr(block), expected);
+    testEqual(repr(*block), expected);
 }
 
 testcase(block)
