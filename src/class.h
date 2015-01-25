@@ -10,6 +10,7 @@ struct Class : public Object
     static void init();
 
     static GlobalRoot<Class*> ObjectClass;
+    static GlobalRoot<Class*> Null;
 
     Class(string name, Traced<Layout*> initialLayout = Object::InitialLayout);
 

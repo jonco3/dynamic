@@ -23,7 +23,7 @@ void Object::init()
     Null.init(nullptr);
 }
 
-Object::Object(Traced<Class*> cls, Traced<Object*> base, Traced<Layout*> layout)
+Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
   : class_(cls), layout_(layout)
 {
     if (cls != Class::ObjectClass)
@@ -47,7 +47,7 @@ Object::~Object()
 {
 }
 
-void Object::initClass(Traced<Class*> cls, Traced<Object*> base)
+void Object::initClass(Traced<Class*> cls, Traced<Class*> base)
 {
     assert(cls);
     assert(!class_);
@@ -55,15 +55,14 @@ void Object::initClass(Traced<Class*> cls, Traced<Object*> base)
     initAttrs(base);
 }
 
-void Object::initAttrs(Object* base)
+void Object::initAttrs(Traced<Class*> classAttr)
 {
     assert(class_);
     assert(layout_);
     slots_.resize(layout_->slotCount());
     for (unsigned i = 0; i < layout_->slotCount(); ++i)
         slots_[i] = UninitializedSlot;
-    // todo: root outwards
-    Root<Value> value(base);
+    Root<Value> value(classAttr);
     setAttr("__class__", value);
 }
 

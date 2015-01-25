@@ -140,6 +140,17 @@ struct Root : protected RootBase
         insert();
     }
 
+    explicit Root(nullptr_t ptr) {
+        *this = ptr;
+        insert();
+    }
+
+    template <typename S>
+    explicit Root(const S& other) {
+        *this = other.get();
+        insert();
+    }
+
     Root(const Root& other) {
         *this = other.ptr_;
         insert();

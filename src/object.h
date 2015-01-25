@@ -26,7 +26,7 @@ struct Object : public Cell
     virtual ~Object();
 
     // Only for use during initialization
-    void initClass(Traced<Class*> cls, Traced<Object*> base);
+    void initClass(Traced<Class*> cls, Traced<Class*> base);
 
     template <typename T> bool is() { return class_ == T::ObjectClass; }
 
@@ -60,7 +60,7 @@ struct Object : public Cell
     virtual size_t hash() const { return size_t(this); }
 
   protected:
-    Object(Traced<Class*> cls, Traced<Object*> base,
+    Object(Traced<Class*> cls, Traced<Class*> base,
            Traced<Layout*> layout = InitialLayout);
 
     virtual void traceChildren(Tracer& t);
@@ -75,7 +75,7 @@ struct Object : public Cell
     Layout* layout_;
     vector<Value> slots_;
 
-    void initAttrs(Object* base);
+    void initAttrs(Traced<Class*> classAttr);
 };
 
 #endif
