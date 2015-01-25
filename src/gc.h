@@ -117,14 +117,13 @@ struct RootBase
     RootBase* prev_;
 };
 
-#define define_smart_ptr_getters                                              \
-    operator T () { return ptr_; }                                            \
-    operator const T () const { return ptr_; }                                \
-    T operator->() { return ptr_; }                                           \
-    const T operator->() const { return ptr_; }                               \
-    T get() { return ptr_; }                                                  \
-    const T get() const { return ptr_; }                                      \
-    T* operator&() { return &ptr_; }
+#define define_smart_ptr_getters                                               \
+    operator T& () { return ptr_; }                                            \
+    operator const T& () const { return ptr_; }                                \
+    T operator->() { return ptr_; }                                            \
+    const T operator->() const { return ptr_; }                                \
+    T& get() { return ptr_; }                                                  \
+    const T& get() const { return ptr_; }
 
 // Roots a cell as long as it is alive.
 template <typename T>
@@ -219,26 +218,21 @@ struct TracedMixins {};
 template <typename T>
 struct Traced : public TracedMixins<T>
 {
-    Traced(Root<T>& root) : handle_(&root) {}
-    Traced(GlobalRoot<T>& root) : handle_(&root) {}
+    Traced(Root<T>& root) : ptr_(root.get()) {}
+    Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
 
-    operator T () { return *handle_; }
-    operator const T () const { return *handle_; }
-    T operator->() { return *handle_; }
-    const T operator->() const { return *handle_; }
-    T get() { return *handle_; }
-    const T get() const { return *handle_; }
+    define_smart_ptr_getters;
 
-    const T* location() const { return handle_; }
+    const T* location() const { return &ptr_; }
 
     static Traced<T> fromTracedLocation(T* traced) {
         return Traced(traced);
     }
 
   private:
-    Traced(T* traced) : handle_(traced) {}
+    Traced(T* traced) : ptr_(*traced) {}
 
-    T* handle_;
+    T& ptr_;
 };
 
 template <typename T>
