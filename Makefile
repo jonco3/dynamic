@@ -79,7 +79,7 @@ test: tests-debug dynamic-debug
 	@$(WRAPPER) tests-debug
 	@$(TEST-RUNNER) dynamic-debug
 
-.PHONY: benchz
+.PHONY: bench
 bench: dynamic
 	python benchmarks/run_benchmarks.py
 
