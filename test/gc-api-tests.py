@@ -72,7 +72,8 @@ class TestCompileErrors(unittest.TestCase):
             command += [os.path.join(self.srcPath, "gc.cpp") ]
         return self.runCommand(command)
 
-    def checkError(self, source, message):
+    def checkCompileError(self, source, message):
+        self.assertNotEqual(message, "")
         path = self.writeSource(source)
         for debugMode in (True, False):
             rc, output = self.compileSource(path, path + ".out", debugMode, False)
@@ -82,7 +83,20 @@ class TestCompileErrors(unittest.TestCase):
                           "Compilation failed but expected error: " + message)
         os.remove(path)
 
-    def checkOk(self, source):
+    def checkDebugAssert(self, source, message):
+        self.assertNotEqual(message, "")
+        path = self.writeSource(source)
+        outputPath = path + ".out"
+        rc, output = self.compileSource(path, outputPath, True, True)
+        self.assertEqual(0, rc, "Compilation failed:\n " + output)
+        rc, output = self.runCommand([outputPath])
+        self.assertNotEqual(0, rc, "Execution succeded, expected error: " + message)
+        self.assertIn("Assertion failed", output)
+        self.assertIn(message, output)
+        os.remove(outputPath)
+        os.remove(path)
+
+    def checkOK(self, source):
         path = self.writeSource(source)
         outputPath = path + ".out"
         for debugMode in (True, False):
@@ -94,9 +108,9 @@ class TestCompileErrors(unittest.TestCase):
             os.remove(outputPath)
         os.remove(path)
 
-    def testAPI(self):
+    def testTracedAPIUse(self):
         # Check we can't pass a raw pointer to an API expecting a traced pointer
-        self.checkError(
+        self.checkCompileError(
             """
             void api(Traced<Cell*> arg) {}
             void test() {
@@ -105,8 +119,9 @@ class TestCompileErrors(unittest.TestCase):
             }
             """,
             "no known conversion from 'Cell *' to 'Traced<Cell *>'")
+
         # Check we can pass a Root to an API expecting a traced pionter
-        self.checkOk(
+        self.checkOK(
             """
             void api(Traced<Cell*> arg) {}
             void test() {
@@ -114,5 +129,43 @@ class TestCompileErrors(unittest.TestCase):
                 api(root);
             }
             """);
+
+        # Check we can pass Global Root to an API expecting a traced pionter
+        self.checkOK(
+            """
+            GlobalRoot<Cell *> globalRoot;
+            void api(Traced<Cell*> arg) {}
+            void test() {
+                api(globalRoot);
+            }
+            """);
+
+    def testAllocationAndDestruction(self):
+        # Check we hit an assert if we create a Cell without using gc::Create()
+        self.checkDebugAssert(
+            """
+            void test() {
+               new TestCell;
+            }
+            """,
+            "gc::isAllocating")
+
+        # Check we hit an assert if we delete a Cell outside of the GC
+        self.checkDebugAssert(
+            """
+            void test() {
+                delete gc::create<TestCell>();
+            }
+            """,
+            "gc::isSweeping")
+
+        # Check normal allocation and collection is OK
+        self.checkOK(
+            """
+            void test() {
+                gc::create<TestCell>();
+              gc::collect();
+            }
+            """)
 
 unittest.main()
