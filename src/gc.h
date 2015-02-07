@@ -22,6 +22,7 @@ extern void maybeCollect();
 extern void collect();
 extern size_t cellCount();
 extern bool isDying(const Cell* cell);
+extern unsigned unsafeCount;
 } // namespace gc
 
 // A visitor that visits edges in the object graph.
@@ -398,5 +399,17 @@ T* create(Args&&... args) {
 }
 
 } // namespace gc
+
+/*
+ * Assert if a collection is possible in the lifetime of the object.
+ */
+struct AutoAssertNoGC
+{
+    AutoAssertNoGC() { gc::unsafeCount++; }
+    ~AutoAssertNoGC() {
+        assert(gc::unsafeCount > 0);
+        gc::unsafeCount--;
+    }
+};
 
 #endif

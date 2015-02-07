@@ -98,15 +98,17 @@ bool Object::hasAttr(Name name) const
     if (hasOwnAttr(name))
         return true;
 
+    AutoAssertNoGC nogc;
+
     // lookup attribute in class hierarchy
     Value base;
-    if (!maybeGetOwnAttr("__class__", base))
+    if (!maybeGetOwnAttr("__class__", base, nogc))
         return false;
 
     while (Object* obj = base.toObject()) {
         if (obj->hasOwnAttr(name))
             return true;
-        if (!obj->maybeGetOwnAttr("__base__", base))
+        if (!obj->maybeGetOwnAttr("__base__", base, nogc))
             break;
     }
 
@@ -121,9 +123,11 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
         return slot;
     }
 
+    AutoAssertNoGC nogc;
+
     // lookup attribute in class hierarchy
     Value base;
-    if (!maybeGetOwnAttr("__class__", base))
+    if (!maybeGetOwnAttr("__class__", base, nogc))
         return false;
 
     while (Class* cls = base.toObject()->as<Class>()) {
@@ -132,7 +136,7 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
             classOut = cls;
             return slot;
         }
-        if (!cls->maybeGetOwnAttr("__base__", base))
+        if (!cls->maybeGetOwnAttr("__base__", base, nogc))
             break;
     }
 
@@ -140,28 +144,30 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
     return -1;
 }
 
-bool Object::maybeGetOwnAttr(Name name, Value& valueOut) const
+bool Object::maybeGetOwnAttr(Name name, Value& valueOut, AutoAssertNoGC& nogc) const
 {
     int slot = layout_->lookupName(name);
     if (slot == -1)
         return false;
-    return getSlot(name, slot, valueOut);
+    return getSlot(name, slot, valueOut, nogc);
 }
 
-bool Object::maybeGetAttr(Name name, Value& valueOut) const
+bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
-    if (maybeGetOwnAttr(name, valueOut))
+    AutoAssertNoGC nogc;
+
+    if (maybeGetOwnAttr(name, valueOut, nogc))
         return true;
 
     // lookup attribute in class hierarchy
     Value base;
-    if (!maybeGetOwnAttr("__class__", base))
+    if (!maybeGetOwnAttr("__class__", base, nogc))
         return false;
 
     while (Object* obj = base.toObject()) {
-        if (obj->maybeGetOwnAttr(name, valueOut))
+        if (obj->maybeGetOwnAttr(name, valueOut, nogc))
             return true;
-        if (!obj->maybeGetOwnAttr("__base__", base))
+        if (!obj->maybeGetOwnAttr("__base__", base, nogc))
             break;
     }
 
@@ -170,14 +176,15 @@ bool Object::maybeGetAttr(Name name, Value& valueOut) const
 
 Value Object::getAttr(Name name) const
 {
-    Value value(None);
+    AutoAssertNoGC nogc;
+    Root<Value> value;
     bool ok = maybeGetAttr(name, value);
     assert(ok);
     (void)ok;
     return value;
 }
 
-bool Object::getSlot(Name name, int slot, Value& valueOut) const
+bool Object::getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == Value(UninitializedSlot)) {
@@ -246,12 +253,13 @@ void Object::traceChildren(Tracer& t)
 testcase(object)
 {
     Root<Object*> o(gc::create<Object>());
-    Value v;
 
+    Root<Value> v;
     testFalse(o->maybeGetAttr("foo", v));
     Root<Value> one(Integer::get(1));
     o->setAttr("foo", one);
     testTrue(o->maybeGetAttr("foo", v));
+
     Root<Object*> obj(v.toObject());
     testTrue(obj->is<Integer>());
     testEqual(obj->as<Integer>()->value(), 1);

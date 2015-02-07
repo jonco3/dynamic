@@ -42,7 +42,7 @@ struct Value
     inline bool isInt32() const;
     inline int32_t asInt32() const;
 
-    inline bool maybeGetAttr(Name name, Value& valueOut);
+    inline bool maybeGetAttr(Name name, Root<Value>& valueOut);
 
     bool operator==(const Value& other) const;
     bool operator!=(const Value& other) const { return !(*this == other); }

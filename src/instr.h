@@ -275,7 +275,7 @@ struct InstrGetAttr : public IdentInstrBase
 
     virtual bool execute(Interpreter& interp) {
         Value value = interp.popStack();
-        Value result;
+        Root<Value> result;
         if (!value.maybeGetAttr(ident, result))
             return raiseAttrError(value, interp);
         assert(result != Value(UninitializedSlot));
@@ -339,19 +339,17 @@ struct InstrGetMethodFallback : public IdentInstrBase
 inline bool InstrGetMethod::execute(Interpreter& interp)
 {
     Value value(interp.popStack());
-    Value result;
+    Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
         return raiseAttrError(value, interp);
     assert(result != Value(UninitializedSlot));
     interp.pushStack(result);
     interp.pushStack(value);
 
-    if (value.isInt32()) {
-        Root<Value> rootedResult(result);
-        interp.replaceInstr(gc::create<InstrGetMethodInt>(ident, rootedResult), this);
-    } else {
+    if (value.isInt32())
+        interp.replaceInstr(gc::create<InstrGetMethodInt>(ident, result), this);
+    else
         interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
-    }
 
     return true;
 }
@@ -361,7 +359,7 @@ inline bool InstrGetMethodInt::execute(Interpreter& interp)
     Value value = interp.popStack();
     if (!value.isInt32()) {
         interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
-        Value result;
+        Root<Value> result;
         if (!value.maybeGetAttr(ident, result))
             return raiseAttrError(value, interp);
         assert(result != Value(UninitializedSlot));
@@ -377,7 +375,7 @@ inline bool InstrGetMethodInt::execute(Interpreter& interp)
 inline bool InstrGetMethodFallback::execute(Interpreter& interp)
 {
     Value value = interp.popStack();
-    Value result;
+    Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
         return raiseAttrError(value, interp);
     assert(result != Value(UninitializedSlot));
@@ -432,7 +430,7 @@ struct InstrIn : public Instr
     virtual bool execute(Interpreter& interp) {
         Root<Object*> container(interp.popStack().toObject());
         Root<Value> value(interp.popStack());
-        Value contains; // todo: root
+        Root<Value> contains;
         if (!container->maybeGetAttr("__contains__", contains)) {
             interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
             return false;
@@ -441,8 +439,7 @@ struct InstrIn : public Instr
         RootVector<Value> args;
         args.push_back(Value(container));
         args.push_back(value);
-        Root<Value> rootedContains(contains);
-        return interp.startCall(rootedContains, args);
+        return interp.startCall(contains, args);
     }
 };
 
@@ -758,18 +755,19 @@ struct InstrDestructure : public Instr
 
     virtual bool execute(Interpreter& interp) {
         Root<Value> seq(interp.popStack());
-        Value attr; // todo: root
-        if (!seq.get().maybeGetAttr("__len__", attr)) {
-            interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
+        Root<Value> lenFunc;
+        if (!seq.get().maybeGetAttr("__len__", lenFunc)) {
+            interp.pushStack(gc::create<Exception>("TypeError",
+                                                   "Argument is not iterable"));
             return false;
         }
-        Root<Value> lenFunc(attr);
 
-        if (!seq.get().maybeGetAttr("__getitem__", attr)) {
-            interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
+        Root<Value> getitemFunc;
+        if (!seq.get().maybeGetAttr("__getitem__", getitemFunc)) {
+            interp.pushStack(gc::create<Exception>("TypeError",
+                                                   "Argument is not iterable"));
             return false;
         }
-        Root<Value> getitemFunc(attr);
 
         RootVector<Value> args;
         args.push_back(seq);

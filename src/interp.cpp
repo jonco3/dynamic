@@ -167,14 +167,13 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     } else if (target->is<Class>()) {
         Root<Class*> cls(target->as<Class>());
         Root<Object*> instance(gc::create<Object>(cls));  // todo: maybe call __new__
-        Value attr; // todo: root
-        if (!target->maybeGetAttr("__init__", attr)) {
+        Root<Value> initFunc;
+        if (!target->maybeGetAttr("__init__", initFunc)) {
             if (args.size() != 0)
                 return raise("TypeError", "this constructor takes no arguments", resultOut);
             resultOut = instance;
             return CallFinished;
         }
-        Root<Value> initFunc(attr);
 
         RootVector<Value> initArgs;
         initArgs.push_back(Value(instance));

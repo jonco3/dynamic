@@ -43,6 +43,8 @@ static size_t minCollectAt = 100;
 static double scheduleFactor = 2;
 #endif
 static size_t collectAt = minCollectAt;
+
+unsigned unsafeCount = 0;
 }
 
 Cell::Cell()
@@ -182,6 +184,7 @@ bool gc::setAllocating(bool state)
 
 void gc::maybeCollect()
 {
+    assert(unsafeCount == 0);
     if (cells.size() >= collectAt)
         collect();
 }

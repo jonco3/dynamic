@@ -43,7 +43,7 @@ struct Object : public Cell
     bool hasAttr(Name name) const;
     int findOwnAttr(Name name) const;
 
-    bool maybeGetAttr(Name name, Value& valueOut) const;
+    bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     Value getAttr(Name name) const;
 
     // Get the slot of and optionally the class containing the named attribute
@@ -67,8 +67,8 @@ struct Object : public Cell
     virtual size_t size() const { return sizeof(*this); }
 
     bool hasOwnAttr(Name name) const;
-    bool maybeGetOwnAttr(Name name, Value& valueOut) const;
-    bool getSlot(Name name, int slot, Value& valueOut) const;
+    bool maybeGetOwnAttr(Name name, Value& valueOut, AutoAssertNoGC& nogc) const;
+    bool getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc) const;
 
   private:
     Class* class_;

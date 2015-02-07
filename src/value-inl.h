@@ -53,7 +53,7 @@ inline int32_t Value::asInt32() const
         return asObject()->as<Integer>()->value();
 }
 
-inline bool Value::maybeGetAttr(Name name, Value& valueOut)
+inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut)
 {
     if (type() == IntType)
         return Integer::Proto->maybeGetAttr(name, valueOut);
