@@ -134,7 +134,7 @@ struct IdentInstrBase : public Instr
         s << name() << " " << ident;
     }
 
-    bool raiseAttrError(Value value, Interpreter& interp) {
+    bool raiseAttrError(Traced<Value> value, Interpreter& interp) {
         const Class* cls = value.toObject()->getClass();
         string message = "'" + cls->name() + "' object has no attribute '" + ident + "'";
         interp.pushStack(gc::create<Exception>("AttributeError", message));
@@ -274,7 +274,7 @@ struct InstrGetAttr : public IdentInstrBase
     instr_name("GetAttr");
 
     virtual bool execute(Interpreter& interp) {
-        Value value = interp.popStack();
+        Root<Value> value(interp.popStack());
         Root<Value> result;
         if (!value.maybeGetAttr(ident, result))
             return raiseAttrError(value, interp);
@@ -338,7 +338,7 @@ struct InstrGetMethodFallback : public IdentInstrBase
 
 inline bool InstrGetMethod::execute(Interpreter& interp)
 {
-    Value value(interp.popStack());
+    Root<Value> value(interp.popStack());
     Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
         return raiseAttrError(value, interp);
@@ -356,7 +356,7 @@ inline bool InstrGetMethod::execute(Interpreter& interp)
 
 inline bool InstrGetMethodInt::execute(Interpreter& interp)
 {
-    Value value = interp.popStack();
+    Root<Value> value(interp.popStack());
     if (!value.isInt32()) {
         interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
         Root<Value> result;
@@ -374,7 +374,7 @@ inline bool InstrGetMethodInt::execute(Interpreter& interp)
 
 inline bool InstrGetMethodFallback::execute(Interpreter& interp)
 {
-    Value value = interp.popStack();
+    Root<Value> value(interp.popStack());
     Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
         return raiseAttrError(value, interp);
