@@ -92,28 +92,29 @@ struct Instr : public Cell
     }
 };
 
-#define instr_type(it)                                                       \
-    virtual InstrType type() const { return Type; }                          \
+#define instr_type(it)                                                        \
+    virtual InstrType type() const { return Type; }                           \
     static const InstrType Type = it
 
-#define instr_name(nameStr)                                                  \
+#define instr_name(nameStr)                                                   \
     virtual string name() const { return nameStr; }
+
+#define instr_execute                                                         \
+    virtual bool execute(Interpreter& interp) override
+
+#define define_instr(it, name)                                                \
+    instr_type(it);                                                           \
+    instr_name(name);                                                         \
+    instr_execute
 
 struct InstrConst : public Instr
 {
+    define_instr(Instr_Const, "Const");
     InstrConst(Traced<Value> v) : value(v) {}
     InstrConst(Traced<Object*> o) : value(o) {}
 
-    instr_type(Instr_Const);
-    instr_name("Const");
-
     virtual void print(ostream& s) const {
         s << name() << " " << value;
-    }
-
-    virtual bool execute(Interpreter& interp) {
-        interp.pushStack(value);
-        return true;
     }
 
     Value getValue() { return value; }
@@ -134,12 +135,7 @@ struct IdentInstrBase : public Instr
         s << name() << " " << ident;
     }
 
-    bool raiseAttrError(Traced<Value> value, Interpreter& interp) {
-        const Class* cls = value.toObject()->getClass();
-        string message = "'" + cls->name() + "' object has no attribute '" + ident + "'";
-        interp.pushStack(gc::create<Exception>("AttributeError", message));
-        return false;
-    }
+    bool raiseAttrError(Traced<Value> value, Interpreter& interp);
 
   protected:
     const Name ident;
@@ -147,47 +143,23 @@ struct IdentInstrBase : public Instr
 
 struct InstrGetLocal : public IdentInstrBase
 {
+    define_instr(Instr_GetLocal, "GetLocal");
     InstrGetLocal(Name ident) : IdentInstrBase(ident) {}
-
-    instr_type(Instr_GetLocal);
-    instr_name("GetLocal");
-
-    virtual bool execute(Interpreter& interp) {
-        Frame* frame = interp.getFrame();
-        interp.pushStack(frame->getAttr(ident));
-        return true;
-    }
 };
 
 struct InstrSetLocal : public IdentInstrBase
 {
+    define_instr(Instr_SetLocal, "SetLocal");
     InstrSetLocal(Name ident) : IdentInstrBase(ident) {}
-
-    instr_type(Instr_SetLocal);
-    instr_name("SetLocal");
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.peekStack(0));
-        interp.getFrame()->setAttr(ident, value);
-        return true;
-    }
 };
 
 struct InstrGetLexical : public Instr
 {
+    define_instr(Instr_GetLexical, "GetLexical");
     InstrGetLexical(int frame, Name ident) : frameIndex(frame), ident(ident) {}
-
-    instr_type(Instr_GetLexical);
-    instr_name("GetLexical");
 
     virtual void print(ostream& s) const {
         s << name() << " " << frameIndex << " " << ident;
-    }
-
-    virtual bool execute(Interpreter& interp) {
-        Frame* frame = interp.getFrame(frameIndex);
-        interp.pushStack(frame->getAttr(ident));
-        return true;
     }
 
   private:
@@ -197,19 +169,11 @@ struct InstrGetLexical : public Instr
 
 struct InstrSetLexical : public Instr
 {
+    define_instr(Instr_SetLexical, "SetLexical");
     InstrSetLexical(unsigned frame, Name ident) : frameIndex(frame), ident(ident) {}
-
-    instr_type(Instr_SetLexical);
-    instr_name("SetLexical");
 
     virtual void print(ostream& s) const {
         s << name() << " " << frameIndex << " " << ident;
-    }
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.peekStack(0));
-        interp.getFrame(frameIndex)->setAttr(ident, value);
-        return true;
     }
 
   private:
@@ -219,18 +183,12 @@ struct InstrSetLexical : public Instr
 
 struct InstrGetGlobal : public IdentInstrBase
 {
+    define_instr(Instr_GetGlobal, "GetGlobal");
+
     InstrGetGlobal(Object* global, Name ident)
       : IdentInstrBase(ident), global(global)
     {
         assert(global);
-    }
-
-    instr_type(Instr_GetGlobal);
-    instr_name("GetGlobal");
-
-    virtual bool execute(Interpreter& interp) {
-        interp.pushStack(global->getAttr(ident));
-        return true;
     }
 
     virtual void traceChildren(Tracer& t) override {
@@ -243,19 +201,12 @@ struct InstrGetGlobal : public IdentInstrBase
 
 struct InstrSetGlobal : public IdentInstrBase
 {
+    define_instr(Instr_SetGlobal, "SetGlobal");
+
     InstrSetGlobal(Object* global, Name ident)
       : IdentInstrBase(ident), global(global)
     {
         assert(global);
-    }
-
-    instr_type(Instr_SetGlobal);
-    instr_name("SetGlobal");
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.peekStack(0));
-        global->setAttr(ident, value);
-        return true;
     }
 
     virtual void traceChildren(Tracer& t) override {
@@ -268,55 +219,27 @@ struct InstrSetGlobal : public IdentInstrBase
 
 struct InstrGetAttr : public IdentInstrBase
 {
+    define_instr(Instr_GetAttr, "GetAttr");
     InstrGetAttr(Name ident) : IdentInstrBase(ident) {}
-
-    instr_type(Instr_GetAttr);
-    instr_name("GetAttr");
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.popStack());
-        Root<Value> result;
-        if (!value.maybeGetAttr(ident, result))
-            return raiseAttrError(value, interp);
-        assert(result != Value(UninitializedSlot));
-        interp.pushStack(result);
-        return true;
-    }
 };
 
 struct InstrSetAttr : public IdentInstrBase
 {
+    define_instr(Instr_SetAttr, "SetAttr");
     InstrSetAttr(Name ident) : IdentInstrBase(ident) {}
-
-    instr_type(Instr_SetAttr);
-    instr_name("SetAttr");
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> value(interp.peekStack(1));
-        interp.popStack().toObject()->setAttr(ident, value);
-        return true;
-    }
 };
 
 struct InstrGetMethod : public IdentInstrBase
 {
+    define_instr(Instr_GetMethod, "GetMethod");
     InstrGetMethod(Name name) : IdentInstrBase(name) {}
-
-    instr_type(Instr_GetMethod);
-    instr_name("GetMethod");
-
-    virtual bool execute(Interpreter& interp) override;
 };
 
 struct InstrGetMethodInt : public IdentInstrBase
 {
+    define_instr(Instr_GetMethodInt, "GetMethodInt");
     InstrGetMethodInt(Name name, Traced<Value> result)
       : IdentInstrBase(name), result_(result) {}
-
-    instr_type(Instr_GetMethodInt);
-    instr_name("GetMethodInt");
-
-    virtual bool execute(Interpreter& interp);
 
     virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &result_);
@@ -328,78 +251,17 @@ struct InstrGetMethodInt : public IdentInstrBase
 
 struct InstrGetMethodFallback : public IdentInstrBase
 {
+    define_instr(Instr_GetMethodFallback, "GetMethodFallback");
     InstrGetMethodFallback(Name name) : IdentInstrBase(name) {}
-
-    instr_type(Instr_GetMethodFallback);
-    instr_name("GetMethodFallback");
-
-    virtual bool execute(Interpreter& interp);
 };
-
-inline bool InstrGetMethod::execute(Interpreter& interp)
-{
-    Root<Value> value(interp.popStack());
-    Root<Value> result;
-    if (!value.maybeGetAttr(ident, result))
-        return raiseAttrError(value, interp);
-    assert(result != Value(UninitializedSlot));
-    interp.pushStack(result);
-    interp.pushStack(value);
-
-    if (value.isInt32())
-        interp.replaceInstr(gc::create<InstrGetMethodInt>(ident, result), this);
-    else
-        interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
-
-    return true;
-}
-
-inline bool InstrGetMethodInt::execute(Interpreter& interp)
-{
-    Root<Value> value(interp.popStack());
-    if (!value.isInt32()) {
-        interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
-        Root<Value> result;
-        if (!value.maybeGetAttr(ident, result))
-            return raiseAttrError(value, interp);
-        assert(result != Value(UninitializedSlot));
-        interp.pushStack(result);
-    } else {
-        interp.pushStack(result_);
-    }
-
-    interp.pushStack(value);
-    return true;
-}
-
-inline bool InstrGetMethodFallback::execute(Interpreter& interp)
-{
-    Root<Value> value(interp.popStack());
-    Root<Value> result;
-    if (!value.maybeGetAttr(ident, result))
-        return raiseAttrError(value, interp);
-    assert(result != Value(UninitializedSlot));
-    interp.pushStack(result);
-    interp.pushStack(value);
-    return true;
-}
 
 struct InstrCall : public Instr
 {
+    define_instr(Instr_Call, "Call");
     InstrCall(unsigned count) : count(count) {}
-
-    instr_type(Instr_Call);
-    instr_name("Call");
 
     virtual void print(ostream& s) const {
         s << name() << " " << count;
-    }
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> target(interp.peekStack(count));
-        TracedVector<Value> args = interp.stackSlice(count - 1, count);
-        interp.popStack(count + 1);
-        return interp.startCall(target, args);
     }
 
   private:
@@ -408,69 +270,22 @@ struct InstrCall : public Instr
 
 struct InstrReturn : public Instr
 {
-    instr_type(Instr_Return);
-    instr_name("Return");
-
-    virtual bool execute(Interpreter& interp) {
-        Value value = interp.popStack();
-        interp.popFrame();
-        interp.pushStack(value);
-        return true;
-    }
+    define_instr(Instr_Return, "Return");
 };
 
 struct InstrIn : public Instr
 {
-    instr_type(Instr_In);
-    instr_name("In");
-
-    // todo: implement this
-    // https://docs.python.org/2/reference/expressions.html#membership-test-details
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Object*> container(interp.popStack().toObject());
-        Root<Value> value(interp.popStack());
-        Root<Value> contains;
-        if (!container->maybeGetAttr("__contains__", contains)) {
-            interp.pushStack(gc::create<Exception>("TypeError", "Argument is not iterable"));
-            return false;
-        }
-
-        RootVector<Value> args;
-        args.push_back(Value(container));
-        args.push_back(value);
-        return interp.startCall(contains, args);
-    }
+    define_instr(Instr_In, "In");
 };
 
 struct InstrIs : public Instr
 {
-    instr_type(Instr_Is);
-    instr_name("Is");
-
-    virtual bool execute(Interpreter& interp) {
-        Value b = interp.popStack();
-        Value a = interp.popStack();
-        bool result = a.toObject() == b.toObject();
-        interp.pushStack(Boolean::get(result));
-        return true;
-    }
+    define_instr(Instr_Is, "Is");
 };
 
 struct InstrNot : public Instr
 {
-    instr_type(Instr_Not);
-    instr_name("Not");
-
-    // the following values are interpreted as false: False, None, numeric zero
-    // of all types, and empty strings and containers (including strings,
-    // tuples, lists, dictionaries, sets and frozensets).
-
-    virtual bool execute(Interpreter& interp) {
-        Object* obj = interp.popStack().toObject();
-        interp.pushStack(Boolean::get(!obj->isTrue()));
-        return true;
-    }
+    define_instr(Instr_Not, "Not");
 };
 
 struct Branch : public Instr
@@ -499,101 +314,38 @@ inline Branch* Instr::asBranch()
 
 struct InstrBranchAlways : public Branch
 {
+    define_instr(Instr_BranchAlways, "BranchAlways");
     InstrBranchAlways(int offset = 0) { offset_ = offset; }
-    instr_type(Instr_BranchAlways);
-    instr_name("BranchAlways");
-
-    virtual bool execute(Interpreter& interp) {
-        assert(offset_);
-        interp.branch(offset_);
-        return true;
-    }
 };
 
 struct InstrBranchIfTrue : public Branch
 {
-    instr_type(Instr_BranchIfTrue);
-    instr_name("BranchIfTrue");
-
-    virtual bool execute(Interpreter& interp) {
-        assert(offset_);
-        Object *x = interp.popStack().toObject();
-        if (x->isTrue())
-            interp.branch(offset_);
-        return true;
-    }
+    define_instr(Instr_BranchIfTrue, "BranchIfTrue");
 };
 
 struct InstrBranchIfFalse : public Branch
 {
-    instr_type(Instr_BranchIfFalse);
-    instr_name("BranchIfFalse");
-
-    virtual bool execute(Interpreter& interp) {
-        assert(offset_);
-        Object *x = interp.popStack().toObject();
-        if (!x->isTrue())
-            interp.branch(offset_);
-        return true;
-    }
+    define_instr(Instr_BranchIfFalse, "BranchIfFalse");
 };
 
 struct InstrOr : public Branch
 {
-    instr_type(Instr_Or);
-    instr_name("Or");
-
-    // The expression |x or y| first evaluates x; if x is true, its value is
-    // returned; otherwise, y is evaluated and the resulting value is returned.
-
-    virtual bool execute(Interpreter& interp) {
-        assert(offset_);
-        Object *x = interp.peekStack(0).toObject();
-        if (x->isTrue()) {
-            interp.branch(offset_);
-            return true;
-        }
-        interp.popStack();
-        return true;
-    }
+    define_instr(Instr_Or, "Or");
 };
 
 struct InstrAnd : public Branch
 {
-    instr_type(Instr_And);
-    instr_name("And");
-
-    // The expression |x and y| first evaluates x; if x is false, its value is
-    // returned; otherwise, y is evaluated and the resulting value is returned.
-
-    virtual bool execute(Interpreter& interp) {
-        assert(offset_);
-        Object *x = interp.peekStack(0).toObject();
-        if (!x->isTrue()) {
-            interp.branch(offset_);
-            return true;
-        }
-        interp.popStack();
-        return true;
-    }
+    define_instr(Instr_And, "And");
 };
 
 struct InstrLambda : public Instr
 {
+    define_instr(Instr_Lambda, "Lambda");
+
     InstrLambda(const vector<Name>& params, Block* block)
       : params_(params), block_(block) {}
 
-    instr_type(Instr_Lambda);
-    instr_name("Lambda");
-
     Block* block() const { return block_; }
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Block*> block(block_);
-        Root<Frame*> frame(interp.getFrame(0));
-        interp.pushStack(gc::create<Function>(params_, block, frame));
-        return true;
-    }
 
     virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &block_);
@@ -613,14 +365,8 @@ struct InstrLambda : public Instr
 
 struct InstrDup : public Instr
 {
+    define_instr(Instr_Dup, "Dup");
     InstrDup(unsigned index) : index_(index) {}
-    instr_type(Instr_Dup);
-    instr_name("Dup");
-
-    virtual bool execute(Interpreter& interp) {
-        interp.pushStack(interp.peekStack(index_));
-        return true;
-    }
 
     virtual void print(ostream& s) const {
         s << name() << " " << index_;
@@ -632,39 +378,18 @@ struct InstrDup : public Instr
 
 struct InstrPop : public Instr
 {
-    instr_type(Instr_Pop);
-    instr_name("Pop");
-
-    virtual bool execute(Interpreter& interp) {
-        interp.popStack();
-        return true;
-    }
+    define_instr(Instr_Pop, "Pop");
 };
 
 struct InstrSwap : public Instr
 {
-    instr_type(Instr_Swap);
-    instr_name("Swap");
-
-    virtual bool execute(Interpreter& interp) {
-        interp.swapStack();
-        return true;
-    }
+    define_instr(Instr_Swap, "Swap");
 };
 
 struct InstrTuple : public Instr
 {
-    instr_type(Instr_Tuple);
-    instr_name("Tuple");
-
-  InstrTuple(unsigned size) : size(size) {}
-
-    virtual bool execute(Interpreter& interp) {
-        Tuple* tuple = Tuple::get(interp.stackSlice(size - 1, size));
-        interp.popStack(size);
-        interp.pushStack(tuple);
-        return true;
-    }
+    define_instr(Instr_Tuple, "Tuple");
+    InstrTuple(unsigned size) : size(size) {}
 
   private:
     unsigned size;
@@ -672,17 +397,8 @@ struct InstrTuple : public Instr
 
 struct InstrList : public Instr
 {
-    instr_type(Instr_List);
-    instr_name("List");
-
-  InstrList(unsigned size) : size(size) {}
-
-    virtual bool execute(Interpreter& interp) {
-        List* list = gc::create<List>(interp.stackSlice(size - 1, size));
-        interp.popStack(size);
-        interp.pushStack(list);
-        return true;
-    }
+    define_instr(Instr_List, "List");
+    InstrList(unsigned size) : size(size) {}
 
   private:
     unsigned size;
@@ -690,17 +406,8 @@ struct InstrList : public Instr
 
 struct InstrDict : public Instr
 {
-    instr_type(Instr_Dict);
-    instr_name("Dict");
-
+    define_instr(Instr_Dict, "Dict");
     InstrDict(unsigned size) : size(size) {}
-
-    virtual bool execute(Interpreter& interp) {
-        Dict* dict = gc::create<Dict>(interp.stackSlice(size * 2 - 1, size * 2));
-        interp.popStack(size * 2);
-        interp.pushStack(dict);
-        return true;
-    }
 
   private:
     unsigned size;
@@ -708,98 +415,19 @@ struct InstrDict : public Instr
 
 struct InstrAssertionFailed : public Instr
 {
-    instr_type(Instr_Dict);
-    instr_name("AssertionFailed");
-
-    virtual bool execute(Interpreter& interp) {
-        Object* obj = interp.popStack().toObject();
-        assert(obj->is<String>() || obj == None);
-        string message = obj != None ? obj->as<String>()->value() : "";
-        interp.pushStack(gc::create<Exception>("AssertionError", message));
-        return false;
-    }
+    define_instr(Instr_Dict, "AssertionFailed");
 };
 
 struct InstrMakeClassFromFrame : public IdentInstrBase
 {
+    define_instr(Instr_MakeClassFromFrame, "MakeClassFromFrame");
     InstrMakeClassFromFrame(Name id) : IdentInstrBase(id) {}
-
-    instr_type(Instr_MakeClassFromFrame);
-    instr_name("MakeClassFromFrame");
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Frame*> frame(interp.getFrame());
-        vector<Name> names;
-        for (Layout* l = frame->layout(); l != Frame::InitialLayout; l = l->parent())
-            names.push_back(l->name());
-        Root<Layout*> layout(Object::InitialLayout);
-        for (auto i = names.begin(); i != names.end(); i++)
-            layout = layout->addName(*i);
-        Class* cls = gc::create<Class>(ident, layout);
-        Root<Value> value;
-        for (auto i = names.begin(); i != names.end(); i++) {
-            value = frame->getAttr(*i);
-            cls->setAttr(*i, value);
-        }
-        interp.pushStack(cls);
-        return true;
-    }
 };
 
 struct InstrDestructure : public Instr
 {
+    define_instr(Instr_Destructure, "Destructure");
     InstrDestructure(unsigned count) : count_(count) {}
-
-    instr_type(Instr_Destructure);
-    instr_name("Destructure");
-
-    virtual bool execute(Interpreter& interp) {
-        Root<Value> seq(interp.popStack());
-        Root<Value> lenFunc;
-        if (!seq.get().maybeGetAttr("__len__", lenFunc)) {
-            interp.pushStack(gc::create<Exception>("TypeError",
-                                                   "Argument is not iterable"));
-            return false;
-        }
-
-        Root<Value> getitemFunc;
-        if (!seq.get().maybeGetAttr("__getitem__", getitemFunc)) {
-            interp.pushStack(gc::create<Exception>("TypeError",
-                                                   "Argument is not iterable"));
-            return false;
-        }
-
-        RootVector<Value> args;
-        args.push_back(seq);
-        Root<Value> result;
-        if (!interp.call(lenFunc, args, result)) {
-            interp.pushStack(result);
-            return false;
-        }
-
-        if (!result.get().isInt32()) {
-            interp.pushStack(gc::create<Exception>("TypeError",
-                                           "__len__ didn't return an integer"));
-            return false;
-        }
-
-        if (result.get().asInt32() != count_) {
-            interp.pushStack(gc::create<Exception>("ValueError",
-                                           "too many values to unpack"));
-            return false;
-        }
-
-        args.resize(2);
-        for (unsigned i = count_; i != 0; i--) {
-            args[1] = Integer::get(i - 1);
-            bool ok = interp.call(getitemFunc, args, result);
-            interp.pushStack(result);
-            if (!ok)
-                return false;
-        }
-
-        return true;
-    }
 
   private:
     unsigned count_;
@@ -807,38 +435,12 @@ struct InstrDestructure : public Instr
 
 struct InstrRaise : public Instr
 {
-    instr_type(Instr_Raise);
-    instr_name("Raise");
-
-    virtual bool execute(Interpreter& interp) {
-        // todo: exceptions must be old-style classes or derived from BaseException
-        return false;
-    }
+    define_instr(Instr_Raise, "Raise");
 };
 
 struct InstrIteratorNext : public Instr
 {
-    instr_type(Instr_IteratorNext);
-    instr_name("IteratorNext");
-
-    virtual bool execute(Interpreter& interp) {
-        // The stack is already set up with next method and target on top
-        Root<Value> target(interp.peekStack(1));
-        TracedVector<Value> args = interp.stackSlice(0, 1);
-        Root<Value> result;
-        bool ok = interp.call(target, args, result);
-        if (!ok) {
-            Root<Object*> exc(result.get().toObject());
-            if (exc->is<StopIteration>()) {
-                interp.pushStack(Boolean::False);
-                return true;
-            }
-        }
-        interp.pushStack(result);
-        if (ok)
-            interp.pushStack(Boolean::True);
-        return ok;
-    }
+    define_instr(Instr_IteratorNext, "IteratorNext");
 };
 
 #endif
