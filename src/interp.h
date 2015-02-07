@@ -23,9 +23,10 @@ struct Interpreter
 
     bool interpret(Traced<Block*> block, Value& valueOut);
 
-    void pushStack(Value value) {
+    template <typename S>
+    void pushStack(const S& element) {
         stack.resize(pos + 1);
-        stack[pos] = value;
+        stack[pos] = element;
         ++pos;
     }
 

@@ -67,6 +67,17 @@ inline ostream& operator<<(ostream& s, const Cell& cell) {
 
 template <typename T> struct GCTraits {};
 
+/*
+template <>
+struct GCTraits<nullptr_t>
+{
+    static nullptr_t nullValue() { return nullptr; }
+    static bool isNonNull( nullptr_t cell) { return false; }
+    static void checkValid(nullptr_t cell) {}
+    static void trace(Tracer& t, nullptr_t** cellp) {}
+};
+*/
+
 template <typename T>
 struct GCTraits<T*>
 {
@@ -122,11 +133,20 @@ struct RootBase
     T operator->() { return ptr_; }                                            \
     const T operator->() const { return ptr_; }                                \
     T& get() { return ptr_; }                                                  \
-    const T& get() const { return ptr_; }
+    const T& get() const { return ptr_; }                                      \
+    bool operator==(const T& other) { return ptr_ == other; }                  \
+    bool operator!=(const T& other) { return ptr_ != other; }
+
+
+template <typename W, typename T>
+struct WrapperMixins {};
+
+template <typename T>
+struct Traced;
 
 // Roots a cell as long as it is alive.
 template <typename T>
-struct Root : protected RootBase
+struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
 {
     Root() {
         ptr_ = GCTraits<T>::nullValue();
@@ -138,19 +158,13 @@ struct Root : protected RootBase
         insert();
     }
 
-    explicit Root(nullptr_t ptr) {
-        *this = ptr;
+    Root(const Root& other) {
+        *this = other.ptr_;
         insert();
     }
 
     template <typename S>
-    explicit Root(const S& other) {
-        *this = other.get();
-        insert();
-    }
-
-    Root(const Root& other) {
-        *this = other.ptr_;
+    explicit Root(const S& other) : ptr_(other) {
         insert();
     }
 
@@ -158,9 +172,12 @@ struct Root : protected RootBase
 
     define_smart_ptr_getters;
 
-    Root& operator=(T ptr) {
-        GCTraits<T>::checkValid(ptr);
+    const T* location() const { return &ptr_; }
+
+    template <typename S>
+    Root& operator=(const S& ptr) {
         ptr_ = ptr;
+        GCTraits<T>::checkValid(ptr_);
         return *this;
     }
 
@@ -181,7 +198,7 @@ struct Root : protected RootBase
 //
 // Intended for globals, it has deferred initialization and can cannot be reassigned.
 template <typename T>
-struct GlobalRoot : protected RootBase
+struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
 {
     GlobalRoot() : ptr_(GCTraits<T>::nullValue()) {}
     GlobalRoot(const GlobalRoot& other) = delete;
@@ -200,6 +217,8 @@ struct GlobalRoot : protected RootBase
 
     define_smart_ptr_getters;
 
+    const T* location() const { return &ptr_; }
+
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
     virtual void trace(Tracer& t) {
@@ -210,12 +229,9 @@ struct GlobalRoot : protected RootBase
     T ptr_;
 };
 
-template <typename T>
-struct TracedMixins {};
-
 // A handle to a traced location
 template <typename T>
-struct Traced : public TracedMixins<T>
+struct Traced : public WrapperMixins<Traced<T>, T>
 {
     Traced(Root<T>& root) : ptr_(root.get()) {}
     Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
@@ -240,8 +256,17 @@ struct std::hash<Traced<T>> {
 };
 
 template <typename T>
-struct RootVector : public vector<T>, private RootBase
+struct RootVector : private vector<T>, private RootBase
 {
+    typedef vector<T> VectorBase;
+
+    using VectorBase::back;
+    using VectorBase::empty;
+    using VectorBase::operator[]; // todo: is this ok?
+    using VectorBase::pop_back;
+    using VectorBase::resize;
+    using VectorBase::size;
+
     RootVector() {
 #ifdef DEBUG
         useCount = 0;
@@ -259,11 +284,19 @@ struct RootVector : public vector<T>, private RootBase
         return Traced<T>::fromTracedLocation(&(*this)[index]);
     }
 
+    void push_back(T element) {
+        VectorBase::push_back(element);
+    }
+
+    template <typename S>
+    void push_back(const S& element) {
+        VectorBase::push_back(element);
+    }
+
     virtual void trace(Tracer& t) {
         for (auto i = this->begin(); i != this->end(); ++i)
             gc::trace(t, &*i);
     }
-
 
     void addUse() {
 #ifdef DEBUG

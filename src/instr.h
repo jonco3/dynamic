@@ -278,7 +278,7 @@ struct InstrGetAttr : public IdentInstrBase
         Value result;
         if (!value.maybeGetAttr(ident, result))
             return raiseAttrError(value, interp);
-        assert(result != UninitializedSlot);
+        assert(result != Value(UninitializedSlot));
         interp.pushStack(result);
         return true;
     }
@@ -342,7 +342,7 @@ inline bool InstrGetMethod::execute(Interpreter& interp)
     Value result;
     if (!value.maybeGetAttr(ident, result))
         return raiseAttrError(value, interp);
-    assert(result != UninitializedSlot);
+    assert(result != Value(UninitializedSlot));
     interp.pushStack(result);
     interp.pushStack(value);
 
@@ -364,7 +364,7 @@ inline bool InstrGetMethodInt::execute(Interpreter& interp)
         Value result;
         if (!value.maybeGetAttr(ident, result))
             return raiseAttrError(value, interp);
-        assert(result != UninitializedSlot);
+        assert(result != Value(UninitializedSlot));
         interp.pushStack(result);
     } else {
         interp.pushStack(result_);
@@ -380,7 +380,7 @@ inline bool InstrGetMethodFallback::execute(Interpreter& interp)
     Value result;
     if (!value.maybeGetAttr(ident, result))
         return raiseAttrError(value, interp);
-    assert(result != UninitializedSlot);
+    assert(result != Value(UninitializedSlot));
     interp.pushStack(result);
     interp.pushStack(value);
     return true;
@@ -439,7 +439,7 @@ struct InstrIn : public Instr
         }
 
         RootVector<Value> args;
-        args.push_back(container);
+        args.push_back(Value(container));
         args.push_back(value);
         Root<Value> rootedContains(contains);
         return interp.startCall(rootedContains, args);

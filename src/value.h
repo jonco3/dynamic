@@ -15,14 +15,19 @@ struct Tracer;
 struct Value
 {
     Value() : objectp(nullptr) {}
-    Value(Object* o) : objectp(o) {}
-    inline Value(int16_t i);
+    Value(Object* const & o) : objectp(o) {}
+    Value(int16_t i) { *this = i; }
 
-    // todo
-    template <typename T>
-    Value(Root<T>& o) : objectp(o.get()) {}
-    template <typename T>
-    Value(GlobalRoot<T>& o) : objectp(o.get()) {}
+    Value& operator=(Object* const & o) {
+        objectp = o;
+        return *this;
+    }
+
+    Value& operator=(int16_t i) {
+        assert(i >= INT16_MIN && i <= INT16_MAX);
+        bits = (i << PayloadShift) | IntType;
+        return *this;
+    }
 
     bool isObject() const {
         return type() == ObjectType;
@@ -68,8 +73,8 @@ struct Value
 
 ostream& operator<<(ostream& s, const Value& v);
 
-template <>
-struct TracedMixins<Value>
+template <typename W>
+struct WrapperMixins<W, Value>
 {
     inline bool isObject() const;
     inline Object *asObject() const;
@@ -79,7 +84,7 @@ struct TracedMixins<Value>
 
   private:
     const Value* get() const {
-        return static_cast<const Traced<Value>*>(this)->location();
+        return static_cast<const W*>(this)->location();
     }
 };
 

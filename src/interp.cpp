@@ -177,7 +177,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Root<Value> initFunc(attr);
 
         RootVector<Value> initArgs;
-        initArgs.push_back(instance);
+        initArgs.push_back(Value(instance));
         for (unsigned i = 0; i < args.size(); i++)
             initArgs.push_back(args[i]);
         if (!call(initFunc, initArgs, resultOut))

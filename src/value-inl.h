@@ -7,7 +7,7 @@
 #include "object.h"
 
 inline Value GCTraits<Value>::nullValue() {
-    return Value(nullptr);
+    return Value();
 }
 
 inline bool GCTraits<Value>::isNonNull(Value value) {
@@ -21,12 +21,6 @@ inline void GCTraits<Value>::trace(Tracer& t, Value* v)
         gc::trace(t, &o);
         *const_cast<Value*>(v) = Value(o);
     }
-}
-
-inline Value::Value(int16_t i)
-  : bits((i << PayloadShift) | IntType)
-{
-    assert(i >= INT16_MIN && i <= INT16_MAX);
 }
 
 inline Object* Value::toObject() const {
@@ -67,27 +61,32 @@ inline bool Value::maybeGetAttr(Name name, Value& valueOut)
         return asObject()->maybeGetAttr(name, valueOut);
 }
 
-inline bool TracedMixins<Value>::isObject() const
+template <typename W>
+inline bool WrapperMixins<W, Value>::isObject() const
 {
     return get()->isObject();
 }
 
-inline Object* TracedMixins<Value>::asObject() const
+template <typename W>
+inline Object* WrapperMixins<W, Value>::asObject() const
 {
     return get()->asObject();
 }
 
-inline Object* TracedMixins<Value>::toObject() const
+template <typename W>
+inline Object* WrapperMixins<W, Value>::toObject() const
 {
     return get()->toObject();
 }
 
-inline bool TracedMixins<Value>::isInt32() const
+template <typename W>
+inline bool WrapperMixins<W, Value>::isInt32() const
 {
     return get()->isInt32();
 }
 
-inline int32_t TracedMixins<Value>::asInt32() const
+template <typename W>
+inline int32_t WrapperMixins<W, Value>::asInt32() const
 {
     return get()->asInt32();
 }

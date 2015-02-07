@@ -170,7 +170,7 @@ bool Object::maybeGetAttr(Name name, Value& valueOut) const
 
 Value Object::getAttr(Name name) const
 {
-    Value value = None;
+    Value value(None);
     bool ok = maybeGetAttr(name, value);
     assert(ok);
     (void)ok;
@@ -180,7 +180,7 @@ Value Object::getAttr(Name name) const
 bool Object::getSlot(Name name, int slot, Value& valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
-    if (slots_[slot] == UninitializedSlot) {
+    if (slots_[slot] == Value(UninitializedSlot)) {
         valueOut = gc::create<Exception>("UnboundLocalError",
                                  "name '" + name + "' has not been bound");
         return false;

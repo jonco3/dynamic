@@ -47,7 +47,7 @@ String::String(const string& v)
 Value String::get(const string& v)
 {
     if (v == "")
-        return EmptyString;
+        return Value(EmptyString);
     // todo: can intern short strings here
     return gc::create<String>(v);
 }

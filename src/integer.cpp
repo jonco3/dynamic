@@ -121,7 +121,7 @@ Integer::Integer(int v)
 Value Integer::get(int v)
 {
     if (v == 0)
-        return Zero;
+        return Value(Zero);
     else if (v >= INT16_MIN && v <= INT16_MAX)
         return Value(v);
     else
