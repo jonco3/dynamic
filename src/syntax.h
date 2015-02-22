@@ -190,7 +190,7 @@ struct BinarySyntax : public Base
 
 struct SyntaxTarget : Syntax
 {
-  SyntaxTarget(const Token& token) : Syntax(token) {}
+    SyntaxTarget(const Token& token) : Syntax(token) {}
 };
 
 struct SyntaxPass : public Syntax
