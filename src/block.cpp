@@ -73,7 +73,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     void addName(Name name) {
-        layout_ = layout_->maybeAddName(name);
+        if (find(globals_.begin(), globals_.end(), name) == globals_.end())
+            layout_ = layout_->maybeAddName(name);
     }
 
     // Record assignments and definintions
@@ -104,6 +105,17 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     virtual void visit(const SyntaxClass& s) {
         addName(s.id());
+    }
+
+    virtual void visit(const SyntaxGlobal& s) {
+        const vector<Name>& names = s.names();
+        for (auto i = names.begin(); i != names.end(); i++) {
+            if (layout_->hasName(*i)) {
+                throw ParseError(
+                    "name " + *i + " is assigned to before global declaration");
+            }
+        }
+        globals_.insert(globals_.end(), names.begin(), names.end());
     }
 
     // Recurse into local blocks
@@ -144,6 +156,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
   private:
     bool inAssignTarget_;
     Root<Layout*> layout_;
+    vector<Name> globals_;
 };
 
 struct BlockBuilder : public SyntaxVisitor
@@ -265,6 +278,10 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxPass& s) {
+        block->append(gc::create<InstrConst>(None));
+    }
+
+    virtual void visit(const SyntaxGlobal& s) {
         block->append(gc::create<InstrConst>(None));
     }
 

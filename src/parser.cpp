@@ -312,7 +312,6 @@ SyntaxTarget* SyntaxParser::parseTargetList()
     return new SyntaxTargetList(startToken, targets);
 }
 
-
 Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -329,6 +328,13 @@ Syntax* SyntaxParser::parseSimpleStatement()
         if (opt(Token_Comma))
             throw ParseError("Multiple exressions for raise not supported"); // todo
         return new SyntaxRaise(token, expr);
+    } else if (opt(Token_Global)) {
+        vector<Name> names;
+        do {
+            Token t = match(Token_Identifier);
+            names.push_back(t.text);
+        } while (opt(Token_Comma));
+        return new SyntaxGlobal(token, names);
     }
 
     Syntax* expr = parseExprOrExprList();

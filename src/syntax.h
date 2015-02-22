@@ -59,7 +59,8 @@ using namespace std;
     syntax(Assert)                                                            \
     syntax(Class)                                                             \
     syntax(Raise)                                                             \
-    syntax(For)
+    syntax(For)                                                               \
+    syntax(Global)
 
 enum SyntaxType
 {
@@ -785,6 +786,30 @@ struct SyntaxFor : public Syntax
     unique_ptr<Syntax> exprs_;
     unique_ptr<SyntaxBlock> suite_;
     unique_ptr<SyntaxBlock> elseSuite_;
+};
+
+struct SyntaxGlobal : public Syntax
+{
+    SyntaxGlobal(const Token& token, vector<Name> names)
+        : Syntax(token), names_(names) {}
+
+    syntax_type(Syntax_Global);
+    syntax_name("global");
+    syntax_accept();
+
+    const vector<Name>& names() const { return names_; }
+
+    virtual void print(ostream& s) const override {
+        s << "global ";
+        for (auto i = names_.begin(); i != names_.end(); i++) {
+            if (i != names_.begin())
+                s << ", ";
+            s << *i;
+        }
+    }
+
+  private:
+    vector<Name> names_;
 };
 
 #endif
