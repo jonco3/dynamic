@@ -33,18 +33,7 @@ using namespace std;
     syntax(GE)                                                                \
     syntax(EQ)                                                                \
     syntax(NE)                                                                \
-    syntax(BitOr)                                                             \
-    syntax(BitXor)                                                            \
-    syntax(BitAnd)                                                            \
-    syntax(BitLeftShift)                                                      \
-    syntax(BitRightShift)                                                     \
-    syntax(Plus)                                                              \
-    syntax(Minus)                                                             \
-    syntax(Multiply)                                                          \
-    syntax(Divide)                                                            \
-    syntax(IntDivide)                                                         \
-    syntax(Modulo)                                                            \
-    syntax(Power)                                                             \
+    syntax(BinaryOp)                                                          \
     syntax(AttrRef)                                                           \
     syntax(Assign)                                                            \
     syntax(TargetList)                                                        \
@@ -406,24 +395,55 @@ define_simple_binary_syntax(Or, "or");
 define_simple_binary_syntax(And, "and");
 define_simple_binary_syntax(In, "in");
 define_simple_binary_syntax(Is, "is");
+
+enum BinaryOp
+{
+    BinaryPlus,
+    BinaryMinus,
+    BinaryMultiply,
+    BinaryDivide,
+    BinaryIntDivide,
+    BinaryModulo,
+    BinaryPower,
+    BinaryOr,
+    BinaryXor,
+    BinaryAnd,
+    BinaryLeftShift,
+    BinaryRightShift,
+
+    CountBinaryOp
+};
+
+struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
+{
+    SyntaxBinaryOp(const Token& token, Syntax* l, Syntax* r, BinaryOp op)
+      : BinarySyntax<Syntax, Syntax, Syntax>(token, l, r), op_(op)
+    {}
+
+    syntax_type(Syntax_BinaryOp);
+    syntax_accept();
+
+    virtual string name() const override {
+        static const char* names[] = {
+            "+", "-", "*", "/", "//", "%", "**", "|", "^", "&", "<<", ">>"
+        };
+        static_assert(sizeof(names)/sizeof(*names) == CountBinaryOp,
+            "Number of names must match number of binary operations");
+        return names[op_];
+    }
+
+    BinaryOp op() const { return op_; }
+
+  private:
+    BinaryOp op_;
+};
+
 define_simple_binary_syntax(LT, "<");
 define_simple_binary_syntax(LE, "<=");
 define_simple_binary_syntax(GT, ">");
 define_simple_binary_syntax(GE, ">=");
 define_simple_binary_syntax(EQ, "!=");
 define_simple_binary_syntax(NE, "==");
-define_simple_binary_syntax(BitOr, "|");
-define_simple_binary_syntax(BitXor, "^");
-define_simple_binary_syntax(BitAnd, "&");
-define_simple_binary_syntax(BitLeftShift, "<<");
-define_simple_binary_syntax(BitRightShift, ">>");
-define_simple_binary_syntax(Plus, "+");
-define_simple_binary_syntax(Minus, "-");
-define_simple_binary_syntax(Multiply, "*");
-define_simple_binary_syntax(Divide, "/");
-define_simple_binary_syntax(IntDivide, "//");
-define_simple_binary_syntax(Modulo, "%");
-define_simple_binary_syntax(Power, "**");
 
 struct SyntaxAttrRef : public BinarySyntax<SyntaxTarget, Syntax, SyntaxName>
 {

@@ -63,6 +63,8 @@ struct Parser
     // position
     template<typename N> void createNodeForBinary(TokenType type,
                                                   unsigned bindLeft, Assoc assoc);
+    template<typename N, typename X>
+    void createNodeForBinary(TokenType type, unsigned bindLeft, Assoc assoc, X x);
 
     bool notFollowedBy(TokenType type) { return token.type != type; }
     bool opt(TokenType type);
@@ -175,7 +177,7 @@ void Parser<T>::createNodeForUnary(TokenType type, unsigned bindRight)
 template<typename T>
 template<typename N>
 void Parser<T>::createNodeForBinary(TokenType type, unsigned bindLeft,
-                                             Assoc assoc)
+                                    Assoc assoc)
 {
     // calculate right binding power by addng left binding power and
     // associativity, hence why left binding power must be a multiple
@@ -190,6 +192,23 @@ void Parser<T>::createNodeForBinary(TokenType type, unsigned bindLeft,
                     });
 }
 
+template<typename T>
+template<typename N, typename X> // todo: use variadic templates
+void Parser<T>::createNodeForBinary(TokenType type, unsigned bindLeft,
+                                    Assoc assoc, X x)
+{
+    // calculate right binding power by addng left binding power and
+    // associativity, hence why left binding power must be a multiple
+    // of two
+    unsigned bindRight = bindLeft + assoc;
+    addInfixHandler(type,
+                    bindLeft,
+                    [=] (Parser<T>& parser, Token token,
+                         const T leftValue) {
+                        T rightValue = parser.expression(bindRight);
+                        return new N(token, leftValue, rightValue, x);
+                    });
+}
 
 template <typename T>
 Parser<T>::Parser(Tokenizer& tokenizer)

@@ -346,6 +346,25 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxNeg& s) { callUnaryMethod(s, "__neg__"); }
     virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
 
+    virtual void visit(const SyntaxBinaryOp& s) {
+        static const char* method[] = {
+            "__add__",
+            "__sub__",
+            "__mul__",
+            "__div__",
+            "__floordiv__",
+            "__mod__",
+            "__pow__",
+            "__or__",
+            "__xor__",
+            "__and__",
+            "__lshift__",
+            "__rshift__"
+        };
+        assert(s.op() < sizeof(method)/sizeof(*method));
+        callBinaryMethod(s, method[s.op()]);
+    }
+
 #define define_vist_binary_as_method_call(syntax, method)                     \
     virtual void visit(const syntax& s) { callBinaryMethod(s, method); }
 
@@ -355,18 +374,6 @@ struct BlockBuilder : public SyntaxVisitor
     define_vist_binary_as_method_call(SyntaxGE, "__ge__");
     define_vist_binary_as_method_call(SyntaxEQ, "__eq__");
     define_vist_binary_as_method_call(SyntaxNE, "__ne__");
-    define_vist_binary_as_method_call(SyntaxBitOr, "__or__");
-    define_vist_binary_as_method_call(SyntaxBitXor, "__xor__");
-    define_vist_binary_as_method_call(SyntaxBitAnd, "__and__");
-    define_vist_binary_as_method_call(SyntaxBitLeftShift, "__lshift__");
-    define_vist_binary_as_method_call(SyntaxBitRightShift, "__rshift__");
-    define_vist_binary_as_method_call(SyntaxPlus, "__add__");
-    define_vist_binary_as_method_call(SyntaxMinus, "__sub__");
-    define_vist_binary_as_method_call(SyntaxMultiply, "__mul__");
-    define_vist_binary_as_method_call(SyntaxDivide, "__div__");
-    define_vist_binary_as_method_call(SyntaxIntDivide, "__floordiv__");
-    define_vist_binary_as_method_call(SyntaxModulo, "__mod__");
-    define_vist_binary_as_method_call(SyntaxPower, "__pow__");
 
 #undef define_vist_binary_as_method_call
 

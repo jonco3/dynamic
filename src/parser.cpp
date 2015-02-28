@@ -150,21 +150,24 @@ SyntaxParser::SyntaxParser()
 
     // Bitwise binary operators
 
-    createNodeForBinary<SyntaxBitOr>(Token_BitOr, 130, Assoc_Left);
-    createNodeForBinary<SyntaxBitXor>(Token_BitXor, 140, Assoc_Left);
-    createNodeForBinary<SyntaxBitAnd>(Token_BitAnd, 150, Assoc_Left);
-    createNodeForBinary<SyntaxBitLeftShift>(Token_BitLeftShift, 160, Assoc_Left);
-    createNodeForBinary<SyntaxBitRightShift>(Token_BitRightShift, 160, Assoc_Left);
+    createNodeForBinary<SyntaxBinaryOp>(Token_BitOr, 130, Assoc_Left, BinaryOr);
+    createNodeForBinary<SyntaxBinaryOp>(Token_BitXor, 140, Assoc_Left, BinaryXor);
+    createNodeForBinary<SyntaxBinaryOp>(Token_BitAnd, 150, Assoc_Left, BinaryAnd);
+    createNodeForBinary<SyntaxBinaryOp>(Token_BitLeftShift, 160, Assoc_Left,
+                                        BinaryLeftShift);
+    createNodeForBinary<SyntaxBinaryOp>(Token_BitRightShift, 160, Assoc_Left,
+                                        BinaryRightShift);
 
     // Arithermetic binary operators
 
-    createNodeForBinary<SyntaxPlus>(Token_Plus, 170, Assoc_Left);
-    createNodeForBinary<SyntaxMinus>(Token_Minus, 170, Assoc_Left);
-    createNodeForBinary<SyntaxMultiply>(Token_Times, 180, Assoc_Left);
-    createNodeForBinary<SyntaxDivide>(Token_Divide, 180, Assoc_Left);
-    createNodeForBinary<SyntaxIntDivide>(Token_IntDivide, 180, Assoc_Left);
-    createNodeForBinary<SyntaxModulo>(Token_Modulo, 180, Assoc_Left);
-    createNodeForBinary<SyntaxPower>(Token_Power, 180, Assoc_Left);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Plus, 170, Assoc_Left, BinaryPlus);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Minus, 170, Assoc_Left, BinaryMinus);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Times, 180, Assoc_Left, BinaryMultiply);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Divide, 180, Assoc_Left, BinaryDivide);
+    createNodeForBinary<SyntaxBinaryOp>(Token_IntDivide, 180, Assoc_Left,
+                                        BinaryIntDivide);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Modulo, 180, Assoc_Left, BinaryModulo);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Power, 180, Assoc_Left, BinaryPower);
 
     addInfixHandler(Token_SBra, 200, [] (ParserT& parser, Token token, Syntax* l) {
         Syntax* index = parser.expression();
