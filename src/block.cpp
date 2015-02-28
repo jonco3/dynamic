@@ -361,21 +361,24 @@ struct BlockBuilder : public SyntaxVisitor
             "__lshift__",
             "__rshift__"
         };
-        assert(s.op() < sizeof(method)/sizeof(*method));
+        static_assert(sizeof(method)/sizeof(*method) == CountBinaryOp,
+            "Number of method names must match number of binary operations");
         callBinaryMethod(s, method[s.op()]);
     }
 
-#define define_vist_binary_as_method_call(syntax, method)                     \
-    virtual void visit(const syntax& s) { callBinaryMethod(s, method); }
-
-    define_vist_binary_as_method_call(SyntaxLT, "__lt__");
-    define_vist_binary_as_method_call(SyntaxLE, "__le__");
-    define_vist_binary_as_method_call(SyntaxGT, "__gt__");
-    define_vist_binary_as_method_call(SyntaxGE, "__ge__");
-    define_vist_binary_as_method_call(SyntaxEQ, "__eq__");
-    define_vist_binary_as_method_call(SyntaxNE, "__ne__");
-
-#undef define_vist_binary_as_method_call
+    virtual void visit(const SyntaxCompareOp& s) {
+        static const char* method[] = {
+            "__lt__",
+            "__le__",
+            "__gt__",
+            "__ge__",
+            "__eq__",
+            "__ne__"
+        };
+        static_assert(sizeof(method)/sizeof(*method) == CountCompareOp,
+            "Number of method names must match number of compare operations");
+        callBinaryMethod(s, method[s.op()]);
+    }
 
 #define define_vist_binary_instr(syntax, instr)                               \
     virtual void visit(const syntax& s) {                                     \

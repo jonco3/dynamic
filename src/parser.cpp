@@ -135,12 +135,12 @@ SyntaxParser::SyntaxParser()
 
     createNodeForBinary<SyntaxIn>(Token_In, 120, Assoc_Left);
     createNodeForBinary<SyntaxIs>(Token_Is, 120, Assoc_Left);
-    createNodeForBinary<SyntaxLT>(Token_LT, 120, Assoc_Left);
-    createNodeForBinary<SyntaxLE>(Token_LE, 120, Assoc_Left);
-    createNodeForBinary<SyntaxGT>(Token_GT, 120, Assoc_Left);
-    createNodeForBinary<SyntaxGE>(Token_GE, 120, Assoc_Left);
-    createNodeForBinary<SyntaxEQ>(Token_EQ, 120, Assoc_Left);
-    createNodeForBinary<SyntaxNE>(Token_NE, 120, Assoc_Left);
+    createNodeForBinary<SyntaxCompareOp>(Token_LT, 120, Assoc_Left, CompareLT);
+    createNodeForBinary<SyntaxCompareOp>(Token_LE, 120, Assoc_Left, CompareLE);
+    createNodeForBinary<SyntaxCompareOp>(Token_GT, 120, Assoc_Left, CompareGT);
+    createNodeForBinary<SyntaxCompareOp>(Token_GE, 120, Assoc_Left, CompareGE);
+    createNodeForBinary<SyntaxCompareOp>(Token_EQ, 120, Assoc_Left, CompareEQ);
+    createNodeForBinary<SyntaxCompareOp>(Token_NE, 120, Assoc_Left, CompareNE);
     addBinaryOp(Token_NotIn, 120, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         return new SyntaxNot(token, new SyntaxIn(token, l, r));
     });

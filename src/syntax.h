@@ -27,12 +27,7 @@ using namespace std;
     syntax(Not)                                                               \
     syntax(In)                                                                \
     syntax(Is)                                                                \
-    syntax(LT)                                                                \
-    syntax(LE)                                                                \
-    syntax(GT)                                                                \
-    syntax(GE)                                                                \
-    syntax(EQ)                                                                \
-    syntax(NE)                                                                \
+    syntax(CompareOp)                                                         \
     syntax(BinaryOp)                                                          \
     syntax(AttrRef)                                                           \
     syntax(Assign)                                                            \
@@ -438,12 +433,41 @@ struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
     BinaryOp op_;
 };
 
-define_simple_binary_syntax(LT, "<");
-define_simple_binary_syntax(LE, "<=");
-define_simple_binary_syntax(GT, ">");
-define_simple_binary_syntax(GE, ">=");
-define_simple_binary_syntax(EQ, "!=");
-define_simple_binary_syntax(NE, "==");
+enum CompareOp
+{
+    CompareLT,
+    CompareLE,
+    CompareGT,
+    CompareGE,
+    CompareEQ,
+    CompareNE,
+
+    CountCompareOp
+};
+
+struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
+{
+    SyntaxCompareOp(const Token& token, Syntax* l, Syntax* r, CompareOp op)
+      : BinarySyntax<Syntax, Syntax, Syntax>(token, l, r), op_(op)
+    {}
+
+    syntax_type(Syntax_CompareOp);
+    syntax_accept();
+
+    virtual string name() const override {
+        static const char* names[] = {
+            "<", "<=", ">", ">=", "==", "!="
+        };
+        static_assert(sizeof(names)/sizeof(*names) == CountCompareOp,
+            "Number of names must match number of compare operations");
+        return names[op_];
+    }
+
+    CompareOp op() const { return op_; }
+
+  private:
+    CompareOp op_;
+};
 
 struct SyntaxAttrRef : public BinarySyntax<SyntaxTarget, Syntax, SyntaxName>
 {
