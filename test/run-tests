@@ -51,6 +51,8 @@ def runTestDir(arg, dirname, names):
     for name in names:
         if name.endswith('.py'):
             result = runTest(dirname, name)
+            if result != 'PASS':
+                result = '     ' + result
             print('  %-20s %s' % (name, result))
 
 print("Running tests...")
