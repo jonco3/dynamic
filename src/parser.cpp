@@ -315,6 +315,22 @@ SyntaxTarget* SyntaxParser::parseTargetList()
     return new SyntaxTargetList(startToken, targets);
 }
 
+Syntax* SyntaxParser::parseAugAssign(Token token, Syntax* syntax, BinaryOp op)
+{
+    SyntaxSingleTarget* target = nullptr;
+    if (syntax->is<SyntaxName>()) {
+        target = syntax->as<SyntaxName>();
+    } else if (syntax->is<SyntaxAttrRef>()) {
+        target = syntax->as<SyntaxAttrRef>();
+    } else if (syntax->is<SyntaxSubscript>()) {
+        target = syntax->as<SyntaxSubscript>();
+    } else {
+        throw ParseError("Illegal target for augmented assignment: " + syntax->name());
+    }
+
+    return new SyntaxAugAssign(token, target, expression(), op);
+}
+
 Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -345,6 +361,30 @@ Syntax* SyntaxParser::parseSimpleStatement()
         SyntaxTarget* target = makeAssignTarget(expr);
         // todo: should admit yield statement too but we haven't implemented that yet
         return new SyntaxAssign(token, target, parseExprOrExprList());
+    } else if (opt(Token_AssignPlus)) {
+        return parseAugAssign(token, expr, BinaryPlus);
+    } else if (opt(Token_AssignMinus)) {
+        return parseAugAssign(token, expr, BinaryMinus);
+    } else if (opt(Token_AssignTimes)) {
+        return parseAugAssign(token, expr, BinaryMultiply);
+    } else if (opt(Token_AssignDivide)) {
+        return parseAugAssign(token, expr, BinaryDivide);
+    } else if (opt(Token_AssignIntDivide)) {
+        return parseAugAssign(token, expr, BinaryIntDivide);
+    } else if (opt(Token_AssignModulo)) {
+        return parseAugAssign(token, expr, BinaryModulo);
+    } else if (opt(Token_AssignPower)) {
+        return parseAugAssign(token, expr, BinaryPower);
+    } else if (opt(Token_AssignBitLeftShift)) {
+        return parseAugAssign(token, expr, BinaryLeftShift);
+    } else if (opt(Token_AssignBitRightShift)) {
+        return parseAugAssign(token, expr, BinaryRightShift);
+    } else if (opt(Token_AssignBitAnd)) {
+        return parseAugAssign(token, expr, BinaryAnd);
+    } else if (opt(Token_AssignBitXor)) {
+        return parseAugAssign(token, expr, BinaryXor);
+    } else if (opt(Token_AssignBitOr)) {
+        return parseAugAssign(token, expr, BinaryOr);
     }
 
     return expr;

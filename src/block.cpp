@@ -2,6 +2,7 @@
 #include "builtin.h"
 #include "common.h"
 #include "instr.h"
+#include "parser.h"
 #include "repr.h"
 #include "string.h"
 #include "syntax.h"
@@ -251,7 +252,7 @@ struct BlockBuilder : public SyntaxVisitor
         return oldValue;
     }
 
-    int lookupLexical(Name name) {
+    unsigned lookupLexical(Name name) {
         int count = 1;
         BlockBuilder* b = parent;
         while (b && b->parent) {
@@ -275,6 +276,18 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(gc::create<InstrGetMethod>(name));
         s.right()->accept(*this);
         block->append(gc::create<InstrCall>(2));
+        // todo: things that implement __rfoo__ rather than __foo__
+    }
+
+    void callAugAssignMethod(const SyntaxAugAssign& s, string name)
+    {
+        s.left()->accept(*this);
+        block->append(gc::create<InstrGetMethod>(name));
+        s.right()->accept(*this);
+        block->append(gc::create<InstrCall>(2));
+        block->append(gc::create<InstrPop>());
+        block->append(gc::create<InstrConst>(None));
+        // todo: things that don't implement __ifoo__
     }
 
     virtual void visit(const SyntaxPass& s) {
@@ -347,23 +360,12 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
 
     virtual void visit(const SyntaxBinaryOp& s) {
-        static const char* method[] = {
-            "__add__",
-            "__sub__",
-            "__mul__",
-            "__div__",
-            "__floordiv__",
-            "__mod__",
-            "__pow__",
-            "__or__",
-            "__xor__",
-            "__and__",
-            "__lshift__",
-            "__rshift__"
-        };
-        static_assert(sizeof(method)/sizeof(*method) == CountBinaryOp,
-            "Number of method names must match number of binary operations");
-        callBinaryMethod(s, method[s.op()]);
+        callBinaryMethod(s, BinaryOpMethodNames[s.op()]);
+    }
+
+    virtual void visit(const SyntaxAugAssign& s) {
+        // todo: what's __itruediv__?
+        callAugAssignMethod(s, method[s.op()]);
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
@@ -379,6 +381,7 @@ struct BlockBuilder : public SyntaxVisitor
             "Number of method names must match number of compare operations");
         callBinaryMethod(s, method[s.op()]);
     }
+
 
 #define define_vist_binary_instr(syntax, instr)                               \
     virtual void visit(const syntax& s) {                                     \
@@ -405,7 +408,7 @@ struct BlockBuilder : public SyntaxVisitor
         if (inAssignTarget) {
             if (parent && block->layout()->hasName(name))
                 block->append(gc::create<InstrSetLocal>(name));
-            else if (int frame = lookupLexical(name))
+            else if (unsigned frame = lookupLexical(name))
                 block->append(gc::create<InstrSetLexical>(frame, name));
             else if (topLevel->hasAttr(name))
                 block->append(gc::create<InstrSetGlobal>(topLevel, name));
@@ -416,7 +419,7 @@ struct BlockBuilder : public SyntaxVisitor
         } else {
             if (parent && block->layout()->hasName(name))
                 block->append(gc::create<InstrGetLocal>(name));
-            else if (int frame = lookupLexical(name))
+            else if (unsigned frame = lookupLexical(name))
                 block->append(gc::create<InstrGetLexical>(frame, name));
             else if (topLevel->hasAttr(name))
                 block->append(gc::create<InstrGetGlobal>(topLevel, name));

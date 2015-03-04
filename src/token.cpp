@@ -136,7 +136,7 @@ string Tokenizer::typeName(TokenType type)
         for_each_token(token_name)
 #undef token_name
     };
-#ifdef DEBUG 
+#ifdef DEBUG
     const size_t len = sizeof(names) / sizeof(const char*);
     assert(len == TokenCount);
     assert(type < len);

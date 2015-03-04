@@ -57,7 +57,10 @@ using namespace std;
     instr(MakeClassFromFrame)                                                \
     instr(Destructure)                                                       \
     instr(Raise)                                                             \
-    instr(IteratorNext)
+    instr(IteratorNext)                                                      \
+    instr(AugAssignLocal)                                                    \
+    instr(AugAssignLexical)                                                  \
+    instr(AugAssignGlobal)
 
 enum InstrType
 {
@@ -158,24 +161,11 @@ struct IdentInstrBase : public Instr
 define_ident_instr(GetLocal);
 define_ident_instr(SetLocal);
 
-struct InstrGetLexical : public Instr
+struct InstrGetLexical : public IdentInstrBase
 {
     define_instr_members(Instr_GetLexical, "GetLexical");
-    InstrGetLexical(int frame, Name ident) : frameIndex(frame), ident(ident) {}
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << frameIndex << " " << ident;
-    }
-
-  private:
-    int frameIndex;
-    Name ident;
-};
-
-struct InstrSetLexical : public Instr
-{
-    define_instr_members(Instr_SetLexical, "SetLexical");
-    InstrSetLexical(unsigned frame, Name ident) : frameIndex(frame), ident(ident) {}
+    InstrGetLexical(unsigned frame, Name ident)
+      : IdentInstrBase(name), frameIndex(frame) {}
 
     virtual void print(ostream& s) const {
         s << name() << " " << frameIndex << " " << ident;
@@ -183,7 +173,20 @@ struct InstrSetLexical : public Instr
 
   private:
     unsigned frameIndex;
-    Name ident;
+};
+
+struct InstrSetLexical : public IdentInstrBase
+{
+    define_instr_members(Instr_SetLexical, "SetLexical");
+    InstrSetLexical(unsigned frame, Name ident)
+      : IdentInstrBase(name), frameIndex(frame), {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << frameIndex << " " << ident;
+    }
+
+  private:
+    unsigned frameIndex;
 };
 
 struct InstrGetGlobal : public IdentInstrBase
@@ -390,6 +393,45 @@ struct InstrDestructure : public Instr
 
 define_simple_instr(Raise);
 define_simple_instr(IteratorNext);
+
+struct InstrAugAssignLocal : public IdentInstrBase
+{
+    define_instr_members(Instr_AugAssignLocal, "AugAssignLocal");
+    InstrAugAssignLocal(Name name, BinaryOp op) : IdentInstrBase(name), op_(op) {}
+
+  private:
+    BinaryOp op_;
+};
+
+struct InstrAugAssignLexical : public IdentInstrBase
+{
+    define_instr_members(Instr_AugAssignLexical, "AugAssignLexical");
+    InstrAugAssignLexical(unsigned frame, Name name, BinaryOp op)
+      : IdentInstrBase(name), frame_(frame), op_(op) {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << frameIndex << " " << ident;
+    }
+
+  private:
+    unsigned frame_;
+    BinaryOp op_;
+};
+
+struct InstrAugAssignGlobal : public IdentInstrBase
+{
+    define_instr_members(Instr_AugAssignGlobal, "AugAssignGlobal");
+    InstrAugAssignGlobal(Object* global, Name name, BinaryOp op)
+      : IdentInstrBase(name), op_(op) {}
+
+    virtual void traceChildren(Tracer& t) override {
+        gc::trace(t, &global);
+    }
+
+  private:
+    Object* global_;
+    BinaryOp op_;
+};
 
 #undef instr_type
 #undef instr_name

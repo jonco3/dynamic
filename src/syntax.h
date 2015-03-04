@@ -1,8 +1,8 @@
 #ifndef __SYNTAX_H__
 #define __SYNTAX_H__
 
-#include "parser.h"
 #include "name.h"
+#include "token.h"
 
 #include <memory>
 #include <ostream>
@@ -44,7 +44,8 @@ using namespace std;
     syntax(Class)                                                             \
     syntax(Raise)                                                             \
     syntax(For)                                                               \
-    syntax(Global)
+    syntax(Global)                                                            \
+    syntax(AugAssign)
 
 enum SyntaxType
 {
@@ -178,6 +179,11 @@ struct SyntaxTarget : Syntax
     SyntaxTarget(const Token& token) : Syntax(token) {}
 };
 
+struct SyntaxSingleTarget : SyntaxTarget
+{
+    SyntaxSingleTarget(const Token& token) : SyntaxTarget(token) {}
+};
+
 struct SyntaxPass : public Syntax
 {
     SyntaxPass(const Token& token) : Syntax(token) {}
@@ -257,9 +263,9 @@ struct SyntaxString : public Syntax
     string value_;
 };
 
-struct SyntaxName : public SyntaxTarget
+struct SyntaxName : public SyntaxSingleTarget
 {
-    SyntaxName(const Token& token) : SyntaxTarget(token), id_(token.text) {}
+    SyntaxName(const Token& token) : SyntaxSingleTarget(token), id_(token.text) {}
 
     syntax_type(Syntax_Name)
     syntax_name("name")
@@ -409,6 +415,9 @@ enum BinaryOp
     CountBinaryOp
 };
 
+extern const char* BinaryOpMethodNames[];
+extern const char* AugAssignMethodNames[];
+
 struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
     SyntaxBinaryOp(const Token& token, Syntax* l, Syntax* r, BinaryOp op)
@@ -421,6 +430,30 @@ struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
     virtual string name() const override {
         static const char* names[] = {
             "+", "-", "*", "/", "//", "%", "**", "|", "^", "&", "<<", ">>"
+        };
+        static_assert(sizeof(names)/sizeof(*names) == CountBinaryOp,
+            "Number of names must match number of binary operations");
+        return names[op_];
+    }
+
+    BinaryOp op() const { return op_; }
+
+  private:
+    BinaryOp op_;
+};
+
+struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
+{
+    SyntaxAugAssign(const Token& token, SyntaxSingleTarget* l, Syntax* r, BinaryOp op)
+      : BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>(token, l, r), op_(op)
+    {}
+
+    syntax_type(Syntax_BinaryOp);
+    syntax_accept();
+
+    virtual string name() const override {
+        static const char* names[] = {
+            "+=", "-=", "*=", "/=", "//=", "%=", "**=", "|=", "^=", "&=", "<<=", ">>="
         };
         static_assert(sizeof(names)/sizeof(*names) == CountBinaryOp,
             "Number of names must match number of binary operations");
@@ -469,10 +502,10 @@ struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
     CompareOp op_;
 };
 
-struct SyntaxAttrRef : public BinarySyntax<SyntaxTarget, Syntax, SyntaxName>
+struct SyntaxAttrRef : public BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxName>
 {
     SyntaxAttrRef(const Token& token, Syntax* l, SyntaxName* r)
-      : BinarySyntax<SyntaxTarget, Syntax, SyntaxName>(token, l, r)
+      : BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxName>(token, l, r)
     {}
 
     syntax_type(Syntax_AttrRef);
@@ -519,10 +552,10 @@ struct SyntaxTargetList : SyntaxTarget
 
 define_binary_syntax(Syntax, SyntaxTarget, Syntax, Assign, "=");
 
-struct SyntaxSubscript : public BinarySyntax<SyntaxTarget, Syntax, Syntax>
+struct SyntaxSubscript : public BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>
 {
     SyntaxSubscript(const Token& token, Syntax* l, Syntax* r)
-      : BinarySyntax<SyntaxTarget, Syntax, Syntax>(token, l, r)
+      : BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>(token, l, r)
     {}
     syntax_type(Syntax_Subscript)
     syntax_name("subscript")

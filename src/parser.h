@@ -3,14 +3,13 @@
 
 #include "token.h"
 #include "assert.h"
+#include "syntax.h"
 
 #include <vector>
 #include <stdexcept>
 #include <functional>
 
 using namespace std;
-
-struct SyntaxTarget;
 
 enum Assoc
 {
@@ -322,8 +321,6 @@ T Parser<T>::infix(Token token, const T leftValue)
     return action.handler(*this, token, leftValue);
 }
 
-struct Syntax;
-struct SyntaxBlock;
 struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
@@ -343,6 +340,8 @@ struct SyntaxParser : public Parser<Syntax *>
 
     SyntaxTarget* parseTarget();
     SyntaxTarget* parseTargetList();
+
+    Syntax* parseAugAssign(Token token, Syntax* target, BinaryOp op);
 };
 
 #endif
