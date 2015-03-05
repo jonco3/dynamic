@@ -80,7 +80,9 @@ bool runModule(string text, string filename, Traced<Object*> globals, Value* val
         Block::buildModule(Input(text, filename), globals, block);
         ok = Interpreter::exec(block, result);
     } catch (const ParseError& e) {
-        result = gc::create<Exception>("SyntaxError", e.what());
+        ostringstream s;
+        s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
+        result = gc::create<Exception>("SyntaxError", s.str());
         ok = false;
     }
 

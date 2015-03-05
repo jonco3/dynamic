@@ -19,7 +19,9 @@ enum Assoc
 
 struct ParseError : public runtime_error
 {
-    ParseError(string message);
+    ParseError(const Token& token, string message);
+
+    TokenPos pos;
 };
 
 template <typename T>
@@ -223,7 +225,7 @@ template <typename T>
 void Parser<T>::nextToken()
 {
     if (atEnd())
-        throw ParseError("Unexpected end of input");
+        throw ParseError(token, "Unexpected end of input");
     token = tokenizer.nextToken();
 }
 
@@ -258,7 +260,8 @@ Token Parser<T>::match(TokenType type)
 {
     Token t;
     if (!opt(type, t)) {
-        throw ParseError("Expected " + tokenizer.typeName(type) +
+        throw ParseError(token,
+                         "Expected " + tokenizer.typeName(type) +
                          " but found " + tokenizer.typeName(token.type));
     }
     return t;
@@ -269,7 +272,8 @@ Token Parser<T>::matchEither(TokenType type1, TokenType type2)
 {
     Token t;
     if (!opt(type1, t) && !opt(type2, t)) {
-        throw ParseError("Expected " + tokenizer.typeName(type1) +
+        throw ParseError(token,
+                         "Expected " + tokenizer.typeName(type1) +
                          " or " + tokenizer.typeName(type2) +
                          " but found " + tokenizer.typeName(token.type));
     }
@@ -295,7 +299,7 @@ T Parser<T>::prefix(Token token)
 {
     const auto& action = prefixActions[token.type];
     if (!action.present) {
-        throw ParseError("Unexpected " + tokenizer.typeName(token.type));
+        throw ParseError(token, "Unexpected " + tokenizer.typeName(token.type));
         // todo: + " in " + name + " context"
     }
     return action.handler(*this, token);
@@ -315,7 +319,7 @@ T Parser<T>::infix(Token token, const T leftValue)
 {
     const auto& action = infixActions[token.type];
     if (!action.present) {
-        throw ParseError("Unexpected " + tokenizer.typeName(token.type));
+        throw ParseError(token, "Unexpected " + tokenizer.typeName(token.type));
         // todo + " in " + name + " context"
     }
     return action.handler(*this, token, leftValue);

@@ -84,7 +84,7 @@ static const Keyword operatorList[] = {
     { "=",  Token_Assign },
     { ";",  Token_Semicolon },
     { "+=",  Token_AssignPlus },
-    { "-+",  Token_AssignMinus },
+    { "-=",  Token_AssignMinus },
     { "*=",  Token_AssignTimes },
     { "/=",  Token_AssignDivide },
     { "//=",  Token_AssignIntDivide },

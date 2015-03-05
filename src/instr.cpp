@@ -417,26 +417,34 @@ bool InstrIteratorNext::execute(Interpreter& interp)
     return ok;
 }
 
-bool InstrAugAssignLocal::execute(Interpreter& interp)
+bool InstrAugAssignUpdate::execute(Interpreter& interp)
 {
-    Root<Value> value(interp.getFrame()->getAttr(ident));
-    
-    Root<Value> value(interp.peekStack(0));
-    
-    interp.getFrame()->setAttr(ident, value);
-    return true;
-}
+    Root<Value> update(interp.popStack());
+    Root<Value> value(interp.popStack());
 
-bool InstrAugAssignLexical::execute(Interpreter& interp)
-{
-    Root<Value> value(interp.peekStack(0));
-    interp.getFrame(frameIndex)->setAttr(ident, value);
-    return true;
-}
-
-bool InstrAugAssignGlobal::execute(Interpreter& interp)
-{
-    Root<Value> value(interp.peekStack(0));
-    global->setAttr(ident, value);
-    return true;
+    Root<Value> method;
+    RootVector<Value> args;
+    Root<Value> result;
+    if (value.get().maybeGetAttr(AugAssignMethodNames[op_], method)) {
+        args.push_back(update);
+        if (!interp.call(method, args, result)) {
+            interp.pushStack(result);
+            return false;
+        }
+        interp.pushStack(value);
+        return true;
+    } else if (value.get().maybeGetAttr(BinaryOpMethodNames[op_], method)) {
+        args.push_back(value);
+        args.push_back(update);
+        if (!interp.call(method, args, result)) {
+            interp.pushStack(result);
+            return false;
+        }
+        interp.pushStack(result);
+        return true;
+    } else {
+        interp.pushStack(gc::create<Exception>("TypeError",
+                                               "Argument is not iterable"));
+        return false;
+    }
 }

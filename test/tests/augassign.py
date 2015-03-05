@@ -28,3 +28,5 @@ assert i == 1
 assert j == 8
 assert k == 995
 assert l == 1004
+
+print('ok')

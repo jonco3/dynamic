@@ -39,8 +39,6 @@ def runTest(dirname, name):
     if not ok:
         return 'FAIL'
     if output.rstrip() != expect:
-        print(expect)
-        print(output)
         return 'FAIL'
 
     passCount += 1

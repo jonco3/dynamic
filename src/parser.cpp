@@ -8,8 +8,8 @@
 #include <stdexcept>
 #include <ostream>
 
-ParseError::ParseError(string message) :
-  runtime_error(message)
+ParseError::ParseError(const Token& token, string message) :
+  runtime_error(message), pos(token.pos)
 {
 #ifdef BUILD_TESTS
     maybeAbortTests(*this);
@@ -187,7 +187,7 @@ SyntaxParser::SyntaxParser()
 
     addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token token, Syntax* l, Syntax* r) {
         if (!r->is<SyntaxName>())
-            throw ParseError("Bad attribute reference");
+            throw ParseError(token, "Bad attribute reference");
         return new SyntaxAttrRef(token, l, r->as<SyntaxName>());
     });
 
@@ -262,7 +262,8 @@ SyntaxTarget* SyntaxParser::makeAssignTarget(Syntax* target)
     } else if (target->is<SyntaxSubscript>()) {
         return target->as<SyntaxSubscript>();
     } else {
-        throw ParseError("Illegal target for assignment: " + target->name());
+        throw ParseError(target->token(),
+                         "Illegal target for assignment: " + target->name());
     }
 }
 
@@ -325,7 +326,9 @@ Syntax* SyntaxParser::parseAugAssign(Token token, Syntax* syntax, BinaryOp op)
     } else if (syntax->is<SyntaxSubscript>()) {
         target = syntax->as<SyntaxSubscript>();
     } else {
-        throw ParseError("Illegal target for augmented assignment: " + syntax->name());
+        throw ParseError(token,
+                         "Illegal target for augmented assignment: " +
+                         syntax->name());
     }
 
     return new SyntaxAugAssign(token, target, expression(), op);
@@ -345,7 +348,8 @@ Syntax* SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_Raise)) {
         Syntax* expr = expression();
         if (opt(Token_Comma))
-            throw ParseError("Multiple exressions for raise not supported"); // todo
+            throw ParseError(token,
+                             "Multiple exressions for raise not supported"); // todo
         return new SyntaxRaise(token, expr);
     } else if (opt(Token_Global)) {
         vector<Name> names;

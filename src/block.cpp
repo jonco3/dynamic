@@ -112,7 +112,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         const vector<Name>& names = s.names();
         for (auto i = names.begin(); i != names.end(); i++) {
             if (layout_->hasName(*i)) {
-                throw ParseError(
+                throw ParseError(s.token(),
                     "name " + *i + " is assigned to before global declaration");
             }
         }
@@ -281,13 +281,17 @@ struct BlockBuilder : public SyntaxVisitor
 
     void callAugAssignMethod(const SyntaxAugAssign& s, string name)
     {
+        // todo: we'll need to change this if we want to specialise depending on
+        // whether the target implements update-in-place methods
         s.left()->accept(*this);
-        block->append(gc::create<InstrGetMethod>(name));
         s.right()->accept(*this);
-        block->append(gc::create<InstrCall>(2));
+        block->append(gc::create<InstrAugAssignUpdate>(s.op()));
+        assert(!inAssignTarget);
+        inAssignTarget = true;
+        s.left()->accept(*this);
+        inAssignTarget = false;
         block->append(gc::create<InstrPop>());
         block->append(gc::create<InstrConst>(None));
-        // todo: things that don't implement __ifoo__
     }
 
     virtual void visit(const SyntaxPass& s) {
@@ -365,7 +369,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxAugAssign& s) {
         // todo: what's __itruediv__?
-        callAugAssignMethod(s, method[s.op()]);
+        callAugAssignMethod(s, AugAssignMethodNames[s.op()]);
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
@@ -397,7 +401,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxAssign& s) {
         s.right()->accept(*this);
-        assert(!inAssignTarget);
+        assert(!inAssignTarget); // todo: python accepts a = b = 1
         inAssignTarget = true;
         s.left()->accept(*this);
         inAssignTarget = false;
@@ -415,7 +419,8 @@ struct BlockBuilder : public SyntaxVisitor
             else if (Builtin && Builtin->hasAttr(name))
                 block->append(gc::create<InstrSetGlobal>(Builtin, name));
             else
-                throw ParseError(string("Name is not defined: ") + name);
+                throw ParseError(s.token(),
+                                 string("Name is not defined: ") + name);
         } else {
             if (parent && block->layout()->hasName(name))
                 block->append(gc::create<InstrGetLocal>(name));
@@ -426,7 +431,8 @@ struct BlockBuilder : public SyntaxVisitor
             else if (Builtin && Builtin->hasAttr(name))
                 block->append(gc::create<InstrGetGlobal>(Builtin, name));
             else
-                throw ParseError(string("Name is not defined: ") + name);
+                throw ParseError(s.token(),
+                                 string("Name is not defined: ") + name);
         }
     }
 
@@ -489,7 +495,8 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxReturn& s) {
         if (inClassBlock)
-            throw ParseError("Return statement not allowed in class body");
+            throw ParseError(s.token(),
+                             "Return statement not allowed in class body");
         if (s.right())
             s.right()->accept(*this);
         else
