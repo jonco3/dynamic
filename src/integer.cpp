@@ -8,7 +8,55 @@
 #include <cmath>
 #include <sstream>
 
-static bool int_str(Traced<Value> arg, Root<Value>& resultOut) {
+struct UnaryPlus        { static int op(int a) { return a; } };
+struct UnaryMinus       { static int op(int a) { return -a; } };
+struct UnaryInvert      { static int op(int a) { return ~a; } };
+struct BinaryPlus       { static int op(int a, int b) { return a + b; } };
+struct BinaryMinus      { static int op(int a, int b) { return a - b; } };
+struct BinaryMultiply   { static int op(int a, int b) { return a * b; } };
+struct BinaryDivide     { static int op(int a, int b) { return a / b; } };
+struct BinaryIntDivide  { static int op(int a, int b) { return a / b; } };
+struct BinaryModulo     { static int op(int a, int b) { return a % b; } };
+struct BinaryPower      { static int op(int a, int b) { return pow(a, b); } };
+struct BinaryOr         { static int op(int a, int b) { return a | b; } };
+struct BinaryXor        { static int op(int a, int b) { return a ^ b; } };
+struct BinaryAnd        { static int op(int a, int b) { return a & b; } };
+struct BinaryLeftShift  { static int op(int a, int b) { return a << b; } };
+struct BinaryRightShift { static int op(int a, int b) { return a >> b; } };
+struct CompareLT        { static int op(int a, int b) { return a < b; } };
+struct CompareLE        { static int op(int a, int b) { return a <= b; } };
+struct CompareGT        { static int op(int a, int b) { return a > b; } };
+struct CompareGE        { static int op(int a, int b) { return a >= b; } };
+struct CompareEQ        { static int op(int a, int b) { return a == b; } };
+struct CompareNE        { static int op(int a, int b) { return a != b; } };
+
+template <typename T>
+static bool intUnaryOp(Traced<Value> arg, Root<Value>& resultOut)
+{
+    int a = arg.asInt32();
+    resultOut = Integer::get(T::op(a));
+    return true;
+}
+
+template <typename T>
+static bool intBinaryOp(Traced<Value> arg1, Traced<Value> arg2,
+                        Root<Value>& resultOut) {
+    int a = arg1.asInt32();
+    int b = arg2.asInt32();
+    resultOut = Integer::get(T::op(a, b));
+    return true;
+}
+
+template <typename T>
+static bool intCompareOp(Traced<Value> arg1, Traced<Value> arg2,
+                         Root<Value>& resultOut) {
+    int a = arg1.asInt32();
+    int b = arg2.asInt32();
+    resultOut = Boolean::get(T::op(a, b));
+    return true;
+}
+
+static bool intStr(Traced<Value> arg, Root<Value>& resultOut) {
     int a = arg.asInt32();
     ostringstream s;
     s << dec << a;
@@ -16,98 +64,45 @@ static bool int_str(Traced<Value> arg, Root<Value>& resultOut) {
     return true;
 }
 
-#define define_unary_int_operator(name, op)                                   \
-    static bool name(Traced<Value> arg, Root<Value>& resultOut) {             \
-        int a = arg.asInt32();                                                \
-        resultOut = Integer::get(op a);                                       \
-        return true;                                                          \
-    }
-
-define_unary_int_operator(int_pos, +);
-define_unary_int_operator(int_neg, -);
-define_unary_int_operator(int_invert, ~);
-
-#undef define_unary_int_operator
-
-#define define_binary_int_operator(name, op)                                  \
-    static bool name(Traced<Value> arg1, Traced<Value> arg2,                  \
-                     Root<Value>& resultOut) {                                \
-        int a = arg1.asInt32();                                               \
-        int b = arg2.asInt32();                                               \
-        resultOut = Integer::get(a op b);                                     \
-        return true;                                                          \
-    }
-
-define_binary_int_operator(int_or, |);
-define_binary_int_operator(int_xor, ^);
-define_binary_int_operator(int_and, &);
-define_binary_int_operator(int_lshift, <<);
-define_binary_int_operator(int_rshift, >>);
-define_binary_int_operator(int_add, +);
-define_binary_int_operator(int_sub, -);
-define_binary_int_operator(int_mul, *);
-define_binary_int_operator(int_div, /);
-define_binary_int_operator(int_floordiv, /);
-define_binary_int_operator(int_mod, %);
-
-#undef define_binary_int_operator
-
-#define define_binary_bool_operator(name, op)                                 \
-    static bool name(Traced<Value> arg1, Traced<Value> arg2,                  \
-                     Root<Value>& resultOut) {                                \
-        int a = arg1.asInt32();                                               \
-        int b = arg2.asInt32();                                               \
-        resultOut = Boolean::get(a op b);                                     \
-        return true;                                                          \
-    }
-
-define_binary_bool_operator(int_lt, <);
-define_binary_bool_operator(int_le, <=);
-define_binary_bool_operator(int_gt, >);
-define_binary_bool_operator(int_ge, >=);
-define_binary_bool_operator(int_eq, ==);
-define_binary_bool_operator(int_ne, !=);
-
-#undef define_binary_bool_operator
-
-static bool int_pow(Traced<Value> arg1, Traced<Value> arg2,
-                    Root<Value>& resultOut) {
-    int a = arg1.asInt32();
-    int b = arg2.asInt32();
-    resultOut = Integer::get(std::pow(a, b));
-    return true;
-}
-
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Integer*> Integer::Zero;
 GlobalRoot<Integer*> Integer::Proto;
+
+template <typename T>
+static void initNativeMethod(Traced<Class*> cls, Name name, typename T::Func f)
+{
+    static_assert(is_base_of<Native, T>(), "Type parameter must derive Native");
+    Root<Value> value;
+    value = gc::create<T>(f);
+    cls->setAttr(name, value);
+}
 
 void Integer::init()
 {
     Root<Class*> cls(gc::create<Class>("int"));
     Root<Value> value;
-    value = gc::create<Native1>(int_str);    cls->setAttr("__str__", value);
-    value = gc::create<Native1>(int_pos);    cls->setAttr("__pos__", value);
-    value = gc::create<Native1>(int_neg);    cls->setAttr("__neg__", value);
-    value = gc::create<Native1>(int_invert); cls->setAttr("__invert__", value);
-    value = gc::create<Native2>(int_lt);     cls->setAttr("__lt__", value);
-    value = gc::create<Native2>(int_le);     cls->setAttr("__le__", value);
-    value = gc::create<Native2>(int_gt);     cls->setAttr("__gt__", value);
-    value = gc::create<Native2>(int_ge);     cls->setAttr("__ge__", value);
-    value = gc::create<Native2>(int_eq);     cls->setAttr("__eq__", value);
-    value = gc::create<Native2>(int_ne);     cls->setAttr("__ne__", value);
-    value = gc::create<Native2>(int_or);     cls->setAttr("__or__", value);
-    value = gc::create<Native2>(int_xor);    cls->setAttr("__xor__", value);
-    value = gc::create<Native2>(int_and);    cls->setAttr("__and__", value);
-    value = gc::create<Native2>(int_lshift); cls->setAttr("__lshift__", value);
-    value = gc::create<Native2>(int_rshift); cls->setAttr("__rshift__", value);
-    value = gc::create<Native2>(int_add);    cls->setAttr("__add__", value);
-    value = gc::create<Native2>(int_sub);    cls->setAttr("__sub__", value);
-    value = gc::create<Native2>(int_mul);    cls->setAttr("__mul__", value);
-    value = gc::create<Native2>(int_div);    cls->setAttr("__div__", value);
-    value = gc::create<Native2>(int_floordiv); cls->setAttr("__floordiv__", value);
-    value = gc::create<Native2>(int_mod);    cls->setAttr("__mod__", value);
-    value = gc::create<Native2>(int_pow);    cls->setAttr("__pow__", value);
+    initNativeMethod<Native1>(cls, "__str__", intStr);
+    initNativeMethod<Native1>(cls, "__pos__", intUnaryOp<UnaryPlus>);
+    initNativeMethod<Native1>(cls, "__neg__", intUnaryOp<UnaryMinus>);
+    initNativeMethod<Native1>(cls, "__invert__", intUnaryOp<UnaryInvert>);
+    initNativeMethod<Native2>(cls, "__lt__", intCompareOp<CompareLT>);
+    initNativeMethod<Native2>(cls, "__le__", intCompareOp<CompareLE>);
+    initNativeMethod<Native2>(cls, "__gt__", intCompareOp<CompareGT>);
+    initNativeMethod<Native2>(cls, "__ge__", intCompareOp<CompareGE>);
+    initNativeMethod<Native2>(cls, "__eq__", intCompareOp<CompareEQ>);
+    initNativeMethod<Native2>(cls, "__ne__", intCompareOp<CompareNE>);
+    initNativeMethod<Native2>(cls, "__or__", intBinaryOp<BinaryOr>);
+    initNativeMethod<Native2>(cls, "__xor__", intBinaryOp<BinaryXor>);
+    initNativeMethod<Native2>(cls, "__and__", intBinaryOp<BinaryAnd>);
+    initNativeMethod<Native2>(cls, "__lshift__", intBinaryOp<BinaryLeftShift>);
+    initNativeMethod<Native2>(cls, "__rshift__", intBinaryOp<BinaryRightShift>);
+    initNativeMethod<Native2>(cls, "__add__", intBinaryOp<BinaryPlus>);
+    initNativeMethod<Native2>(cls, "__sub__", intBinaryOp<BinaryMinus>);
+    initNativeMethod<Native2>(cls, "__mul__", intBinaryOp<BinaryMultiply>);
+    initNativeMethod<Native2>(cls, "__div__", intBinaryOp<BinaryDivide>);
+    initNativeMethod<Native2>(cls, "__floordiv__", intBinaryOp<BinaryIntDivide>);
+    initNativeMethod<Native2>(cls, "__mod__", intBinaryOp<BinaryModulo>);
+    initNativeMethod<Native2>(cls, "__pow__", intBinaryOp<BinaryPower>);
     ObjectClass.init(cls);
 
     Zero.init(gc::create<Integer>(0));
