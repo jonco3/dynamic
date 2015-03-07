@@ -254,7 +254,9 @@ void testException(const string& input, const string& expected)
     }
 }
 
-void testReplacement(const string& input, const string& expected, InstrType initial,
+void testReplacement(const string& input,
+                     const string& expected,
+                     InstrType initial,
                      InstrType replacement)
 {
     Root<Block*> block;
@@ -274,6 +276,24 @@ void testReplacement(const string& input, const string& expected, InstrType init
     testEqual(repr(result), expected);
 
     testEqual((*instrp)->type(), replacement);
+}
+
+void testReplacements(const string& defs,
+                      const string& call1, const string& result1,
+                      const string& call2, const string& result2,
+                      InstrType initial,
+                      InstrType afterCall1,
+                      InstrType afterCall2,
+                      InstrType afterBoth)
+{
+    testReplacement(defs + "\n" + call1,
+                    result1, initial, afterCall1);
+    testReplacement(defs + "\n" + call2,
+                    result2, initial, afterCall2);
+    testReplacement(defs + "\n" + call1 + "\n" + call2,
+                    result2, initial, afterBoth);
+    testReplacement(defs + "\n" + call2 + "\n" + call1,
+                    result1, initial, afterBoth);
 }
 
 testcase(interp)
@@ -389,65 +409,23 @@ testcase(interp)
                   "foo()\n",
                   "Wrong number of arguments");
 
-    testReplacement("def foo(x, y):\n"
-                    "  return x.__add__(y)\n"
-                    "foo('a', 'b')\n",
-                    "'ab'",
-                    Instr_GetMethod,
-                    Instr_GetMethodFallback);
+    testReplacements("def foo(x, y):\n"
+                     "  return x.__add__(y)",
+                     "foo(1, 2)", "3",
+                     "foo('a', 'b')", "'ab'",
+                     Instr_GetMethod,
+                     Instr_GetMethodInt,
+                     Instr_GetMethodFallback,
+                     Instr_GetMethodFallback);
 
-    testReplacement("def foo(x, y):\n"
-                    "  return x.__add__(y)\n"
-                    "foo(1, 2)\n",
-                    "3",
-                    Instr_GetMethod,
-                    Instr_GetMethodInt);
-
-    testReplacement("def foo(x, y):\n"
-                    "  return x.__add__(y)\n"
-                    "foo(1, 2)\n"
-                    "foo('a', 'b')\n",
-                    "'ab'",
-                    Instr_GetMethod,
-                    Instr_GetMethodFallback);
-
-    testReplacement("def foo(x, y):\n"
-                    "  return x.__add__(y)\n"
-                    "foo('a', 'b')\n"
-                    "foo(1, 2)\n",
-                    "3",
-                    Instr_GetMethod,
-                    Instr_GetMethodFallback);
-
-    testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
-                    "foo('a', 'b')\n",
-                    "'ab'",
-                    Instr_BinaryOp,
-                    Instr_BinaryOpFallback);
-
-    testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
-                    "foo(1, 2)\n",
-                    "3",
-                    Instr_BinaryOp,
-                    Instr_BinaryOpInt);
-
-    testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
-                    "foo(1, 2)\n"
-                    "foo('a', 'b')\n",
-                    "'ab'",
-                    Instr_BinaryOp,
-                    Instr_BinaryOpFallback);
-
-    testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
-                    "foo('a', 'b')\n"
-                    "foo(1, 2)\n",
-                    "3",
-                    Instr_BinaryOp,
-                    Instr_BinaryOpFallback);
+    testReplacements("def foo(x, y):\n"
+                     "  return x + y",
+                     "foo(1, 2)", "3",
+                     "foo('a', 'b')", "'ab'",
+                     Instr_BinaryOp,
+                     Instr_BinaryOpInt,
+                     Instr_BinaryOpFallback,
+                     Instr_BinaryOpFallback);
 
     testInterp("a, b = 1, 2\na", "1");
     testInterp("a, b = 1, 2\nb", "2");
