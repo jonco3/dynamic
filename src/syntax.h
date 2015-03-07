@@ -75,6 +75,19 @@ struct DefaultSyntaxVisitor : public SyntaxVisitor
 #undef syntax_visitor
 };
 
+template <typename T>
+struct OwningVector : public vector<T*>
+{
+    OwningVector() {}
+
+    OwningVector(const vector<T*>& other) : vector<T*>(other) {}
+
+    ~OwningVector() {
+        for (auto i = this->begin(); i != this->end(); i++)
+            delete *i;
+    }
+};
+
 struct Syntax
 {
     Syntax(const Token& token) : token_(token) {}
@@ -201,11 +214,6 @@ struct SyntaxBlock : public Syntax
     define_syntax_members(Block, "block");
     SyntaxBlock(const Token& token) : Syntax(token) {}
 
-    ~SyntaxBlock() {
-        for (auto i = statements.begin(); i != statements.end(); ++i)
-            delete *i;
-    }
-
     void append(Syntax* s) { statements.push_back(s); }
     const vector<Syntax *>& stmts() const { return statements; }
 
@@ -215,7 +223,7 @@ struct SyntaxBlock : public Syntax
     }
 
   private:
-    vector<Syntax *> statements;
+    OwningVector<Syntax> statements;
 };
 
 struct SyntaxInteger : public Syntax
@@ -279,11 +287,6 @@ struct SyntaxExprList : public Syntax
       : Syntax(token), elements(elems)
     {}
 
-    ~SyntaxExprList() {
-        for (auto i = elements.begin(); i != elements.end(); ++i)
-            delete *i;
-    }
-
     const vector<Syntax *>& elems() const { return elements; }
 
     void release() { elements.clear(); }
@@ -301,7 +304,7 @@ struct SyntaxExprList : public Syntax
     }
 
   private:
-    vector<Syntax *> elements;
+    OwningVector<Syntax> elements;
 };
 
 struct SyntaxList : public Syntax
@@ -310,11 +313,6 @@ struct SyntaxList : public Syntax
 
     SyntaxList(const Token& token, const vector<Syntax*> elems)
       : Syntax(token), elements(elems) {}
-
-    ~SyntaxList() {
-        for (auto i = elements.begin(); i != elements.end(); ++i)
-            delete *i;
-    }
 
     const vector<Syntax *>& elems() const { return elements; }
 
@@ -331,7 +329,7 @@ struct SyntaxList : public Syntax
     }
 
   private:
-    vector<Syntax *> elements;
+    OwningVector<Syntax> elements;
 };
 
 struct SyntaxDict : public Syntax
@@ -475,7 +473,7 @@ struct SyntaxTargetList : SyntaxTarget
     }
 
   private:
-    vector<SyntaxTarget*> targets_;
+    OwningVector<SyntaxTarget> targets_;
 };
 
 define_binary_syntax(Syntax, SyntaxTarget, Syntax, Assign, "=");
@@ -501,11 +499,6 @@ struct SyntaxCall : public Syntax
       : Syntax(token), left_(l), right_(r)
     {}
 
-    ~SyntaxCall() {
-        for (auto i = right_.begin(); i != right_.end(); ++i)
-            delete *i;
-    }
-
     const Syntax* left() const { return left_.get(); }
     const vector<Syntax*>& right() const { return right_; }
 
@@ -521,7 +514,7 @@ struct SyntaxCall : public Syntax
 
   private:
     unique_ptr<Syntax> left_;
-    vector<Syntax*> right_;
+    OwningVector<Syntax> right_;
 };
 
 struct SyntaxReturn : public UnarySyntax
