@@ -77,7 +77,6 @@ static bool intStr(Traced<Value> arg, Root<Value>& resultOut) {
 
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Integer*> Integer::Zero;
-GlobalRoot<Integer*> Integer::Proto;
 
 template <typename T>
 static void initNativeMethod(Traced<Class*> cls, Name name, typename T::Func f)
@@ -117,7 +116,6 @@ void Integer::init()
     ObjectClass.init(cls);
 
     Zero.init(gc::create<Integer>(0));
-    Proto.init(gc::create<Integer>(INT16_MAX + 1));
 }
 
 Integer::Integer(int v)

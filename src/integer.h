@@ -11,7 +11,6 @@ struct Integer : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     static GlobalRoot<Integer*> Zero;
-    static GlobalRoot<Integer*> Proto; // A prototypical integer
 
     static Value get(int v);
     static Object* getObject(int v);

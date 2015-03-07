@@ -380,14 +380,14 @@ bool InstrDestructure::execute(Interpreter& interp)
 {
     Root<Value> seq(interp.popStack());
     Root<Value> lenFunc;
-    if (!seq.get().maybeGetAttr("__len__", lenFunc)) {
+    if (!seq.maybeGetAttr("__len__", lenFunc)) {
         interp.pushStack(gc::create<Exception>("TypeError",
                                                "Argument is not iterable"));
         return false;
     }
 
     Root<Value> getitemFunc;
-    if (!seq.get().maybeGetAttr("__getitem__", getitemFunc)) {
+    if (!seq.maybeGetAttr("__getitem__", getitemFunc)) {
         interp.pushStack(gc::create<Exception>("TypeError",
                                                "Argument is not iterable"));
         return false;
@@ -401,13 +401,13 @@ bool InstrDestructure::execute(Interpreter& interp)
         return false;
     }
 
-    if (!result.get().isInt32()) {
+    if (!result.isInt32()) {
         interp.pushStack(gc::create<Exception>("TypeError",
                                                "__len__ didn't return an integer"));
         return false;
     }
 
-    if (result.get().asInt32() != count_) {
+    if (result.asInt32() != count_) {
         interp.pushStack(gc::create<Exception>("ValueError",
                                                "too many values to unpack"));
         return false;
@@ -439,7 +439,7 @@ bool InstrIteratorNext::execute(Interpreter& interp)
     Root<Value> result;
     bool ok = interp.call(target, args, result);
     if (!ok) {
-        Root<Object*> exc(result.get().toObject());
+        Root<Object*> exc(result.toObject());
         if (exc->is<StopIteration>()) {
             interp.pushStack(Boolean::False);
             return true;
@@ -469,7 +469,7 @@ bool InstrBinaryOp::execute(Interpreter& interp)
 
     Root<Value> method;
     Root<Value> result;
-    if (left.get().maybeGetAttr(BinaryOpMethodNames[op()], method)) {
+    if (left.maybeGetAttr(BinaryOpMethodNames[op()], method)) {
         RootVector<Value> args;
         args.push_back(left);
         args.push_back(right);
@@ -484,7 +484,7 @@ bool InstrBinaryOp::execute(Interpreter& interp)
     }
 
     if (left.getType() != right.getType() &&
-        right.get().maybeGetAttr(BinaryOpReflectedMethodNames[op()], method))
+        right.maybeGetAttr(BinaryOpReflectedMethodNames[op()], method))
     {
         RootVector<Value> args;
         args.push_back(right);
@@ -511,7 +511,7 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
 
     Root<Value> method;
     Root<Value> result;
-    if (value.get().maybeGetAttr(AugAssignMethodNames[op()], method)) {
+    if (value.maybeGetAttr(AugAssignMethodNames[op()], method)) {
         RootVector<Value> args;
         args.push_back(value);
         args.push_back(update);
@@ -521,7 +521,7 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
         }
         interp.pushStack(result);
         return true;
-    } else if (value.get().maybeGetAttr(BinaryOpMethodNames[op()], method)) {
+    } else if (value.maybeGetAttr(BinaryOpMethodNames[op()], method)) {
         RootVector<Value> args;
         args.push_back(value);
         args.push_back(update);

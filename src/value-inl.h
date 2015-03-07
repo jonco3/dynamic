@@ -63,10 +63,8 @@ inline Class* Value::getType() const
 
 inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
-    if (type() == IntType)
-        return Integer::Proto->maybeGetAttr(name, valueOut);
-    else
-        return asObject()->maybeGetAttr(name, valueOut);
+    Object* obj = type() == IntType ? Integer::ObjectClass : asObject();
+    return obj->maybeGetAttr(name, valueOut);
 }
 
 template <typename W>
