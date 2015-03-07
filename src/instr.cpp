@@ -152,27 +152,23 @@ bool InstrGetMethod::execute(Interpreter& interp)
     interp.pushStack(value);
 
     if (value.isInt32())
-        interp.replaceInstr(gc::create<InstrGetMethodInt>(ident, result), this);
+        interp.replaceInstr(this, gc::create<InstrGetMethodInt>(ident, result));
     else
-        interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
+        interp.replaceInstr(this, gc::create<InstrGetMethodFallback>(ident));
 
     return true;
 }
 
 bool InstrGetMethodInt::execute(Interpreter& interp)
 {
-    Root<Value> value(interp.popStack());
+    Root<Value> value(interp.peekStack(0));
     if (!value.isInt32()) {
-        interp.replaceInstr(gc::create<InstrGetMethodFallback>(ident), this);
-        Root<Value> result;
-        if (!value.maybeGetAttr(ident, result))
-            return raiseAttrError(value, interp);
-        assert(result != Value(UninitializedSlot));
-        interp.pushStack(result);
-    } else {
-        interp.pushStack(result_);
+        Instr *fallback = gc::create<InstrGetMethodFallback>(ident);
+        return interp.replaceInstrAndRestart(this, fallback);
     }
 
+    interp.popStack();
+    interp.pushStack(result_);
     interp.pushStack(value);
     return true;
 }

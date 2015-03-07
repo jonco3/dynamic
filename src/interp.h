@@ -80,7 +80,8 @@ struct Interpreter
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
 
-    void replaceInstr(Instr* instr, Instr* prev);
+    void replaceInstr(Instr* current, Instr* newInstr);
+    bool replaceInstrAndRestart(Instr* current, Instr* newInstr);
 
   private:
     static Interpreter* instance_;

@@ -200,10 +200,16 @@ Interpreter::CallStatus Interpreter::raise(string className, string message,
     return CallError;
 }
 
-void Interpreter::replaceInstr(Instr* instr, Instr* prev)
+void Interpreter::replaceInstr(Instr* current, Instr* newInstr)
 {
-    assert(instrp[-1] == prev);
-    instrp[-1] = instr;
+    assert(instrp[-1] == current);
+    instrp[-1] = newInstr;
+}
+
+bool Interpreter::replaceInstrAndRestart(Instr* current, Instr* newInstr)
+{
+    replaceInstr(current, newInstr);
+    return newInstr->execute(*this);
 }
 
 #ifdef BUILD_TESTS
