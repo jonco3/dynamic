@@ -1,5 +1,22 @@
 #include "instr.h"
 
+const char* BinaryOpNames[] = {
+    "+",
+    "-",
+    "*",
+    "/",
+    "//",
+    "%",
+    "**",
+    "|",
+    "^",
+    "&",
+    "<<",
+    ">>"
+};
+static_assert(sizeof(BinaryOpNames) / sizeof(*BinaryOpNames) == CountBinaryOp,
+              "Number of names must match number of binary operations");
+
 const char* BinaryOpMethodNames[] = {
     "__add__",
     "__sub__",
@@ -14,7 +31,24 @@ const char* BinaryOpMethodNames[] = {
     "__lshift__",
     "__rshift__"
 };
-static_assert(sizeof(BinaryOpMethodNames)/sizeof(*BinaryOpMethodNames) == CountBinaryOp,
+static_assert(sizeof(BinaryOpMethodNames) / sizeof(*BinaryOpMethodNames) == CountBinaryOp,
+              "Number of method names must match number of binary operations");
+
+const char* BinaryOpReflectedMethodNames[] = {
+    "__radd__",
+    "__rsub__",
+    "__rmul__",
+    "__rdiv__",
+    "__rfloordiv__",
+    "__rmod__",
+    "__rpow__",
+    "__ror__",
+    "__rxor__",
+    "__rand__",
+    "__rlshift__",
+    "__rrshift__"
+};
+static_assert(sizeof(BinaryOpReflectedMethodNames) / sizeof(*BinaryOpReflectedMethodNames) == CountBinaryOp,
               "Number of method names must match number of binary operations");
 
 const char* AugAssignMethodNames[] = {
@@ -31,7 +65,7 @@ const char* AugAssignMethodNames[] = {
     "__ilshift__",
     "__irshift__"
 };
-static_assert(sizeof(AugAssignMethodNames)/sizeof(*AugAssignMethodNames) == CountBinaryOp,
+static_assert(sizeof(AugAssignMethodNames) / sizeof(*AugAssignMethodNames) == CountBinaryOp,
               "Number of method names must match number of binary operations");
 
 
@@ -417,15 +451,68 @@ bool InstrIteratorNext::execute(Interpreter& interp)
     return ok;
 }
 
+void BinaryOpInstr::print(ostream& s) const
+{
+    s << name() << " " << BinaryOpNames[op()];
+}
+
+bool InstrBinaryOp::execute(Interpreter& interp)
+{
+    Root<Value> right(interp.popStack());
+    Root<Value> left(interp.popStack());
+
+    // todo: "If the right operand's type is a subclass of the left operand's
+    // type and that subclass provides the reflected method for the operation,
+    // this method will be called before the left operand's non-reflected
+    // method. This behavior allows subclasses to override their ancestors'
+    // operations."
+
+    Root<Value> method;
+    Root<Value> result;
+    if (left.get().maybeGetAttr(BinaryOpMethodNames[op()], method)) {
+        RootVector<Value> args;
+        args.push_back(left);
+        args.push_back(right);
+        if (!interp.call(method, args, result)) {
+            interp.pushStack(result);
+            return false;
+        }
+        if (result != Value(NotImplemented)) {
+            interp.pushStack(result);
+            return true;
+        }
+    }
+
+    if (left.getType() != right.getType() &&
+        right.get().maybeGetAttr(BinaryOpReflectedMethodNames[op()], method))
+    {
+        RootVector<Value> args;
+        args.push_back(right);
+        args.push_back(left);
+        if (!interp.call(method, args, result)) {
+            interp.pushStack(result);
+            return false;
+        }
+        if (result != Value(NotImplemented)) {
+            interp.pushStack(result);
+            return true;
+        }
+    }
+
+    interp.pushStack(gc::create<Exception>("TypeError",
+                                           "unsupported operand type(s) for augmented assignment"));
+        return false;
+}
+
 bool InstrAugAssignUpdate::execute(Interpreter& interp)
 {
     Root<Value> update(interp.popStack());
     Root<Value> value(interp.popStack());
 
     Root<Value> method;
-    RootVector<Value> args;
     Root<Value> result;
-    if (value.get().maybeGetAttr(AugAssignMethodNames[op_], method)) {
+    if (value.get().maybeGetAttr(AugAssignMethodNames[op()], method)) {
+        RootVector<Value> args;
         args.push_back(value);
         args.push_back(update);
         if (!interp.call(method, args, result)) {
@@ -434,7 +521,8 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
         }
         interp.pushStack(result);
         return true;
-    } else if (value.get().maybeGetAttr(BinaryOpMethodNames[op_], method)) {
+    } else if (value.get().maybeGetAttr(BinaryOpMethodNames[op()], method)) {
+        RootVector<Value> args;
         args.push_back(value);
         args.push_back(update);
         if (!interp.call(method, args, result)) {

@@ -384,21 +384,21 @@ testcase(interp)
                   "Wrong number of arguments");
 
     testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
+                    "  return x.__add__(y)\n"
                     "foo('a', 'b')\n",
                     "'ab'",
                     Instr_GetMethod,
                     Instr_GetMethodFallback);
 
     testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
+                    "  return x.__add__(y)\n"
                     "foo(1, 2)\n",
                     "3",
                     Instr_GetMethod,
                     Instr_GetMethodInt);
 
     testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
+                    "  return x.__add__(y)\n"
                     "foo(1, 2)\n"
                     "foo('a', 'b')\n",
                     "'ab'",
@@ -406,7 +406,7 @@ testcase(interp)
                     Instr_GetMethodFallback);
 
     testReplacement("def foo(x, y):\n"
-                    "  return x + y\n"
+                    "  return x.__add__(y)\n"
                     "foo('a', 'b')\n"
                     "foo(1, 2)\n",
                     "3",

@@ -225,6 +225,11 @@ void Object::print(ostream& s) const
     s << " } ";
 }
 
+Class* Object::getType() const
+{
+    return getAttr("__class__").asObject()->as<Class>();
+}
+
 bool Object::isTrue() const
 {
     // the following values are interpreted as false: False, None, numeric zero

@@ -53,6 +53,14 @@ inline int32_t Value::asInt32() const
         return asObject()->as<Integer>()->value();
 }
 
+inline Class* Value::getType() const
+{
+    if (type() == IntType)
+        return Integer::ObjectClass;
+    else
+        return asObject()->getType();
+}
+
 inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
     if (type() == IntType)
@@ -89,6 +97,12 @@ template <typename W>
 inline int32_t WrapperMixins<W, Value>::asInt32() const
 {
     return get()->asInt32();
+}
+
+template <typename W>
+inline Class* WrapperMixins<W, Value>::getType() const
+{
+    return get()->getType();
 }
 
 template <typename W>

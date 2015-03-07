@@ -8,6 +8,7 @@
 
 using namespace std;
 
+struct Class;
 struct Integer;
 struct Object;
 struct Tracer;
@@ -42,6 +43,7 @@ struct Value
     inline bool isInt32() const;
     inline int32_t asInt32() const;
 
+    inline Class* getType() const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
 
     bool operator==(const Value& other) const;
@@ -82,6 +84,7 @@ struct WrapperMixins<W, Value>
     inline bool isInt32() const;
     inline int32_t asInt32() const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
+    inline Class* getType() const;
 
   private:
     const Value* get() const {
@@ -93,11 +96,8 @@ template <>
 struct GCTraits<Value>
 {
     static Value nullValue();
-
     static bool isNonNull(Value value);
-
     static void checkValid(Value value);
-
     static void trace(Tracer& t, Value* v);
 };
 

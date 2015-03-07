@@ -59,6 +59,7 @@ using namespace std;
     instr(Destructure)                                                       \
     instr(Raise)                                                             \
     instr(IteratorNext)                                                      \
+    instr(BinaryOp)                                                          \
     instr(AugAssignUpdate)
 
 enum InstrType
@@ -393,13 +394,28 @@ struct InstrDestructure : public Instr
 define_simple_instr(Raise);
 define_simple_instr(IteratorNext);
 
-struct InstrAugAssignUpdate : public Instr
+struct BinaryOpInstr : public Instr
 {
-    define_instr_members(Instr_AugAssignUpdate, "AugAssignUpdate");
-    InstrAugAssignUpdate(BinaryOp op) : op_(op) {}
+    BinaryOpInstr(BinaryOp op) : op_(op) {}
+
+    virtual void print(ostream& s) const;
+
+    BinaryOp op() const { return op_; }
 
   private:
     BinaryOp op_;
+};
+
+struct InstrBinaryOp : public BinaryOpInstr
+{
+    define_instr_members(Instr_BinaryOp, "BinaryOp");
+    InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
+};
+
+struct InstrAugAssignUpdate : public BinaryOpInstr
+{
+    define_instr_members(Instr_AugAssignUpdate, "AugAssignUpdate");
+    InstrAugAssignUpdate(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
 #undef instr_type

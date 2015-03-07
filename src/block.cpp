@@ -349,7 +349,9 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
 
     virtual void visit(const SyntaxBinaryOp& s) {
-        callBinaryMethod(s, BinaryOpMethodNames[s.op()]);
+        s.left()->accept(*this);
+        s.right()->accept(*this);
+        block->append(gc::create<InstrBinaryOp>(s.op()));
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
@@ -706,7 +708,7 @@ testcase(block)
     testBuildModule("foo = 1\n"
                     "foo + 1",
                     "Const 1, SetGlobal foo, Pop, "
-                    "GetGlobal foo, GetMethod __add__, Const 1, Call 2, Return");
+                    "GetGlobal foo, Const 1, BinaryOp +, Return");
 
     testBuildModule("1",
                     "Const 1, Return");
@@ -729,7 +731,7 @@ testcase(block)
                     "GetGlobal foo, GetGlobal bar, Is, Not, Return");
 
     testBuildModule("return 2 - - 1",
-                    "Const 2, GetMethod __sub__, Const 1, GetMethod __neg__, Call 1, Call 2, Return");
+                    "Const 2, Const 1, GetMethod __neg__, Call 1, BinaryOp -, Return");
 }
 
 #endif

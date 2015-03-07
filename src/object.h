@@ -39,6 +39,7 @@ struct Object : public Cell
 
     const Class* getClass() const { return class_; }
     Layout* layout() { return layout_; }
+    Class* getType() const;
 
     bool hasAttr(Name name) const;
     int findOwnAttr(Name name) const;
