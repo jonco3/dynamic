@@ -439,7 +439,6 @@ struct SyntaxAttrRef : public BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxNam
       : BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxName>(token, l, r)
     {}
 
-
     virtual void print(ostream& s) const override {
         if (left()->is<SyntaxName>() || left()->is<SyntaxExprList>() ||
             left()->is<SyntaxAttrRef>())
