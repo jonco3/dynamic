@@ -2,6 +2,7 @@
 
 #include "bool.h"
 #include "callable.h"
+#include "singletons.h"
 #include "string.h"
 #include "value-inl.h"
 
@@ -33,33 +34,43 @@ struct CompareNE        { static int op(int a, int b) { return a != b; } };
 template <typename T>
 static bool intUnaryOp(Traced<Value> arg, Root<Value>& resultOut)
 {
-    int a = arg.asInt32();
-    resultOut = Integer::get(T::op(a));
+    if (arg.isInt32())
+        resultOut = Integer::get(T::op(arg.asInt32()));
+    else
+        resultOut = NotImplemented;
     return true;
 }
 
 template <typename T>
 static bool intBinaryOp(Traced<Value> arg1, Traced<Value> arg2,
-                        Root<Value>& resultOut) {
-    int a = arg1.asInt32();
-    int b = arg2.asInt32();
-    resultOut = Integer::get(T::op(a, b));
+                        Root<Value>& resultOut)
+{
+    if (arg1.isInt32() && arg2.isInt32())
+        resultOut = Integer::get(T::op(arg1.asInt32(), arg2.asInt32()));
+    else
+        resultOut = NotImplemented;
     return true;
 }
 
 template <typename T>
 static bool intCompareOp(Traced<Value> arg1, Traced<Value> arg2,
-                         Root<Value>& resultOut) {
-    int a = arg1.asInt32();
-    int b = arg2.asInt32();
-    resultOut = Boolean::get(T::op(a, b));
+                         Root<Value>& resultOut)
+{
+    if (arg1.isInt32() && arg2.isInt32())
+        resultOut = Boolean::get(T::op(arg1.asInt32(), arg2.asInt32()));
+    else
+        resultOut = NotImplemented;
     return true;
 }
 
 static bool intStr(Traced<Value> arg, Root<Value>& resultOut) {
-    int a = arg.asInt32();
+    if (!arg.isInt32()) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
     ostringstream s;
-    s << dec << a;
+    s << dec << arg.asInt32();
     resultOut = String::get(s.str());
     return true;
 }
