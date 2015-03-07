@@ -108,15 +108,20 @@ inline ostream& operator<<(ostream& s, const Syntax& syntax) {
     return s;
 }
 
-#define syntax_type(st)                                                       \
+#define define_syntax_type(st)                                                \
     static const SyntaxType Type = st;                                        \
     virtual SyntaxType type() const override { return Type; }
 
-#define syntax_name(nm)                                                       \
-    virtual string name() const override { return string(nm); }
+#define define_syntax_name(nm)                                                \
+    virtual string name() const override { return nm; }
 
-#define syntax_accept()                                                      \
+#define define_syntax_accept()                                                \
     virtual void accept(SyntaxVisitor& v) const override { v.visit(*this); }
+
+#define define_syntax_members(st, nm)                                         \
+    define_syntax_type(Syntax_##st)                                           \
+    define_syntax_name(nm)                                                    \
+    define_syntax_accept()
 
 struct UnarySyntax : public Syntax
 {
@@ -153,12 +158,10 @@ struct BinarySyntax : public Base
 #define define_binary_syntax(BaseType, LeftType, RightType, name, nameStr)    \
     struct Syntax##name : public BinarySyntax<BaseType, LeftType, RightType>  \
     {                                                                         \
+        define_syntax_members(name, nameStr);                                 \
         Syntax##name(const Token& token, LeftType* l, RightType* r)           \
           : BinarySyntax<BaseType, LeftType, RightType>(token, l, r)          \
         {}                                                                    \
-        syntax_type(Syntax_##name)                                            \
-        syntax_name(nameStr)                                                  \
-        syntax_accept()                                                       \
     }
 
 #define define_simple_binary_syntax(name, nameStr)                            \
@@ -167,12 +170,10 @@ struct BinarySyntax : public Base
 #define define_unary_syntax(name, nameStr)                                    \
     struct Syntax##name : public UnarySyntax                                  \
     {                                                                         \
+        define_syntax_members(name, nameStr);                                 \
         Syntax##name(const Token& token, Syntax* r)                           \
           : UnarySyntax(token, r)                                             \
         {}                                                                    \
-        syntax_type(Syntax_##name)                                            \
-        syntax_name(nameStr)                                                  \
-        syntax_accept()                                                       \
     }
 
 struct SyntaxTarget : Syntax
@@ -187,29 +188,23 @@ struct SyntaxSingleTarget : SyntaxTarget
 
 struct SyntaxPass : public Syntax
 {
+    define_syntax_members(Pass, "pass");
     SyntaxPass(const Token& token) : Syntax(token) {}
-
-    syntax_type(Syntax_Pass)
-    syntax_name("pass")
 
     virtual void print(ostream& s) const override {
         s << "pass";
     }
-
-    syntax_accept()
 };
 
 struct SyntaxBlock : public Syntax
 {
+    define_syntax_members(Block, "block");
     SyntaxBlock(const Token& token) : Syntax(token) {}
 
     ~SyntaxBlock() {
         for (auto i = statements.begin(); i != statements.end(); ++i)
             delete *i;
     }
-
-    syntax_type(Syntax_Block);
-    syntax_name("block");
 
     void append(Syntax* s) { statements.push_back(s); }
     const vector<Syntax *>& stmts() const { return statements; }
@@ -219,28 +214,24 @@ struct SyntaxBlock : public Syntax
             s << **i << endl;
     }
 
-    syntax_accept();
-
   private:
     vector<Syntax *> statements;
 };
 
 struct SyntaxInteger : public Syntax
 {
+    define_syntax_members(Integer, "integer");
+
     // todo: this probably doesn't correctly parse all python integers
     SyntaxInteger(const Token& token)
       : Syntax(token), value_(atoi(token.text.c_str()))
     {}
 
-    syntax_type(Syntax_Integer)
-    syntax_name("integer")
     int value() const { return value_; }
 
     virtual void print(ostream& s) const override {
         s << value_;
     }
-
-    syntax_accept()
 
   private:
     int value_;
@@ -248,17 +239,14 @@ struct SyntaxInteger : public Syntax
 
 struct SyntaxString : public Syntax
 {
+    define_syntax_members(String, "string");
     SyntaxString(const Token& token) : Syntax(token), value_(token.text) {}
 
-    syntax_type(Syntax_String)
-    syntax_name("string")
     const string& value() const { return value_; }
 
     virtual void print(ostream& s) const override {
         s << "'" << value_ << "'";
     }
-
-    syntax_accept()
 
   private:
     string value_;
@@ -266,17 +254,16 @@ struct SyntaxString : public Syntax
 
 struct SyntaxName : public SyntaxSingleTarget
 {
-    SyntaxName(const Token& token) : SyntaxSingleTarget(token), id_(token.text) {}
+    define_syntax_members(Name, "name");
 
-    syntax_type(Syntax_Name)
-    syntax_name("name")
+    SyntaxName(const Token& token)
+      : SyntaxSingleTarget(token), id_(token.text) {}
+
     Name id() const { return id_; }
 
     virtual void print(ostream& s) const override {
         s << id_;
     }
-
-    syntax_accept()
 
   private:
     Name id_;
@@ -284,8 +271,7 @@ struct SyntaxName : public SyntaxSingleTarget
 
 struct SyntaxExprList : public Syntax
 {
-    syntax_type(Syntax_ExprList);
-    syntax_name("exprList");
+    define_syntax_members(ExprList, "exprList");
 
     SyntaxExprList(const Token& token) : Syntax(token) {}
 
@@ -314,14 +300,14 @@ struct SyntaxExprList : public Syntax
         s << ")";
     }
 
-    syntax_accept();
-
   private:
     vector<Syntax *> elements;
 };
 
 struct SyntaxList : public Syntax
 {
+    define_syntax_members(List, "list");
+
     SyntaxList(const Token& token, const vector<Syntax*> elems)
       : Syntax(token), elements(elems) {}
 
@@ -329,9 +315,6 @@ struct SyntaxList : public Syntax
         for (auto i = elements.begin(); i != elements.end(); ++i)
             delete *i;
     }
-
-    syntax_type(Syntax_List);
-    syntax_name("List");
 
     const vector<Syntax *>& elems() const { return elements; }
 
@@ -347,14 +330,14 @@ struct SyntaxList : public Syntax
         s << "]";
     }
 
-    syntax_accept();
-
   private:
     vector<Syntax *> elements;
 };
 
 struct SyntaxDict : public Syntax
 {
+    define_syntax_members(Dict, "dict");
+
     typedef pair<Syntax*, Syntax*> Entry;
 
     SyntaxDict(const Token& token, const vector<Entry>& entries)
@@ -367,9 +350,6 @@ struct SyntaxDict : public Syntax
         }
     }
 
-    syntax_type(Syntax_Dict);
-    syntax_name("Dict");
-
     const vector<Entry>& entries() const { return entries_; }
 
     virtual void print(ostream& s) const override {
@@ -381,8 +361,6 @@ struct SyntaxDict : public Syntax
         }
         s << "}";
     }
-
-    syntax_accept();
 
   private:
     vector<Entry> entries_;
@@ -400,12 +378,12 @@ define_simple_binary_syntax(Is, "is");
 
 struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
+    define_syntax_type(Syntax_BinaryOp);
+    define_syntax_accept();
+
     SyntaxBinaryOp(const Token& token, Syntax* l, Syntax* r, BinaryOp op)
       : BinarySyntax<Syntax, Syntax, Syntax>(token, l, r), op_(op)
     {}
-
-    syntax_type(Syntax_BinaryOp);
-    syntax_accept();
 
     virtual string name() const override {
         return BinaryOpNames[op_];
@@ -419,12 +397,12 @@ struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
 
 struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
 {
+    define_syntax_type(Syntax_BinaryOp);
+    define_syntax_accept();
+
     SyntaxAugAssign(const Token& token, SyntaxSingleTarget* l, Syntax* r, BinaryOp op)
       : BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>(token, l, r), op_(op)
     {}
-
-    syntax_type(Syntax_BinaryOp);
-    syntax_accept();
 
     virtual string name() const override {
         return AugAssignNames[op_];
@@ -438,12 +416,12 @@ struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
 
 struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
+    define_syntax_type(Syntax_CompareOp);
+    define_syntax_accept();
+
     SyntaxCompareOp(const Token& token, Syntax* l, Syntax* r, CompareOp op)
       : BinarySyntax<Syntax, Syntax, Syntax>(token, l, r), op_(op)
     {}
-
-    syntax_type(Syntax_CompareOp);
-    syntax_accept();
 
     virtual string name() const override {
         return CompareOpNames[op()];
@@ -457,13 +435,12 @@ struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
 
 struct SyntaxAttrRef : public BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxName>
 {
+    define_syntax_members(AttrRef, ".");
+
     SyntaxAttrRef(const Token& token, Syntax* l, SyntaxName* r)
       : BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxName>(token, l, r)
     {}
 
-    syntax_type(Syntax_AttrRef);
-    syntax_name(".");
-    syntax_accept();
 
     virtual void print(ostream& s) const override {
         if (left()->is<SyntaxName>() || left()->is<SyntaxExprList>() ||
@@ -479,13 +456,12 @@ struct SyntaxAttrRef : public BinarySyntax<SyntaxSingleTarget, Syntax, SyntaxNam
 
 struct SyntaxTargetList : SyntaxTarget
 {
+    define_syntax_members(TargetList, "targetList");
+
     SyntaxTargetList(const Token& token, const vector<SyntaxTarget*>& targets)
       : SyntaxTarget(token), targets_(targets)
     {}
 
-    syntax_type(Syntax_TargetList);
-    syntax_name("targetList");
-    syntax_accept();
 
     const vector<SyntaxTarget*>& targets() const { return targets_; }
 
@@ -507,12 +483,11 @@ define_binary_syntax(Syntax, SyntaxTarget, Syntax, Assign, "=");
 
 struct SyntaxSubscript : public BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>
 {
+    define_syntax_members(Subscript, "subscript");
+
     SyntaxSubscript(const Token& token, Syntax* l, Syntax* r)
       : BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>(token, l, r)
     {}
-    syntax_type(Syntax_Subscript)
-    syntax_name("subscript")
-    syntax_accept()
 
     virtual void print(ostream& s) const override {
         s << *left() << "[" << *right() << "]";
@@ -521,6 +496,8 @@ struct SyntaxSubscript : public BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>
 
 struct SyntaxCall : public Syntax
 {
+    define_syntax_members(Call, "call");
+
     SyntaxCall(const Token& token, Syntax* l, const vector<Syntax *>& r)
       : Syntax(token), left_(l), right_(r)
     {}
@@ -532,10 +509,6 @@ struct SyntaxCall : public Syntax
 
     const Syntax* left() const { return left_.get(); }
     const vector<Syntax*>& right() const { return right_; }
-
-    syntax_type(Syntax_Call)
-    syntax_name("call")
-    syntax_accept()
 
     virtual void print(ostream& s) const override {
         s << *left() << "(";
@@ -554,24 +527,22 @@ struct SyntaxCall : public Syntax
 
 struct SyntaxReturn : public UnarySyntax
 {
-    SyntaxReturn(const Token& token, Syntax* right) : UnarySyntax(token, right) {}
-    syntax_type(Syntax_Return)
-    syntax_name("return")
-    syntax_accept()
+    define_syntax_members(Return, "return");
+
+    SyntaxReturn(const Token& token, Syntax* right)
+      : UnarySyntax(token, right) {}
 };
 
 struct SyntaxCond : public Syntax
 {
+    define_syntax_members(Cond, "cond");
+
     SyntaxCond(const Token& token, Syntax* cons, Syntax* cond, Syntax* alt)
       : Syntax(token), cons_(cons), cond_(cond), alt_(alt) {}
-    syntax_type(Syntax_Cond)
-    syntax_name("cond")
 
     const Syntax* cons() const { return cons_.get(); }
     const Syntax* cond() const { return cond_.get(); }
     const Syntax* alt() const { return alt_.get(); }
-
-    syntax_accept()
 
     virtual void print(ostream& s) const override {
         s << *cons() << " if " << *cond() << " else " << *alt();
@@ -585,13 +556,11 @@ struct SyntaxCond : public Syntax
 
 struct SyntaxLambda : public Syntax
 {
+    define_syntax_members(Lambda, "lambda");
+
     SyntaxLambda(const Token& token, const vector<Name>& params, Syntax* expr)
       : Syntax(token), params_(params), expr_(expr)
     {}
-
-    syntax_type(Syntax_Lambda);
-    syntax_name("lambda");
-    syntax_accept();
 
     const vector<Name>& params() const { return params_; }
     Syntax* expr() const { return expr_; }
@@ -611,13 +580,11 @@ struct SyntaxLambda : public Syntax
 
 struct SyntaxDef : public Syntax
 {
+    define_syntax_members(Def, "def");
+
     SyntaxDef(const Token& token, Name id, const vector<Name>& params, Syntax* expr)
         : Syntax(token), id_(id), params_(params), expr_(expr)
     {}
-
-    syntax_type(Syntax_Def);
-    syntax_name("def");
-    syntax_accept();
 
     Name id() const { return id_; }
     const vector<Name>& params() const { return params_; }
@@ -642,6 +609,8 @@ struct SyntaxDef : public Syntax
 
 struct SyntaxIf : public Syntax
 {
+    define_syntax_members(If, "if");
+
     struct Branch
     {
         Syntax* cond;
@@ -658,9 +627,6 @@ struct SyntaxIf : public Syntax
         }
     }
 
-    syntax_type(Syntax_If);
-    syntax_name("if");
-
     void addBranch(Syntax* cond, SyntaxBlock* block) {
         branches_.push_back({ cond, block });
     }
@@ -671,8 +637,6 @@ struct SyntaxIf : public Syntax
 
     const vector<Branch>& branches() const { return branches_; }
     const SyntaxBlock* elseBranch() const { return else_.get(); }
-
-    syntax_accept();
 
     virtual void print(ostream& s) const override {
         // todo: indentation
@@ -693,19 +657,16 @@ struct SyntaxIf : public Syntax
 
 struct SyntaxWhile : public Syntax
 {
+    define_syntax_members(While, "while");
+
     SyntaxWhile(const Token& token, Syntax* cond, SyntaxBlock* suite,
               SyntaxBlock* elseSuite)
       : Syntax(token), cond_(cond), suite_(suite), elseSuite_(elseSuite)
     {}
 
-    syntax_type(Syntax_While);
-    syntax_name("while");
-
     const Syntax* cond() const { return cond_.get(); }
     const Syntax* suite() const { return suite_.get(); }
     const Syntax* elseSuite() const { return elseSuite_.get(); }
-
-    syntax_accept();
 
     virtual void print(ostream& s) const override {
         // todo: indentation
@@ -723,17 +684,14 @@ struct SyntaxWhile : public Syntax
 
 struct SyntaxAssert : public Syntax
 {
+    define_syntax_members(Assert, "assert");
+
     SyntaxAssert(const Token& token, Syntax* cond, Syntax* message)
       : Syntax(token), cond_(cond), message_(message)
     {}
 
-    syntax_type(Syntax_Assert)
-    syntax_name("assert")
-
     const Syntax* cond() const { return cond_.get(); }
     const Syntax* message() const { return message_.get(); }
-
-    syntax_accept();
 
     virtual void print(ostream& s) const override {
         s << "assert " << cond();
@@ -748,18 +706,15 @@ struct SyntaxAssert : public Syntax
 
 struct SyntaxClass : public Syntax
 {
+    define_syntax_members(Class, "class");
+
     SyntaxClass(const Token& token, Name id, SyntaxExprList* bases, SyntaxBlock* suite)
       : Syntax(token), id_(id), bases_(bases), suite_(suite)
     {}
 
-    syntax_type(Syntax_Class);
-    syntax_name("class");
-
     Name id() const { return id_; }
     const SyntaxExprList* bases() const { return bases_.get(); }
     const Syntax* suite() const { return suite_.get(); }
-
-    syntax_accept();
 
     virtual void print(ostream& s) const override {
         // todo: indentation
@@ -778,28 +733,25 @@ struct SyntaxClass : public Syntax
 struct SyntaxRaise : public UnarySyntax
 {
     SyntaxRaise(const Token& token, Syntax* right) : UnarySyntax(token, right) {}
-    syntax_type(Syntax_Raise)
-    syntax_name("raise")
-    syntax_accept()
+    define_syntax_type(Syntax_Raise)
+    define_syntax_name("raise")
+    define_syntax_accept()
 };
 
 struct SyntaxFor : public Syntax
 {
+    define_syntax_members(For, "for");
+
     SyntaxFor(const Token& token, SyntaxTarget* targets, Syntax* exprs,
               SyntaxBlock* suite, SyntaxBlock* elseSuite)
       : Syntax(token), targets_(targets), exprs_(exprs), suite_(suite),
         elseSuite_(elseSuite)
     {}
 
-    syntax_type(Syntax_For);
-    syntax_name("for");
-
     const SyntaxTarget* targets() const { return targets_.get(); }
     const Syntax* exprs() const { return exprs_.get(); }
     const SyntaxBlock* suite() const { return suite_.get(); }
     const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
-
-    syntax_accept();
 
     virtual void print(ostream& s) const override {
         // todo: indentation
@@ -820,12 +772,10 @@ struct SyntaxFor : public Syntax
 
 struct SyntaxGlobal : public Syntax
 {
+    define_syntax_members(Global, "global");
+
     SyntaxGlobal(const Token& token, vector<Name> names)
         : Syntax(token), names_(names) {}
-
-    syntax_type(Syntax_Global);
-    syntax_name("global");
-    syntax_accept();
 
     const vector<Name>& names() const { return names_; }
 
