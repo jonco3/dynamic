@@ -60,6 +60,8 @@ using namespace std;
     instr(Raise)                                                             \
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
+    instr(BinaryOpInt)                                                       \
+    instr(BinaryOpFallback)                                                  \
     instr(AugAssignUpdate)
 
 enum InstrType
@@ -410,6 +412,26 @@ struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(Instr_BinaryOp, "BinaryOp");
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
+};
+
+struct InstrBinaryOpInt : public BinaryOpInstr
+{
+    define_instr_members(Instr_BinaryOpInt, "BinaryOpInt");
+    InstrBinaryOpInt(BinaryOp op, Traced<Value> method)
+      : BinaryOpInstr(op), method_(method) {}
+
+    virtual void traceChildren(Tracer& t) override {
+        gc::trace(t, &method_);
+    }
+
+  private:
+    Value method_;
+};
+
+struct InstrBinaryOpFallback : public BinaryOpInstr
+{
+    define_instr_members(Instr_BinaryOpFallback, "BinaryOpFallback");
+    InstrBinaryOpFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
 struct InstrAugAssignUpdate : public BinaryOpInstr

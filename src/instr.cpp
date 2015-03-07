@@ -454,6 +454,44 @@ void BinaryOpInstr::print(ostream& s) const
 
 bool InstrBinaryOp::execute(Interpreter& interp)
 {
+    Root<Value> right(interp.peekStack(0));
+    Root<Value> left(interp.peekStack(1));
+
+    if (left.isInt32() && right.isInt32()) {
+        Root<Value> method(left.getAttr(BinaryOpMethodNames[op()]));
+        Instr* instr = gc::create<InstrBinaryOpInt>(op(), method);
+        return interp.replaceInstrAndRestart(this, instr);
+    } else {
+        Instr* instr = gc::create<InstrBinaryOpFallback>(op());
+        return interp.replaceInstrAndRestart(this, instr);
+    }
+}
+
+bool InstrBinaryOpInt::execute(Interpreter& interp)
+{
+    Root<Value> right(interp.peekStack(0));
+    Root<Value> left(interp.peekStack(1));
+
+    if (!left.isInt32() || !right.isInt32()) {
+        Instr* instr = gc::create<InstrBinaryOpFallback>(op());
+        return interp.replaceInstrAndRestart(this, instr);
+    }
+
+    interp.popStack(2);
+    RootVector<Value> args;
+    args.push_back(left);
+    args.push_back(right);
+    Root<Value> result;
+    Root<Value> method(method_);
+    bool r = interp.call(method, args, result);
+    assert(r);
+    assert(result != Value(NotImplemented));
+    interp.pushStack(result);
+    return r;
+}
+
+bool InstrBinaryOpFallback::execute(Interpreter& interp)
+{
     Root<Value> right(interp.popStack());
     Root<Value> left(interp.popStack());
 

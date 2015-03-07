@@ -44,6 +44,7 @@ struct Value
     inline int32_t asInt32() const;
 
     inline Class* getType() const;
+    inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
 
     bool operator==(const Value& other) const;
@@ -83,6 +84,7 @@ struct WrapperMixins<W, Value>
     inline Object *toObject() const;
     inline bool isInt32() const;
     inline int32_t asInt32() const;
+    inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     inline Class* getType() const;
 

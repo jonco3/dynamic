@@ -61,6 +61,12 @@ inline Class* Value::getType() const
         return asObject()->getType();
 }
 
+inline Value Value::getAttr(Name name) const
+{
+    Object* obj = type() == IntType ? Integer::ObjectClass : asObject();
+    return obj->getAttr(name);
+}
+
 inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
     Object* obj = type() == IntType ? Integer::ObjectClass : asObject();
@@ -101,6 +107,12 @@ template <typename W>
 inline Class* WrapperMixins<W, Value>::getType() const
 {
     return get()->getType();
+}
+
+template <typename W>
+inline Value WrapperMixins<W, Value>::getAttr(Name name) const
+{
+    return get()->getAttr(name);
 }
 
 template <typename W>

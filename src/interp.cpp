@@ -419,6 +419,36 @@ testcase(interp)
                     Instr_GetMethod,
                     Instr_GetMethodFallback);
 
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo('a', 'b')\n",
+                    "'ab'",
+                    Instr_BinaryOp,
+                    Instr_BinaryOpFallback);
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo(1, 2)\n",
+                    "3",
+                    Instr_BinaryOp,
+                    Instr_BinaryOpInt);
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo(1, 2)\n"
+                    "foo('a', 'b')\n",
+                    "'ab'",
+                    Instr_BinaryOp,
+                    Instr_BinaryOpFallback);
+
+    testReplacement("def foo(x, y):\n"
+                    "  return x + y\n"
+                    "foo('a', 'b')\n"
+                    "foo(1, 2)\n",
+                    "3",
+                    Instr_BinaryOp,
+                    Instr_BinaryOpFallback);
+
     testInterp("a, b = 1, 2\na", "1");
     testInterp("a, b = 1, 2\nb", "2");
 
