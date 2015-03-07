@@ -42,6 +42,7 @@ void initBuiltins()
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);
     value = None; Builtin->setAttr("None", value);
+    value = NotImplemented; Builtin->setAttr("NotImplemented", value);
 
     value = Exception::ObjectClass; Builtin->setAttr("Exception", value);
 

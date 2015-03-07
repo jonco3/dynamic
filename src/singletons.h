@@ -4,6 +4,7 @@
 #include "object.h"
 
 extern GlobalRoot<Object*> None;
+extern GlobalRoot<Object*> NotImplemented;
 extern GlobalRoot<Object*> UninitializedSlot;
 extern void initSingletons();
 
