@@ -39,6 +39,7 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 
 bool Interpreter::run(Value& valueOut)
 {
+    unsigned initialPos = stackPos();
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
         Instr *instr = *instrp++;
@@ -61,8 +62,8 @@ bool Interpreter::run(Value& valueOut)
         }
     }
 
-    assert(stackPos() == 1);
     valueOut = popStack();
+    assert(stackPos() == initialPos);
     return true;
 }
 

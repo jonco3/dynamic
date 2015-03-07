@@ -426,12 +426,13 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
     RootVector<Value> args;
     Root<Value> result;
     if (value.get().maybeGetAttr(AugAssignMethodNames[op_], method)) {
+        args.push_back(value);
         args.push_back(update);
         if (!interp.call(method, args, result)) {
             interp.pushStack(result);
             return false;
         }
-        interp.pushStack(value);
+        interp.pushStack(result);
         return true;
     } else if (value.get().maybeGetAttr(BinaryOpMethodNames[op_], method)) {
         args.push_back(value);
@@ -444,7 +445,7 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
         return true;
     } else {
         interp.pushStack(gc::create<Exception>("TypeError",
-                                               "Argument is not iterable"));
+                                               "unsupported operand type(s) for augmented assignment"));
         return false;
     }
 }
