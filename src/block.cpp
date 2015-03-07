@@ -279,21 +279,6 @@ struct BlockBuilder : public SyntaxVisitor
         // todo: things that implement __rfoo__ rather than __foo__
     }
 
-    void callAugAssignMethod(const SyntaxAugAssign& s, string name)
-    {
-        // todo: we'll need to change this if we want to specialise depending on
-        // whether the target implements update-in-place methods
-        s.left()->accept(*this);
-        s.right()->accept(*this);
-        block->append(gc::create<InstrAugAssignUpdate>(s.op()));
-        assert(!inAssignTarget);
-        inAssignTarget = true;
-        s.left()->accept(*this);
-        inAssignTarget = false;
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrConst>(None));
-    }
-
     virtual void visit(const SyntaxPass& s) {
         block->append(gc::create<InstrConst>(None));
     }
@@ -369,7 +354,17 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxAugAssign& s) {
         // todo: what's __itruediv__?
-        callAugAssignMethod(s, AugAssignMethodNames[s.op()]);
+        // todo: we'll need to change this if we want to specialise depending on
+        // whether the target implements update-in-place methods
+        s.left()->accept(*this);
+        s.right()->accept(*this);
+        block->append(gc::create<InstrAugAssignUpdate>(s.op()));
+        assert(!inAssignTarget);
+        inAssignTarget = true;
+        s.left()->accept(*this);
+        inAssignTarget = false;
+        block->append(gc::create<InstrPop>());
+        block->append(gc::create<InstrConst>(None));
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
