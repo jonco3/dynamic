@@ -13,8 +13,8 @@
 #include "name.h"
 #include "object.h"
 #include "singletons.h"
+#include "specials.h"
 #include "string.h"
-#include "syntax.h"
 #include "list.h"
 
 #include "value-inl.h"

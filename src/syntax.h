@@ -2,6 +2,7 @@
 #define __SYNTAX_H__
 
 #include "name.h"
+#include "specials.h"
 #include "token.h"
 
 #include <memory>
@@ -397,27 +398,6 @@ define_simple_binary_syntax(And, "and");
 define_simple_binary_syntax(In, "in");
 define_simple_binary_syntax(Is, "is");
 
-enum BinaryOp
-{
-    BinaryPlus,
-    BinaryMinus,
-    BinaryMultiply,
-    BinaryDivide,
-    BinaryIntDivide,
-    BinaryModulo,
-    BinaryPower,
-    BinaryOr,
-    BinaryXor,
-    BinaryAnd,
-    BinaryLeftShift,
-    BinaryRightShift,
-
-    CountBinaryOp
-};
-
-extern const char* BinaryOpMethodNames[];
-extern const char* AugAssignMethodNames[];
-
 struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
     SyntaxBinaryOp(const Token& token, Syntax* l, Syntax* r, BinaryOp op)
@@ -466,18 +446,6 @@ struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
     BinaryOp op_;
 };
 
-enum CompareOp
-{
-    CompareLT,
-    CompareLE,
-    CompareGT,
-    CompareGE,
-    CompareEQ,
-    CompareNE,
-
-    CountCompareOp
-};
-
 struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
     SyntaxCompareOp(const Token& token, Syntax* l, Syntax* r, CompareOp op)
@@ -488,12 +456,7 @@ struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
     syntax_accept();
 
     virtual string name() const override {
-        static const char* names[] = {
-            "<", "<=", ">", ">=", "==", "!="
-        };
-        static_assert(sizeof(names)/sizeof(*names) == CountCompareOp,
-            "Number of names must match number of compare operations");
-        return names[op_];
+        return CompareOpNames[op()];
     }
 
     CompareOp op() const { return op_; }
