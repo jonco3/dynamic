@@ -462,7 +462,6 @@ struct SyntaxTargetList : SyntaxTarget
       : SyntaxTarget(token), targets_(targets)
     {}
 
-
     const vector<SyntaxTarget*>& targets() const { return targets_; }
 
     virtual void print(ostream& s) const override {
@@ -791,5 +790,13 @@ struct SyntaxGlobal : public Syntax
   private:
     vector<Name> names_;
 };
+
+#undef define_syntax_type
+#undef define_syntax_name
+#undef define_syntax_accept
+#undef define_syntax_members
+#undef define_binary_syntax
+#undef define_simple_binary_syntax
+#undef define_unary_syntax
 
 #endif
