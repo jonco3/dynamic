@@ -51,6 +51,23 @@ const char* BinaryOpReflectedMethodNames[] = {
 static_assert(sizeof(BinaryOpReflectedMethodNames) / sizeof(*BinaryOpReflectedMethodNames) == CountBinaryOp,
               "Number of method names must match number of binary operations");
 
+const char* AugAssignNames[] = {
+    "+=",
+    "-=",
+    "*=",
+    "/=",
+    "//=",
+    "%=",
+    "**=",
+    "|=",
+    "^=",
+    "&=",
+    "<<=",
+    ">>="
+};
+static_assert(sizeof(AugAssignNames)/sizeof(*AugAssignNames) == CountBinaryOp,
+              "Number of names must match number of binary operations");
+
 const char* AugAssignMethodNames[] = {
     "__iadd__",
     "__isub__",
@@ -69,7 +86,23 @@ static_assert(sizeof(AugAssignMethodNames) / sizeof(*AugAssignMethodNames) == Co
               "Number of method names must match number of binary operations");
 
 const char* CompareOpNames[] = {
-    "<", "<=", ">", ">=", "==", "!="
+    "<",
+    "<=",
+    ">",
+    ">=",
+    "==",
+    "!="
 };
 static_assert(sizeof(CompareOpNames) / sizeof(*CompareOpNames) == CountCompareOp,
               "Number of names must match number of compare operations");
+
+const char* CompareOpMethodNames[] = {
+    "__lt__",
+    "__le__",
+    "__gt__",
+    "__ge__",
+    "__eq__",
+    "__ne__"
+};
+static_assert(sizeof(CompareOpMethodNames) / sizeof(*CompareOpMethodNames) == CountCompareOp,
+              "Number of method names must match number of compare operations");

@@ -34,8 +34,10 @@ enum CompareOp
 extern const char* BinaryOpNames[];
 extern const char* BinaryOpMethodNames[];
 extern const char* BinaryOpReflectedMethodNames[];
+extern const char* AugAssignNames[];
 extern const char* AugAssignMethodNames[];
 
 extern const char* CompareOpNames[];
+extern const char* CompareOpMethodNames[];
 
 #endif

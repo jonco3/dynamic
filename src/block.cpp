@@ -370,17 +370,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
-        static const char* method[] = {
-            "__lt__",
-            "__le__",
-            "__gt__",
-            "__ge__",
-            "__eq__",
-            "__ne__"
-        };
-        static_assert(sizeof(method)/sizeof(*method) == CountCompareOp,
-            "Number of method names must match number of compare operations");
-        callBinaryMethod(s, method[s.op()]);
+        callBinaryMethod(s, CompareOpMethodNames[s.op()]);
     }
 
 

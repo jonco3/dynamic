@@ -408,12 +408,7 @@ struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
     syntax_accept();
 
     virtual string name() const override {
-        static const char* names[] = {
-            "+", "-", "*", "/", "//", "%", "**", "|", "^", "&", "<<", ">>"
-        };
-        static_assert(sizeof(names)/sizeof(*names) == CountBinaryOp,
-            "Number of names must match number of binary operations");
-        return names[op_];
+        return BinaryOpNames[op_];
     }
 
     BinaryOp op() const { return op_; }
@@ -432,12 +427,7 @@ struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
     syntax_accept();
 
     virtual string name() const override {
-        static const char* names[] = {
-            "+=", "-=", "*=", "/=", "//=", "%=", "**=", "|=", "^=", "&=", "<<=", ">>="
-        };
-        static_assert(sizeof(names)/sizeof(*names) == CountBinaryOp,
-            "Number of names must match number of binary operations");
-        return names[op_];
+        return AugAssignNames[op_];
     }
 
     BinaryOp op() const { return op_; }
