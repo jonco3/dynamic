@@ -11,6 +11,8 @@
 
 //#define TRACE_BUILD
 
+static const Name ClassFunctionParam = "__bases__";
+
 Block::Block(Traced<Layout*> layout)
   : layout_(layout)
 {}
@@ -162,8 +164,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
 struct BlockBuilder : public SyntaxVisitor
 {
-    BlockBuilder(BlockBuilder* parent = nullptr)
-      : parent(parent),
+    BlockBuilder()
+      : parent(nullptr),
         topLevel(nullptr),
         layout(Frame::InitialLayout),
         block(nullptr),
@@ -171,72 +173,86 @@ struct BlockBuilder : public SyntaxVisitor
         inAssignTarget(false)
     {}
 
-    void setParams(const vector<Name>& params) {
-        assert(parent);
-        assert(layout == Frame::InitialLayout);
-        assert(!topLevel);
-        for (auto i = params.begin(); i != params.end(); ++i)
-            layout = layout->addName(*i);
-    }
-
-    void setGlobals(Traced<Object*> globals) {
+    Block* buildModule(Traced<Object*> globals, const Syntax* s) {
         assert(globals);
-        assert(!parent);
-        assert(layout == Frame::InitialLayout);
-        assert(!topLevel);
         topLevel = globals;
         layout = topLevel->layout();
+        build(s);
+        if (!block->lastInstr()->is<InstrReturn>())
+            block->append(gc::create<InstrReturn>());
+#ifdef TRACE_BUILD
+        cerr << repr(*block) << endl;
+#endif
+        return block;
     }
 
-    void setClassBlock(bool isClassBlock) {
-        inClassBlock = isClassBlock;
-    }
-
-    Block* build(const Syntax* s) {
-        assert(!block);
-        if (parent) {
-            assert(!topLevel);
-            topLevel = parent->topLevel;
-        } else if (!topLevel) {
-            topLevel = gc::create<Object>();
-        }
-        layout = DefinitionFinder::buildLayout(s, layout);
-        if (!parent)
-            topLevel->extend(layout);
-        assert(topLevel);
-
-        block = gc::create<Block>(layout);
-        s->accept(*this);
-        Block* result = block;
-        block = nullptr;
-        return result;
-    }
-
-    Block* buildBody(const Syntax* s) {
-        Root<Block*> b(build(s));
-        assert(b->instrCount() != 0);
-        if (!b->lastInstr()->is<InstrReturn>()) {
-            b->append(gc::create<InstrPop>());
-            b->append(gc::create<InstrConst>(None));
-            b->append(gc::create<InstrReturn>());
+    Block* buildFunctionBody(BlockBuilder* parent, const vector<Name>& params,
+                             const Syntax* s) {
+        assert(parent);
+        this->parent = parent;
+        topLevel = parent->topLevel;
+        for (auto i = params.begin(); i != params.end(); ++i)
+            layout = layout->addName(*i);
+        build(s);
+        if (!block->lastInstr()->is<InstrReturn>()) {
+            block->append(gc::create<InstrPop>());
+            block->append(gc::create<InstrConst>(None));
+            block->append(gc::create<InstrReturn>());
         }
 #ifdef TRACE_BUILD
-        cerr << repr(*b) << endl;
+        cerr << repr(*block) << endl;
 #endif
-        return b;
+        return block;
     }
 
-    Block* buildModule(const Syntax* s) {
-        Root<Block*> b(build(s));
-        assert(b->instrCount() != 0);
-        if (!b->lastInstr()->is<InstrReturn>()) {
-            b->append(gc::create<InstrReturn>());
-        }
+    Block* buildLambda(BlockBuilder* parent, const vector<Name>& params,
+                       const Syntax* s) {
+        assert(parent);
+        this->parent = parent;
+        topLevel = parent->topLevel;
+        for (auto i = params.begin(); i != params.end(); ++i)
+            layout = layout->addName(*i);
+        build(s);
 #ifdef TRACE_BUILD
-        cerr << repr(*b) << endl;
+        cerr << repr(*block) << endl;
 #endif
-        return b;
+        return block;
     }
+
+    Block* buildClass(BlockBuilder* parent, Name id, const Syntax* s) {
+        assert(parent);
+        this->parent = parent;
+        topLevel = parent->topLevel;
+        layout = layout->addName(ClassFunctionParam);
+        inClassBlock = true;
+        build(s);
+        block->append(gc::create<InstrPop>());
+        block->append(gc::create<InstrMakeClassFromFrame>(id));
+        block->append(gc::create<InstrReturn>());
+#ifdef TRACE_BUILD
+        cerr << repr(*block) << endl;
+#endif
+        return block;
+    }
+
+    /*
+    Block* buildGenerator(BlockBuilder* parent, const Syntax* s) {
+        assert(parent);
+        this->parent = parent;
+        topLevel = parent->topLevel;
+        // todo: find some way of passing the generator parameter so it's not
+        // visible to user code
+        layout = layout->addName("__gen__");
+        inGenerator = true;
+        build(s);
+        if (!block->lastInstr()->is<InstrLeaveGenerator>()) {
+            block->append(gc::create<InstrPop>());
+            block->append(gc::create<InstrConst>(None));
+            block->append(gc::create<InstrLeaveGenerator>());
+        }
+        return block;
+    }
+    */
 
   private:
     BlockBuilder* parent;
@@ -245,6 +261,16 @@ struct BlockBuilder : public SyntaxVisitor
     Root<Block*> block;
     bool inClassBlock;
     bool inAssignTarget;
+
+    void build(const Syntax* s) {
+        assert(!block);
+        assert(topLevel);
+        layout = DefinitionFinder::buildLayout(s, layout);
+        if (!parent)
+            topLevel->extend(layout);
+        block = gc::create<Block>(layout);
+        s->accept(*this);
+    }
 
     bool setInAssignTarget(bool newValue) {
         bool oldValue = inAssignTarget;
@@ -568,17 +594,13 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxLambda& a) {
-        BlockBuilder exprBuilder(this);
-        exprBuilder.setParams(a.params());
-        Root<Block*> exprBlock(exprBuilder.build(a.expr()));
+        Root<Block*> exprBlock(BlockBuilder().buildLambda(this, a.params(), a.expr()));
         exprBlock->append(gc::create<InstrReturn>());
         block->append(gc::create<InstrLambda>(a.params(), exprBlock));
     }
 
     virtual void visit(const SyntaxDef& s) {
-        BlockBuilder exprBuilder(this);
-        exprBuilder.setParams(s.params());
-        Root<Block*> exprBlock(exprBuilder.buildBody(s.expr()));
+        Root<Block*> exprBlock(BlockBuilder().buildFunctionBody(this, s.params(), s.expr()));
         if (!exprBlock->lastInstr()->is<InstrReturn>()) {
             exprBlock->append(gc::create<InstrPop>());
             exprBlock->append(gc::create<InstrConst>(None));
@@ -591,15 +613,12 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxClass& s) {
-        vector<Name> params = { "__bases__" };
-        BlockBuilder exprBuilder(this);
-        exprBuilder.setClassBlock(true);
-        exprBuilder.setParams(params);
-        Root<Block*> suite(exprBuilder.build(s.suite()));
+        Root<Block*> suite(BlockBuilder().buildClass(this, s.id(), s.suite()));
         suite->append(gc::create<InstrPop>());
         suite->append(gc::create<InstrMakeClassFromFrame>(s.id()));
         suite->append(gc::create<InstrReturn>());
 
+        vector<Name> params = { ClassFunctionParam };
         block->append(gc::create<InstrLambda>(params, suite));
         s.bases()->accept(*this);
         block->append(gc::create<InstrCall>(1));
@@ -639,14 +658,14 @@ static unique_ptr<SyntaxBlock> ParseModule(const Input& input)
     return unique_ptr<SyntaxBlock>(parser.parseModule());
 }
 
-void Block::buildModule(const Input& input, Traced<Object*> globals,
+void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
                         Root<Block*>& blockOut)
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
-    BlockBuilder builder;
-    if (globals)
-        builder.setGlobals(globals);
-    blockOut = builder.buildModule(syntax.get());
+    Root<Object*> globals(globalsArg);
+    if (!globals)
+        globals = gc::create<Object>();
+    blockOut = BlockBuilder().buildModule(globals, syntax.get());
 }
 
 #ifdef BUILD_TESTS
