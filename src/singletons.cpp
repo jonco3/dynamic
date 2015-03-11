@@ -2,15 +2,6 @@
 
 #include "object.h"
 
-struct NoneObject : public Object
-{
-    static GlobalRoot<Class*> ObjectClass;
-    static void init();
-
-    NoneObject() : Object(ObjectClass) {}
-    virtual void print(ostream& s) const { s << "None"; }
-};
-
 struct NotImplementedObject : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
@@ -29,18 +20,10 @@ struct UninitializedSlotObject : public Object
     virtual void print(ostream& s) const { s << "UninitializedSlot"; }
 };
 
-GlobalRoot<Object*> None;
 GlobalRoot<Object*> NotImplemented;
 GlobalRoot<Object*> UninitializedSlot;
-GlobalRoot<Class*> NoneObject::ObjectClass;
 GlobalRoot<Class*> NotImplementedObject::ObjectClass;
 GlobalRoot<Class*> UninitializedSlotObject::ObjectClass;
-
-void NoneObject::init()
-{
-    ObjectClass.init(gc::create<Class>("None"));
-    None.init(gc::create<NoneObject>());
-}
 
 void NotImplementedObject::init()
 {
@@ -56,7 +39,6 @@ void UninitializedSlotObject::init()
 
 void initSingletons()
 {
-    NoneObject::init();
     NotImplementedObject::init();
     UninitializedSlotObject::init();
 }

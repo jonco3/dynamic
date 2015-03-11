@@ -96,6 +96,8 @@ struct Class : public Object
     string name_;
 };
 
+extern GlobalRoot<Object*> None;
+
 extern void initObject();
 
 #endif

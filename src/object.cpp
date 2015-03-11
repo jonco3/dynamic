@@ -11,12 +11,24 @@
 #include <iostream>
 #include <memory>
 
+struct NoneObject : public Object
+{
+    static GlobalRoot<Class*> ObjectClass;
+    static void init();
+
+    NoneObject() : Object(ObjectClass) {}
+    virtual void print(ostream& s) const { s << "None"; }
+};
+
 GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
 GlobalRoot<Object*> Object::Null;
 
 GlobalRoot<Class*> Class::ObjectClass;
 GlobalRoot<Class*> Class::Null;
+
+GlobalRoot<Object*> None;
+GlobalRoot<Class*> NoneObject::ObjectClass;
 
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
   : class_(cls), layout_(layout)
@@ -269,10 +281,17 @@ void Class::init()
     Object::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
 }
 
+void NoneObject::init()
+{
+    ObjectClass.init(gc::create<Class>("None"));
+    None.init(gc::create<NoneObject>());
+}
+
 void initObject()
 {
     Object::init();
     Class::init();
+    NoneObject::init();
 }
 
 #ifdef BUILD_TESTS
