@@ -1,7 +1,7 @@
 #ifndef __EXCEPTION_H__
 #define __EXCEPTION_H__
 
-#include "class.h"
+#include "object.h"
 #include "string.h"
 
 struct Exception : public Object

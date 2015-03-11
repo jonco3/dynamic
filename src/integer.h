@@ -2,7 +2,6 @@
 #define __INTEGER_H__
 
 #include "object.h"
-#include "class.h"
 
 struct Integer : public Object
 {

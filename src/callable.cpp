@@ -1,6 +1,6 @@
 #include "callable.h"
 
-#include "class.h"
+#include "object.h"
 
 GlobalRoot<Class*> Native::ObjectClass;
 

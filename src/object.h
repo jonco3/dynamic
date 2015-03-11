@@ -79,4 +79,23 @@ struct Object : public Cell
     void initAttrs(Traced<Class*> classAttr);
 };
 
+struct Class : public Object
+{
+    static void init();
+
+    static GlobalRoot<Class*> ObjectClass;
+    static GlobalRoot<Class*> Null;
+
+    Class(string name, Traced<Layout*> initialLayout = Object::InitialLayout);
+
+    const string& name() const { return name_; }
+
+    virtual void print(ostream& s) const;
+
+  private:
+    string name_;
+};
+
+extern void initObject();
+
 #endif

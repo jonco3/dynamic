@@ -1,7 +1,6 @@
 #include "object.h"
 
 #include "bool.h"
-#include "class.h"
 #include "exception.h"
 #include "integer.h"
 #include "singletons.h"
@@ -16,12 +15,8 @@ GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
 GlobalRoot<Object*> Object::Null;
 
-void Object::init()
-{
-    InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
-    ObjectClass.init(gc::create<Class>("Object"));
-    Null.init(nullptr);
-}
+GlobalRoot<Class*> Class::ObjectClass;
+GlobalRoot<Class*> Class::Null;
 
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
   : class_(cls), layout_(layout)
@@ -248,6 +243,36 @@ void Object::traceChildren(Tracer& t)
     gc::trace(t, &layout_);
     for (auto i = slots_.begin(); i != slots_.end(); ++i)
         gc::trace(t, &*i);
+}
+
+Class::Class(string name, Traced<Layout*> initialLayout) :
+  Object(ObjectClass, initialLayout), name_(name)
+{}
+
+void Class::print(ostream& s) const
+{
+    s << "Class " << name_;
+}
+
+void Object::init()
+{
+    InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
+    ObjectClass.init(gc::create<Class>("Object"));
+    Null.init(nullptr);
+}
+
+void Class::init()
+{
+    ObjectClass.init(gc::create<Class>("Class"));
+    Null.init(nullptr);
+    Class::ObjectClass->initClass(Class::ObjectClass, Object::ObjectClass);
+    Object::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
+}
+
+void initObject()
+{
+    Object::init();
+    Class::init();
 }
 
 #ifdef BUILD_TESTS

@@ -3,7 +3,6 @@
 #include "bool.h"
 #include "builtin.h"
 #include "callable.h"
-#include "class.h"
 #include "dict.h"
 #include "exception.h"
 #include "frame.h"
@@ -25,8 +24,7 @@ bool debugMode = true;
 
 void init1()
 {
-    Object::init();
-    Class::init();
+    initObject();
     Native::init();
     Function::init();
     Frame::init();

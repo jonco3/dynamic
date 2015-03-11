@@ -2,7 +2,6 @@
 #define __FRAME_H__
 
 #include "object.h"
-#include "class.h"
 
 struct Block;
 struct Instr;

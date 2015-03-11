@@ -2,7 +2,6 @@
 #define __GENERATOR_H__
 
 #include "object.h"
-#include "class.h"
 #include "callable.h"
 
 struct GeneratorIter : public Object

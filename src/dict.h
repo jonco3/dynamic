@@ -2,7 +2,6 @@
 #define __DICT_H__
 
 #include "object.h"
-#include "class.h"
 
 struct Dict : public Object
 {

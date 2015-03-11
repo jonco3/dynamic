@@ -1,6 +1,6 @@
 #include "singletons.h"
 
-#include "class.h"
+#include "object.h"
 
 struct NoneObject : public Object
 {

@@ -2,7 +2,6 @@
 #define __STRING_H__
 
 #include "object.h"
-#include "class.h"
 
 #include <string>
 

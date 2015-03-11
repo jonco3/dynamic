@@ -2,7 +2,6 @@
 #define __BOOL_H__
 
 #include "object.h"
-#include "class.h"
 
 struct Boolean : public Object
 {

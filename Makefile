@@ -22,7 +22,6 @@ SRCS = \
 	src/layout.cpp \
 	src/value.cpp \
 	src/object.cpp \
-	src/class.cpp \
 	src/singletons.cpp \
 	src/bool.cpp \
 	src/frame.cpp \

@@ -2,7 +2,6 @@
 #define __LIST_H__
 
 #include "object.h"
-#include "class.h"
 
 struct ListIter;
 

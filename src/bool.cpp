@@ -1,6 +1,6 @@
 #include "bool.h"
 
-#include "class.h"
+#include "object.h"
 
 GlobalRoot<Class*> Boolean::ObjectClass;
 GlobalRoot<Boolean*> Boolean::True;
