@@ -39,6 +39,7 @@ struct Value
         return objectp;
     }
 
+    inline bool isNone() const;
     inline Object *toObject() const;
     inline bool isInt32() const;
     inline int32_t asInt32() const;

@@ -688,7 +688,7 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     Root<Object*> globals(globalsArg);
-    if (!globals)
+    if (globals->isNone())
         globals = gc::create<Object>();
     blockOut = BlockBuilder().buildModule(globals, syntax.get());
 }
@@ -700,7 +700,7 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
 void testBuildModule(const string& input, const string& expected)
 {
     Root<Block*> block;
-    Block::buildModule(input, Object::Null, block);
+    Block::buildModule(input, None, block);
     testEqual(repr(*block), expected);
 }
 

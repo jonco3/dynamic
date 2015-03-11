@@ -270,7 +270,7 @@ void testInterp(const string& input, const string& expected)
     cout << "testInterp: " << input << endl;
 #endif
     Root<Block*> block;
-    Block::buildModule(input, Object::Null, block);
+    Block::buildModule(input, None, block);
     Value result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
@@ -285,7 +285,7 @@ void testException(const string& input, const string& expected)
     cout << "testException: " << input << endl;
 #endif
     Root<Block*> block;
-    Block::buildModule(input, Object::Null, block);
+    Block::buildModule(input, None, block);
     Value result;
     bool ok = Interpreter::exec(block, result);
     if (ok) {
@@ -308,7 +308,7 @@ void testReplacement(const string& input,
                      InstrType replacement)
 {
     Root<Block*> block;
-    Block::buildModule(input, Object::Null, block);
+    Block::buildModule(input, None, block);
 
     Instr** instrp = block->findInstr(Instr_Lambda);
     assert(instrp);

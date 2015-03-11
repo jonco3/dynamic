@@ -13,14 +13,16 @@
 using namespace std;
 
 struct Class;
+struct Object;
+
+extern GlobalRoot<Object*> None;
+
+extern void initObject();
 
 struct Object : public Cell
 {
-    static void init();
-
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
-    static GlobalRoot<Object*> Null;
 
     Object(Traced<Class*> cls = ObjectClass, Traced<Layout*> layout = InitialLayout);
     virtual ~Object();
@@ -33,6 +35,10 @@ struct Object : public Cell
     template <typename T> T* as() {
         assert(is<T>());
         return static_cast<T*>(this);
+    }
+
+    bool isNone() {
+        return this == None;
     }
 
     virtual void print(ostream& os) const;
@@ -77,14 +83,13 @@ struct Object : public Cell
     vector<Value> slots_;
 
     void initAttrs(Traced<Class*> classAttr);
+
+    friend void initObject();
 };
 
 struct Class : public Object
 {
-    static void init();
-
     static GlobalRoot<Class*> ObjectClass;
-    static GlobalRoot<Class*> Null;
 
     Class(string name, Traced<Layout*> initialLayout = Object::InitialLayout);
 
@@ -94,10 +99,8 @@ struct Class : public Object
 
   private:
     string name_;
+
+    friend void initObject();
 };
-
-extern GlobalRoot<Object*> None;
-
-extern void initObject();
 
 #endif

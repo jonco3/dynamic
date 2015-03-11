@@ -70,7 +70,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     //RootVector<String> argStrings(arg_count);
     //for (unsigned i = 0 ; i < arg_count ; ++i)
     //    argStrings[i] = gc::create<String>(args[i]);
-    if (!runModule(readFile(filename), filename, Object::Null))
+    if (!runModule(readFile(filename), filename, None))
         return EX_SOFTWARE;
 
     return EX_OK;
@@ -80,7 +80,7 @@ static int runExprs(int count, const char* args[])
 {
     for (unsigned i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
-        if (!runModule(args[i], "<none>", Object::Null))
+        if (!runModule(args[i], "<none>", None))
             return EX_SOFTWARE;
     }
 

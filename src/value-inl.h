@@ -30,6 +30,11 @@ inline Object* Value::toObject() const {
         return Integer::getObject(asInt32());
 }
 
+bool Value::isNone() const
+{
+    return isObject() && asObject()->isNone();
+}
+
 inline bool Value::isTrue() const
 {
     return toObject()->isTrue();

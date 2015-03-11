@@ -14,18 +14,17 @@
 struct NoneObject : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
-    static void init();
 
     NoneObject() : Object(ObjectClass) {}
     virtual void print(ostream& s) const { s << "None"; }
+
+    friend void initObject();
 };
 
 GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
-GlobalRoot<Object*> Object::Null;
 
 GlobalRoot<Class*> Class::ObjectClass;
-GlobalRoot<Class*> Class::Null;
 
 GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
@@ -266,32 +265,19 @@ void Class::print(ostream& s) const
     s << "Class " << name_;
 }
 
-void Object::init()
-{
-    InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
-    ObjectClass.init(gc::create<Class>("Object"));
-    Null.init(nullptr);
-}
-
-void Class::init()
-{
-    ObjectClass.init(gc::create<Class>("Class"));
-    Null.init(nullptr);
-    Class::ObjectClass->initClass(Class::ObjectClass, Object::ObjectClass);
-    Object::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
-}
-
-void NoneObject::init()
-{
-    ObjectClass.init(gc::create<Class>("None"));
-    None.init(gc::create<NoneObject>());
-}
-
 void initObject()
 {
-    Object::init();
-    Class::init();
-    NoneObject::init();
+    Object::InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
+
+    Object::ObjectClass.init(gc::create<Class>("Object"));
+    NoneObject::ObjectClass.init(gc::create<Class>("None"));
+    Class::ObjectClass.init(gc::create<Class>("Class"));
+
+    None.init(gc::create<NoneObject>());
+
+    Class::ObjectClass->initClass(Class::ObjectClass, Object::ObjectClass);
+    Object::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
+    NoneObject::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
 }
 
 #ifdef BUILD_TESTS
