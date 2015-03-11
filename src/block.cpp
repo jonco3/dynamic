@@ -311,7 +311,6 @@ struct BlockBuilder : public SyntaxVisitor
         block->append(gc::create<InstrGetMethod>(name));
         s.right()->accept(*this);
         block->append(gc::create<InstrCall>(2));
-        // todo: things that implement __rfoo__ rather than __foo__
     }
 
     virtual void visit(const SyntaxPass& s) {
