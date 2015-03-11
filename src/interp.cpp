@@ -2,6 +2,7 @@
 #include "callable.h"
 #include "exception.h"
 #include "frame.h"
+#include "generator.h"
 #include "input.h"
 #include "instr.h"
 #include "interp.h"
@@ -48,14 +49,19 @@ bool Interpreter::run(Value& valueOut)
         for (unsigned i = 0; i < pos; ++i)
             cerr << " " << stack[i];
         cerr << endl;
-        cerr << "  execute " << repr(instr) << endl;
+        cerr << "frames:";
+        for (unsigned i = 0; i < frames.size(); i++)
+            cerr << " " << frames[i];
+        cerr << endl << endl;
+        cerr << "execute: " << repr(*instr) << endl << endl;
 #endif
         if (!instr->execute(*this)) {
             valueOut = popStack();
 #ifdef TRACE_INTERP
             cerr << "Error: " << valueOut << endl;
 #endif
-            assert(valueOut.asObject()->is<Exception>());
+            assert(valueOut.asObject()->is<Exception>() ||
+                   valueOut.asObject()->is<StopIteration>());
             while (instrp)
                 popFrame();
             return false;
@@ -94,6 +100,31 @@ void Interpreter::popFrame()
     frames.pop_back();
 }
 
+void Interpreter::resumeGenerator(Traced<Frame*> frame,
+                                  unsigned ipOffset,
+                                  vector<Value> savedStack)
+{
+    frame->setReturnPoint(instrp);
+    pushFrame(frame);
+    instrp += ipOffset;
+    for (auto i = savedStack.begin(); i != savedStack.end(); i++)
+        pushStack(*i);
+}
+
+unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
+{
+    Frame* frame = frames.back();
+    assert(frame->stackPos() <= pos);
+    unsigned len = pos - frame->stackPos();
+    savedStack.resize(len);
+    // todo: probably a better way to do this with STL
+    for (unsigned i = 0; i < pos; i++)
+        savedStack[i] = stack[i + frame->stackPos()];
+    unsigned ipOffset = instrp - frame->block()->startInstr();
+    popFrame();
+    return ipOffset;
+}
+
 Frame* Interpreter::getFrame(unsigned reverseIndex)
 {
     assert(reverseIndex < frames.size());
@@ -107,7 +138,8 @@ void Interpreter::branch(int offset)
     instrp = target;
 }
 
-bool Interpreter::call(Traced<Value> targetValue, const TracedVector<Value>& args,
+bool Interpreter::call(Traced<Value> targetValue,
+                       const TracedVector<Value>& args,
                        Root<Value>& resultOut)
 {
     Instr** oldInstrp = instrp;
@@ -158,11 +190,27 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return ok ? CallFinished : CallError;
     } else if (target->is<Function>()) {
         Root<Function*> function(target->as<Function>());
-        if (function->requiredArgs() != args.size())
-            return raise("TypeError", "Wrong number of arguments", resultOut);
+        if (function->requiredArgs() != args.size()) {
+            ostringstream s;
+            s << "Wrong number of arguments:";
+            s << " expected " << dec << function->requiredArgs();
+            s << " but got " << args.size();
+            return raise("TypeError", s.str(), resultOut);
+        }
         Root<Frame*> callFrame(newFrame(function));
+        if (function->isGenerator()) {
+            Root<Value> none(None);
+            callFrame->setAttr("%gen", none);
+        }
         for (int i = args.size() - 1; i >= 0; --i)
             callFrame->setAttr(function->paramName(i), args[i]);
+        if (function->isGenerator()) {
+            Root<Value> iter(
+                gc::create<GeneratorIter>(function, callFrame));
+            callFrame->setAttr("%gen", iter);
+            resultOut = iter;
+            return CallFinished;
+        }
         pushFrame(callFrame);
         return CallStarted;
     } else if (target->is<Class>()) {

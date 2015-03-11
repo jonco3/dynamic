@@ -88,8 +88,10 @@ struct Function : public Callable
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    Function(const vector<Name>& params, Traced<Block*> block, Traced<Frame*> scope)
-      : Callable(ObjectClass), params_(params), block_(block), scope_(scope) {}
+    Function(const vector<Name>& params,
+             Traced<Block*> block,
+             Traced<Frame*> scope,
+             bool isGenerator = false);
 
     virtual unsigned requiredArgs() { return params_.size(); }
 
@@ -100,6 +102,7 @@ struct Function : public Callable
 
     Block* block() const { return block_; }
     Frame* scope() const { return scope_; }
+    bool isGenerator() { return isGenerator_; }
 
     virtual void traceChildren(Tracer& t) {
         gc::trace(t, &block_);
@@ -107,9 +110,12 @@ struct Function : public Callable
     }
 
   private:
+    // todo: move common stuff to GC'ed FunctionInfo class also referred to by
+    // instr
     const vector<Name>& params_;
     Block* block_;
     Frame* scope_;
+    bool isGenerator_;
 };
 
 

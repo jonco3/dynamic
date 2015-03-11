@@ -83,6 +83,11 @@ struct Interpreter
     void replaceInstr(Instr* current, Instr* newInstr);
     bool replaceInstrAndRestart(Instr* current, Instr* newInstr);
 
+    void resumeGenerator(Traced<Frame*> frame,
+                         unsigned ipOffset,
+                         vector<Value> savedStack);
+    unsigned suspendGenerator(vector<Value>& savedStackx);
+
   private:
     static Interpreter* instance_;
 

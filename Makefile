@@ -36,7 +36,8 @@ SRCS = \
 	src/dict.cpp \
 	src/builtin.cpp \
 	src/instr.cpp \
-	src/specials.cpp
+	src/specials.cpp \
+	src/generator.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)
 MAINSRCS = src/main.cpp $(SRCS)

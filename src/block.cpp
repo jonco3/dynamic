@@ -1,6 +1,7 @@
 #include "block.h"
 #include "builtin.h"
 #include "common.h"
+#include "generator.h"
 #include "instr.h"
 #include "parser.h"
 #include "repr.h"
@@ -169,7 +170,8 @@ struct BlockBuilder : public SyntaxVisitor
         topLevel(nullptr),
         layout(Frame::InitialLayout),
         block(nullptr),
-        inClassBlock(false),
+        isClassBlock(false),
+        isGenerator(false),
         inAssignTarget(false)
     {}
 
@@ -186,8 +188,10 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    Block* buildFunctionBody(BlockBuilder* parent, const vector<Name>& params,
-                             const Syntax* s) {
+    Block* buildFunctionBody(BlockBuilder* parent,
+                             const vector<Name>& params,
+                             const Syntax* s)
+    {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
@@ -224,7 +228,7 @@ struct BlockBuilder : public SyntaxVisitor
         this->parent = parent;
         topLevel = parent->topLevel;
         layout = layout->addName(ClassFunctionParam);
-        inClassBlock = true;
+        isClassBlock = true;
         build(s);
         block->append(gc::create<InstrPop>());
         block->append(gc::create<InstrMakeClassFromFrame>(id));
@@ -235,31 +239,34 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    /*
-    Block* buildGenerator(BlockBuilder* parent, const Syntax* s) {
+    Block* buildGenerator(BlockBuilder* parent,
+                          const vector<Name>& params,
+                          const Syntax* s)
+    {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
-        // todo: find some way of passing the generator parameter so it's not
-        // visible to user code
-        layout = layout->addName("__gen__");
-        inGenerator = true;
+        isGenerator = true;
+        for (auto i = params.begin(); i != params.end(); ++i)
+            layout = layout->addName(*i);
         build(s);
         if (!block->lastInstr()->is<InstrLeaveGenerator>()) {
             block->append(gc::create<InstrPop>());
-            block->append(gc::create<InstrConst>(None));
             block->append(gc::create<InstrLeaveGenerator>());
         }
+#ifdef TRACE_BUILD
+        cerr << repr(*block) << endl;
+#endif
         return block;
     }
-    */
 
   private:
     BlockBuilder* parent;
     Root<Object*> topLevel;
     Root<Layout*> layout;
     Root<Block*> block;
-    bool inClassBlock;
+    bool isClassBlock;
+    bool isGenerator;
     bool inAssignTarget;
 
     void build(const Syntax* s) {
@@ -507,14 +514,22 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxReturn& s) {
-        if (inClassBlock)
+        if (isClassBlock) {
             throw ParseError(s.token(),
                              "Return statement not allowed in class body");
-        if (s.right())
-            s.right()->accept(*this);
-        else
-            block->append(gc::create<InstrConst>(None));
-        block->append(gc::create<InstrReturn>());
+        } else if (isGenerator) {
+            if (s.right()) {
+                throw ParseError(s.token(),
+                                 "SyntaxError: 'return' with argument inside generator");
+            }
+            block->append(gc::create<InstrLeaveGenerator>());
+        } else {
+            if (s.right())
+                s.right()->accept(*this);
+            else
+                block->append(gc::create<InstrConst>(None));
+            block->append(gc::create<InstrReturn>());
+        }
     }
 
     virtual void visit(const SyntaxCond& s) {
@@ -600,12 +615,16 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxDef& s) {
-        Root<Block*> exprBlock(BlockBuilder().buildFunctionBody(this, s.params(), s.expr()));
-        if (!exprBlock->lastInstr()->is<InstrReturn>()) {
-            exprBlock->append(gc::create<InstrPop>());
-            exprBlock->append(gc::create<InstrConst>(None));
+        Root<Block*> exprBlock;
+        if (s.isGenerator()) {
+            exprBlock =
+                BlockBuilder().buildGenerator(this, s.params(), s.expr());
+        } else {
+            exprBlock =
+                BlockBuilder().buildFunctionBody(this, s.params(), s.expr());
         }
-        block->append(gc::create<InstrLambda>(s.params(), exprBlock));
+        block->append(
+            gc::create<InstrLambda>(s.params(), exprBlock, s.isGenerator()));
         if (parent)
             block->append(gc::create<InstrSetLocal>(s.id()));
         else
@@ -648,6 +667,11 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxRaise& s) {
         s.right()->accept(*this);
         block->append(gc::create<InstrRaise>());
+    }
+
+    virtual void visit(const SyntaxYield& s) {
+        s.right()->accept(*this);
+        block->append(gc::create<InstrSuspendGenerator>());
     }
 };
 

@@ -110,5 +110,4 @@ struct std::hash<Value> {
     }
 };
 
-
 #endif

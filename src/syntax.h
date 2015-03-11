@@ -46,7 +46,8 @@ using namespace std;
     syntax(Raise)                                                             \
     syntax(For)                                                               \
     syntax(Global)                                                            \
-    syntax(AugAssign)
+    syntax(AugAssign)                                                         \
+    syntax(Yield)
 
 enum SyntaxType
 {
@@ -573,13 +574,22 @@ struct SyntaxDef : public Syntax
 {
     define_syntax_members(Def, "def");
 
-    SyntaxDef(const Token& token, Name id, const vector<Name>& params, Syntax* expr)
-        : Syntax(token), id_(id), params_(params), expr_(expr)
+    SyntaxDef(const Token& token,
+              Name id,
+              const vector<Name>& params,
+              Syntax* expr,
+              bool isGenerator)
+      : Syntax(token),
+        id_(id),
+        params_(params),
+        expr_(expr),
+        isGenerator_(isGenerator)
     {}
 
     Name id() const { return id_; }
     const vector<Name>& params() const { return params_; }
     Syntax* expr() const { return expr_; }
+    bool isGenerator() const { return isGenerator_; }
 
     virtual void print(ostream& s) const override {
         s << "def " << id_ << "(";
@@ -596,6 +606,7 @@ struct SyntaxDef : public Syntax
     Name id_;
     vector<Name> params_;
     Syntax* expr_;
+    bool isGenerator_;
 };
 
 struct SyntaxIf : public Syntax
@@ -782,6 +793,30 @@ struct SyntaxGlobal : public Syntax
   private:
     vector<Name> names_;
 };
+
+/*
+struct SyntaxEnterGenerator : public Syntax
+{
+    define_syntax_members(EnterGenerator, "enterGenerator");
+    SyntaxEnterGenerator(const Token& token) : Syntax(token) {}
+
+    virtual void print(ostream& s) const override {
+        s << "enterGenerator";
+    }
+};
+
+struct SyntaxLeaveGenerator : public Syntax
+{
+    define_syntax_members(LeaveGenerator, "leaveGenerator");
+    SyntaxLeaveGenerator(const Token& token) : Syntax(token) {}
+
+    virtual void print(ostream& s) const override {
+        s << "leaveGenerator";
+    }
+};
+*/
+
+define_unary_syntax(Yield, "yield");
 
 #undef define_syntax_type
 #undef define_syntax_name

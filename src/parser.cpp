@@ -1,8 +1,10 @@
 #include "parser.h"
 
+#include "generator.h"
 #include "syntax.h"
 #include "repr.h"
 #include "test.h"
+#include "utils.h"
 
 #include <cstdlib>
 #include <stdexcept>
@@ -54,7 +56,7 @@ vector<T> Parser<T>::exprListTrailing(TokenType separator,
 }
 
 SyntaxParser::SyntaxParser()
-  : Parser(tokenizer)
+  : Parser(tokenizer), inFunction(false), isGenerator(false)
 {
     // Atoms
 
@@ -358,12 +360,14 @@ Syntax* SyntaxParser::parseSimpleStatement()
             names.push_back(t.text);
         } while (opt(Token_Comma));
         return new SyntaxGlobal(token, names);
+    } else if (opt(Token_Yield)) {
+        isGenerator = true;
+        return new SyntaxYield(token, expression());
     }
 
     Syntax* expr = parseExprOrExprList();
     if (opt(Token_Assign)) {
         SyntaxTarget* target = makeAssignTarget(expr);
-        // todo: should admit yield statement too but we haven't implemented that yet
         return new SyntaxAssign(token, target, parseExprOrExprList());
     } else if (opt(Token_AssignPlus)) {
         return parseAugAssign(token, expr, BinaryPlus);
@@ -440,8 +444,11 @@ Syntax* SyntaxParser::parseCompoundStatement()
                 match(Token_Comma);
             }
         }
+
+        AutoSetAndRestore asar1(inFunction, true);
+        AutoSetAndRestore asar2(isGenerator, false);
         SyntaxBlock* suite = parseSuite();
-        return new SyntaxDef(token, name.text, params, suite);
+        return new SyntaxDef(token, name.text, params, suite, isGenerator);
     } else if (opt(Token_Class)) {
         Token name = match(Token_Identifier);
         vector<Syntax*> bases;

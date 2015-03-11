@@ -338,6 +338,8 @@ struct SyntaxParser : public Parser<Syntax *>
 
   private:
     Tokenizer tokenizer;
+    bool inFunction;
+    bool isGenerator;
 
     bool maybeExprToken();
     Syntax* parseExprOrExprList();

@@ -16,6 +16,7 @@
 #include "string.h"
 #include "test.h"
 #include "list.h"
+#include "generator.h"
 
 #include <fstream>
 #include <sstream>
@@ -37,6 +38,7 @@ void init1()
     Dict::init();
     initSingletons();
     Interpreter::init();
+    GeneratorIter::init();
 }
 
 void init2()

@@ -1,5 +1,7 @@
 #include "instr.h"
 
+#include "generator.h"
+
 bool InstrConst::execute(Interpreter& interp)
 {
     interp.pushStack(value);
@@ -229,7 +231,8 @@ bool InstrLambda::execute(Interpreter& interp)
 {
     Root<Block*> block(block_);
     Root<Frame*> frame(interp.getFrame(0));
-    interp.pushStack(gc::create<Function>(params_, block, frame));
+    Object* obj = gc::create<Function>(params_, block, frame, isGenerator());
+    interp.pushStack(Value(obj));
     return true;
 }
 
@@ -501,4 +504,27 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
                                                "unsupported operand type(s) for augmented assignment"));
         return false;
     }
+}
+
+bool InstrResumeGenerator::execute(Interpreter& interp)
+{
+    Frame* frame = interp.getFrame();
+    GeneratorIter *gen = frame->getAttr("self").asObject()->as<GeneratorIter>();
+    return gen->resume(interp);
+}
+
+bool InstrLeaveGenerator::execute(Interpreter& interp)
+{
+    Frame* frame = interp.getFrame();
+    GeneratorIter *gen = frame->getAttr("%gen").asObject()->as<GeneratorIter>();
+    return gen->leave(interp);
+}
+
+bool InstrSuspendGenerator::execute(Interpreter& interp)
+{
+    Root<Value> value(interp.popStack());
+    Frame* frame = interp.getFrame();
+    GeneratorIter *gen = frame->getAttr("%gen").asObject()->as<GeneratorIter>();
+    gen->suspend(interp, value);
+    return true;
 }

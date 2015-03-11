@@ -62,7 +62,10 @@ using namespace std;
     instr(BinaryOp)                                                          \
     instr(BinaryOpInt)                                                       \
     instr(BinaryOpFallback)                                                  \
-    instr(AugAssignUpdate)
+    instr(AugAssignUpdate)                                                   \
+    instr(ResumeGenerator)                                                   \
+    instr(LeaveGenerator)                                                    \
+    instr(SuspendGenerator)
 
 enum InstrType
 {
@@ -316,10 +319,12 @@ struct InstrLambda : public Instr
 {
     define_instr_members(Instr_Lambda, "Lambda");
 
-    InstrLambda(const vector<Name>& params, Block* block)
-      : params_(params), block_(block) {}
+  InstrLambda(const vector<Name>& params, Block* block, bool isGenerator = false)
+      : params_(params), block_(block), isGenerator_(isGenerator) {}
 
     Block* block() const { return block_; }
+
+    bool isGenerator() const { return isGenerator_; }
 
     virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &block_);
@@ -335,6 +340,7 @@ struct InstrLambda : public Instr
   private:
     vector<Name> params_;
     Block* block_;
+    bool isGenerator_;
 };
 
 struct InstrDup : public Instr
@@ -439,6 +445,10 @@ struct InstrAugAssignUpdate : public BinaryOpInstr
     define_instr_members(Instr_AugAssignUpdate, "AugAssignUpdate");
     InstrAugAssignUpdate(BinaryOp op) : BinaryOpInstr(op) {}
 };
+
+define_simple_instr(ResumeGenerator);
+define_simple_instr(LeaveGenerator);
+define_simple_instr(SuspendGenerator);
 
 #undef instr_type
 #undef instr_name
