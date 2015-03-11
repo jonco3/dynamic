@@ -98,9 +98,11 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     virtual void visit(const SyntaxName& s) {
-        // todo: check this is not a global ref
-        if (inAssignTarget_)
+        if (inAssignTarget_ &&
+            find(globals_.begin(), globals_.end(), s.id()) == globals_.end())
+        {
             addName(s.id());
+        }
     }
 
     virtual void visit(const SyntaxDef& s) {
