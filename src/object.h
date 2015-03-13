@@ -83,7 +83,7 @@ struct Object : public Cell
     Layout* layout_;
     vector<Value> slots_;
 
-    void initAttrs(Traced<Class*> classAttr);
+    void initAttrs(Traced<Class*> cls);
 
     friend void initObject();
 };

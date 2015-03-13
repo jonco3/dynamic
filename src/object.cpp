@@ -21,6 +21,9 @@ struct NoneObject : public Object
     friend void initObject();
 };
 
+static const Name ClassAttr = "__class__";
+static const Name BaseAttr = "__base__";
+
 GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
 
@@ -58,15 +61,15 @@ void Object::init(Traced<Class*> cls)
     initAttrs(cls);
 }
 
-void Object::initAttrs(Traced<Class*> classAttr)
+void Object::initAttrs(Traced<Class*> cls)
 {
     assert(class_);
     assert(layout_);
     slots_.resize(layout_->slotCount());
     for (unsigned i = 0; i < layout_->slotCount(); ++i)
         slots_[i] = UninitializedSlot;
-    Root<Value> value(classAttr);
-    setAttr("__class__", value);
+    Root<Value> value(cls);
+    setAttr(ClassAttr, value);
 }
 
 void Object::extend(Traced<Layout*> layout)
@@ -105,13 +108,13 @@ bool Object::hasAttr(Name name) const
 
     // lookup attribute in class hierarchy
     Value base;
-    if (!maybeGetOwnAttr("__class__", base, nogc))
+    if (!maybeGetOwnAttr(ClassAttr, base, nogc))
         return false;
 
     while (Object* obj = base.toObject()) {
         if (obj->hasOwnAttr(name))
             return true;
-        if (!obj->maybeGetOwnAttr("__base__", base, nogc))
+        if (!obj->maybeGetOwnAttr(BaseAttr, base, nogc))
             break;
     }
 
@@ -130,7 +133,7 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
 
     // lookup attribute in class hierarchy
     Value base;
-    if (!maybeGetOwnAttr("__class__", base, nogc))
+    if (!maybeGetOwnAttr(ClassAttr, base, nogc))
         return false;
 
     while (Class* cls = base.toObject()->as<Class>()) {
@@ -139,7 +142,7 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
             classOut = cls;
             return slot;
         }
-        if (!cls->maybeGetOwnAttr("__base__", base, nogc))
+        if (!cls->maybeGetOwnAttr(BaseAttr, base, nogc))
             break;
     }
 
@@ -164,13 +167,13 @@ bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
 
     // lookup attribute in class hierarchy
     Value base;
-    if (!maybeGetOwnAttr("__class__", base, nogc))
+    if (!maybeGetOwnAttr(ClassAttr, base, nogc))
         return false;
 
     while (Object* obj = base.toObject()) {
         if (obj->maybeGetOwnAttr(name, valueOut, nogc))
             return true;
-        if (!obj->maybeGetOwnAttr("__base__", base, nogc))
+        if (!obj->maybeGetOwnAttr(BaseAttr, base, nogc))
             break;
     }
 
@@ -230,7 +233,7 @@ void Object::print(ostream& s) const
 
 Class* Object::getType() const
 {
-    return getAttr("__class__").asObject()->as<Class>();
+    return getAttr(ClassAttr).asObject()->as<Class>();
 }
 
 bool Object::isTrue() const
@@ -259,7 +262,7 @@ Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass) {
         Root<Value> value(base);
-        setAttr("__base__", value);
+        setAttr(BaseAttr, value);
     }
 }
 
@@ -267,7 +270,7 @@ void Class::init(Traced<Object*> base)
 {
     Object::init(ObjectClass);
     Root<Value> value(base);
-    setAttr("__base__", value);
+    setAttr(BaseAttr, value);
 }
 
 void Class::print(ostream& s) const
@@ -277,9 +280,9 @@ void Class::print(ostream& s) const
 
 void initObject()
 {
-    Object::InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
+    Object::InitialLayout.init(gc::create<Layout>(nullptr, ClassAttr));
     Class::InitialLayout.init(gc::create<Layout>(Object::InitialLayout,
-                                                 "__base__"));
+                                                 BaseAttr));
 
     Object::ObjectClass.init(gc::create<Class>("Object"));
     NoneObject::ObjectClass.init(gc::create<Class>("None"));
