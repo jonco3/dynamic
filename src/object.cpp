@@ -68,8 +68,7 @@ void Object::initAttrs(Traced<Class*> cls)
     slots_.resize(layout_->slotCount());
     for (unsigned i = 0; i < layout_->slotCount(); ++i)
         slots_[i] = UninitializedSlot;
-    Root<Value> value(cls);
-    setAttr(ClassAttr, value);
+    setAttr(ClassAttr, cls);
 }
 
 void Object::extend(Traced<Layout*> layout)
@@ -260,17 +259,14 @@ Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
 {
     assert(initialLayout->subsumes(InitialLayout));
-    if (Class::ObjectClass) {
-        Root<Value> value(base);
-        setAttr(BaseAttr, value);
-    }
+    if (Class::ObjectClass)
+        setAttr(BaseAttr, base);
 }
 
 void Class::init(Traced<Object*> base)
 {
     Object::init(ObjectClass);
-    Root<Value> value(base);
-    setAttr(BaseAttr, value);
+    setAttr(BaseAttr, base);
 }
 
 void Class::print(ostream& s) const
