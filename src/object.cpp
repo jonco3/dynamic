@@ -181,9 +181,18 @@ bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
 
 Value Object::getAttr(Name name) const
 {
-    AutoAssertNoGC nogc;
     Root<Value> value;
     bool ok = maybeGetAttr(name, value);
+    assert(ok);
+    (void)ok;
+    return value;
+}
+
+Value Object::getOwnAttr(Name name) const
+{
+    AutoAssertNoGC nogc;
+    Root<Value> value;
+    bool ok = maybeGetOwnAttr(name, value, nogc);
     assert(ok);
     (void)ok;
     return value;
@@ -248,6 +257,17 @@ bool Object::isTrue() const
         this != Integer::Zero;
 }
 
+bool Object::isInstanceOf(Traced<Class*> cls)
+{
+    Object* obj = getOwnAttr("__class__").toObject();
+    do {
+        if (obj == cls)
+            return true;
+        obj = obj->getOwnAttr("__base__").toObject();
+    } while (obj != None);
+    return false;
+}
+
 void Object::traceChildren(Tracer& t)
 {
     gc::trace(t, &layout_);
@@ -258,6 +278,7 @@ void Object::traceChildren(Tracer& t)
 Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
 {
+    assert(base == None || base->is<Class>());
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass)
         setAttr(BaseAttr, base);

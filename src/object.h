@@ -49,6 +49,7 @@ struct Object : public Cell
     int findOwnAttr(Name name) const;
 
     bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
+    Value getOwnAttr(Name name) const;
     Value getAttr(Name name) const;
 
     // Get the slot of and optionally the class containing the named attribute
@@ -60,6 +61,7 @@ struct Object : public Cell
     void extend(Traced<Layout*> layout);
 
     bool isTrue() const;
+    bool isInstanceOf(Traced<Class*> cls);
 
     virtual bool equals(Object* other) const { return this == other; }
     virtual size_t hash() const { return size_t(this); }

@@ -6,7 +6,7 @@ def fib():
         yield a
         a, b = b, a + b
 
-f = fib();
+f = fib()
 for i in range(10):
     f.next()
 

@@ -32,12 +32,23 @@ static bool builtin_object(Root<Value>& resultOut)
     return true;
 }
 
+static bool builtin_isinstance(Traced<Value> value,
+                               Traced<Value> classInfo,
+                               Root<Value>& resultOut)
+{
+    // todo: support tuples etc for classInfo
+    Root<Class*> cls(classInfo.toObject()->as<Class>());
+    resultOut = Boolean::get(value.toObject()->isInstanceOf(cls));
+    return true;
+}
+
 void initBuiltins()
 {
     Builtin.init(gc::create<Object>());
     Root<Value> value;
     value = gc::create<Native2>(builtin_hasattr); Builtin->setAttr("hasattr", value);
     value = gc::create<Native0>(builtin_object); Builtin->setAttr("object", value);
+    value = gc::create<Native2>(builtin_isinstance); Builtin->setAttr("isinstance", value);
 
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);

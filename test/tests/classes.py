@@ -36,4 +36,13 @@ c4 = C4()
 c4.set(3)
 assert c4.get2() == 5
 
+assert isinstance(c1, C1)
+assert isinstance(c2, C2)
+assert not isinstance(c1, C2)
+assert not isinstance(c2, C1)
+assert isinstance(c3, C3)
+assert not isinstance(c3, C4)
+assert isinstance(c4, C3)
+assert isinstance(c4, C4)
+
 print("ok")
