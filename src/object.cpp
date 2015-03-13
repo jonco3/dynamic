@@ -25,6 +25,7 @@ GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
 
 GlobalRoot<Class*> Class::ObjectClass;
+GlobalRoot<Layout*> Class::InitialLayout;
 
 GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
@@ -49,16 +50,12 @@ Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
         initAttrs(cls);
 }
 
-Object::~Object()
-{
-}
-
-void Object::initClass(Traced<Class*> cls, Traced<Class*> base)
+void Object::init(Traced<Class*> cls)
 {
     assert(cls);
     assert(!class_);
     class_ = cls;
-    initAttrs(base);
+    initAttrs(cls);
 }
 
 void Object::initAttrs(Traced<Class*> classAttr)
@@ -256,9 +253,22 @@ void Object::traceChildren(Tracer& t)
         gc::trace(t, &*i);
 }
 
-Class::Class(string name, Traced<Layout*> initialLayout) :
+Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
-{}
+{
+    assert(initialLayout->subsumes(InitialLayout));
+    if (Class::ObjectClass) {
+        Root<Value> value(base);
+        setAttr("__base__", value);
+    }
+}
+
+void Class::init(Traced<Object*> base)
+{
+    Object::init(ObjectClass);
+    Root<Value> value(base);
+    setAttr("__base__", value);
+}
 
 void Class::print(ostream& s) const
 {
@@ -268,6 +278,8 @@ void Class::print(ostream& s) const
 void initObject()
 {
     Object::InitialLayout.init(gc::create<Layout>(nullptr, "__class__"));
+    Class::InitialLayout.init(gc::create<Layout>(Object::InitialLayout,
+                                                 "__base__"));
 
     Object::ObjectClass.init(gc::create<Class>("Object"));
     NoneObject::ObjectClass.init(gc::create<Class>("None"));
@@ -275,9 +287,9 @@ void initObject()
 
     None.init(gc::create<NoneObject>());
 
-    Class::ObjectClass->initClass(Class::ObjectClass, Object::ObjectClass);
-    Object::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
-    NoneObject::ObjectClass->initClass(Class::ObjectClass, Class::ObjectClass);
+    Class::ObjectClass->init(Object::ObjectClass);
+    Object::ObjectClass->init(None);
+    NoneObject::ObjectClass->init(Class::ObjectClass);
 }
 
 #ifdef BUILD_TESTS

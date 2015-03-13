@@ -293,10 +293,10 @@ bool InstrMakeClassFromFrame::execute(Interpreter& interp)
     vector<Name> names;
     for (Layout* l = frame->layout(); l != Frame::InitialLayout; l = l->parent())
         names.push_back(l->name());
-    Root<Layout*> layout(Object::InitialLayout);
+    Root<Layout*> layout(Class::InitialLayout);
     for (auto i = names.begin(); i != names.end(); i++)
         layout = layout->addName(*i);
-    Class* cls = gc::create<Class>(ident, layout);
+    Class* cls = gc::create<Class>(ident, None, layout);
     Root<Value> value;
     for (auto i = names.begin(); i != names.end(); i++) {
         value = frame->getAttr(*i);

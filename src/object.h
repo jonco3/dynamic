@@ -24,11 +24,9 @@ struct Object : public Cell
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
 
-    Object(Traced<Class*> cls = ObjectClass, Traced<Layout*> layout = InitialLayout);
-    virtual ~Object();
-
-    // Only for use during initialization
-    void initClass(Traced<Class*> cls, Traced<Class*> base);
+    Object(Traced<Class*> cls = ObjectClass,
+           Traced<Layout*> layout = InitialLayout);
+    virtual ~Object() {}
 
     template <typename T> bool is() { return class_ == T::ObjectClass; }
 
@@ -70,6 +68,9 @@ struct Object : public Cell
     Object(Traced<Class*> cls, Traced<Class*> base,
            Traced<Layout*> layout = InitialLayout);
 
+    // Only for use during initialization
+    void init(Traced<Class*> cls);
+
     virtual void traceChildren(Tracer& t);
     virtual size_t size() const { return sizeof(*this); }
 
@@ -90,8 +91,10 @@ struct Object : public Cell
 struct Class : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
+    static GlobalRoot<Layout*> InitialLayout;
 
-    Class(string name, Traced<Layout*> initialLayout = Object::InitialLayout);
+    Class(string name, Traced<Object*> base = None,
+          Traced<Layout*> initialLayout = InitialLayout);
 
     const string& name() const { return name_; }
 
@@ -99,6 +102,9 @@ struct Class : public Object
 
   private:
     string name_;
+
+    // Only for use during initialization
+    void init(Traced<Object*> base);
 
     friend void initObject();
 };
