@@ -128,16 +128,18 @@ struct RootBase
     RootBase* prev_;
 };
 
-#define define_smart_ptr_getters                                               \
-    operator T& () { return ptr_; }                                            \
-    operator const T& () const { return ptr_; }                                \
-    T operator->() { return ptr_; }                                            \
-    const T operator->() const { return ptr_; }                                \
-    T& get() { return ptr_; }                                                  \
-    const T& get() const { return ptr_; }                                      \
-    bool operator==(const T& other) { return ptr_ == other; }                  \
-    bool operator!=(const T& other) { return ptr_ != other; }
+#define define_comparisions                                                    \
+    bool operator==(T other) { return ptr_ == other; }                         \
+    bool operator!=(T other) { return ptr_ != other; }
 
+#define define_immutable_accessors                                             \
+    operator const T& () const { return ptr_; }                                \
+    T operator->() const { return ptr_; }                                      \
+    const T& get() const { return ptr_; }                                      \
+
+#define define_mutable_accessors                                               \
+    operator T& () { return ptr_; }                                            \
+    T& get() { return ptr_; }
 
 template <typename W, typename T>
 struct WrapperMixins {};
@@ -171,7 +173,9 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
 
     ~Root() { remove(); }
 
-    define_smart_ptr_getters;
+    define_comparisions;
+    define_immutable_accessors;
+    define_mutable_accessors;
 
     const T* location() const { return &ptr_; }
 
@@ -197,7 +201,8 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
 
 // Roots a cell.
 //
-// Intended for globals, it has deferred initialization and can cannot be reassigned.
+// Intended for globals, it has deferred initialization and can cannot be
+// reassigned.
 template <typename T>
 struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
 {
@@ -216,7 +221,8 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
         ptr_ = ptr;
     }
 
-    define_smart_ptr_getters;
+    define_comparisions;
+    define_immutable_accessors;
 
     const T* location() const { return &ptr_; }
 
@@ -234,21 +240,23 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
 template <typename T>
 struct Traced : public WrapperMixins<Traced<T>, T>
 {
+    Traced(const Traced<T>& other) : ptr_(other.ptr_) {}
     Traced(Root<T>& root) : ptr_(root.get()) {}
     Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
 
-    define_smart_ptr_getters;
+    define_comparisions;
+    define_immutable_accessors;
 
     const T* location() const { return &ptr_; }
 
-    static Traced<T> fromTracedLocation(T* traced) {
+    static Traced<T> fromTracedLocation(const T* traced) {
         return Traced(traced);
     }
 
   private:
-    Traced(T* traced) : ptr_(*traced) {}
+    Traced(const T* traced) : ptr_(*traced) {}
 
-    T& ptr_;
+    const T& ptr_;
 };
 
 template <typename T>
@@ -373,7 +381,8 @@ struct AllocRoot : protected RootBase
 
     ~AllocRoot() { remove(); }
 
-    define_smart_ptr_getters;
+    define_comparisions;
+    define_immutable_accessors;
 
     virtual void trace(Tracer& t) {
         gc::trace(t, &ptr_);
@@ -411,5 +420,8 @@ struct AutoAssertNoGC
         gc::unsafeCount--;
     }
 };
+
+#undef define_immutable_accessors
+#undef define_mutable_accessors
 
 #endif

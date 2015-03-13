@@ -16,7 +16,7 @@ struct Tracer;
 struct Value
 {
     Value() : objectp(nullptr) {}
-    Value(Object* const & o) : objectp(o) {}
+    Value(Object* o) : objectp(o) {}
     Value(int16_t i) { *this = i; }
 
     Value& operator=(Object* const & o) {
@@ -108,6 +108,26 @@ template <>
 struct std::hash<Value> {
     size_t operator()(Value v) const {
         return v.hash();
+    }
+};
+
+template <typename W>
+struct WrapperMixins<W, Object*>
+{
+    Traced<Value> asValue() const {
+        // Since Traced<T> is immutable and all Objects are Values, we can
+        // safely cast a Root<Object*> to a Traced<Value>.
+        const Value* ptr = reinterpret_cast<Value const*>(get());
+        return Traced<Value>::fromTracedLocation(ptr);
+    }
+
+    operator Traced<Value> () const {
+        return asValue();
+    }
+
+  private:
+    Object const* const* get() const {
+        return static_cast<const W*>(this)->location();
     }
 };
 

@@ -3,6 +3,7 @@
 #include "common.h"
 #include "generator.h"
 #include "instr.h"
+#include "object.h"
 #include "parser.h"
 #include "repr.h"
 #include "string.h"

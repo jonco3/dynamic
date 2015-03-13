@@ -125,8 +125,7 @@ struct Instr : public Cell
 struct InstrConst : public Instr
 {
     define_instr_members(Instr_Const, "Const");
-    InstrConst(Traced<Value> v) : value(v) {}
-    InstrConst(Traced<Object*> o) : value(o) {}
+    explicit InstrConst(Traced<Value> v) : value(v) {}
 
     virtual void print(ostream& s) const {
         s << name() << " " << value;
