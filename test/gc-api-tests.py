@@ -14,21 +14,9 @@ class TestCompileErrors(unittest.TestCase):
     prelude = """
     struct TestCell : public Cell
     {
-        virtual void traceChildren(Tracer& t) {
-            for (auto i = children_.begin(); i != children_.end(); ++i)
-                gc::trace(t, &(*i));
-        }
-
+        virtual void traceChildren(Tracer& t) {}
         virtual size_t size() const { return sizeof(*this); }
-
         virtual void print(ostream& s) const {}
-
-        void addChild(TestCell* cell) {
-            children_.push_back(cell);
-        }
-
-      private:
-        vector<TestCell*> children_;
     };
     """
 
@@ -120,7 +108,7 @@ class TestCompileErrors(unittest.TestCase):
             """,
             "no known conversion from 'Cell *' to 'Traced<Cell *>'")
 
-        # Check we can pass a Root to an API expecting a traced pionter
+        # Check we can pass a Root to an API expecting a traced pointer
         self.checkOK(
             """
             void api(Traced<Cell*> arg) {}
@@ -130,10 +118,10 @@ class TestCompileErrors(unittest.TestCase):
             }
             """);
 
-        # Check we can pass Global Root to an API expecting a traced pionter
+        # Check we can pass GlobalRoot to an API expecting a traced pointer
         self.checkOK(
             """
-            GlobalRoot<Cell *> globalRoot;
+            GlobalRoot<Cell*> globalRoot;
             void api(Traced<Cell*> arg) {}
             void test() {
                 api(globalRoot);
@@ -146,6 +134,13 @@ class TestCompileErrors(unittest.TestCase):
             """
             void test() {
                new TestCell;
+            }
+            """,
+            "gc::isAllocating")
+        self.checkDebugAssert(
+            """
+            void test() {
+               TestCell cell;
             }
             """,
             "gc::isAllocating")
@@ -164,7 +159,7 @@ class TestCompileErrors(unittest.TestCase):
             """
             void test() {
                 gc::create<TestCell>();
-              gc::collect();
+                gc::collect();
             }
             """)
 
