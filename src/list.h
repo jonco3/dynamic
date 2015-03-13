@@ -17,6 +17,11 @@ struct ListBase : public Object
     virtual const string& listName() const = 0;
     virtual void traceChildren(Tracer& t);
 
+    size_t len() { return elements_.size(); }
+    Traced<Value> getitem(size_t index) {
+        return Traced<Value>::fromTracedLocation(&elements_.at(index));
+    }
+
   protected:
     vector<Value> elements_;
     friend struct ListIter;

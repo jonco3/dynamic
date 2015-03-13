@@ -133,7 +133,7 @@ struct RootBase
     bool operator!=(T other) { return ptr_ != other; }
 
 #define define_immutable_accessors                                             \
-    operator const T& () const { return ptr_; }                                \
+    operator T () const { return ptr_; }                                       \
     T operator->() const { return ptr_; }                                      \
     const T& get() const { return ptr_; }                                      \
 
@@ -146,58 +146,6 @@ struct WrapperMixins {};
 
 template <typename T>
 struct Traced;
-
-// Roots a cell as long as it is alive.
-template <typename T>
-struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
-{
-    Root() {
-        ptr_ = GCTraits<T>::nullValue();
-        insert();
-    }
-
-    explicit Root(T ptr) {
-        *this = ptr;
-        insert();
-    }
-
-    Root(const Root& other) {
-        *this = other.ptr_;
-        insert();
-    }
-
-    template <typename S>
-    explicit Root(const S& other) : ptr_(other) {
-        insert();
-    }
-
-    ~Root() { remove(); }
-
-    define_comparisions;
-    define_immutable_accessors;
-    define_mutable_accessors;
-
-    const T* location() const { return &ptr_; }
-
-    template <typename S>
-    Root& operator=(const S& ptr) {
-        ptr_ = ptr;
-        GCTraits<T>::checkValid(ptr_);
-        return *this;
-    }
-
-    Root& operator=(const Root& other) {
-        *this = other.ptr_;
-        return *this;
-    }
-
-    virtual void trace(Tracer& t) {
-        gc::trace(t, &ptr_);
-    }
-
-  private:
-    T ptr_;
-};
 
 // Roots a cell.
 //
@@ -227,6 +175,68 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
     const T* location() const { return &ptr_; }
 
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
+
+    virtual void trace(Tracer& t) {
+        gc::trace(t, &ptr_);
+    }
+
+  private:
+    T ptr_;
+};
+
+// Roots a cell as long as it is alive.
+template <typename T>
+struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
+{
+    Root() {
+        ptr_ = GCTraits<T>::nullValue();
+        insert();
+    }
+
+    explicit Root(T ptr) {
+        *this = ptr;
+        insert();
+    }
+
+    Root(const Root& other) {
+        *this = other.ptr_;
+        insert();
+    }
+
+    Root(const GlobalRoot<T>& other) {
+        *this = other.get();
+        insert();
+    }
+
+    template <typename S>
+    explicit Root(const S& other) : ptr_(other) {
+        insert();
+    }
+
+    ~Root() { remove(); }
+
+    define_comparisions;
+    define_immutable_accessors;
+    define_mutable_accessors;
+
+    const T* location() const { return &ptr_; }
+
+    template <typename S>
+    Root& operator=(const S& ptr) {
+        ptr_ = ptr;
+        GCTraits<T>::checkValid(ptr_);
+        return *this;
+    }
+
+    Root& operator=(const Root& other) {
+        *this = other.ptr_;
+        return *this;
+    }
+
+    Root& operator=(const GlobalRoot<T>& other) {
+        *this = other.get();
+        return *this;
+    }
 
     virtual void trace(Tracer& t) {
         gc::trace(t, &ptr_);

@@ -28,4 +28,12 @@ c3 = C3()
 c3.set(3)
 assert c3.get() == 3
 
+class C4(C3):
+  def get2(self):
+    return self.x + 2
+
+c4 = C4()
+c4.set(3)
+assert c4.get2() == 5
+
 print("ok")

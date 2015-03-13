@@ -291,12 +291,44 @@ bool InstrMakeClassFromFrame::execute(Interpreter& interp)
 {
     Root<Frame*> frame(interp.getFrame());
     vector<Name> names;
-    for (Layout* l = frame->layout(); l != Frame::InitialLayout; l = l->parent())
-        names.push_back(l->name());
+    for (Layout* l = frame->layout();
+         l != Frame::InitialLayout;
+         l = l->parent())
+    {
+        Name name = l->name();
+        if (name != "__bases__")
+            names.push_back(l->name());
+    }
     Root<Layout*> layout(Class::InitialLayout);
     for (auto i = names.begin(); i != names.end(); i++)
         layout = layout->addName(*i);
-    Class* cls = gc::create<Class>(ident, None, layout);
+    Root<Value> bases;
+    if (!frame->maybeGetAttr("__bases__", bases)) {
+        interp.pushStack(gc::create<Exception>("AttributeError",
+                                               "Missing __bases__"));
+        return false;
+    }
+    if (!bases.toObject()->is<Tuple>()) {
+        interp.pushStack(gc::create<Exception>("TypeError",
+                                               "__bases__ is not a tuple"));
+        return false;
+    }
+    Root<Tuple*> tuple(bases.toObject()->as<Tuple>());
+    Root<Object*> base = None;
+    if (tuple->len() > 1) {
+        interp.pushStack(gc::create<Exception>("Error",
+                                               "Multiple inheritance not NYI"));
+        return false;
+    } else if (tuple->len() == 1) {
+        Root<Value> value(tuple->getitem(0));
+        if (!value.toObject()->is<Class>()) {
+            interp.pushStack(gc::create<Exception>("TypeError",
+                                                   "__bases__[0] is not a class"));
+            return false;
+        }
+        base = value.toObject();
+    }
+    Class* cls = gc::create<Class>(ident, base, layout);
     Root<Value> value;
     for (auto i = names.begin(); i != names.end(); i++) {
         value = frame->getAttr(*i);
