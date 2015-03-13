@@ -111,23 +111,28 @@ struct std::hash<Value> {
     }
 };
 
-template <typename W>
-struct WrapperMixins<W, Object*>
+template <typename W, typename T>
+struct WrapperMixins<W, T*>
 {
-    Traced<Value> asValue() const {
+    operator Traced<Value> () const {
+        static_assert(is_base_of<Object, T>::value,
+                      "T must derive from object for this conversion");
         // Since Traced<T> is immutable and all Objects are Values, we can
         // safely cast a Root<Object*> to a Traced<Value>.
         const Value* ptr = reinterpret_cast<Value const*>(get());
         return Traced<Value>::fromTracedLocation(ptr);
     }
 
-    operator Traced<Value> () const {
-        return asValue();
+    operator Traced<Object*> () const {
+        static_assert(is_base_of<Object, T>::value,
+                      "T must derive from object for this conversion");
+        Object* const * ptr = reinterpret_cast<Object* const *>(get());
+        return Traced<Object*>::fromTracedLocation(ptr);
     }
 
   private:
-    Object const* const* get() const {
-        return static_cast<const W*>(this)->location();
+    T* const * get() const {
+        return static_cast<W const *>(this)->location();
     }
 };
 

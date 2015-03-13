@@ -249,7 +249,7 @@ struct Traced : public WrapperMixins<Traced<T>, T>
 
     const T* location() const { return &ptr_; }
 
-    static Traced<T> fromTracedLocation(const T* traced) {
+    static Traced<T> fromTracedLocation(T const* traced) {
         return Traced(traced);
     }
 
