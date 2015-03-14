@@ -28,7 +28,9 @@ struct Object : public Cell
            Traced<Layout*> layout = InitialLayout);
     virtual ~Object() {}
 
-    template <typename T> bool is() { return class_ == T::ObjectClass; }
+    template <typename T> bool is() {
+        return slots_[ClassSlot].asObject() == T::ObjectClass;
+    }
 
     template <typename T> T* as() {
         assert(is<T>());
@@ -41,9 +43,8 @@ struct Object : public Cell
 
     virtual void print(ostream& os) const;
 
-    const Class* getClass() const { return class_; }
-    Layout* layout() { return layout_; }
-    Class* getType() const;
+    Layout* layout() const { return layout_; }
+    Class* type() const;
 
     bool hasAttr(Name name) const;
     int findOwnAttr(Name name) const;
@@ -81,9 +82,10 @@ struct Object : public Cell
     bool getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc) const;
 
   private:
-    Class* class_;
     Layout* layout_;
     vector<Value> slots_;
+
+    static const unsigned ClassSlot = 0;
 
     void initAttrs(Traced<Class*> cls);
 

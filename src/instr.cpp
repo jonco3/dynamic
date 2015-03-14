@@ -9,7 +9,7 @@ bool InstrConst::execute(Interpreter& interp)
 }
 
 bool IdentInstrBase::raiseAttrError(Traced<Value> value, Interpreter& interp) {
-    const Class* cls = value.toObject()->getClass();
+    const Class* cls = value.toObject()->type();
     string message = "'" + cls->name() + "' object has no attribute '" + ident + "'";
     interp.pushStack(gc::create<Exception>("AttributeError", message));
     return false;
@@ -483,7 +483,7 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
         }
     }
 
-    if (left.getType() != right.getType() &&
+    if (left.type() != right.type() &&
         right.maybeGetAttr(BinaryOpReflectedMethodNames[op()], method))
     {
         RootVector<Value> args;

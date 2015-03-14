@@ -34,7 +34,7 @@ GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
 
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
-  : class_(cls), layout_(layout)
+  : layout_(layout)
 {
     if (cls != Class::ObjectClass)
         assert(base == cls);
@@ -45,7 +45,7 @@ Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
 }
 
 Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
-  : class_(cls), layout_(layout)
+  : layout_(layout)
 {
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
@@ -56,14 +56,11 @@ Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
 void Object::init(Traced<Class*> cls)
 {
     assert(cls);
-    assert(!class_);
-    class_ = cls;
     initAttrs(cls);
 }
 
 void Object::initAttrs(Traced<Class*> cls)
 {
-    assert(class_);
     assert(layout_);
     slots_.resize(layout_->slotCount());
     for (unsigned i = 0; i < layout_->slotCount(); ++i)
@@ -225,7 +222,7 @@ void Object::setAttr(Name name, Traced<Value> value)
 
 void Object::print(ostream& s) const
 {
-    s << class_->name() << "@" << hex << reinterpret_cast<uintptr_t>(this);
+    s << type()->name() << "@" << hex << reinterpret_cast<uintptr_t>(this);
     s << " { ";
     unsigned slot = slots_.size() - 1;
     Layout* layout = layout_;
@@ -239,7 +236,7 @@ void Object::print(ostream& s) const
     s << " } ";
 }
 
-Class* Object::getType() const
+Class* Object::type() const
 {
     return getAttr(ClassAttr).asObject()->as<Class>();
 }
@@ -300,6 +297,7 @@ void initObject()
     Object::InitialLayout.init(gc::create<Layout>(nullptr, ClassAttr));
     Class::InitialLayout.init(gc::create<Layout>(Object::InitialLayout,
                                                  BaseAttr));
+    assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
     Object::ObjectClass.init(gc::create<Class>("Object"));
     NoneObject::ObjectClass.init(gc::create<Class>("None"));

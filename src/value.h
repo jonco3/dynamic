@@ -26,12 +26,12 @@ struct Value
 
     Value& operator=(int16_t i) {
         assert(i >= INT16_MIN && i <= INT16_MAX);
-        bits = (i << PayloadShift) | IntType;
+        bits = (i << PayloadShift) | IntKind;
         return *this;
     }
 
     bool isObject() const {
-        return type() == ObjectType;
+        return kind() == ObjectKind;
     }
 
     Object *asObject() const {
@@ -44,7 +44,7 @@ struct Value
     inline bool isInt32() const;
     inline int32_t asInt32() const;
 
-    inline Class* getType() const;
+    inline Class* type() const;
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
 
@@ -56,13 +56,13 @@ struct Value
     inline bool isTrue() const;
 
   private:
-    enum Type
+    enum Kind
     {
-        ObjectType = 0,
-        IntType = 1,
+        ObjectKind = 0,
+        IntKind = 1,
 
         PayloadShift = 1,
-        TypeMask = (1 << PayloadShift) - 1
+        KindMask = (1 << PayloadShift) - 1
     };
 
     union
@@ -71,7 +71,7 @@ struct Value
         int32_t bits;
     };
 
-    int32_t type() const { return bits & TypeMask; }
+    int32_t kind() const { return bits & KindMask; }
     int32_t payload() const { return bits >> PayloadShift; }
 };
 
@@ -87,7 +87,7 @@ struct WrapperMixins<W, Value>
     inline int32_t asInt32() const;
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
-    inline Class* getType() const;
+    inline Class* type() const;
 
   private:
     const Value* get() const {

@@ -42,7 +42,7 @@ inline bool Value::isTrue() const
 
 inline bool Value::isInt32() const
 {
-    if (type() == IntType)
+    if (kind() == IntKind)
         return true;
     Object* obj = asObject();
     if (!obj)
@@ -52,29 +52,29 @@ inline bool Value::isInt32() const
 
 inline int32_t Value::asInt32() const
 {
-    if (type() == IntType)
+    if (kind() == IntKind)
         return payload();
     else
         return asObject()->as<Integer>()->value();
 }
 
-inline Class* Value::getType() const
+inline Class* Value::type() const
 {
-    if (type() == IntType)
+    if (kind() == IntKind)
         return Integer::ObjectClass;
     else
-        return asObject()->getType();
+        return asObject()->type();
 }
 
 inline Value Value::getAttr(Name name) const
 {
-    Object* obj = type() == IntType ? Integer::ObjectClass : asObject();
+    Object* obj = kind() == IntKind ? Integer::ObjectClass : asObject();
     return obj->getAttr(name);
 }
 
 inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
-    Object* obj = type() == IntType ? Integer::ObjectClass : asObject();
+    Object* obj = kind() == IntKind ? Integer::ObjectClass : asObject();
     return obj->maybeGetAttr(name, valueOut);
 }
 
@@ -109,9 +109,9 @@ inline int32_t WrapperMixins<W, Value>::asInt32() const
 }
 
 template <typename W>
-inline Class* WrapperMixins<W, Value>::getType() const
+inline Class* WrapperMixins<W, Value>::type() const
 {
-    return get()->getType();
+    return get()->type();
 }
 
 template <typename W>
