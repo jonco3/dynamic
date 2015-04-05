@@ -68,7 +68,8 @@ class TestCompileErrors(unittest.TestCase):
             self.assertNotEqual(0, rc,
                                 "Compilation succeeded, expected error: " + message)
             self.assertIn(message, output,
-                          "Compilation failed but expected error: " + message)
+                          "Compilation failed but expected error: " + message + "\n" + \
+                          "Got: " + output)
         os.remove(path)
 
     def checkDebugAssert(self, source, message):
@@ -162,5 +163,27 @@ class TestCompileErrors(unittest.TestCase):
                 gc::collect();
             }
             """)
+
+    def testConversions(self):
+        # Check we can't pass a base root to something expecting a derived class
+        self.checkCompileError(
+            """
+            void api(Traced<TestCell*> arg) {}
+            void test() {
+                Root<Cell*> root;
+                api(root);
+            }
+            """,
+            "Invalid conversion")
+
+        # Check we can pass a derived root to something expecting a base class
+        self.checkOK(
+            """
+            void api(Traced<Cell*> arg) {}
+            void test() {
+                Root<TestCell*> root;
+                api(root);
+            }
+            """);
 
 unittest.main()

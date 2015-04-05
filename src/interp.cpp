@@ -177,6 +177,23 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
     return true;
 }
 
+bool Interpreter::checkArguments(Traced<Callable*> callable,
+                                 const TracedVector<Value>& args,
+                                 Root<Value>& resultOut)
+{
+    if (callable->requiredArgs() != args.size()) {
+        ostringstream s;
+        s << "Function takes " << dec << callable->requiredArgs();
+        s << " positional arguments but " << args.size();
+        if (args.size() == 1)
+            s << " was given";
+        else
+            s << " were given";
+        return raise("TypeError", s.str(), resultOut);
+    }
+    return true;
+}
+
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                const TracedVector<Value>& args,
                                                Root<Value>& resultOut)
@@ -184,19 +201,14 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     Root<Object*> target(targetValue.toObject());
     if (target->is<Native>()) {
         Root<Native*> native(target->as<Native>());
-        if (native->requiredArgs() != args.size())
-            return raise("TypeError", "Wrong number of arguments", resultOut);
+        if (!checkArguments(native, args, resultOut))
+            return CallError;
         bool ok = native->call(args, resultOut);
         return ok ? CallFinished : CallError;
     } else if (target->is<Function>()) {
         Root<Function*> function(target->as<Function>());
-        if (function->requiredArgs() != args.size()) {
-            ostringstream s;
-            s << "Wrong number of arguments:";
-            s << " expected " << dec << function->requiredArgs();
-            s << " but got " << args.size();
-            return raise("TypeError", s.str(), resultOut);
-        }
+        if (!checkArguments(function, args, resultOut))
+            return CallError;
         Root<Frame*> callFrame(newFrame(function));
         if (function->isGenerator()) {
             Root<Value> none(None);
@@ -451,11 +463,15 @@ testcase(interp)
     testException("def foo():\n"
                   "  return 1\n"
                   "foo(1)\n",
-                  "Wrong number of arguments");
+                  "Function takes 0 positional arguments but 1 was given");
+    testException("def foo(x):\n"
+                  "  return 1\n"
+                  "foo(1, 2)\n",
+                  "Function takes 1 positional arguments but 2 were given");
     testException("def foo(a):\n"
                   "  return 1\n"
                   "foo()\n",
-                  "Wrong number of arguments");
+                  "Function takes 1 positional arguments but 0 were given");
 
     testReplacements("def foo(x, y):\n"
                      "  return x.__add__(y)",

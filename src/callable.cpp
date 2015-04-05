@@ -3,13 +3,16 @@
 #include "object.h"
 
 GlobalRoot<Class*> Native::ObjectClass;
+GlobalRoot<Class*> Function::ObjectClass;
+
+Callable::Callable(Traced<Class*> cls, unsigned reqArgs)
+  : Object(cls), reqArgs_(reqArgs)
+{}
 
 void Native::init()
 {
     ObjectClass.init(gc::create<Class>("Native"));
 }
-
-GlobalRoot<Class*> Function::ObjectClass;
 
 void Function::init()
 {
@@ -20,7 +23,7 @@ Function::Function(const vector<Name>& params,
                    Traced<Block*> block,
                    Traced<Frame*> scope,
                    bool isGenerator)
-  : Callable(ObjectClass),
+  : Callable(ObjectClass, params.size()),
     params_(params),
     block_(block),
     scope_(scope),

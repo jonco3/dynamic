@@ -254,6 +254,15 @@ struct Traced : public WrapperMixins<Traced<T>, T>
     Traced(Root<T>& root) : ptr_(root.get()) {}
     Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
 
+    template <typename S>
+    Traced(Root<S>& other)
+        : ptr_(reinterpret_cast<const T&>(other.get()))
+    {
+        static_assert(is_base_of<typename remove_pointer<T>::type,
+                                 typename remove_pointer<S>::type>::value,
+                      "Invalid conversion");
+    }
+
     define_comparisions;
     define_immutable_accessors;
 

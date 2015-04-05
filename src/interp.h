@@ -9,9 +9,10 @@
 
 using namespace std;
 
-struct Instr;
 struct Block;
+struct Callable;
 struct Function;
+struct Instr;
 
 struct Interpreter
 {
@@ -108,6 +109,9 @@ struct Interpreter
         CallFinished
     };
 
+    bool checkArguments(Traced<Callable*> callable,
+                        const TracedVector<Value>& args,
+                        Root<Value>& resultOut);
     CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
                          Root<Value>& resultOut);
     CallStatus raise(string className, string message, Root<Value>& resultOut);

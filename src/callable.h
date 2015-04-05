@@ -12,23 +12,26 @@ using namespace std;
 
 struct Callable : public Object
 {
-    Callable(Traced<Class*> cls) : Object(cls) {}
-    virtual unsigned requiredArgs() = 0;
+    Callable(Traced<Class*> cls, unsigned reqArgs);
+    unsigned requiredArgs() { return reqArgs_; }
+
+  private:
+    unsigned reqArgs_;
 };
 
 struct Native : public Callable
 {
     static void init();
     static GlobalRoot<Class*> ObjectClass;
-    Native() : Callable(ObjectClass) {}
+
+    Native(unsigned reqArgs) : Callable(ObjectClass, reqArgs) {}
     virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) = 0;
 };
 
 struct Native0 : public Native
 {
     typedef bool (*Func)(Root<Value>&);
-    Native0(Func func) : func(func) {}
-    virtual unsigned requiredArgs() { return 0; }
+    Native0(Func func) : Native(0), func(func) {}
     virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
         assert(args.size() == 0);
         return func(resultOut);
@@ -41,8 +44,7 @@ struct Native0 : public Native
 struct Native1 : public Native
 {
     typedef bool (*Func)(Traced<Value>, Root<Value>&);
-    Native1(Func func) : func(func) {}
-    virtual unsigned requiredArgs() { return 1; }
+    Native1(Func func) : Native(1), func(func) {}
 
     virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
         assert(args.size() == 1);
@@ -56,8 +58,7 @@ struct Native1 : public Native
 struct Native2 : public Native
 {
     typedef bool (*Func)(Traced<Value>, Traced<Value>, Root<Value>&);
-    Native2(Func func) : func(func) {}
-    virtual unsigned requiredArgs() { return 2; }
+    Native2(Func func) : Native(2), func(func) {}
 
     virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
         assert(args.size() == 2);
@@ -71,8 +72,7 @@ struct Native2 : public Native
 struct Native3 : public Native
 {
     typedef bool (*Func)(Traced<Value>, Traced<Value>, Traced<Value>, Root<Value>&);
-    Native3(Func func) : func(func) {}
-    virtual unsigned requiredArgs() { return 3; }
+    Native3(Func func) : Native(3), func(func) {}
 
     virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
         assert(args.size() == 3);
@@ -92,8 +92,6 @@ struct Function : public Callable
              Traced<Block*> block,
              Traced<Frame*> scope,
              bool isGenerator = false);
-
-    virtual unsigned requiredArgs() { return params_.size(); }
 
     Name paramName(unsigned i) {
         assert(i < params_.size());
