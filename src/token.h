@@ -115,6 +115,8 @@ struct TokenPos
     string file;
     unsigned line;
     unsigned column;
+
+    TokenPos() : file(""), line(0), column(0) {}
 };
 
 struct Token

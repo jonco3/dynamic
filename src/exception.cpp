@@ -16,16 +16,16 @@ void Exception::init()
 
 void StopIteration::init()
 {
-    Root<Class*> cls(gc::create<Class>("StopIterator"));
-    // todo: make this derive Exception
-    ObjectClass.init(cls);
+    ObjectClass.init(
+        gc::create<Class>("StopIteration", Exception::ObjectClass));
 }
 
-Exception::Exception(Traced<Class*> cls, const string& className, const string& message)
-  : Object(cls)
+Exception::Exception(Traced<Class*> cls, const TokenPos& pos,
+                     const string& message)
+  : Object(cls), pos_(pos)
 {
     Root<Value> classNameValue, messageValue;
-    classNameValue = String::get(className);
+    classNameValue = String::get(cls->name());
     messageValue = String::get(message);
     init(classNameValue, messageValue);
 }

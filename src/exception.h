@@ -3,6 +3,7 @@
 
 #include "object.h"
 #include "string.h"
+#include "token.h"
 
 struct Exception : public Object
 {
@@ -13,18 +14,19 @@ struct Exception : public Object
 
     static bool create(TracedVector<Value> args, Root<Value>& resultOut);
 
-    string fullMessage() const;
-
     string className() const;
     string message() const;
+
+    string fullMessage() const;
 
     virtual void print(ostream& os) const;
 
   protected:
-    Exception(Traced<Class*> cls, const string& className,
-              const string& message);
+    Exception(Traced<Class*> cls, const TokenPos& pos, const string& message);
 
   private:
+    TokenPos pos_;
+
     void init(Traced<Value> className, Traced<Value> message);
 };
 
@@ -33,7 +35,7 @@ struct StopIteration : public Exception
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    StopIteration() : Exception(ObjectClass, "StopIteration", "") {}
+    StopIteration() : Exception(ObjectClass, TokenPos(), "") {}
 };
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);
