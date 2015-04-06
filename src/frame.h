@@ -21,7 +21,7 @@ struct Frame : public Object
     unsigned stackPos() { return stackPos_; }
     Block* block() { return block_; }
 
-    virtual void traceChildren(Tracer& t);
+    virtual void traceChildren(Tracer& t) override;
 
   private:
     Block* block_;

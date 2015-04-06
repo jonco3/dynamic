@@ -102,7 +102,8 @@ struct Function : public Callable
     Frame* scope() const { return scope_; }
     bool isGenerator() { return isGenerator_; }
 
-    virtual void traceChildren(Tracer& t) {
+    virtual void traceChildren(Tracer& t) override {
+        Callable::traceChildren(t);
         gc::trace(t, &block_);
         gc::trace(t, &scope_);
     }

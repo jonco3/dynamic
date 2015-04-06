@@ -42,6 +42,7 @@ GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Frame*> frame)
 
 void GeneratorIter::traceChildren(Tracer& t)
 {
+    Object::traceChildren(t);
     gc::trace(t, &func_);
     gc::trace(t, &frame_);
     for (auto i = savedStack_.begin(); i != savedStack_.end(); i++)

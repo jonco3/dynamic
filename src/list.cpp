@@ -271,6 +271,7 @@ ListIter::ListIter(Traced<ListBase*> list)
 
 void ListIter::traceChildren(Tracer& t)
 {
+    Object::traceChildren(t);
     gc::trace(t, &list_);
 }
 

@@ -39,7 +39,7 @@ struct Cell
 
     void checkValid() const;
 
-    virtual void traceChildren(Tracer& t) = 0;
+    virtual void traceChildren(Tracer& t) {}
     virtual size_t size() const = 0;
     virtual void print(ostream& s) const = 0;
     virtual void sweep() {}

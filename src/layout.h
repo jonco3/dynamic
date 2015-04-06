@@ -28,7 +28,7 @@ struct Layout : public Cell
     Layout* addName(Name name);
     Layout* maybeAddName(Name name);
 
-    virtual void traceChildren(Tracer& t);
+    virtual void traceChildren(Tracer& t) override;
     virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
     virtual void sweep();

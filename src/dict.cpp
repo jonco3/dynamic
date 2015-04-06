@@ -45,6 +45,7 @@ Dict::Dict(const TracedVector<Value>& values)
 
 void Dict::traceChildren(Tracer& t)
 {
+    Object::traceChildren(t);
     for (auto i = entries_.begin(); i != entries_.end(); ++i) {
         Value key = i->first;
 #ifdef DEBUG

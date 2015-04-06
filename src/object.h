@@ -74,7 +74,7 @@ struct Object : public Cell
     // Only for use during initialization
     void init(Traced<Class*> cls);
 
-    virtual void traceChildren(Tracer& t);
+    virtual void traceChildren(Tracer& t) override;
     virtual size_t size() const { return sizeof(*this); }
 
     bool hasOwnAttr(Name name) const;
