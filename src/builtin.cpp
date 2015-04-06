@@ -13,32 +13,31 @@
 
 GlobalRoot<Object*> Builtin;
 
-static bool builtin_hasattr(Traced<Value> v, Traced<Value> name, Root<Value>& resultOut)
+static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    Object* n = name.toObject();
+    Object* n = args[1].toObject();
     if (!n->is<String>()) {
         resultOut = gc::create<Exception>("TypeError",
                                   "hasattr(): attribute name must be string");
         return false;
     }
-    resultOut = Boolean::get(v.toObject()->hasAttr(n->as<String>()->value()));
+    Name name = n->as<String>()->value();
+    resultOut = Boolean::get(args[0].toObject()->hasAttr(name));
     return true;
 }
 
-static bool builtin_object(Root<Value>& resultOut)
+static bool builtin_object(TracedVector<Value> args, Root<Value>& resultOut)
 {
     // todo: the returned object should not allow attributes to be set on it
     resultOut = gc::create<Object>();
     return true;
 }
 
-static bool builtin_isinstance(Traced<Value> value,
-                               Traced<Value> classInfo,
-                               Root<Value>& resultOut)
+static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
 {
     // todo: support tuples etc for classInfo
-    Root<Class*> cls(classInfo.toObject()->as<Class>());
-    resultOut = Boolean::get(value.toObject()->isInstanceOf(cls));
+    Root<Class*> cls(args[1].toObject()->as<Class>());
+    resultOut = Boolean::get(args[0].toObject()->isInstanceOf(cls));
     return true;
 }
 
@@ -46,9 +45,9 @@ void initBuiltins()
 {
     Builtin.init(gc::create<Object>());
     Root<Value> value;
-    value = gc::create<Native2>(builtin_hasattr); Builtin->setAttr("hasattr", value);
-    value = gc::create<Native0>(builtin_object); Builtin->setAttr("object", value);
-    value = gc::create<Native2>(builtin_isinstance); Builtin->setAttr("isinstance", value);
+    value = gc::create<Native>(2, builtin_hasattr); Builtin->setAttr("hasattr", value);
+    value = gc::create<Native>(0, builtin_object); Builtin->setAttr("object", value);
+    value = gc::create<Native>(2, builtin_isinstance); Builtin->setAttr("isinstance", value);
 
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);

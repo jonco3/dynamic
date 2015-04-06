@@ -24,63 +24,16 @@ struct Native : public Callable
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    Native(unsigned reqArgs) : Callable(ObjectClass, reqArgs) {}
-    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) = 0;
-};
+    typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
 
-struct Native0 : public Native
-{
-    typedef bool (*Func)(Root<Value>&);
-    Native0(Func func) : Native(0), func(func) {}
-    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
-        assert(args.size() == 0);
-        return func(resultOut);
+    Native(unsigned reqArgs, Func func);
+
+    bool call(TracedVector<Value> args, Root<Value>& resultOut) const {
+        return func_(args, resultOut);
     }
 
   private:
-    Func func;
-};
-
-struct Native1 : public Native
-{
-    typedef bool (*Func)(Traced<Value>, Root<Value>&);
-    Native1(Func func) : Native(1), func(func) {}
-
-    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
-        assert(args.size() == 1);
-        return func(args[0], resultOut);
-    }
-
-  private:
-    Func func;
-};
-
-struct Native2 : public Native
-{
-    typedef bool (*Func)(Traced<Value>, Traced<Value>, Root<Value>&);
-    Native2(Func func) : Native(2), func(func) {}
-
-    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
-        assert(args.size() == 2);
-        return func(args[0], args[1], resultOut);
-    }
-
-  private:
-    Func func;
-};
-
-struct Native3 : public Native
-{
-    typedef bool (*Func)(Traced<Value>, Traced<Value>, Traced<Value>, Root<Value>&);
-    Native3(Func func) : Native(3), func(func) {}
-
-    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
-        assert(args.size() == 3);
-        return func(args[0], args[1], args[2], resultOut);
-    }
-
-  private:
-    Func func;
+    Func func_;
 };
 
 struct Function : public Callable

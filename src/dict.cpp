@@ -7,31 +7,31 @@
 
 GlobalRoot<Class*> Dict::ObjectClass;
 
-static bool dict_contains(Traced<Value> arg1, Traced<Value> arg2,
-                          Root<Value>& resultOut) {
-    Dict* dict = arg1.toObject()->as<Dict>();
-    return dict->contains(arg2, resultOut);
+static bool dict_contains(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->contains(args[1], resultOut);
 }
 
-static bool dict_getitem(Traced<Value> arg1, Traced<Value> arg2,
-                          Root<Value>& resultOut) {
-    Dict* dict = arg1.toObject()->as<Dict>();
-    return dict->getitem(arg2, resultOut);
+static bool dict_getitem(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->getitem(args[1], resultOut);
 }
 
-static bool dict_setitem(Traced<Value> arg1, Traced<Value> arg2,
-                         Traced<Value> arg3, Root<Value>& resultOut) {
-    Dict* dict = arg1.toObject()->as<Dict>();
-    return dict->setitem(arg2, arg3, resultOut);
+static bool dict_setitem(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->setitem(args[1], args[2], resultOut);
 }
 
 void Dict::init()
 {
     Root<Class*> cls(gc::create<Class>("dict"));
     Root<Value> value;
-    value = gc::create<Native2>(dict_contains);  cls->setAttr("__contains__", value);
-    value = gc::create<Native2>(dict_getitem);   cls->setAttr("__getitem__", value);
-    value = gc::create<Native3>(dict_setitem);   cls->setAttr("__setitem__", value);
+    value = gc::create<Native>(2, dict_contains);  cls->setAttr("__contains__", value);
+    value = gc::create<Native>(2, dict_getitem);   cls->setAttr("__getitem__", value);
+    value = gc::create<Native>(3, dict_setitem);   cls->setAttr("__setitem__", value);
     ObjectClass.init(cls);
 }
 

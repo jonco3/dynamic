@@ -5,9 +5,9 @@
 
 GlobalRoot<Class*> GeneratorIter::ObjectClass;
 
-static bool generatorIter_iter(Traced<Value> arg, Root<Value>& resultOut)
+static bool generatorIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    GeneratorIter* i = arg.toObject()->as<GeneratorIter>();
+    GeneratorIter* i = args[0].toObject()->as<GeneratorIter>();
     return i->iter(resultOut);
 }
 
@@ -15,7 +15,7 @@ void GeneratorIter::init()
 {
     Root<Class*> cls(gc::create<Class>("GeneratorIterator"));
     Root<Value> value;
-    value = gc::create<Native1>(generatorIter_iter);
+    value = gc::create<Native>(1, generatorIter_iter);
     cls->setAttr("__iter__", value);
 
     Root<Layout*> layout(Frame::InitialLayout);

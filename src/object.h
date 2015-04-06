@@ -115,9 +115,12 @@ struct Class : public Object
 
 struct NativeClass : public Class
 {
-    typedef bool (*CreateFunc)(TracedVector<Value>, Root<Value>&);
-    NativeClass(string name, unsigned reqArgs, CreateFunc createFunc,
-                Traced<Layout*> initialLayout = Class::InitialLayout);
+    static GlobalRoot<Layout*> InitialLayout;
+
+    typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
+
+    NativeClass(string name, unsigned reqArgs, Func createFunc,
+                Traced<Layout*> initialLayout = InitialLayout);
 };
 
 #endif

@@ -14,6 +14,11 @@ void Native::init()
     ObjectClass.init(gc::create<Class>("Native"));
 }
 
+Native::Native(unsigned reqArgs, Func func)
+  : Callable(ObjectClass, reqArgs),
+    func_(func)
+{}
+
 void Function::init()
 {
     ObjectClass.init(gc::create<Class>("Function"));

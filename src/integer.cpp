@@ -32,45 +32,43 @@ struct CompareEQ        { static int op(int a, int b) { return a == b; } };
 struct CompareNE        { static int op(int a, int b) { return a != b; } };
 
 template <typename T>
-static bool intUnaryOp(Traced<Value> arg, Root<Value>& resultOut)
+static bool intUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    if (arg.isInt32())
-        resultOut = Integer::get(T::op(arg.asInt32()));
+    if (args[0].isInt32())
+        resultOut = Integer::get(T::op(args[0].asInt32()));
     else
         resultOut = NotImplemented;
     return true;
 }
 
 template <typename T>
-static bool intBinaryOp(Traced<Value> arg1, Traced<Value> arg2,
-                        Root<Value>& resultOut)
+static bool intBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    if (arg1.isInt32() && arg2.isInt32())
-        resultOut = Integer::get(T::op(arg1.asInt32(), arg2.asInt32()));
+    if (args[0].isInt32() && args[1].isInt32())
+        resultOut = Integer::get(T::op(args[0].asInt32(), args[1].asInt32()));
     else
         resultOut = NotImplemented;
     return true;
 }
 
 template <typename T>
-static bool intCompareOp(Traced<Value> arg1, Traced<Value> arg2,
-                         Root<Value>& resultOut)
+static bool intCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    if (arg1.isInt32() && arg2.isInt32())
-        resultOut = Boolean::get(T::op(arg1.asInt32(), arg2.asInt32()));
+    if (args[0].isInt32() && args[1].isInt32())
+        resultOut = Boolean::get(T::op(args[0].asInt32(), args[1].asInt32()));
     else
         resultOut = NotImplemented;
     return true;
 }
 
-static bool intStr(Traced<Value> arg, Root<Value>& resultOut) {
-    if (!arg.isInt32()) {
+static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
+    if (!args[0].isInt32()) {
         resultOut = NotImplemented;
         return true;
     }
 
     ostringstream s;
-    s << dec << arg.asInt32();
+    s << dec << args[0].asInt32();
     resultOut = String::get(s.str());
     return true;
 }
@@ -78,12 +76,10 @@ static bool intStr(Traced<Value> arg, Root<Value>& resultOut) {
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Integer*> Integer::Zero;
 
-template <typename T>
-static void initNativeMethod(Traced<Class*> cls, Name name, typename T::Func f)
+static void initNativeMethod(Traced<Class*> cls, Name name, unsigned reqArgs,
+                             Native::Func func)
 {
-    static_assert(is_base_of<Native, T>(), "Type parameter must derive Native");
-    Root<Value> value;
-    value = gc::create<T>(f);
+    Root<Value> value(gc::create<Native>(reqArgs, func));
     cls->setAttr(name, value);
 }
 
@@ -91,28 +87,28 @@ void Integer::init()
 {
     Root<Class*> cls(gc::create<Class>("int"));
     Root<Value> value;
-    initNativeMethod<Native1>(cls, "__str__", intStr);
-    initNativeMethod<Native1>(cls, "__pos__", intUnaryOp<UnaryPlus>);
-    initNativeMethod<Native1>(cls, "__neg__", intUnaryOp<UnaryMinus>);
-    initNativeMethod<Native1>(cls, "__invert__", intUnaryOp<UnaryInvert>);
-    initNativeMethod<Native2>(cls, "__lt__", intCompareOp<CompareLT>);
-    initNativeMethod<Native2>(cls, "__le__", intCompareOp<CompareLE>);
-    initNativeMethod<Native2>(cls, "__gt__", intCompareOp<CompareGT>);
-    initNativeMethod<Native2>(cls, "__ge__", intCompareOp<CompareGE>);
-    initNativeMethod<Native2>(cls, "__eq__", intCompareOp<CompareEQ>);
-    initNativeMethod<Native2>(cls, "__ne__", intCompareOp<CompareNE>);
-    initNativeMethod<Native2>(cls, "__or__", intBinaryOp<BinaryOr>);
-    initNativeMethod<Native2>(cls, "__xor__", intBinaryOp<BinaryXor>);
-    initNativeMethod<Native2>(cls, "__and__", intBinaryOp<BinaryAnd>);
-    initNativeMethod<Native2>(cls, "__lshift__", intBinaryOp<BinaryLeftShift>);
-    initNativeMethod<Native2>(cls, "__rshift__", intBinaryOp<BinaryRightShift>);
-    initNativeMethod<Native2>(cls, "__add__", intBinaryOp<BinaryPlus>);
-    initNativeMethod<Native2>(cls, "__sub__", intBinaryOp<BinaryMinus>);
-    initNativeMethod<Native2>(cls, "__mul__", intBinaryOp<BinaryMultiply>);
-    initNativeMethod<Native2>(cls, "__div__", intBinaryOp<BinaryDivide>);
-    initNativeMethod<Native2>(cls, "__floordiv__", intBinaryOp<BinaryIntDivide>);
-    initNativeMethod<Native2>(cls, "__mod__", intBinaryOp<BinaryModulo>);
-    initNativeMethod<Native2>(cls, "__pow__", intBinaryOp<BinaryPower>);
+    initNativeMethod(cls, "__str__", 1, intStr);
+    initNativeMethod(cls, "__pos__", 1, intUnaryOp<UnaryPlus>);
+    initNativeMethod(cls, "__neg__", 1, intUnaryOp<UnaryMinus>);
+    initNativeMethod(cls, "__invert__", 1, intUnaryOp<UnaryInvert>);
+    initNativeMethod(cls, "__lt__", 2, intCompareOp<CompareLT>);
+    initNativeMethod(cls, "__le__", 2, intCompareOp<CompareLE>);
+    initNativeMethod(cls, "__gt__", 2, intCompareOp<CompareGT>);
+    initNativeMethod(cls, "__ge__", 2, intCompareOp<CompareGE>);
+    initNativeMethod(cls, "__eq__", 2, intCompareOp<CompareEQ>);
+    initNativeMethod(cls, "__ne__", 2, intCompareOp<CompareNE>);
+    initNativeMethod(cls, "__or__", 2, intBinaryOp<BinaryOr>);
+    initNativeMethod(cls, "__xor__", 2, intBinaryOp<BinaryXor>);
+    initNativeMethod(cls, "__and__", 2, intBinaryOp<BinaryAnd>);
+    initNativeMethod(cls, "__lshift__", 2, intBinaryOp<BinaryLeftShift>);
+    initNativeMethod(cls, "__rshift__", 2, intBinaryOp<BinaryRightShift>);
+    initNativeMethod(cls, "__add__", 2, intBinaryOp<BinaryPlus>);
+    initNativeMethod(cls, "__sub__", 2, intBinaryOp<BinaryMinus>);
+    initNativeMethod(cls, "__mul__", 2, intBinaryOp<BinaryMultiply>);
+    initNativeMethod(cls, "__div__", 2, intBinaryOp<BinaryDivide>);
+    initNativeMethod(cls, "__floordiv__", 2, intBinaryOp<BinaryIntDivide>);
+    initNativeMethod(cls, "__mod__", 2, intBinaryOp<BinaryModulo>);
+    initNativeMethod(cls, "__pow__", 2, intBinaryOp<BinaryPower>);
     ObjectClass.init(cls);
 
     Zero.init(gc::create<Integer>(0));

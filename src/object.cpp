@@ -24,12 +24,15 @@ struct NoneObject : public Object
 
 static const Name ClassAttr = "__class__";
 static const Name BaseAttr = "__base__";
+static const Name NewAttr = "__new__";
 
 GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
 
 GlobalRoot<Class*> Class::ObjectClass;
 GlobalRoot<Layout*> Class::InitialLayout;
+
+GlobalRoot<Layout*> NativeClass::InitialLayout;
 
 GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
@@ -293,35 +296,24 @@ void Class::print(ostream& s) const
     s << "Class " << name_;
 }
 
-struct NativeNew : public Native
-{
-    NativeNew(Traced<NativeClass*> cls, unsigned reqArgs,
-              NativeClass::CreateFunc createFunc)
-      : Native(reqArgs), createFunc_(createFunc) {}
-
-    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
-        return createFunc_(args, resultOut);
-    }
-
-  private:
-    NativeClass::CreateFunc createFunc_;
-};
-
-NativeClass::NativeClass(string name, unsigned reqArgs, CreateFunc createFunc,
+NativeClass::NativeClass(string name, unsigned reqArgs, Func createFunc,
                          Traced<Layout*> initialLayout)
   : Class(name, None, initialLayout)
 {
-    assert(reqArgs >= 1 && reqArgs <= 3);
-    Root<NativeClass*> self(this);
-    Root<Value> newFunc(gc::create<NativeNew>(self, reqArgs, createFunc));
+    assert(reqArgs >= 1); // Class is passed as first argument.
+    assert(initialLayout->subsumes(InitialLayout));
+    Root<Value> newFunc(gc::create<Native>(reqArgs, createFunc));
     setAttr("__new__", newFunc);
 }
 
 void initObject()
 {
     Object::InitialLayout.init(gc::create<Layout>(nullptr, ClassAttr));
-    Class::InitialLayout.init(gc::create<Layout>(Object::InitialLayout,
-                                                 BaseAttr));
+    Class::InitialLayout.init(
+        gc::create<Layout>(Object::InitialLayout, BaseAttr));
+    NativeClass::InitialLayout.init(
+        gc::create<Layout>(Class::InitialLayout, NewAttr));
+
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
     Object::ObjectClass.init(gc::create<Class>("Object"));

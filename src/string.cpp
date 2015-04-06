@@ -7,20 +7,20 @@
 
 #include <iostream>
 
-static bool str_add(Traced<Value> arg1, Traced<Value> arg2, Root<Value>& resultOut) {
-    const string& a = arg1.toObject()->as<String>()->value();
-    const string& b = arg2.toObject()->as<String>()->value();
+static bool str_add(TracedVector<Value> args, Root<Value>& resultOut) {
+    const string& a = args[0].toObject()->as<String>()->value();
+    const string& b = args[1].toObject()->as<String>()->value();
     resultOut = String::get(a + b);
     return true;
 }
 
-static bool str_str(Traced<Value> arg, Root<Value>& resultOut) {
-    resultOut = arg;
+static bool str_str(TracedVector<Value> args, Root<Value>& resultOut) {
+    resultOut = args[0];
     return true;
 }
 
-static bool str_print(Traced<Value> arg, Root<Value>& resultOut) {
-    const string& a = arg.toObject()->as<String>()->value();
+static bool str_print(TracedVector<Value> args, Root<Value>& resultOut) {
+    const string& a = args[0].toObject()->as<String>()->value();
     cout << a << endl;
     resultOut = None;
     return true;
@@ -33,9 +33,9 @@ void String::init()
 {
     Root<Class*> cls(gc::create<Class>("str"));
     Root<Value> value;
-    value = gc::create<Native2>(str_add);    cls->setAttr("__add__", value);
-    value = gc::create<Native1>(str_str);    cls->setAttr("__str__", value);
-    value = gc::create<Native1>(str_print);  cls->setAttr("_print", value);
+    value = gc::create<Native>(2, str_add);    cls->setAttr("__add__", value);
+    value = gc::create<Native>(1, str_str);    cls->setAttr("__str__", value);
+    value = gc::create<Native>(1, str_print);  cls->setAttr("_print", value);
     ObjectClass.init(cls);
     EmptyString.init(gc::create<String>(""));
 }

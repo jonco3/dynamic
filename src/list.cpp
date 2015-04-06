@@ -47,50 +47,47 @@ static ListBase* asListBase(Object *o)
     return static_cast<ListBase*>(o);
 }
 
-static bool listBase_len(Traced<Value> arg, Root<Value>& resultOut)
+static bool listBase_len(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    ListBase* l = asListBase(arg.toObject());
+    ListBase* l = asListBase(args[0].toObject());
     return l->len(resultOut);
 }
 
-static bool listBase_getitem(Traced<Value> arg1, Traced<Value> arg2,
-                             Root<Value>& resultOut)
+static bool listBase_getitem(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    ListBase* l = asListBase(arg1.toObject());
-    return l->getitem(arg2, resultOut);
+    ListBase* l = asListBase(args[0].toObject());
+    return l->getitem(args[1], resultOut);
 }
 
-static bool listBase_contains(Traced<Value> arg1, Traced<Value> arg2,
-                              Root<Value>& resultOut)
+static bool listBase_contains(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    ListBase* l = asListBase(arg1.toObject());
-    return l->contains(arg2, resultOut);
+    ListBase* l = asListBase(args[0].toObject());
+    return l->contains(args[1], resultOut);
 }
 
-static bool listBase_iter(Traced<Value> arg, Root<Value>& resultOut)
+static bool listBase_iter(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    ListBase* l = asListBase(arg.toObject());
+    ListBase* l = asListBase(args[0].toObject());
     return l->iter(resultOut);
 }
 
 static void listBase_initNatives(Traced<Class*> cls)
 {
     Root<Value> value;
-    value = gc::create<Native1>(listBase_len); cls->setAttr("__len__", value);
-    value = gc::create<Native2>(listBase_getitem); cls->setAttr("__getitem__", value);
-    value = gc::create<Native2>(listBase_contains); cls->setAttr("__contains__", value);
-    value = gc::create<Native1>(listBase_iter); cls->setAttr("__iter__", value);
+    value = gc::create<Native>(1, listBase_len); cls->setAttr("__len__", value);
+    value = gc::create<Native>(2, listBase_getitem); cls->setAttr("__getitem__", value);
+    value = gc::create<Native>(2, listBase_contains); cls->setAttr("__contains__", value);
+    value = gc::create<Native>(1, listBase_iter); cls->setAttr("__iter__", value);
 }
 
-static bool list_setitem(Traced<Value> arg1, Traced<Value> arg2, Traced<Value> arg3,
-                         Root<Value>& resultOut) {
-    List* list = arg1.toObject()->as<List>();
-    return list->setitem(arg2, arg3, resultOut);
+static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
+    List* list = args[0].toObject()->as<List>();
+    return list->setitem(args[1], args[2], resultOut);
 }
 
-static bool list_append(Traced<Value> arg1, Traced<Value> arg2, Root<Value>& resultOut) {
-    List* list = arg1.toObject()->as<List>();
-    return list->append(arg2, resultOut);
+static bool list_append(TracedVector<Value> args, Root<Value>& resultOut) {
+    List* list = args[0].toObject()->as<List>();
+    return list->append(args[1], resultOut);
 }
 
 ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
@@ -189,8 +186,8 @@ void List::init()
     Root<Class*> cls(gc::create<Class>("list"));
     listBase_initNatives(cls);
     Root<Value> value;
-    value = gc::create<Native3>(list_setitem); cls->setAttr("__setitem__", value);
-    value = gc::create<Native2>(list_append); cls->setAttr("append", value);
+    value = gc::create<Native>(3, list_setitem); cls->setAttr("__setitem__", value);
+    value = gc::create<Native>(2, list_append); cls->setAttr("append", value);
     ObjectClass.init(cls);
 }
 
@@ -243,15 +240,15 @@ bool List::append(Traced<Value> element, Root<Value>& resultOut)
     return true;
 }
 
-static bool listIter_iter(Traced<Value> arg, Root<Value>& resultOut)
+static bool listIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    ListIter* i = arg.toObject()->as<ListIter>();
+    ListIter* i = args[0].toObject()->as<ListIter>();
     return i->iter(resultOut);
 }
 
-static bool listIter_next(Traced<Value> arg, Root<Value>& resultOut)
+static bool listIter_next(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    ListIter* i = arg.toObject()->as<ListIter>();
+    ListIter* i = args[0].toObject()->as<ListIter>();
     return i->next(resultOut);
 }
 
@@ -259,8 +256,8 @@ void ListIter::init()
 {
     Root<Class*> cls(gc::create<Class>("listiterator"));
     Root<Value> value;
-    value = gc::create<Native1>(listIter_iter); cls->setAttr("__iter__", value);
-    value = gc::create<Native1>(listIter_next); cls->setAttr("next", value);
+    value = gc::create<Native>(1, listIter_iter); cls->setAttr("__iter__", value);
+    value = gc::create<Native>(1, listIter_next); cls->setAttr("next", value);
     ObjectClass.init(cls);
 }
 
