@@ -186,7 +186,8 @@ bool Interpreter::checkArguments(Traced<Callable*> callable,
 {
     if (callable->requiredArgs() != args.size()) {
         ostringstream s;
-        s << "Function takes " << dec << callable->requiredArgs();
+        s << callable->name() << "()";
+        s << " takes " << dec << callable->requiredArgs();
         s << " positional arguments but " << args.size();
         if (args.size() == 1)
             s << " was given";
@@ -473,15 +474,15 @@ testcase(interp)
     testException("def foo():\n"
                   "  return 1\n"
                   "foo(1)\n",
-                  "Function takes 0 positional arguments but 1 was given");
+                  "foo() takes 0 positional arguments but 1 was given");
     testException("def foo(x):\n"
                   "  return 1\n"
                   "foo(1, 2)\n",
-                  "Function takes 1 positional arguments but 2 were given");
+                  "foo() takes 1 positional arguments but 2 were given");
     testException("def foo(a):\n"
                   "  return 1\n"
                   "foo()\n",
-                  "Function takes 1 positional arguments but 0 were given");
+                  "foo() takes 1 positional arguments but 0 were given");
 
     testReplacements("def foo(x, y):\n"
                      "  return x.__add__(y)",
