@@ -613,7 +613,8 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxLambda& a) {
         Root<Block*> exprBlock(BlockBuilder().buildLambda(this, a.params(), a.expr()));
         exprBlock->append(gc::create<InstrReturn>());
-        block->append(gc::create<InstrLambda>(a.params(), exprBlock));
+        block->append(gc::create<InstrLambda>("(lambda)", a.params(),
+                                              exprBlock));
     }
 
     virtual void visit(const SyntaxDef& s) {
@@ -625,8 +626,8 @@ struct BlockBuilder : public SyntaxVisitor
             exprBlock =
                 BlockBuilder().buildFunctionBody(this, s.params(), s.expr());
         }
-        block->append(
-            gc::create<InstrLambda>(s.params(), exprBlock, s.isGenerator()));
+        block->append(gc::create<InstrLambda>(s.id(), s.params(), exprBlock,
+                                              s.isGenerator()));
         if (parent)
             block->append(gc::create<InstrSetLocal>(s.id()));
         else
@@ -640,7 +641,7 @@ struct BlockBuilder : public SyntaxVisitor
         suite->append(gc::create<InstrReturn>());
 
         vector<Name> params = { ClassFunctionParam };
-        block->append(gc::create<InstrLambda>(params, suite));
+        block->append(gc::create<InstrLambda>(s.id(), params, suite));
         s.bases()->accept(*this);
         block->append(gc::create<InstrCall>(1));
         if (parent)

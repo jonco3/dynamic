@@ -23,7 +23,7 @@ void GeneratorIter::init()
     block->append(gc::create<InstrReturn>());
     static vector<Name> params = { "self" };
     Root<Frame*> scope; // todo: allow construction of traced for nullptr
-    Root<Value> value(gc::create<Function>(params, block, scope));
+    Root<Value> value(gc::create<Function>("next", params, block, scope));
     ObjectClass->setAttr("next", value);
 }
 

@@ -227,11 +227,20 @@ bool InstrAnd::execute(Interpreter& interp)
     return true;
 }
 
+InstrLambda::InstrLambda(Name name, const vector<Name>& params, Block* block,
+                         bool isGenerator)
+  : funcName_(name),
+    params_(params),
+    block_(block),
+    isGenerator_(isGenerator)
+{}
+
 bool InstrLambda::execute(Interpreter& interp)
 {
     Root<Block*> block(block_);
     Root<Frame*> frame(interp.getFrame(0));
-    Object* obj = gc::create<Function>(params_, block, frame, isGenerator());
+    Object* obj = gc::create<Function>(funcName_, params_, block, frame,
+                                       isGenerator());
     interp.pushStack(Value(obj));
     return true;
 }

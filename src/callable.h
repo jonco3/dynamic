@@ -12,10 +12,12 @@ using namespace std;
 
 struct Callable : public Object
 {
-    Callable(Traced<Class*> cls, unsigned reqArgs);
+    Callable(Traced<Class*> cls, Name name, unsigned reqArgs);
+    Name name() { return name_; }
     unsigned requiredArgs() { return reqArgs_; }
 
   private:
+    Name name_;
     unsigned reqArgs_;
 };
 
@@ -26,7 +28,7 @@ struct Native : public Callable
 
     typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
 
-    Native(unsigned reqArgs, Func func);
+    Native(Name name, unsigned reqArgs, Func func);
 
     bool call(TracedVector<Value> args, Root<Value>& resultOut) const {
         return func_(args, resultOut);
@@ -41,7 +43,8 @@ struct Function : public Callable
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    Function(const vector<Name>& params,
+    Function(Name name,
+             const vector<Name>& params,
              Traced<Block*> block,
              Traced<Frame*> scope,
              bool isGenerator = false);

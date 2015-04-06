@@ -317,9 +317,10 @@ struct InstrLambda : public Instr
 {
     define_instr_members(Instr_Lambda, "Lambda");
 
-  InstrLambda(const vector<Name>& params, Block* block, bool isGenerator = false)
-      : params_(params), block_(block), isGenerator_(isGenerator) {}
+    InstrLambda(Name name, const vector<Name>& params, Block* block,
+                bool isGenerator = false);
 
+    Name functionName() { return funcName_; }
     Block* block() const { return block_; }
 
     bool isGenerator() const { return isGenerator_; }
@@ -336,6 +337,7 @@ struct InstrLambda : public Instr
     }
 
   private:
+    Name funcName_;
     vector<Name> params_;
     Block* block_;
     bool isGenerator_;
