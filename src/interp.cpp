@@ -64,7 +64,8 @@ bool Interpreter::run(Value& valueOut)
             Object* obj = valueOut.asObject();
 #endif
             assert(obj);
-            assert(obj->isInstanceOf(Exception::ObjectClass));
+            assert(obj->isInstanceOf(Exception::ObjectClass) ||
+                   obj->is<StopIteration>() /* todo */);
             while (instrp)
                 popFrame();
             return false;
