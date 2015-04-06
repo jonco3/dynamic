@@ -40,6 +40,11 @@ inline bool Value::isTrue() const
     return toObject()->isTrue();
 }
 
+inline bool Value::isInstanceOf(Traced<Class*> cls) const
+{
+    return toObject()->isInstanceOf(cls);
+}
+
 inline bool Value::isInt32() const
 {
     if (kind() == IntKind)
@@ -124,6 +129,18 @@ template <typename W>
 inline bool WrapperMixins<W, Value>::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
     return get()->maybeGetAttr(name, valueOut);
+}
+
+template <typename W>
+inline bool WrapperMixins<W, Value>::isTrue() const
+{
+    return get()->isTrue();
+}
+
+template <typename W>
+inline bool WrapperMixins<W, Value>::isInstanceOf(Traced<Class*> cls) const
+{
+    return get()->isInstanceOf(cls);
 }
 
 #endif

@@ -11,7 +11,7 @@ struct Exception : public Object
 
     Exception(const string& className, const string& message);
 
-    void __init__(Traced<Value> className, Traced<Value> message);
+    static bool create(TracedVector<Value> args, Root<Value>& resultOut);
 
     string fullMessage() const;
 
@@ -21,7 +21,11 @@ struct Exception : public Object
     virtual void print(ostream& os) const;
 
   protected:
-    Exception(Traced<Class*> cls, const string& className, const string& message);
+    Exception(Traced<Class*> cls, const string& className,
+              const string& message);
+
+  private:
+    void init(Traced<Value> className, Traced<Value> message);
 };
 
 struct StopIteration : public Exception
@@ -31,5 +35,7 @@ struct StopIteration : public Exception
 
     StopIteration() : Exception(ObjectClass, "StopIteration", "") {}
 };
+
+bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);
 
 #endif

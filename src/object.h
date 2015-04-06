@@ -62,7 +62,7 @@ struct Object : public Cell
     void extend(Traced<Layout*> layout);
 
     bool isTrue() const;
-    bool isInstanceOf(Traced<Class*> cls);
+    bool isInstanceOf(Traced<Class*> cls) const;
 
     virtual bool equals(Object* other) const { return this == other; }
     virtual size_t hash() const { return size_t(this); }
@@ -111,6 +111,13 @@ struct Class : public Object
     void init(Traced<Object*> base);
 
     friend void initObject();
+};
+
+struct NativeClass : public Class
+{
+    typedef bool (*CreateFunc)(TracedVector<Value>, Root<Value>&);
+    NativeClass(string name, unsigned reqArgs, CreateFunc createFunc,
+                Traced<Layout*> initialLayout = Class::InitialLayout);
 };
 
 #endif

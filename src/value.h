@@ -54,6 +54,7 @@ struct Value
     size_t hash() const;
 
     inline bool isTrue() const;
+    inline bool isInstanceOf(Traced<Class*> cls) const;
 
   private:
     enum Kind
@@ -88,6 +89,8 @@ struct WrapperMixins<W, Value>
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     inline Class* type() const;
+    inline bool isTrue() const;
+    inline bool isInstanceOf(Traced<Class*> cls) const;
 
   private:
     const Value* get() const {

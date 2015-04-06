@@ -1,6 +1,7 @@
 #include "object.h"
 
 #include "bool.h"
+#include "callable.h"
 #include "exception.h"
 #include "integer.h"
 #include "singletons.h"
@@ -254,7 +255,7 @@ bool Object::isTrue() const
         this != Integer::Zero;
 }
 
-bool Object::isInstanceOf(Traced<Class*> cls)
+bool Object::isInstanceOf(Traced<Class*> cls) const
 {
     Object* obj = getOwnAttr("__class__").toObject();
     do {
@@ -290,6 +291,30 @@ void Class::init(Traced<Object*> base)
 void Class::print(ostream& s) const
 {
     s << "Class " << name_;
+}
+
+struct NativeNew : public Native
+{
+    NativeNew(Traced<NativeClass*> cls, unsigned reqArgs,
+              NativeClass::CreateFunc createFunc)
+      : Native(reqArgs), createFunc_(createFunc) {}
+
+    virtual bool call(TracedVector<Value> args, Root<Value>& resultOut) {
+        return createFunc_(args, resultOut);
+    }
+
+  private:
+    NativeClass::CreateFunc createFunc_;
+};
+
+NativeClass::NativeClass(string name, unsigned reqArgs, CreateFunc createFunc,
+                         Traced<Layout*> initialLayout)
+  : Class(name, None, initialLayout)
+{
+    assert(reqArgs >= 1 && reqArgs <= 3);
+    Root<NativeClass*> self(this);
+    Root<Value> newFunc(gc::create<NativeNew>(self, reqArgs, createFunc));
+    setAttr("__new__", newFunc);
 }
 
 void initObject()

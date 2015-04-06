@@ -60,8 +60,11 @@ bool Interpreter::run(Value& valueOut)
 #ifdef TRACE_INTERP
             cerr << "Error: " << valueOut << endl;
 #endif
-            assert(valueOut.asObject()->is<Exception>() ||
-                   valueOut.asObject()->is<StopIteration>());
+#ifdef DEBUG
+            Object* obj = valueOut.asObject();
+#endif
+            assert(obj);
+            assert(obj->isInstanceOf(Exception::ObjectClass));
             while (instrp)
                 popFrame();
             return false;
@@ -227,26 +230,33 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return CallStarted;
     } else if (target->is<Class>()) {
         Root<Class*> cls(target->as<Class>());
-        Root<Object*> instance(gc::create<Object>(cls));  // todo: maybe call __new__
-        Root<Value> initFunc;
-        if (!target->maybeGetAttr("__init__", initFunc)) {
-            if (args.size() != 0)
-                return raise("TypeError", "this constructor takes no arguments", resultOut);
-            resultOut = instance;
-            return CallFinished;
+        Root<Value> newFunc;
+        if (target->maybeGetAttr("__new__", newFunc)) {
+            RootVector<Value> newArgs;
+            newArgs.push_back(Value(cls));
+            for (unsigned i = 0; i < args.size(); i++)
+                newArgs.push_back(args[i]);
+            if (!call(newFunc, newArgs, resultOut))
+                return CallError;
+        } else {
+            resultOut = gc::create<Object>(cls);  // todo: do we need this?
         }
-
-        RootVector<Value> initArgs;
-        initArgs.push_back(Value(instance));
-        for (unsigned i = 0; i < args.size(); i++)
-            initArgs.push_back(args[i]);
-        if (!call(initFunc, initArgs, resultOut))
-            return CallError;
-
-        if (resultOut.get().toObject() != None)
-            return raise("TypeError", "__init__() should return None", resultOut);
-
-        resultOut = instance;
+        if (resultOut.isInstanceOf(cls)) {
+            Root<Value> initFunc;
+            if (target->maybeGetAttr("__init__", initFunc)) {
+                Root<Value> initResult;
+                RootVector<Value> initArgs;
+                initArgs.push_back(resultOut);
+                for (unsigned i = 0; i < args.size(); i++)
+                    initArgs.push_back(args[i]);
+                if (!call(initFunc, initArgs, initResult))
+                    return CallError;
+                if (initResult.get().toObject() != None) {
+                    return raise("TypeError",
+                                 "__init__() should return None", resultOut);
+                }
+            }
+        }
         return CallFinished;
     } else {
         return raise("TypeError", "object is not callable:" + repr(target), resultOut);
