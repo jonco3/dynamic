@@ -302,8 +302,8 @@ NativeClass::NativeClass(string name, unsigned reqArgs, Func createFunc,
 {
     assert(reqArgs >= 1); // Class is passed as first argument.
     assert(initialLayout->subsumes(InitialLayout));
-    Root<Value> newFunc(gc::create<Native>(reqArgs, createFunc));
-    setAttr("__new__", newFunc);
+    Root<NativeClass*> self(this);
+    initNativeMethod(self, "__new__", reqArgs, createFunc);
 }
 
 void initObject()

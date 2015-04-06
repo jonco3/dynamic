@@ -74,10 +74,10 @@ static bool listBase_iter(TracedVector<Value> args, Root<Value>& resultOut)
 static void listBase_initNatives(Traced<Class*> cls)
 {
     Root<Value> value;
-    value = gc::create<Native>(1, listBase_len); cls->setAttr("__len__", value);
-    value = gc::create<Native>(2, listBase_getitem); cls->setAttr("__getitem__", value);
-    value = gc::create<Native>(2, listBase_contains); cls->setAttr("__contains__", value);
-    value = gc::create<Native>(1, listBase_iter); cls->setAttr("__iter__", value);
+    initNativeMethod(cls, "__len__", 1, listBase_len);
+    initNativeMethod(cls, "__getitem__", 2, listBase_getitem);
+    initNativeMethod(cls, "__contains__", 2, listBase_contains);
+    initNativeMethod(cls, "__iter__", 1, listBase_iter);
 }
 
 static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
@@ -183,12 +183,10 @@ void Tuple::print(ostream& s) const
 
 void List::init()
 {
-    Root<Class*> cls(gc::create<Class>("list"));
-    listBase_initNatives(cls);
-    Root<Value> value;
-    value = gc::create<Native>(3, list_setitem); cls->setAttr("__setitem__", value);
-    value = gc::create<Native>(2, list_append); cls->setAttr("append", value);
-    ObjectClass.init(cls);
+    ObjectClass.init(gc::create<Class>("list"));
+    listBase_initNatives(ObjectClass);
+    initNativeMethod(ObjectClass, "__setitem__", 3, list_setitem);
+    initNativeMethod(ObjectClass, "append", 2, list_append);
 }
 
 List::List(const TracedVector<Value>& values)
@@ -254,11 +252,9 @@ static bool listIter_next(TracedVector<Value> args, Root<Value>& resultOut)
 
 void ListIter::init()
 {
-    Root<Class*> cls(gc::create<Class>("listiterator"));
-    Root<Value> value;
-    value = gc::create<Native>(1, listIter_iter); cls->setAttr("__iter__", value);
-    value = gc::create<Native>(1, listIter_next); cls->setAttr("next", value);
-    ObjectClass.init(cls);
+    ObjectClass.init(gc::create<Class>("listiterator"));
+    initNativeMethod(ObjectClass, "__iter__", 1, listIter_iter);
+    initNativeMethod(ObjectClass, "next", 1, listIter_next);
 }
 
 ListIter::ListIter(Traced<ListBase*> list)

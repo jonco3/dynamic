@@ -35,4 +35,11 @@ Function::Function(const vector<Name>& params,
     isGenerator_(isGenerator)
 {}
 
+void initNativeMethod(Traced<Object*> cls, Name name, unsigned reqArgs,
+                             Native::Func func)
+{
+    Root<Value> value(gc::create<Native>(reqArgs, func));
+    cls->setAttr(name, value);
+}
+
 //here

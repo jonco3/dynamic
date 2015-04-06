@@ -13,10 +13,8 @@ static bool generatorIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
 
 void GeneratorIter::init()
 {
-    Root<Class*> cls(gc::create<Class>("GeneratorIterator"));
-    Root<Value> value;
-    value = gc::create<Native>(1, generatorIter_iter);
-    cls->setAttr("__iter__", value);
+    ObjectClass.init(gc::create<Class>("GeneratorIterator"));
+    initNativeMethod(ObjectClass, "__iter__", 1, generatorIter_iter);
 
     Root<Layout*> layout(Frame::InitialLayout);
     layout = layout->addName("self");
@@ -25,10 +23,8 @@ void GeneratorIter::init()
     block->append(gc::create<InstrReturn>());
     static vector<Name> params = { "self" };
     Root<Frame*> scope; // todo: allow construction of traced for nullptr
-    value = gc::create<Function>(params, block, scope);
-    cls->setAttr("next", value);
-
-    ObjectClass.init(cls);
+    Root<Value> value(gc::create<Function>(params, block, scope));
+    ObjectClass->setAttr("next", value);
 }
 
 GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Frame*> frame)

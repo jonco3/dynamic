@@ -76,13 +76,6 @@ static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Integer*> Integer::Zero;
 
-static void initNativeMethod(Traced<Class*> cls, Name name, unsigned reqArgs,
-                             Native::Func func)
-{
-    Root<Value> value(gc::create<Native>(reqArgs, func));
-    cls->setAttr(name, value);
-}
-
 void Integer::init()
 {
     Root<Class*> cls(gc::create<Class>("int"));

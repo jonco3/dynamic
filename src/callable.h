@@ -70,5 +70,7 @@ struct Function : public Callable
     bool isGenerator_;
 };
 
+void initNativeMethod(Traced<Object*> cls, Name name, unsigned reqArgs,
+                      Native::Func func);
 
 #endif

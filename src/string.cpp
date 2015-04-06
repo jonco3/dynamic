@@ -31,12 +31,11 @@ GlobalRoot<String*> String::EmptyString;
 
 void String::init()
 {
-    Root<Class*> cls(gc::create<Class>("str"));
-    Root<Value> value;
-    value = gc::create<Native>(2, str_add);    cls->setAttr("__add__", value);
-    value = gc::create<Native>(1, str_str);    cls->setAttr("__str__", value);
-    value = gc::create<Native>(1, str_print);  cls->setAttr("_print", value);
-    ObjectClass.init(cls);
+    ObjectClass.init(gc::create<Class>("str"));
+    initNativeMethod(ObjectClass, "__add__", 2, str_add);
+    initNativeMethod(ObjectClass, "__str__", 1, str_str);
+    initNativeMethod(ObjectClass, "_print", 1, str_print);
+
     EmptyString.init(gc::create<String>(""));
 }
 

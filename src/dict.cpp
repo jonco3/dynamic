@@ -27,12 +27,10 @@ static bool dict_setitem(TracedVector<Value> args, Root<Value>& resultOut)
 
 void Dict::init()
 {
-    Root<Class*> cls(gc::create<Class>("dict"));
-    Root<Value> value;
-    value = gc::create<Native>(2, dict_contains);  cls->setAttr("__contains__", value);
-    value = gc::create<Native>(2, dict_getitem);   cls->setAttr("__getitem__", value);
-    value = gc::create<Native>(3, dict_setitem);   cls->setAttr("__setitem__", value);
-    ObjectClass.init(cls);
+    ObjectClass.init(gc::create<Class>("dict"));
+    initNativeMethod(ObjectClass, "__contains__", 2, dict_contains);
+    initNativeMethod(ObjectClass, "__getitem__", 2, dict_getitem);
+    initNativeMethod(ObjectClass, "__setitem__", 3, dict_setitem);
 }
 
 Dict::Dict(const TracedVector<Value>& values)
