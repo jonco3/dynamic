@@ -40,7 +40,9 @@ bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 
 bool Interpreter::run(Value& valueOut)
 {
+#ifdef DEBUG
     unsigned initialPos = stackPos();
+#endif
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
         Instr *instr = *instrp++;
