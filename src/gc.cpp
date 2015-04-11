@@ -1,5 +1,7 @@
 #include "gc.h"
 
+#include <algorithm>
+#include <cstring>
 #include <list>
 #include <vector>
 #include <iostream>

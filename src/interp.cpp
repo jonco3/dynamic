@@ -370,17 +370,16 @@ void testReplacements(const string& defs,
 testcase(interp)
 {
     Interpreter& i = Interpreter::instance();
-    testEqual(i.stackPos(), 0);
+    testEqual(i.stackPos(), 0u);
     i.pushStack(None);
-    testEqual(i.stackPos(), 1);
-    Root<Value> v(None);
-    testEqual(i.peekStack(0), v);
-    testEqual(i.stackRef(0).get(), v);
+    testEqual(i.stackPos(), 1u);
+    testEqual(i.peekStack(0), Value(None));
+    testEqual(i.stackRef(0).get(), Value(None));
     TracedVector<Value> slice = i.stackSlice(0, 1);
-    testEqual(slice.size(), 1);
-    testEqual(slice[0].get(), v.get());
-    testEqual(i.popStack(), v);
-    testEqual(i.stackPos(), 0);
+    testEqual(slice.size(), 1u);
+    testEqual(slice[0].get(), Value(None));
+    testEqual(i.popStack(), Value(None));
+    testEqual(i.stackPos(), 0u);
 
     testInterp("pass", "None");
     testInterp("return 3", "3");

@@ -6,7 +6,7 @@
 #include "dict.h"
 #include "exception.h"
 #include "frame.h"
-#include "gc.h"
+#include "gcdefs.h"
 #include "integer.h"
 #include "interp.h"
 #include "list.h"

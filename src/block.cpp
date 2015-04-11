@@ -9,6 +9,7 @@
 #include "string.h"
 #include "syntax.h"
 
+#include <algorithm>
 #include <memory>
 
 //#define TRACE_BUILD

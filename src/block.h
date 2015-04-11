@@ -1,7 +1,7 @@
 #ifndef __BLOCK_H__
 #define __BLOCK_H__
 
-#include "gc.h"
+#include "gcdefs.h"
 
 #include <cassert>
 #include <vector>

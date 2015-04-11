@@ -8,6 +8,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 
 #ifdef USE_READLINE
@@ -78,7 +79,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
 
 static int runExprs(int count, const char* args[])
 {
-    for (unsigned i = 0 ; i < count ; ++i) {
+    for (int i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
         if (!runModule(args[i], "<none>", None))
             return EX_SOFTWARE;

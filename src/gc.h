@@ -278,10 +278,12 @@ struct Traced : public WrapperMixins<Traced<T>, T>
     const T& ptr_;
 };
 
+namespace std {
 template <typename T>
-struct std::hash<Traced<T>> {
+struct hash<Traced<T>> {
     size_t operator()(Traced<T> t) const { return std::hash<T>()(t.get()); }
 };
+} /* namespace std */
 
 template <typename T>
 struct RootVector : private vector<T>, private RootBase
@@ -299,7 +301,7 @@ struct RootVector : private vector<T>, private RootBase
 #ifdef DEBUG
         useCount = 0;
 #endif
-        insert();
+        RootBase::insert();
     }
 
     ~RootVector() {
@@ -313,11 +315,6 @@ struct RootVector : private vector<T>, private RootBase
     }
 
     void push_back(T element) {
-        VectorBase::push_back(element);
-    }
-
-    template <typename S>
-    void push_back(const S& element) {
         VectorBase::push_back(element);
     }
 

@@ -5,6 +5,8 @@
 #include "exception.h"
 #include "singletons.h"
 
+#include <algorithm>
+
 struct ListIter : public Object
 {
     static void init();
@@ -120,7 +122,7 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     int32_t i = index.asInt32();
     if (i < 0)
         i = elements_.size() + i;
-    if (i < 0 || i >= elements_.size()) {
+    if (i < 0 || size_t(i) >= elements_.size()) {
         resultOut = gc::create<Exception>("IndexError", listName() + " index out of range");
         return false;
     }
@@ -221,7 +223,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     int32_t i = index.asInt32();
     if (i < 0)
         i = elements_.size() + i;
-    if (i < 0 || i >= elements_.size()) {
+    if (i < 0 || size_t(i) >= elements_.size()) {
         resultOut = gc::create<Exception>("IndexError", listName() + " index out of range");
         return false;
     }
@@ -277,7 +279,8 @@ bool ListIter::iter(Root<Value>& resultOut)
 
 bool ListIter::next(Root<Value>& resultOut)
 {
-    if (index_ == -1 || index_ >= list_->elements_.size()) {
+    assert(index_ >= -1);
+    if (index_ == -1 || size_t(index_) >= list_->elements_.size()) {
         index_ = -1;
         resultOut = gc::create<StopIteration>();
         return false;

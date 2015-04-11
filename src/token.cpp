@@ -416,8 +416,8 @@ testcase(tokenizer)
     testEqual(t.type, Token_EOF);
     testEqual(t.text, "");
     testEqual(t.pos.file, "empty.txt");
-    testEqual(t.pos.line, 1);
-    testEqual(t.pos.column, 0);
+    testEqual(t.pos.line, 1u);
+    testEqual(t.pos.column, 0u);
 
     tz.start("   ");
     testEqual(tz.nextToken().type, Token_EOF);
@@ -444,25 +444,25 @@ testcase(tokenizer)
     t = tz.nextToken();
     testEqual(t.type, Token_Integer);
     testEqual(t.text, "1");
-    testEqual(t.pos.column, 0);
+    testEqual(t.pos.column, 0u);
     t = tz.nextToken();
     testEqual(t.type, Token_Plus);
-    testEqual(t.pos.column, 1);
+    testEqual(t.pos.column, 1u);
     t = tz.nextToken();
     testEqual(t.type, Token_Integer);
     testEqual(t.text, "2");
-    testEqual(t.pos.column, 2);
+    testEqual(t.pos.column, 2u);
     t = tz.nextToken();
     testEqual(t.type, Token_Minus);
-    testEqual(t.pos.column, 4);
+    testEqual(t.pos.column, 4u);
     t = tz.nextToken();
     testEqual(t.type, Token_Integer);
     testEqual(t.text, "3");
-    testEqual(t.pos.column, 6);
+    testEqual(t.pos.column, 6u);
     t = tz.nextToken();
     testEqual(t.type, Token_EOF);
-    testEqual(t.pos.column, 7);
-    testEqual(t.pos.line, 1);
+    testEqual(t.pos.column, 7u);
+    testEqual(t.pos.line, 1u);
 
     tz.start("foo()");
     testEqual(tz.nextToken().type, Token_Identifier);

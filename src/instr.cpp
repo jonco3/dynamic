@@ -378,7 +378,13 @@ bool InstrDestructure::execute(Interpreter& interp)
         return false;
     }
 
-    if (result.asInt32() != count_) {
+    int32_t len = result.asInt32();
+    if (len < 0) {
+        interp.pushStack(gc::create<Exception>("ValueError",
+                                               "__len__ returned negative value"));
+        return false;
+    }
+    if (size_t(len) != count_) {
         interp.pushStack(gc::create<Exception>("ValueError",
                                                "too many values to unpack"));
         return false;

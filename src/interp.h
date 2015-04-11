@@ -26,8 +26,9 @@ struct Interpreter
 
     template <typename S>
     void pushStack(const S& element) {
+        Root<Value> value(element);
         stack.resize(pos + 1);
-        stack[pos] = element;
+        stack[pos] = value.get();
         ++pos;
     }
 

@@ -60,18 +60,22 @@ bool GeneratorIter::resume(Interpreter& interp)
                                                "Generator running"));
         return false;
 
-    case Suspended: {
+      case Suspended: {
         Root<Frame*> frame(frame_); // todo: Heap<T>
         interp.resumeGenerator(frame, ipOffset_, savedStack_);
         interp.pushStack(None);
         state_ = Running;
         return true;
-    }
+      }
 
       case Finished:
         // todo: not sure about this behaviour, need tests
         interp.pushStack(gc::create<StopIteration>());
         return false;
+
+      default:
+        assert(false);
+        exit(1);
     }
 }
 

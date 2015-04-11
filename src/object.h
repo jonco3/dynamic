@@ -1,10 +1,10 @@
 #ifndef __OBJECT_H__
 #define __OBJECT_H__
 
-#include "gc.h"
+#include "gcdefs.h"
+#include "value.h"
 #include "layout.h"
 #include "name.h"
-#include "value.h"
 
 #include <cassert>
 #include <ostream>

@@ -1,7 +1,7 @@
 #ifndef __LAYOUT_H__
 #define __LAYOUT_H__
 
-#include "gc.h"
+#include "gcdefs.h"
 #include "name.h"
 
 #include <ostream>
