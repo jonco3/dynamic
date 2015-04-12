@@ -227,11 +227,12 @@ bool InstrAnd::execute(Interpreter& interp)
     return true;
 }
 
-InstrLambda::InstrLambda(Name name, const vector<Name>& params, Block* block,
-                         bool isGenerator)
+InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
+                         Block* block, unsigned defaultCount, bool isGenerator)
   : funcName_(name),
-    params_(params),
+    paramNames_(paramNames),
     block_(block),
+    defaultCount_(defaultCount),
     isGenerator_(isGenerator)
 {}
 
@@ -239,8 +240,10 @@ bool InstrLambda::execute(Interpreter& interp)
 {
     Root<Block*> block(block_);
     Root<Frame*> frame(interp.getFrame(0));
-    Object* obj = gc::create<Function>(funcName_, params_, block, frame,
-                                       isGenerator());
+    TracedVector<Value> defaults(
+        interp.stackSlice(defaultCount_ - 1, defaultCount_));
+    Object* obj = gc::create<Function>(funcName_, paramNames_, defaults, block,
+                                       frame, isGenerator());
     interp.pushStack(Value(obj));
     return true;
 }

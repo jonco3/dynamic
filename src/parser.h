@@ -4,6 +4,7 @@
 #include "token.h"
 #include "assert.h"
 #include "specials.h"
+#include "syntax.h"
 
 #include <vector>
 #include <stdexcept>
@@ -325,10 +326,6 @@ T Parser<T>::infix(Token token, const T leftValue)
     return action.handler(*this, token, leftValue);
 }
 
-struct Syntax;
-struct SyntaxBlock;
-struct SyntaxTarget;
-
 struct SyntaxParser : public Parser<Syntax *>
 {
     SyntaxParser();
@@ -345,6 +342,7 @@ struct SyntaxParser : public Parser<Syntax *>
     Syntax* parseExprOrExprList();
     SyntaxBlock* parseBlock();
     SyntaxBlock* parseSuite();
+    vector<Parameter> parseParameterList(TokenType endToken);
 
     SyntaxTarget* makeAssignTarget(Syntax* s);
 

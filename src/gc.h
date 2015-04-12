@@ -374,6 +374,8 @@ struct TracedVector
         return Traced<T>::fromTracedLocation(&source_[index + offset_]);
     }
 
+    // todo: implement c++ iterators
+
   private:
     RootVector<T>& source_;
     unsigned offset_;

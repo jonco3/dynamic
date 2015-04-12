@@ -105,16 +105,11 @@ SyntaxParser::SyntaxParser()
     // Lambda
 
     addPrefixHandler(Token_Lambda, [] (ParserT& parser, Token token) {
-        vector<string> params;
+        vector<Parameter> params;
         if (!parser.opt(Token_Colon)) {
-            for (;;) {
-                // todo: * and **
-                Token t = parser.match(Token_Identifier);
-                params.push_back(t.text);
-                if (parser.opt(Token_Colon))
-                    break;
-                parser.match(Token_Comma);
-            }
+            // todo: may need to allow bracketed parameters here
+            SyntaxParser& sp = static_cast<SyntaxParser&>(parser);
+            params = sp.parseParameterList(Token_Colon);
         }
         return new SyntaxLambda(token, params, parser.expression());
     });
@@ -398,6 +393,35 @@ Syntax* SyntaxParser::parseSimpleStatement()
     return expr;
 }
 
+vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
+{
+    vector<Parameter> params;
+    bool hadDefault = false;
+    while (!opt(endToken)) {
+        Token t = match(Token_Identifier);
+        Name name = t.text;
+        Syntax* defaultExpr = nullptr;
+        if (opt(Token_Assign)) {
+            defaultExpr = expression();
+            hadDefault = true;
+        } else if (hadDefault) {
+            // todo: use unique_ptr or something to do this automatically
+            for (auto i = params.begin(); i != params.end(); i++)
+                delete i->maybeDefault;
+            throw ParseError(t, "Non-default parameter following default parameter");
+        }
+        for (auto i = params.begin(); i != params.end(); i++)
+            if (name == i->name)
+                throw ParseError(t, "Duplicate parameter name: " + name);
+        // todo: * and **
+        params.push_back({name, defaultExpr});
+        if (opt(endToken))
+            break;
+        match(Token_Comma);
+    }
+    return params;
+}
+
 Syntax* SyntaxParser::parseCompoundStatement()
 {
     Token token = currentToken();
@@ -433,18 +457,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
     } else if (opt(Token_Def)) {
         Token name = match(Token_Identifier);
         match(Token_Bra);
-        vector<string> params;
-        if (!opt(Token_Ket)) {
-            for (;;) {
-                Token t = match(Token_Identifier);
-                // todo: * and **
-                params.push_back(t.text);
-                if (opt(Token_Ket))
-                    break;
-                match(Token_Comma);
-            }
-        }
-
+        vector<Parameter> params = parseParameterList(Token_Ket);
         AutoSetAndRestore asar1(inFunction, true);
         AutoSetAndRestore asar2(isGenerator, false);
         SyntaxBlock* suite = parseSuite();
@@ -488,10 +501,10 @@ SyntaxBlock* SyntaxParser::parseSuite()
     } else {
         do {
             suite->append(parseSimpleStatement());
-            if (opt(Token_Newline))
+            if (atEnd() || opt(Token_Newline))
                 break;
             match(Token_Semicolon);
-        } while (!opt(Token_Newline));
+        } while (!atEnd() && !opt(Token_Newline));
     }
     return suite.release();
 }
@@ -568,38 +581,48 @@ testcase(parser)
     testTrue(expr.get()->is<SyntaxAssign>());
     testTrue(expr.get()->as<SyntaxAssign>()->left()->is<SyntaxName>());
 
-    testParseModule("1\n2", "1\n2\n");
-    testParseModule("1; 2; 3", "1\n2\n3\n");
-    testParseModule("1; 2; 3;", "1\n2\n3\n");
-    testParseModule("a[0] = 1", "a[0] = 1\n");
+    testParseModule("1\n2", "1\n2");
+    testParseModule("1; 2; 3", "1\n2\n3");
+    testParseModule("1; 2; 3;", "1\n2\n3");
+    testParseModule("a[0] = 1", "a[0] = 1");
 
     // test this parses as "not (a in b)" not "(not a) in b"
     sp.start("not a in b");
     expr.reset(sp.parseModule());
-    testEqual(repr(*expr.get()), "not a in b\n");
+    testEqual(repr(*expr.get()), "not a in b");
     testTrue(expr->is<SyntaxBlock>());
     testTrue(expr->as<SyntaxBlock>()->stmts()[0]->is<SyntaxNot>());
 
     testParseExpression("a.x", "a.x");
     testParseExpression("(a + 1).x", "(a + 1).x");
 
-    testParseModule("(1)", "1\n");
-    testParseModule("()", "()\n");
-    testParseModule("(1,)", "(1,)\n");
-    testParseModule("(1,2)", "(1, 2)\n");
-    testParseModule("foo(bar)", "foo(bar)\n");
-    testParseModule("foo(bar, baz)", "foo(bar, baz)\n");
-    testParseModule("a, b = 1, 2", "(a, b) = (1, 2)\n");
+    testParseModule("(1)", "1");
+    testParseModule("()", "()");
+    testParseModule("(1,)", "(1,)");
+    testParseModule("(1,2)", "(1, 2)");
+    testParseModule("foo(bar)", "foo(bar)");
+    testParseModule("foo(bar, baz)", "foo(bar, baz)");
+    testParseModule("a, b = 1, 2", "(a, b) = (1, 2)");
 
-    testParseModule("for x in []:\n  pass", "for x in []:\npass\n\n");
-    testParseModule("for a.x in []:\n  pass", "for a.x in []:\npass\n\n");
-    testParseModule("for (a + 1).x in []:\n  pass", "for (a + 1).x in []:\npass\n\n");
-    testParseModule("for (a, b) in []:\n  pass", "for (a, b) in []:\npass\n\n");
-    testParseModule("for (a, b).x in []:\n  pass", "for (a, b).x in []:\npass\n\n");
-    testParseModule("for a[0][0] in []:\n  pass", "for a[0][0] in []:\npass\n\n");
-    testParseModule("for a.b.c in []:\n  pass", "for a.b.c in []:\npass\n\n");
+    testParseModule("for x in []:\n  pass", "for x in []:\npass");
+    testParseModule("for a.x in []:\n  pass", "for a.x in []:\npass");
+    testParseModule("for (a + 1).x in []:\n  pass", "for (a + 1).x in []:\npass");
+    testParseModule("for (a, b) in []:\n  pass", "for (a, b) in []:\npass");
+    testParseModule("for (a, b).x in []:\n  pass", "for (a, b).x in []:\npass");
+    testParseModule("for a[0][0] in []:\n  pass", "for a[0][0] in []:\npass");
+    testParseModule("for a.b.c in []:\n  pass", "for a.b.c in []:\npass");
     testParseException("for 1 in []: pass");
     testParseException("for (a + 1) in []: pass");
+
+    testParseModule("def f(): pass", "def f():\npass");
+    testParseModule("def f(x): pass", "def f(x):\npass");
+    testParseModule("def f(x,): pass", "def f(x):\npass");
+    testParseModule("def f(x = 0): pass", "def f(x):\npass");
+    testParseModule("def f(x, y): pass", "def f(x, y):\npass");
+    testParseModule("def f(x, y = 1): pass", "def f(x, y):\npass");
+    testParseModule("def f(x = 0, y = 1): pass", "def f(x, y):\npass");
+    testParseException("def f(x, x): pass");
+    testParseException("def f(x = 0, y): pass");
 }
 
 #endif

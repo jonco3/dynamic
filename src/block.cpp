@@ -193,14 +193,14 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     Block* buildFunctionBody(BlockBuilder* parent,
-                             const vector<Name>& params,
+                             const vector<Parameter>& params,
                              const Syntax* s)
     {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
-            layout = layout->addName(*i);
+            layout = layout->addName(i->name);
         build(s);
         if (!block->lastInstr()->is<InstrReturn>()) {
             block->append(gc::create<InstrPop>());
@@ -213,13 +213,13 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    Block* buildLambda(BlockBuilder* parent, const vector<Name>& params,
+    Block* buildLambda(BlockBuilder* parent, const vector<Parameter>& params,
                        const Syntax* s) {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
-            layout = layout->addName(*i);
+            layout = layout->addName(i->name);
         build(s);
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
@@ -244,7 +244,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     Block* buildGenerator(BlockBuilder* parent,
-                          const vector<Name>& params,
+                          const vector<Parameter>& params,
                           const Syntax* s)
     {
         assert(parent);
@@ -252,7 +252,7 @@ struct BlockBuilder : public SyntaxVisitor
         topLevel = parent->topLevel;
         isGenerator = true;
         for (auto i = params.begin(); i != params.end(); ++i)
-            layout = layout->addName(*i);
+            layout = layout->addName(i->name);
         build(s);
         if (!block->lastInstr()->is<InstrLeaveGenerator>()) {
             block->append(gc::create<InstrPop>());
@@ -611,11 +611,27 @@ struct BlockBuilder : public SyntaxVisitor
         // todo: else clause
     }
 
-    virtual void visit(const SyntaxLambda& a) {
-        Root<Block*> exprBlock(BlockBuilder().buildLambda(this, a.params(), a.expr()));
+    void emitLambda(Name defName, const vector<Parameter>& params,
+                    Traced<Block*> exprBlock, bool isGenerator)
+    {
+        vector<Name> names;
+        unsigned defaultCount = 0;
+        for (auto i = params.begin(); i != params.end(); i++) {
+            names.push_back(i->name);
+            if (i->maybeDefault) {
+                defaultCount++;
+                i->maybeDefault->accept(*this);
+            }
+        }
+        block->append(gc::create<InstrLambda>(defName, names, exprBlock,
+                                              defaultCount, isGenerator));
+    }
+
+    virtual void visit(const SyntaxLambda& s) {
+        Root<Block*> exprBlock(
+            BlockBuilder().buildLambda(this, s.params(), s.expr()));
         exprBlock->append(gc::create<InstrReturn>());
-        block->append(gc::create<InstrLambda>("(lambda)", a.params(),
-                                              exprBlock));
+        emitLambda("(lambda)", s.params(), exprBlock, false);
     }
 
     virtual void visit(const SyntaxDef& s) {
@@ -627,8 +643,7 @@ struct BlockBuilder : public SyntaxVisitor
             exprBlock =
                 BlockBuilder().buildFunctionBody(this, s.params(), s.expr());
         }
-        block->append(gc::create<InstrLambda>(s.id(), s.params(), exprBlock,
-                                              s.isGenerator()));
+        emitLambda(s.id(), s.params(), exprBlock, s.isGenerator());
         if (parent)
             block->append(gc::create<InstrSetLocal>(s.id()));
         else

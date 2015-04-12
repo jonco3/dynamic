@@ -186,10 +186,13 @@ bool Interpreter::checkArguments(Traced<Callable*> callable,
                                  const TracedVector<Value>& args,
                                  Root<Value>& resultOut)
 {
-    if (callable->requiredArgs() != args.size()) {
+    unsigned count = args.size();
+    if (count < callable->minArgs() || count > callable->maxArgs()) {
         ostringstream s;
-        s << callable->name() << "()";
-        s << " takes " << dec << callable->requiredArgs();
+        s << callable->name() << "() takes " << dec;
+        if (callable->minArgs() != callable->maxArgs())
+            s << "at least ";
+        s << callable->minArgs();
         s << " positional arguments but " << args.size();
         if (args.size() == 1)
             s << " was given";
@@ -222,6 +225,10 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         }
         for (int i = args.size() - 1; i >= 0; --i)
             callFrame->setAttr(function->paramName(i), args[i]);
+        for (unsigned i = args.size(); i < function->maxArgs(); i++) {
+            callFrame->setAttr(function->paramName(i),
+                               function->paramDefault(i));
+        }
         if (function->isGenerator()) {
             Root<Value> iter(
                 gc::create<GeneratorIter>(function, callFrame));
@@ -458,6 +465,26 @@ testcase(interp)
                "  1\n"
                "foo()\n",
                "None");
+
+    testInterp("def foo(x):\n"
+               "  return x\n"
+               "foo(3)\n",
+               "3");
+
+    testInterp("def foo(x = 2):\n"
+               "  return x\n"
+               "foo()\n",
+               "2");
+
+    testInterp("def foo(x = 1, y = 2):\n"
+               "  return (x, y)\n"
+               "foo(3)\n",
+               "(3, 2)");
+
+    testInterp("def foo(x = 1, y = 2):\n"
+               "  return (x, y)\n"
+               "foo()\n",
+               "(1, 2)");
 
     testInterp("class Foo:\n"
                "  a = 1\n"

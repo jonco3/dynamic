@@ -317,8 +317,8 @@ struct InstrLambda : public Instr
 {
     define_instr_members(Instr_Lambda, "Lambda");
 
-    InstrLambda(Name name, const vector<Name>& params, Block* block,
-                bool isGenerator = false);
+    InstrLambda(Name name, const vector<Name>& paramNames, Block* block,
+                unsigned defaultCount = 0, bool isGenerator = false);
 
     Name functionName() { return funcName_; }
     Block* block() const { return block_; }
@@ -331,15 +331,16 @@ struct InstrLambda : public Instr
 
     virtual void print(ostream& s) const {
         s << name();
-        for (auto i = params_.begin(); i != params_.end(); ++i)
+        for (auto i = paramNames_.begin(); i != paramNames_.end(); ++i)
             s << " " << *i;
         s << ": { " << *block_ << " }";
     }
 
   private:
     Name funcName_;
-    vector<Name> params_;
+    vector<Name> paramNames_;
     Block* block_;
+    unsigned defaultCount_;
     bool isGenerator_;
 };
 

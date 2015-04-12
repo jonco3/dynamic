@@ -5,10 +5,12 @@
 GlobalRoot<Class*> Native::ObjectClass;
 GlobalRoot<Class*> Function::ObjectClass;
 
-Callable::Callable(Traced<Class*> cls, Name name, unsigned reqArgs)
+Callable::Callable(Traced<Class*> cls, Name name,
+                   unsigned minArgs, unsigned maxArgs)
   : Object(cls),
     name_(name),
-    reqArgs_(reqArgs)
+    minArgs_(minArgs),
+    maxArgs_(maxArgs)
 {}
 
 void Native::init()
@@ -17,7 +19,7 @@ void Native::init()
 }
 
 Native::Native(Name name, unsigned reqArgs, Func func)
-  : Callable(ObjectClass, name, reqArgs),
+  : Callable(ObjectClass, name, reqArgs, reqArgs),
     func_(func)
 {}
 
@@ -28,15 +30,21 @@ void Function::init()
 
 Function::Function(Name name,
                    const vector<Name>& params,
+                   TracedVector<Value> defaults,
                    Traced<Block*> block,
                    Traced<Frame*> scope,
                    bool isGenerator)
-  : Callable(ObjectClass, name, params.size()),
+  : Callable(ObjectClass, name,
+             params.size() - defaults.size(), params.size()),
     params_(params),
     block_(block),
     scope_(scope),
     isGenerator_(isGenerator)
-{}
+{
+    assert(params.size() >= defaults.size());
+    for (size_t i = 0; i < defaults.size(); i++)
+        defaults_.push_back(defaults[i]);
+}
 
 void initNativeMethod(Traced<Object*> cls, Name name, unsigned reqArgs,
                              Native::Func func)

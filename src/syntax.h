@@ -219,8 +219,11 @@ struct SyntaxBlock : public Syntax
     const vector<Syntax *>& stmts() const { return statements; }
 
     virtual void print(ostream& s) const override {
-        for (auto i = statements.begin(); i != statements.end(); ++i)
-            s << **i << endl;
+        for (auto i = statements.begin(); i != statements.end(); ++i) {
+            if (i != statements.begin())
+                s << endl;
+            s << **i;
+        }
     }
 
   private:
@@ -546,28 +549,40 @@ struct SyntaxCond : public Syntax
     unique_ptr<Syntax> alt_;
 };
 
+struct Parameter
+{
+    Name name;
+    Syntax* maybeDefault;
+};
+
 struct SyntaxLambda : public Syntax
 {
     define_syntax_members(Lambda, "lambda");
 
-    SyntaxLambda(const Token& token, const vector<Name>& params, Syntax* expr)
-      : Syntax(token), params_(params), expr_(expr)
+    SyntaxLambda(const Token& token, const vector<Parameter>& params,
+                 Syntax* expr)
+        : Syntax(token), params_(params), expr_(expr)
     {}
 
-    const vector<Name>& params() const { return params_; }
-    Syntax* expr() const { return expr_; }
+    ~SyntaxLambda() {
+        for (auto i = params_.begin(); i != params_.end(); ++i)
+            delete i->maybeDefault;
+    }
+
+    const vector<Parameter>& params() const { return params_; }
+    Syntax* expr() const { return expr_.get(); }
 
     virtual void print(ostream& s) const override {
         s << "lambda";
         for (auto i = params_.begin(); i != params_.end(); ++i)
-            s << " " << *i;
+            s << " " << i->name;
         s << ": ";
         expr_->print(s);
     }
 
   private:
-    vector<Name> params_;
-    Syntax* expr_;
+    vector<Parameter> params_;
+    unique_ptr<Syntax> expr_;
 };
 
 struct SyntaxDef : public Syntax
@@ -576,7 +591,7 @@ struct SyntaxDef : public Syntax
 
     SyntaxDef(const Token& token,
               Name id,
-              const vector<Name>& params,
+              const vector<Parameter>& params,
               Syntax* expr,
               bool isGenerator)
       : Syntax(token),
@@ -587,7 +602,7 @@ struct SyntaxDef : public Syntax
     {}
 
     Name id() const { return id_; }
-    const vector<Name>& params() const { return params_; }
+    const vector<Parameter>& params() const { return params_; }
     Syntax* expr() const { return expr_; }
     bool isGenerator() const { return isGenerator_; }
 
@@ -596,7 +611,7 @@ struct SyntaxDef : public Syntax
         for (auto i = params_.begin(); i != params_.end(); ++i) {
             if (i != params_.begin())
                 s << ", ";
-            s << *i;
+            s << i->name;
         }
         s << "):" << endl;
         expr_->print(s);
@@ -604,7 +619,7 @@ struct SyntaxDef : public Syntax
 
   private:
     Name id_;
-    vector<Name> params_;
+    vector<Parameter> params_;
     Syntax* expr_;
     bool isGenerator_;
 };
@@ -793,28 +808,6 @@ struct SyntaxGlobal : public Syntax
   private:
     vector<Name> names_;
 };
-
-/*
-struct SyntaxEnterGenerator : public Syntax
-{
-    define_syntax_members(EnterGenerator, "enterGenerator");
-    SyntaxEnterGenerator(const Token& token) : Syntax(token) {}
-
-    virtual void print(ostream& s) const override {
-        s << "enterGenerator";
-    }
-};
-
-struct SyntaxLeaveGenerator : public Syntax
-{
-    define_syntax_members(LeaveGenerator, "leaveGenerator");
-    SyntaxLeaveGenerator(const Token& token) : Syntax(token) {}
-
-    virtual void print(ostream& s) const override {
-        s << "leaveGenerator";
-    }
-};
-*/
 
 define_unary_syntax(Yield, "yield");
 
