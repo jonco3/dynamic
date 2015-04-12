@@ -45,9 +45,9 @@ void initBuiltins()
 {
     Builtin.init(gc::create<Object>());
     Root<Value> value;
-    initNativeMethod(Builtin, "hasattr", 2, builtin_hasattr);
-    initNativeMethod(Builtin, "object", 0, builtin_object);
-    initNativeMethod(Builtin, "isinstance", 2, builtin_isinstance);
+    initNativeMethod(Builtin, "hasattr", builtin_hasattr, 2);
+    initNativeMethod(Builtin, "object", builtin_object, 0);
+    initNativeMethod(Builtin, "isinstance", builtin_isinstance, 2);
 
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);

@@ -18,8 +18,8 @@ void Native::init()
     ObjectClass.init(gc::create<Class>("Native"));
 }
 
-Native::Native(Name name, unsigned reqArgs, Func func)
-  : Callable(ObjectClass, name, reqArgs, reqArgs),
+Native::Native(Name name, Func func, unsigned minArgs, unsigned maxArgs)
+  : Callable(ObjectClass, name, minArgs, maxArgs ? maxArgs : minArgs),
     func_(func)
 {}
 
@@ -46,10 +46,10 @@ Function::Function(Name name,
         defaults_.push_back(defaults[i]);
 }
 
-void initNativeMethod(Traced<Object*> cls, Name name, unsigned reqArgs,
-                             Native::Func func)
+void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
+                      unsigned minArgs, unsigned maxArgs)
 {
-    Root<Value> value(gc::create<Native>(name, reqArgs, func));
+    Root<Value> value(gc::create<Native>(name, func, minArgs, maxArgs));
     cls->setAttr(name, value);
 }
 

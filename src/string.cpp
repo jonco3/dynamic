@@ -32,9 +32,9 @@ GlobalRoot<String*> String::EmptyString;
 void String::init()
 {
     ObjectClass.init(gc::create<Class>("str"));
-    initNativeMethod(ObjectClass, "__add__", 2, str_add);
-    initNativeMethod(ObjectClass, "__str__", 1, str_str);
-    initNativeMethod(ObjectClass, "_print", 1, str_print);
+    initNativeMethod(ObjectClass, "__add__", str_add, 2);
+    initNativeMethod(ObjectClass, "__str__", str_str, 1);
+    initNativeMethod(ObjectClass, "_print", str_print, 1);
 
     EmptyString.init(gc::create<String>(""));
 }

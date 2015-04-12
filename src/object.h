@@ -119,7 +119,8 @@ struct NativeClass : public Class
 
     typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
 
-    NativeClass(string name, unsigned reqArgs, Func createFunc,
+    NativeClass(string name, Func createFunc,
+                unsigned minArgs, unsigned maxArgs = 0,
                 Traced<Layout*> initialLayout = InitialLayout);
 };
 

@@ -76,10 +76,10 @@ static bool listBase_iter(TracedVector<Value> args, Root<Value>& resultOut)
 static void listBase_initNatives(Traced<Class*> cls)
 {
     Root<Value> value;
-    initNativeMethod(cls, "__len__", 1, listBase_len);
-    initNativeMethod(cls, "__getitem__", 2, listBase_getitem);
-    initNativeMethod(cls, "__contains__", 2, listBase_contains);
-    initNativeMethod(cls, "__iter__", 1, listBase_iter);
+    initNativeMethod(cls, "__len__", listBase_len, 1);
+    initNativeMethod(cls, "__getitem__", listBase_getitem, 2);
+    initNativeMethod(cls, "__contains__", listBase_contains, 2);
+    initNativeMethod(cls, "__iter__", listBase_iter, 1);
 }
 
 static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
@@ -187,8 +187,8 @@ void List::init()
 {
     ObjectClass.init(gc::create<Class>("list"));
     listBase_initNatives(ObjectClass);
-    initNativeMethod(ObjectClass, "__setitem__", 3, list_setitem);
-    initNativeMethod(ObjectClass, "append", 2, list_append);
+    initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
+    initNativeMethod(ObjectClass, "append", list_append, 2);
 }
 
 List::List(const TracedVector<Value>& values)
@@ -255,8 +255,8 @@ static bool listIter_next(TracedVector<Value> args, Root<Value>& resultOut)
 void ListIter::init()
 {
     ObjectClass.init(gc::create<Class>("listiterator"));
-    initNativeMethod(ObjectClass, "__iter__", 1, listIter_iter);
-    initNativeMethod(ObjectClass, "next", 1, listIter_next);
+    initNativeMethod(ObjectClass, "__iter__", listIter_iter, 1);
+    initNativeMethod(ObjectClass, "next", listIter_next, 1);
 }
 
 ListIter::ListIter(Traced<ListBase*> list)

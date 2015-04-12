@@ -28,9 +28,9 @@ static bool dict_setitem(TracedVector<Value> args, Root<Value>& resultOut)
 void Dict::init()
 {
     ObjectClass.init(gc::create<Class>("dict"));
-    initNativeMethod(ObjectClass, "__contains__", 2, dict_contains);
-    initNativeMethod(ObjectClass, "__getitem__", 2, dict_getitem);
-    initNativeMethod(ObjectClass, "__setitem__", 3, dict_setitem);
+    initNativeMethod(ObjectClass, "__contains__", dict_contains, 2);
+    initNativeMethod(ObjectClass, "__getitem__", dict_getitem, 2);
+    initNativeMethod(ObjectClass, "__setitem__", dict_setitem, 3);
 }
 
 Dict::Dict(const TracedVector<Value>& values)

@@ -30,7 +30,7 @@ struct Native : public Callable
 
     typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
 
-    Native(Name name, unsigned reqArgs, Func func);
+    Native(Name name, Func func, unsigned minArgs, unsigned maxArgs = 0);
 
     bool call(TracedVector<Value> args, Root<Value>& resultOut) const {
         return func_(args, resultOut);
@@ -83,7 +83,7 @@ struct Function : public Callable
     bool isGenerator_;
 };
 
-void initNativeMethod(Traced<Object*> cls, Name name, unsigned reqArgs,
-                      Native::Func func);
+void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
+                      unsigned minArgs, unsigned maxArgs = 0);
 
 #endif

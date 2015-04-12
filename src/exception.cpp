@@ -9,8 +9,8 @@ GlobalRoot<Class*> StopIteration::ObjectClass;
 
 void Exception::init()
 {
-    ObjectClass.init(gc::create<NativeClass>("Exception", 2,
-                                             &Exception::create));
+    ObjectClass.init(gc::create<NativeClass>("Exception",
+                                             &Exception::create, 2));
     StopIteration::init();
 }
 

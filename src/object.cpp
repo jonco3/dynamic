@@ -296,14 +296,15 @@ void Class::print(ostream& s) const
     s << "Class " << name_;
 }
 
-NativeClass::NativeClass(string name, unsigned reqArgs, Func createFunc,
+NativeClass::NativeClass(string name, Func createFunc,
+                         unsigned minArgs, unsigned maxArgs,
                          Traced<Layout*> initialLayout)
   : Class(name, None, initialLayout)
 {
-    assert(reqArgs >= 1); // Class is passed as first argument.
+    assert(minArgs >= 1); // Class is passed as first argument.
     assert(initialLayout->subsumes(InitialLayout));
     Root<NativeClass*> self(this);
-    initNativeMethod(self, "__new__", reqArgs, createFunc);
+    initNativeMethod(self, "__new__", createFunc, minArgs, maxArgs);
 }
 
 void initObject()
