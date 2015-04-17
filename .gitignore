@@ -1,9 +1,9 @@
+.DS_Store
 /GPATH
 /GRTAGS
 /GTAGS
-/build/
-/dynamic
-/dynamic-debug
-/tests
-/tests-debug
-
+aclocal.m4
+autom4te.cache/
+config.h.in
+configure
+/*-build/

@@ -39,9 +39,9 @@ void init1()
     GeneratorIter::init();
 }
 
-void init2()
+void init2(const string& libDir)
 {
-    initBuiltins();
+    initBuiltins(libDir);
 }
 
 void final()

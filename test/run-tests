@@ -5,10 +5,9 @@ import re
 import subprocess
 import sys
 
-if len(sys.argv) > 1:
-    exe = os.path.realpath(sys.argv[1])
-else:
-    exe = './dynamic-debug'
+command = sys.argv[1:]
+if not command:
+    sys.exit("usage: run-tests EXE...")
 
 testsDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
 
@@ -31,7 +30,8 @@ def runTest(dirname, name):
 
     try:
         ok = True
-        output = subprocess.check_output([exe, filename], stderr=subprocess.STDOUT)
+        output = subprocess.check_output(command + [filename],
+                                         stderr = subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         ok = False
         output = e.output

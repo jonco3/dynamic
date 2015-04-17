@@ -92,7 +92,9 @@ const char* usageMessage =
     "usage:\n"
     "  dynamic            -- enter the REPL\n"
     "  dynamic FILE ARG*  -- run script from file\n"
-    "  dynamic -e EXPRS   -- execute expressions from commandline";
+    "  dynamic -e EXPRS   -- execute expressions from commandline\n"
+    "options:\n"
+    "  -l LIBDIR          -- set directory to load libraries from";
 
 static void badUsage()
 {
@@ -106,18 +108,20 @@ int main(int argc, const char* argv[])
     int pos = 1;
 
     bool expr = false;
+    string libDir = ".";
 
-    while ((argc - pos) > 0 && argv[pos][0] == '-') {
-        const char* opt = argv[pos];
-        ++pos;
+    while (pos != argc && argv[pos][0] == '-') {
+        const char* opt = argv[pos++];
         if (strcmp("-e", opt) == 0)
             expr = true;
+        if (strcmp("-l", opt) == 0 && pos != argc)
+            libDir = argv[pos++];
         else
             badUsage();
     }
 
     init1();
-    init2();
+    init2(libDir);
 
     if (expr)
         r = runExprs(argc - pos, &argv[pos]);

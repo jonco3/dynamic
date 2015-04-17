@@ -5,6 +5,6 @@
 
 extern GlobalRoot<Object*> Builtin;
 
-extern void initBuiltins();
+extern void initBuiltins(const string& libDir);
 
 #endif

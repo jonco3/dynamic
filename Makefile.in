@@ -1,0 +1,99 @@
+# @configure_input@
+
+# Package-related substitution variables
+package        = @PACKAGE_NAME@
+version        = @PACKAGE_VERSION@
+tarname        = @PACKAGE_TARNAME@
+
+# Prefix-related substitution variables
+prefix         = @prefix@
+exec_prefix    = @exec_prefix@
+bindir         = @bindir@
+
+# VPATH-related substitution variables
+srcdir         = @srcdir@
+VPATH          = @srcdir@
+
+CXX            = @CXX@
+LD             = @CXX@
+
+FLAGS          = -Wall -Werror --std=c++11 # --stdlib=libc++
+CXXFLAGS       = @CXXFLAGS@ $(FLAGS) -I.. -include config.h
+LDFLAGS        = @LDFLAGS@ $(FLAGS) -lstdc++ -lm
+
+TESTCXXFLAGS   = -DBUILD_TESTS
+TESTLDFLAGS    = 
+MAINCXXFLAGS   = -DUSE_READLINE
+MAINLDFLAGS    = -lreadline
+
+SRCS = \
+	src/token.cpp \
+	src/parser.cpp \
+	src/gc.cpp \
+	src/block.cpp \
+	src/layout.cpp \
+	src/value.cpp \
+	src/object.cpp \
+	src/singletons.cpp \
+	src/bool.cpp \
+	src/frame.cpp \
+	src/callable.cpp \
+	src/interp.cpp \
+	src/common.cpp \
+	src/exception.cpp \
+	src/integer.cpp \
+	src/string.cpp \
+	src/list.cpp \
+	src/dict.cpp \
+	src/builtin.cpp \
+	src/instr.cpp \
+	src/specials.cpp \
+	src/generator.cpp
+
+TESTSRCS = src/test.cpp $(SRCS)
+MAINSRCS = src/main.cpp $(SRCS)
+
+TESTOBJS = $(subst src,build/test,$(TESTSRCS:.cpp=.o))
+MAINOBJS = $(subst src,build/main,$(MAINSRCS:.cpp=.o))
+
+.PHONY: all
+all: dynamic tests
+
+Makefile: Makefile.in config.status
+	./config.status $@
+
+config.status: configure
+	./config.status --recheck
+
+tests: $(TESTOBJS) Makefile
+	$(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o tests
+
+dynamic: $(MAINOBJS) Makefile
+	$(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
+
+WRAPPER = python $(srcdir)/test/debug-wrapper
+TEST-RUNNER = python $(srcdir)/test/run-tests
+.PHONY: test
+test: tests dynamic
+	@echo "Entering directory \`src'"
+	$(WRAPPER) tests -l $(srcdir)/lib
+	$(TEST-RUNNER) ./dynamic -l $(srcdir)/lib
+
+.PHONY: bench
+bench: dynamic
+	python benchmarks/run_benchmarks.py
+
+.PHONY: clean
+clean:
+	rm -f build/*/* dynamic tests
+
+-include $(TESTDEPS)
+-include $(MAINDEPS)
+
+build/test/%.o: $(srcdir)/src/%.cpp Makefile
+	mkdir -p build/test
+	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $(TESTCXXFLAGS) $< -o $@
+
+build/main/%.o: $(srcdir)/src/%.cpp Makefile
+	mkdir -p build/main
+	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $(MAINCXXFLAGS) $< -o $@

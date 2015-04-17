@@ -41,7 +41,7 @@ static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-void initBuiltins()
+void initBuiltins(const string& libDir)
 {
     Builtin.init(gc::create<Object>());
     Root<Value> value;
@@ -56,7 +56,7 @@ void initBuiltins()
 
     value = Exception::ObjectClass; Builtin->setAttr("Exception", value);
 
-    string filename = "lib/builtin.py";
+    string filename = libDir + "/builtin.py";
     string text = readFile(filename);
     Root<Block*> block;
     Block::buildModule(Input(text, filename), Builtin, block);

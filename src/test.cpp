@@ -2,6 +2,8 @@
 
 #include "common.h"
 
+#include "sysexits.h"
+
 #include <cassert>
 #include <cstdio>
 
@@ -66,10 +68,34 @@ void maybeAbortTests(const runtime_error& exception)
     }
 }
 
+const char* usageMessage =
+    "usage:\n"
+    "  tests              -- enter the unit tests\n"
+    "options:\n"
+    "  -l LIBDIR          -- set directory to load libraries from";
+
+static void badUsage()
+{
+    cerr << usageMessage << endl;
+    exit(EX_USAGE);
+}
+
 int main(int argc, char *argv[])
 {
+    int pos = 1;
+
+    string libDir = ".";
+
+    while (pos != argc && argv[pos][0] == '-') {
+        const char* opt = argv[pos++];
+        if (strcmp("-l", opt) == 0 && pos != argc)
+            libDir = argv[pos++];
+        else
+            badUsage();
+    }
+
     init1();
-    init2();
+    init2(libDir);
     TestCase::runAllTests();
     return 0;
 }

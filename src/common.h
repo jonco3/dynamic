@@ -10,7 +10,7 @@ using namespace std;
 extern bool debugMode;
 
 extern void init1();
-extern void init2();
+extern void init2(const string& libDir);
 extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
