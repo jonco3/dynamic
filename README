@@ -1,0 +1,13 @@
+dynamic
+=======
+
+An implementation of the python programming language in C++.
+
+Building
+--------
+
+  $ ../configure
+  $ make test
+  $ ./dynamic -l lib
+  > print("Hello world")
+  Hello world
