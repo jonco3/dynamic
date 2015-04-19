@@ -35,7 +35,19 @@ struct StopIteration : public Exception
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
+    static bool create(TracedVector<Value> args, Root<Value>& resultOut);
+
     StopIteration() : Exception(ObjectClass, TokenPos(), "") {}
+};
+
+struct TypeError : public Exception
+{
+    static void init();
+    static GlobalRoot<Class*> ObjectClass;
+
+    static bool create(TracedVector<Value> args, Root<Value>& resultOut);
+
+    TypeError(string message) : Exception("TypeError", "message") {}
 };
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);

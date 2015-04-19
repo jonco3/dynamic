@@ -65,6 +65,8 @@ void initBuiltins(const string& libDir)
     value = Integer::ObjectClass; Builtin->setAttr("int", value);
     value = String::ObjectClass; Builtin->setAttr("str", value);
     value = Exception::ObjectClass; Builtin->setAttr("Exception", value);
+    value = StopIteration::ObjectClass; Builtin->setAttr("StopIteration", value);
+    value = TypeError::ObjectClass; Builtin->setAttr("TypeError", value);
 
     string filename = libDir + "/builtin.py";
     string text = readFile(filename);

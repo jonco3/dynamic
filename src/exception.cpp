@@ -6,10 +6,12 @@
 
 GlobalRoot<Class*> Exception::ObjectClass;
 GlobalRoot<Class*> StopIteration::ObjectClass;
+GlobalRoot<Class*> TypeError::ObjectClass;
 
 void Exception::init()
 {
     ObjectClass.init(gc::create<NativeClass>("Exception",
+                                             None,
                                              &Exception::create, 2));
     StopIteration::init();
 }
@@ -17,7 +19,17 @@ void Exception::init()
 void StopIteration::init()
 {
     ObjectClass.init(
-        gc::create<Class>("StopIteration", Exception::ObjectClass));
+        gc::create<NativeClass>("StopIteration",
+                                Exception::ObjectClass,
+                                &StopIteration::create, 1));
+}
+
+void TypeError::init()
+{
+    ObjectClass.init(
+        gc::create<NativeClass>("TypeError",
+                                Exception::ObjectClass,
+                                &TypeError::create, 2));
 }
 
 Exception::Exception(Traced<Class*> cls, const TokenPos& pos,
@@ -82,6 +94,23 @@ string Exception::fullMessage() const
 void Exception::print(ostream& os) const
 {
     os << fullMessage();
+}
+
+bool StopIteration::create(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    assert(args.size() == 0);
+    resultOut = gc::create<StopIteration>();
+    return true;
+}
+
+bool TypeError::create(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    assert(args.size() == 2);
+    if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
+        return false;
+
+    resultOut = gc::create<TypeError>(args[1].toObject()->as<String>()->value());
+    return true;
 }
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)

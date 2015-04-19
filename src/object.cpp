@@ -296,10 +296,10 @@ void Class::print(ostream& s) const
     s << "Class " << name_;
 }
 
-NativeClass::NativeClass(string name, Func createFunc,
+NativeClass::NativeClass(string name, Traced<Object*> base, Func createFunc,
                          unsigned minArgs, unsigned maxArgs,
                          Traced<Layout*> initialLayout)
-  : Class(name, None, initialLayout)
+  : Class(name, base, initialLayout)
 {
     assert(minArgs >= 1); // Class is passed as first argument.
     assert(initialLayout->subsumes(InitialLayout));
