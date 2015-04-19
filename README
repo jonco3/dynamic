@@ -1,13 +1,19 @@
 dynamic
 =======
 
-An implementation of the python programming language in C++.
+A toy implementation of the python programming language in C++.
 
 Building
 --------
 
-  $ ../configure
+  $ autoreconf
+  $ ./configure
   $ make test
   $ ./dynamic -l lib
   > print("Hello world")
   Hello world
+
+Some useful configure options:
+
+  --enable-debug  -- build debug version, no optimisation
+  --with-ccache   -- use compiler cache if installed
