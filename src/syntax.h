@@ -553,6 +553,7 @@ struct Parameter
 {
     Name name;
     Syntax* maybeDefault;
+    bool takesRest;
 };
 
 struct SyntaxLambda : public Syntax
@@ -574,8 +575,13 @@ struct SyntaxLambda : public Syntax
 
     virtual void print(ostream& s) const override {
         s << "lambda";
-        for (auto i = params_.begin(); i != params_.end(); ++i)
+        for (auto i = params_.begin(); i != params_.end(); ++i) {
+            if (i->takesRest)
+                s << "*";
             s << " " << i->name;
+            if (i->maybeDefault)
+                s << " = " << *i->maybeDefault;
+        }
         s << ": ";
         expr_->print(s);
     }
@@ -611,7 +617,11 @@ struct SyntaxDef : public Syntax
         for (auto i = params_.begin(); i != params_.end(); ++i) {
             if (i != params_.begin())
                 s << ", ";
+            if (i->takesRest)
+                s << "*";
             s << i->name;
+            if (i->maybeDefault)
+                s << " = " << *i->maybeDefault;
         }
         s << "):" << endl;
         expr_->print(s);

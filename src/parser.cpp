@@ -397,14 +397,23 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
 {
     vector<Parameter> params;
     bool hadDefault = false;
+    bool hadRest = false;
     while (!opt(endToken)) {
+        // todo: kwargs
+        bool takesRest = false;
+        if (opt(Token_Times))
+            takesRest = true;
         Token t = match(Token_Identifier);
+        if (hadRest)
+            throw ParseError(t, "Parameter following rest parameter");
         Name name = t.text;
         Syntax* defaultExpr = nullptr;
         if (opt(Token_Assign)) {
+            if (takesRest)
+                throw ParseError(t, "Rest parameter can't take default");
             defaultExpr = expression();
             hadDefault = true;
-        } else if (hadDefault) {
+        } else if (hadDefault && !takesRest) {
             // todo: use unique_ptr or something to do this automatically
             for (auto i = params.begin(); i != params.end(); i++)
                 delete i->maybeDefault;
@@ -413,11 +422,11 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         for (auto i = params.begin(); i != params.end(); i++)
             if (name == i->name)
                 throw ParseError(t, "Duplicate parameter name: " + name);
-        // todo: * and **
-        params.push_back({name, defaultExpr});
+        params.push_back({name, defaultExpr, takesRest});
         if (opt(endToken))
             break;
         match(Token_Comma);
+        hadRest = takesRest;
     }
     return params;
 }
@@ -617,12 +626,17 @@ testcase(parser)
     testParseModule("def f(): pass", "def f():\npass");
     testParseModule("def f(x): pass", "def f(x):\npass");
     testParseModule("def f(x,): pass", "def f(x):\npass");
-    testParseModule("def f(x = 0): pass", "def f(x):\npass");
+    testParseModule("def f(x = 0): pass", "def f(x = 0):\npass");
     testParseModule("def f(x, y): pass", "def f(x, y):\npass");
-    testParseModule("def f(x, y = 1): pass", "def f(x, y):\npass");
-    testParseModule("def f(x = 0, y = 1): pass", "def f(x, y):\npass");
+    testParseModule("def f(x, y = 1): pass", "def f(x, y = 1):\npass");
+    testParseModule("def f(x = 0, y = 1): pass", "def f(x = 0, y = 1):\npass");
+    testParseModule("def f(*x): pass", "def f(*x):\npass");
+    testParseModule("def f(x, *y): pass", "def f(x, *y):\npass");
+    testParseModule("def f(x = 0, *y): pass", "def f(x = 0, *y):\npass");
     testParseException("def f(x, x): pass");
     testParseException("def f(x = 0, y): pass");
+    testParseException("def f(*x, y): pass");
+    testParseException("def f(*x = ()): pass");
 }
 
 #endif

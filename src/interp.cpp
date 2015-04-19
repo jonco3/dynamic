@@ -223,11 +223,25 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             Root<Value> none(None);
             callFrame->setAttr("%gen", none);
         }
-        for (int i = args.size() - 1; i >= 0; --i)
+        unsigned normalArgs = min(args.size(), function->maxNormalArgs());
+        for (size_t i = 0; i < normalArgs; i++) {
+            // todo: set by slot not name
             callFrame->setAttr(function->paramName(i), args[i]);
-        for (unsigned i = args.size(); i < function->maxArgs(); i++) {
+        }
+        for (size_t i = args.size(); i < function->maxNormalArgs(); i++) {
             callFrame->setAttr(function->paramName(i),
                                function->paramDefault(i));
+        }
+        if (function->takesRest()) {
+            Root<Value> rest(Tuple::Empty);
+            if (args.size() > function->maxNormalArgs()) {
+                size_t count = args.size() - function->maxNormalArgs();
+                size_t start = function->maxNormalArgs();
+                TracedVector<Value> restArgs(args, start, count);
+                rest = Tuple::get(restArgs);
+            }
+            callFrame->setAttr(function->paramName(function->restParam()),
+                               rest);
         }
         if (function->isGenerator()) {
             Root<Value> iter(
@@ -485,6 +499,26 @@ testcase(interp)
                "  return (x, y)\n"
                "foo()\n",
                "(1, 2)");
+
+    testInterp("def foo(*x):\n"
+               "  return x\n"
+               "foo()\n",
+               "()");
+
+    testInterp("def foo(*x):\n"
+               "  return x\n"
+               "foo(1, 2)\n",
+               "(1, 2)");
+
+    testInterp("def foo(x, *y):\n"
+               "  return (x, y)\n"
+               "foo(1, 2)\n",
+               "(1, (2,))");
+
+    testInterp("def foo(x = 1, *y):\n"
+               "  return (x, y)\n"
+               "foo()\n",
+               "(1, ())");
 
     testInterp("class Foo:\n"
                "  a = 1\n"

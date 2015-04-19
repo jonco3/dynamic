@@ -2,6 +2,8 @@
 
 #include "object.h"
 
+#include <climits>
+
 GlobalRoot<Class*> Native::ObjectClass;
 GlobalRoot<Class*> Function::ObjectClass;
 
@@ -23,25 +25,34 @@ Native::Native(Name name, Func func, unsigned minArgs, unsigned maxArgs)
     func_(func)
 {}
 
+FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
+                           unsigned defaultCount, bool takesRest,
+                           bool isGenerator)
+  : params_(paramNames),
+    block_(block),
+    defaultCount_(defaultCount),
+    takesRest_(takesRest),
+    isGenerator_(isGenerator)
+{
+    assert(!takesRest || params_.size() > 0);
+}
+
 void Function::init()
 {
     ObjectClass.init(gc::create<Class>("Function"));
 }
 
 Function::Function(Name name,
-                   const vector<Name>& params,
+                   Traced<FunctionInfo*> info,
                    TracedVector<Value> defaults,
-                   Traced<Block*> block,
-                   Traced<Frame*> scope,
-                   bool isGenerator)
+                   Traced<Frame*> scope)
   : Callable(ObjectClass, name,
-             params.size() - defaults.size(), params.size()),
-    params_(params),
-    block_(block),
-    scope_(scope),
-    isGenerator_(isGenerator)
+             info->paramCount() - defaults.size() - (info->takesRest_ ? 1 : 0),
+             info->takesRest_ ? UINT_MAX : info->paramCount()),
+    info_(info),
+    scope_(scope)
 {
-    assert(params.size() >= defaults.size());
+    assert(info->paramCount() >= defaults.size());
     for (size_t i = 0; i < defaults.size(); i++)
         defaults_.push_back(defaults[i]);
 }
@@ -52,5 +63,3 @@ void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
     Root<Value> value(gc::create<Native>(name, func, minArgs, maxArgs));
     cls->setAttr(name, value);
 }
-
-//here

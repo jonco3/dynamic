@@ -41,7 +41,9 @@ struct Cell
 
     virtual void traceChildren(Tracer& t) {}
     virtual size_t size() const = 0;
-    virtual void print(ostream& s) const = 0;
+    virtual void print(ostream& s) const {
+        s << "Cell@" << hex << this;
+    }
     virtual void sweep() {}
 
   protected:
@@ -356,6 +358,12 @@ struct TracedVector
         source_.addUse();
     }
 
+    TracedVector(const TracedVector<T>& source, unsigned offset, unsigned size)
+      : source_(source.source_), offset_(source.offset_ + offset), size_(size) {
+        assert(offset_ + size_ <= source_.size());
+        source_.addUse();
+    }
+
     TracedVector(const TracedVector& other)
       : source_(other.source_), offset_(other.offset_), size_(other.size_) {
         source_.addUse();
@@ -414,7 +422,10 @@ template <typename T, typename... Args>
 T* create(Args&&... args) {
     static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
     maybeCollect();
-    AllocRoot<T*> t(static_cast<T*>(malloc(sizeof(T))));
+    // Pre-initialize memory to zero so that if we trigger GC by allocating in a
+    // constructor then any pointers in the partially constructed object will be
+    // in a valid state.
+    AllocRoot<T*> t(static_cast<T*>(calloc(1, sizeof(T))));
 #ifdef DEBUG
     bool oldAllocState = setAllocating(true);
 #endif

@@ -35,4 +35,24 @@ def k2(x):
     return k(x + 1)
 assert k(1) == 11
 
+def l(a, *b):
+    return (a, b)
+assert l(0) == (0, ())
+assert l(1, 2) == (1, (2,))
+assert l(1, 2, 3) == (1, (2, 3))
+
+def m(a, b = 1, *c):
+    return (a, b, c)
+assert m(0) == (0, 1, ())
+assert m(1, 2) == (1, 2, ())
+assert m(1, 2, 3) == (1, 2, (3,))
+assert m(1, 2, 3, 4) == (1, 2, (3, 4))
+
+def n(a, b = 1, c = 2, *d):
+    return (a, b, c, d)
+assert n(0) == (0, 1, 2, ())
+assert n(1, 2) == (1, 2, 2, ())
+assert n(1, 2, 3) == (1, 2, 3, ())
+assert n(1, 2, 3, 4) == (1, 2, 3, (4,))
+
 print('ok')

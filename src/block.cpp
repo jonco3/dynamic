@@ -623,8 +623,12 @@ struct BlockBuilder : public SyntaxVisitor
                 i->maybeDefault->accept(*this);
             }
         }
+        bool takesRest = false;
+        if (params.size() > 0)
+            takesRest = params.back().takesRest;
         block->append(gc::create<InstrLambda>(defName, names, exprBlock,
-                                              defaultCount, isGenerator));
+                                              defaultCount, takesRest,
+                                              isGenerator));
     }
 
     virtual void visit(const SyntaxLambda& s) {

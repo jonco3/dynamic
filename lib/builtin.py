@@ -1,4 +1,4 @@
-# Some self-hosted builtins
+# Some self-hosted builtins that are visible in the global namespace
 
 def len(x):
     return x.__len__()

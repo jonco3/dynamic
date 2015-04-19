@@ -40,47 +40,71 @@ struct Native : public Callable
     Func func_;
 };
 
+struct FunctionInfo : public Cell
+{
+    FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
+                 unsigned defaultCount = 0, bool takesRest = false,
+                 bool isGenerator = false);
+
+    virtual size_t size() const { return sizeof(*this); }
+    virtual void traceChildren(Tracer& t) override {
+        gc::trace(t, &block_);
+    }
+
+    size_t paramCount() const { return params_.size(); }
+
+    vector<Name> params_;
+    Block* block_;
+    unsigned defaultCount_;
+    bool takesRest_;
+    bool isGenerator_;
+};
+
 struct Function : public Callable
 {
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
     Function(Name name,
-             const vector<Name>& params,
+             Traced<FunctionInfo*> info,
              TracedVector<Value> defaults,
-             Traced<Block*> block,
-             Traced<Frame*> scope,
-             bool isGenerator = false);
+             Traced<Frame*> scopeo);
 
     Name paramName(unsigned i) {
-        assert(i < params_.size());
-        return params_[i];
+        assert(i < info_->params_.size());
+        return info_->params_[i];
     }
 
-    Block* block() const { return block_; }
+    Block* block() const { return info_->block_; }
     Frame* scope() const { return scope_; }
-    bool isGenerator() { return isGenerator_; }
+    bool takesRest() const { return info_->takesRest_; }
+    bool isGenerator() const { return info_->isGenerator_; }
     Traced<Value> paramDefault(unsigned i) {
+        assert(i < info_->paramCount());
+        i -= maxNormalArgs() - defaults_.size();
         assert(i < defaults_.size());
         return Traced<Value>::fromTracedLocation(&defaults_[i]);
+    }
+    size_t maxNormalArgs() const {
+        return info_->paramCount() - (takesRest() ? 1 : 0);
+    }
+    unsigned restParam() const {
+        assert(takesRest());
+        return info_->paramCount() - 1;
     }
 
     virtual void traceChildren(Tracer& t) override {
         Callable::traceChildren(t);
+        gc::trace(t, &info_);
         for (auto i: defaults_)
             gc::trace(t, &i);
-        gc::trace(t, &block_);
         gc::trace(t, &scope_);
     }
 
   private:
-    // todo: move common stuff to GC'ed FunctionInfo class also referred to by
-    // instr
-    vector<Name> params_;
+    FunctionInfo* info_;
     vector<Value> defaults_;
-    Block* block_;
     Frame* scope_;
-    bool isGenerator_;
 };
 
 void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,

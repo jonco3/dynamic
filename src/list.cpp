@@ -73,6 +73,22 @@ static bool listBase_iter(TracedVector<Value> args, Root<Value>& resultOut)
     return l->iter(resultOut);
 }
 
+static bool listBase_eq(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    ListBase* a = asListBase(args[0].toObject());
+    ListBase* b = asListBase(args[1].toObject());
+    resultOut = Boolean::get(*a == *b);
+    return true;
+}
+
+static bool listBase_ne(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    ListBase* a = asListBase(args[0].toObject());
+    ListBase* b = asListBase(args[1].toObject());
+    resultOut = Boolean::get(*a == *b);
+    return true;
+}
+
 static void listBase_initNatives(Traced<Class*> cls)
 {
     Root<Value> value;
@@ -80,6 +96,8 @@ static void listBase_initNatives(Traced<Class*> cls)
     initNativeMethod(cls, "__getitem__", listBase_getitem, 2);
     initNativeMethod(cls, "__contains__", listBase_contains, 2);
     initNativeMethod(cls, "__iter__", listBase_iter, 1);
+    initNativeMethod(cls, "__eq__", listBase_eq, 2);
+    initNativeMethod(cls, "__ne__", listBase_ne, 2);
 }
 
 static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
@@ -143,6 +161,11 @@ bool ListBase::iter(Root<Value>& resultOut)
     Root<ListBase*> self(this);
     resultOut = gc::create<ListIter>(self);
     return true;
+}
+
+bool ListBase::operator==(const ListBase& other)
+{
+    return false;
 }
 
 void Tuple::init()

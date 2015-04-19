@@ -207,13 +207,14 @@ bool Tokenizer::isIdentifierRest(char c)
     return isIdentifierStart(c) || isDigit(c);
 }
 
-bool Tokenizer::isOrdinary(char c)
+bool Tokenizer::isOperatorOrDelimiter(char c)
 {
     return
         c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '<' ||
         c == '>' || c == '&' || c == '|' || c == '^' || c == '~' || c == '=' ||
         c == '(' || c == ')' || c == '[' || c == ']' || c == '{' || c == '}' ||
-        c == '@' || c == ',' || c == ':' || c == '.' || c == '`' || c == ';';
+        c == '@' || c == ',' || c == ':' || c == '.' || c == '`' || c == ';' ||
+        c == '!';
 }
 
 void Tokenizer::skipWhitespace()
@@ -377,10 +378,10 @@ Token Tokenizer::findNextToken()
     }
 
     // Operators and delimiters
-    if (isOrdinary(peekChar())) {
+    if (isOperatorOrDelimiter(peekChar())) {
         do {
             nextChar();
-        } while (isOrdinary(peekChar()));
+        } while (isOperatorOrDelimiter(peekChar()));
         size_t length = index - startIndex;
 
         // Return the longest valid token we can make out of what we found.
@@ -427,6 +428,11 @@ testcase(tokenizer)
     testEqual(t.type, Token_Plus);
     testEqual(t.text, "+");
     testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("!=");
+    t = tz.nextToken();
+    testEqual(t.type, Token_NE);
+    testEqual(t.text, "!=");
 
     tz.start("123");
     t = tz.nextToken();

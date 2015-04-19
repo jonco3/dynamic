@@ -317,31 +317,31 @@ struct InstrLambda : public Instr
 {
     define_instr_members(Instr_Lambda, "Lambda");
 
-    InstrLambda(Name name, const vector<Name>& paramNames, Block* block,
-                unsigned defaultCount = 0, bool isGenerator = false);
+    InstrLambda(Name name, const vector<Name>& paramNames, Traced<Block*> block,
+                unsigned defaultCount = 0, bool takesRest = false,
+                bool isGenerator = false);
 
-    Name functionName() { return funcName_; }
-    Block* block() const { return block_; }
-
-    bool isGenerator() const { return isGenerator_; }
+    Name functionName() const { return funcName_; }
+    const vector<Name>& paramNames() const { return info_->params_; }
+    Block* block() const { return info_->block_; }
+    unsigned defaultCount() const { return info_->defaultCount_; }
+    bool takesRest() const { return info_->takesRest_; }
+    bool isGenerator() const { return info_->isGenerator_; }
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &block_);
+        gc::trace(t, &info_);
     }
 
     virtual void print(ostream& s) const {
         s << name();
-        for (auto i = paramNames_.begin(); i != paramNames_.end(); ++i)
+        for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i)
             s << " " << *i;
-        s << ": { " << *block_ << " }";
+        s << ": { " << *info_->block_ << " }";
     }
 
   private:
     Name funcName_;
-    vector<Name> paramNames_;
-    Block* block_;
-    unsigned defaultCount_;
-    bool isGenerator_;
+    FunctionInfo *info_;
 };
 
 struct InstrDup : public Instr

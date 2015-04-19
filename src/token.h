@@ -163,7 +163,7 @@ private:
     bool isDigit(char c);
     bool isIdentifierStart(char c);
     bool isIdentifierRest(char c);
-    bool isOrdinary(char c);
+    bool isOperatorOrDelimiter(char c);
 
     void queueDedentsToColumn(unsigned column);
 };

@@ -24,8 +24,8 @@ void GeneratorIter::init()
     static vector<Name> params = { "self" };
     Root<Frame*> scope; // todo: allow construction of traced for nullptr
     RootVector<Value> defaults; // todo: find a way of passing an empty vector
-    Root<Value> value(
-        gc::create<Function>("next", params, defaults, block, scope));
+    Root<FunctionInfo*> info(gc::create<FunctionInfo>(params, block));
+    Root<Value> value(gc::create<Function>("next", info, defaults, scope));
     ObjectClass->setAttr("next", value);
 }
 

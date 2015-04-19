@@ -5,6 +5,7 @@
 #include "exception.h"
 #include "input.h"
 #include "integer.h"
+#include "list.h"
 #include "singletons.h"
 #include "string.h"
 #include "value-inl.h"
@@ -44,16 +45,25 @@ static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
 void initBuiltins(const string& libDir)
 {
     Builtin.init(gc::create<Object>());
-    Root<Value> value;
+
+    // Functions
     initNativeMethod(Builtin, "hasattr", builtin_hasattr, 2);
     initNativeMethod(Builtin, "object", builtin_object, 0);
     initNativeMethod(Builtin, "isinstance", builtin_isinstance, 2);
 
+    // Constants
+    Root<Value> value;
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);
     value = None; Builtin->setAttr("None", value);
     value = NotImplemented; Builtin->setAttr("NotImplemented", value);
 
+    // Classes
+    value = List::ObjectClass; Builtin->setAttr("list", value);
+    value = Tuple::ObjectClass; Builtin->setAttr("tuple", value);
+    value = Boolean::ObjectClass; Builtin->setAttr("bool", value);
+    value = Integer::ObjectClass; Builtin->setAttr("int", value);
+    value = String::ObjectClass; Builtin->setAttr("str", value);
     value = Exception::ObjectClass; Builtin->setAttr("Exception", value);
 
     string filename = libDir + "/builtin.py";
@@ -65,6 +75,10 @@ void initBuiltins(const string& libDir)
         printException(result);
         exit(1);
     }
+
+    filename = libDir + "/internal.py";
+    text = readFile(filename);
+    runModule(text, filename, None);
 }
 
 #ifdef BUILD_TESTS

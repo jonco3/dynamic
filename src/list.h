@@ -22,6 +22,9 @@ struct ListBase : public Object
         return Traced<Value>::fromTracedLocation(&elements_.at(index));
     }
 
+    bool operator==(const ListBase& other);
+    bool operator!=(const ListBase& other) { return !(*this == other); }
+
   protected:
     vector<Value> elements_;
     friend struct ListIter;
