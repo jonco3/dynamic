@@ -56,6 +56,9 @@ MAINSRCS = src/main.cpp $(SRCS)
 TESTOBJS = $(subst src,build/test,$(TESTSRCS:.cpp=.o))
 MAINOBJS = $(subst src,build/main,$(MAINSRCS:.cpp=.o))
 
+TESTDEPS = $(TESTOBJS:.o=.d)
+MAINDEPS = $(MAINOBJS:.o=.d)
+
 .PHONY: all
 all: dynamic tests
 
@@ -75,7 +78,7 @@ WRAPPER = python $(srcdir)/test/debug-wrapper
 TEST-RUNNER = python $(srcdir)/test/run-tests
 .PHONY: test
 test: tests dynamic
-	@echo "Entering directory \`src'"
+	@echo "Entering directory \`@srcdir@/src'"
 	$(WRAPPER) tests -l $(srcdir)/lib
 	$(TEST-RUNNER) ./dynamic -l $(srcdir)/lib
 
