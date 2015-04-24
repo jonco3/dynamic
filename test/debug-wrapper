@@ -19,6 +19,16 @@ def which(program):
             return file
     return None
 
+args = sys.argv[1:]
+
+if sys.platform == "darwin" and which('lldb'):
+    args = [ 'lldb', '--no-use-colors', '--batch',
+             '--one-line', 'run',
+             '--one-line-on-crash', 'bt', '--one-line-on-crash', 'quit',
+             '--', ] + args
+    print(" ".join(args))
+    os.execvp('lldb', args)
+
 exit_pattern = re.compile(r" (?:exited with code|exited with status =) (\d+)")
 crash_pattern = re.compile(r"Program received signal")
 
@@ -31,7 +41,6 @@ elif which('lldb'):
 else:
     sys.exit("Can't find a debugger!")
 
-args = sys.argv[1:]
 process = Popen(command + args, stdin = PIPE, stdout = PIPE, stderr = STDOUT)
 
 state = 'init'
