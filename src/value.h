@@ -30,6 +30,9 @@ struct Value
         return *this;
     }
 
+    inline bool isInt32() const;
+    inline int32_t asInt32() const;
+
     bool isObject() const {
         return kind() == ObjectKind;
     }
@@ -39,19 +42,16 @@ struct Value
         return objectp;
     }
 
-    inline bool isNone() const;
     inline Object *toObject() const;
-    inline bool isInt32() const;
-    inline int32_t asInt32() const;
+
+    inline bool isNone() const;
 
     inline Class* type() const;
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
 
-    bool operator==(const Value& other) const;
+    bool operator==(const Value& other) const { return bits == other.bits; }
     bool operator!=(const Value& other) const { return !(*this == other); }
-
-    size_t hash() const;
 
     inline bool isTrue() const;
     inline bool isInstanceOf(Traced<Class*> cls) const;
@@ -77,14 +77,5 @@ struct Value
 };
 
 ostream& operator<<(ostream& s, const Value& v);
-
-namespace std {
-template <>
-struct hash<Value> {
-    size_t operator()(Value v) const {
-        return v.hash();
-    }
-};
-} /* namespace std */
 
 #endif

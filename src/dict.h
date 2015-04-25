@@ -19,7 +19,15 @@ struct Dict : public Object
     bool setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOut);
 
   private:
-    unordered_map<Value, Value> entries_;
+    struct ValueHash {
+        size_t operator()(Value v) const;
+    };
+
+    struct ValuesEqual {
+        bool operator()(Value a, Value b) const;
+    };
+
+    unordered_map<Value, Value, ValueHash, ValuesEqual> entries_;
 };
 
 #endif

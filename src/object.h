@@ -64,9 +64,6 @@ struct Object : public Cell
     bool isTrue() const;
     bool isInstanceOf(Traced<Class*> cls) const;
 
-    virtual bool equals(Object* other) const { return this == other; }
-    virtual size_t hash() const { return size_t(this); }
-
   protected:
     Object(Traced<Class*> cls, Traced<Class*> base,
            Traced<Layout*> layout = InitialLayout);

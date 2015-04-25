@@ -30,6 +30,7 @@ struct CompareGT        { static int op(int a, int b) { return a > b; } };
 struct CompareGE        { static int op(int a, int b) { return a >= b; } };
 struct CompareEQ        { static int op(int a, int b) { return a == b; } };
 struct CompareNE        { static int op(int a, int b) { return a != b; } };
+struct Hash             { static int op(int a) { return a; } };
 
 template <typename T>
 static bool intUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
@@ -102,6 +103,7 @@ void Integer::init()
     initNativeMethod(cls, "__floordiv__", intBinaryOp<BinaryIntDivide>, 2);
     initNativeMethod(cls, "__mod__", intBinaryOp<BinaryModulo>, 2);
     initNativeMethod(cls, "__pow__", intBinaryOp<BinaryPower>, 2);
+    initNativeMethod(cls, "__hash__", intUnaryOp<Hash>, 1);
     ObjectClass.init(cls);
 
     Zero.init(gc::create<Integer>(0));

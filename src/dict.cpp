@@ -5,6 +5,8 @@
 #include "exception.h"
 #include "repr.h"
 
+#include <stdexcept>
+
 GlobalRoot<Class*> Dict::ObjectClass;
 
 static bool dict_contains(TracedVector<Value> args, Root<Value>& resultOut)
@@ -90,6 +92,80 @@ bool Dict::setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOu
     entries_[key] = value;
     resultOut = value;
     return true;
+}
+
+// Wrap a python error in a C++ exception to propagate it out of STL machinery.
+struct PythonException : public runtime_error
+{
+    PythonException(Value result)
+      : runtime_error("python exception"), result_(result)
+    {}
+
+    Value result() const { return result_; }
+
+  private:
+    Value result_;
+    AutoAssertNoGC nogc_;
+};
+
+size_t Dict::ValueHash::operator()(Value v) const
+{
+    // Integers hash to themselves in python.
+    if (v.isInt32())
+        return v.asInt32();
+
+    Root<Object*> obj(v.asObject());
+    Root<Value> hashFunc;
+    if (!obj->maybeGetAttr("__hash__", hashFunc))
+        return size_t(obj.get());
+
+    Root<Value> result;
+    if (hashFunc.isNone()) {
+        result =
+            gc::create<TypeError>("Object has no __hash__ method");
+        throw PythonException(result);
+    }
+
+    RootVector<Value> args(1);
+    args[0] = v;
+    if (!Interpreter::instance().call(hashFunc, args, result))
+        throw PythonException(result);
+
+    if (!result.isInt32()) {
+        result =
+            gc::create<TypeError>("__hash__ method should return an integer");
+        throw PythonException(result);
+    }
+
+    return result.asInt32();
+}
+
+bool Dict::ValuesEqual::operator()(Value a, Value b) const
+{
+    if (a.isInt32() && b.isInt32())
+        return a.asInt32() == b.asInt32();
+
+    Root<Object*> obj(a.asObject());
+
+    Root<Value> eqFunc;
+    if (!obj->maybeGetAttr("__eq__", eqFunc))
+        return size_t(obj.get());
+
+    Root<Value> result;
+    RootVector<Value> args(2);
+    args[0] = a;
+    args[1] = b;
+    if (!Interpreter::instance().call(eqFunc, args, result))
+        throw PythonException(result);
+
+    obj = result.toObject();
+    if (!obj->is<Boolean>()) {
+        result =
+            gc::create<TypeError>("__eq__ method should return an bool");
+        throw PythonException(result);
+    }
+
+    return obj->as<Boolean>()->value();
 }
 
 #ifdef BUILD_TESTS

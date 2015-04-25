@@ -18,9 +18,7 @@ struct Interpreter
 {
     static void init();
     static bool exec(Traced<Block*> block, Value& valueOut);
-#ifdef BUILD_TESTS
     static Interpreter& instance() { return *instance_; }
-#endif
 
     bool interpret(Traced<Block*> block, Value& valueOut);
 

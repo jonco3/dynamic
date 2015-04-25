@@ -306,6 +306,14 @@ struct RootVector : private vector<T>, private RootBase
         RootBase::insert();
     }
 
+  RootVector(size_t initialSize)
+    : vector<T>(initialSize) {
+#ifdef DEBUG
+        useCount = 0;
+#endif
+        RootBase::insert();
+    }
+
     ~RootVector() {
         assert(useCount == 0);
         remove();

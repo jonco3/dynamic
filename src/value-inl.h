@@ -84,6 +84,18 @@ inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut) const
 }
 
 template <typename W>
+inline bool WrapperMixins<W, Value>::isInt32() const
+{
+    return get()->isInt32();
+}
+
+template <typename W>
+inline int32_t WrapperMixins<W, Value>::asInt32() const
+{
+    return get()->asInt32();
+}
+
+template <typename W>
 inline bool WrapperMixins<W, Value>::isObject() const
 {
     return get()->isObject();
@@ -102,15 +114,9 @@ inline Object* WrapperMixins<W, Value>::toObject() const
 }
 
 template <typename W>
-inline bool WrapperMixins<W, Value>::isInt32() const
+inline bool WrapperMixins<W, Value>::isNone() const
 {
-    return get()->isInt32();
-}
-
-template <typename W>
-inline int32_t WrapperMixins<W, Value>::asInt32() const
-{
-    return get()->asInt32();
+    return get()->isObject() && get()->asObject() == None;
 }
 
 template <typename W>

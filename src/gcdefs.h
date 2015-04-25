@@ -20,11 +20,12 @@ struct GCTraits<Value>
 template <typename W>
 struct WrapperMixins<W, Value>
 {
+    inline bool isInt32() const;
+    inline int32_t asInt32() const;
     inline bool isObject() const;
     inline Object *asObject() const;
     inline Object *toObject() const;
-    inline bool isInt32() const;
-    inline int32_t asInt32() const;
+    inline bool isNone() const;
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     inline Class* type() const;
