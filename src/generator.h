@@ -33,7 +33,6 @@ struct GeneratorIter : public Object
     Frame* frame_;
     size_t ipOffset_;
     vector<Value> savedStack_;
-
 };
 
 #endif

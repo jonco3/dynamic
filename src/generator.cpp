@@ -3,6 +3,16 @@
 #include "callable.h"
 #include "instr.h"
 
+//#define TRACE_GENERATOR
+
+#ifdef TRACE_GENERATOR
+static inline void log(const char* s, void *p, unsigned x) {
+    cerr << s << " " << p << " " << x << endl;
+}
+#else
+static inline void log(const char* s, void *p, unsigned x) {}
+#endif
+
 GlobalRoot<Class*> GeneratorIter::ObjectClass;
 
 static bool generatorIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
@@ -36,6 +46,7 @@ GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Frame*> frame)
     frame_(frame),
     ipOffset_(0)
 {
+    assert(savedStack_.empty());
 }
 
 void GeneratorIter::traceChildren(Tracer& t)
@@ -56,8 +67,10 @@ bool GeneratorIter::iter(Root<Value>& resultOut)
 
 bool GeneratorIter::resume(Interpreter& interp)
 {
+    log("GeneratorIter::resume", this, state_);
     switch (state_) {
       case Running:
+        assert(savedStack_.empty());
         interp.pushStack(gc.create<Exception>("ValueError",
                                                "Generator running"));
         return false;
@@ -67,10 +80,12 @@ bool GeneratorIter::resume(Interpreter& interp)
         interp.resumeGenerator(frame, ipOffset_, savedStack_);
         interp.pushStack(None);
         state_ = Running;
+        assert(savedStack_.empty());
         return true;
       }
 
       case Finished:
+        assert(savedStack_.empty());
         // todo: not sure about this behaviour, need tests
         interp.pushStack(gc.create<StopIteration>());
         return false;
@@ -83,8 +98,9 @@ bool GeneratorIter::resume(Interpreter& interp)
 
 bool GeneratorIter::leave(Interpreter& interp)
 {
-    // todo: get rid of value
+    log("GeneratorIter::leave", this, state_);
     assert(state_ == Running);
+    assert(savedStack_.empty());
     interp.popFrame();
     state_ = Finished;
     interp.pushStack(gc.create<StopIteration>());
@@ -93,7 +109,9 @@ bool GeneratorIter::leave(Interpreter& interp)
 
 void GeneratorIter::suspend(Interpreter& interp, Traced<Value> value)
 {
+    log("GeneratorIter::suspend", this, state_);
     assert(state_ == Running);
+    assert(savedStack_.empty());
     ipOffset_ = interp.suspendGenerator(savedStack_);
     state_ = Suspended;
     interp.pushStack(value);
