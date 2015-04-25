@@ -121,7 +121,9 @@ bool InstrGetMethodFallback::execute(Interpreter& interp)
 bool InstrCall::execute(Interpreter& interp)
 {
     Root<Value> target(interp.peekStack(count));
-    TracedVector<Value> args = interp.stackSlice(count - 1, count);
+    RootVector<Value> args(count);
+    for (unsigned i = 0; i < count; i++)
+        args[i] = interp.peekStack(count - i - 1);
     interp.popStack(count + 1);
     return interp.startCall(target, args);
 }
@@ -241,7 +243,7 @@ bool InstrLambda::execute(Interpreter& interp)
     Root<Block*> block(this->block());
     Root<Frame*> frame(interp.getFrame(0));
     TracedVector<Value> defaults(
-        interp.stackSlice(defaultCount() - 1, defaultCount()));
+        interp.stackSlice(defaultCount()));
     Object* obj = gc.create<Function>(funcName_, info, defaults, frame);
     interp.pushStack(Value(obj));
     return true;
@@ -267,7 +269,7 @@ bool InstrSwap::execute(Interpreter& interp)
 
 bool InstrTuple::execute(Interpreter& interp)
 {
-    Tuple* tuple = Tuple::get(interp.stackSlice(size - 1, size));
+    Tuple* tuple = Tuple::get(interp.stackSlice(size));
     interp.popStack(size);
     interp.pushStack(tuple);
     return true;
@@ -275,7 +277,7 @@ bool InstrTuple::execute(Interpreter& interp)
 
 bool InstrList::execute(Interpreter& interp)
 {
-    List* list = gc.create<List>(interp.stackSlice(size - 1, size));
+    List* list = gc.create<List>(interp.stackSlice(size));
     interp.popStack(size);
     interp.pushStack(list);
     return true;
@@ -283,7 +285,7 @@ bool InstrList::execute(Interpreter& interp)
 
 bool InstrDict::execute(Interpreter& interp)
 {
-    Dict* dict = gc.create<Dict>(interp.stackSlice(size * 2 - 1, size * 2));
+    Dict* dict = gc.create<Dict>(interp.stackSlice(size * 2));
     interp.popStack(size * 2);
     interp.pushStack(dict);
     return true;
@@ -414,7 +416,7 @@ bool InstrIteratorNext::execute(Interpreter& interp)
 {
     // The stack is already set up with next method and target on top
     Root<Value> target(interp.peekStack(1));
-    TracedVector<Value> args = interp.stackSlice(0, 1);
+    TracedVector<Value> args = interp.stackSlice(1);
     Root<Value> result;
     bool ok = interp.call(target, args, result);
     if (!ok) {

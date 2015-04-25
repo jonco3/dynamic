@@ -27,7 +27,7 @@ Interpreter* Interpreter::instance_ = nullptr;
 }
 
 Interpreter::Interpreter()
-  : instrp(nullptr), pos(0)
+  : instrp(nullptr)
 {}
 
 bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
@@ -86,7 +86,7 @@ Frame* Interpreter::newFrame(Traced<Function*> function)
 
 void Interpreter::pushFrame(Traced<Frame*> frame)
 {
-    frame->setStackPos(pos);
+    frame->setStackPos(stackPos());
     instrp = frame->block()->startInstr();
     frames.push_back(frame);
 }
@@ -95,9 +95,8 @@ void Interpreter::popFrame()
 {
     assert(!frames.empty());
     Frame* frame = frames.back();
-    assert(frame->stackPos() <= pos);
-    pos = frame->stackPos();
-    stack.resize(pos);
+    assert(frame->stackPos() <= stackPos());
+    stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
 #ifdef TRACE_INTERP
     cout << "  return to " << (void*)instrp << endl;
@@ -120,8 +119,9 @@ void Interpreter::resumeGenerator(Traced<Frame*> frame,
 unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
 {
     Frame* frame = frames.back();
-    assert(frame->stackPos() <= pos);
-    unsigned len = pos - frame->stackPos();
+    assert(frame->stackPos() <= stackPos());
+    unsigned len = stackPos() - frame->stackPos();
+    assert(savedStack.empty());
     savedStack.resize(len);
     // todo: probably a better way to do this with STL
     for (unsigned i = 0; i < len; i++)
@@ -399,7 +399,7 @@ testcase(interp)
     testEqual(i.stackPos(), 1u);
     testEqual(i.peekStack(0), Value(None));
     testEqual(i.stackRef(0).get(), Value(None));
-    TracedVector<Value> slice = i.stackSlice(0, 1);
+    TracedVector<Value> slice = i.stackSlice(1);
     testEqual(slice.size(), 1u);
     testEqual(slice[0].get(), Value(None));
     testEqual(i.popStack(), Value(None));

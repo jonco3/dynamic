@@ -25,53 +25,52 @@ struct Interpreter
     template <typename S>
     void pushStack(const S& element) {
         Root<Value> value(element);
-        stack.resize(pos + 1);
-        stack[pos] = value.get();
-        ++pos;
+        stack.push_back(value.get());
     }
 
+    // Remove and return the value on the top of the stack.
     Value popStack() {
-        assert(pos >= 1);
-        assert(pos <= stack.size());
-        --pos;
-        Value result = stack[pos];
+        assert(!stack.empty());
+        Value result = stack.back();
+        stack.pop_back();
         return result;
     }
 
+    // Remove |count| values from the top of the stack.
     void popStack(unsigned count) {
-        assert(pos >= count);
-        assert(pos <= stack.size());
-        pos -= count;
+        assert(count <= stack.size());
+        stack.resize(stack.size() - count);
     }
 
+    // Return the value at position |offset| counting from zero.
     Value peekStack(unsigned offset) {
-        assert(pos >= offset + 1);
-        assert(pos <= stack.size());
-        return stack[pos - offset - 1];
+        assert(offset < stack.size());
+        return stack[stackPos() - offset - 1];
     }
 
+    // Get a reference to the value at position |offset| counting from zero.
     Traced<Value> stackRef(unsigned offset) {
-        assert(pos >= offset + 1);
-        assert(pos <= stack.size());
-        return stack.ref(pos - offset - 1);
+        assert(offset < stack.size());
+        return stack.ref(stackPos() - offset - 1);
     }
 
-    TracedVector<Value> stackSlice(unsigned offset, unsigned size) {
-        assert(pos >= offset + 1);
-        assert(pos <= stack.size());
-        return TracedVector<Value>(stack, pos - offset - 1, size);
+    // Return a reference to the |count| topmost values.
+    TracedVector<Value> stackSlice(unsigned count) {
+        assert(count <= stack.size());
+        return TracedVector<Value>(stack, stackPos() - count, count);
     }
 
+    // Swap the two values on the top of the stack.
     void swapStack() {
-        assert(pos >= 2);
-        assert(pos <= stack.size());
+        assert(stack.size() >= 2);
+        unsigned pos = stackPos();
         swap(stack[pos - 1], stack[pos - 2]);
     }
 
     void branch(int offset);
 
     Instr** nextInstr() { return instrp; }
-    unsigned stackPos() { return pos; }
+    unsigned stackPos() { return stack.size(); }
 
     bool call(Traced<Value> callable, const TracedVector<Value>& args,
               Root<Value>& resultOut);
@@ -94,7 +93,6 @@ struct Interpreter
     Instr **instrp;
     RootVector<Frame*> frames;
     RootVector<Value> stack;
-    unsigned pos;
 
     Interpreter();
     Frame* newFrame(Traced<Function*> function);
