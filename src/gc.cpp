@@ -61,6 +61,7 @@ Cell::Cell()
 {
     assert(gc.isAllocating);
     assert(!gc.isSweeping);
+    assert((size_t(this) & ((1 << GC::sizeSmallAlignShift) - 1)) == 0);
 
     log("created", this);
     epoch_ = gc.currentEpoch;

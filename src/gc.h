@@ -479,14 +479,22 @@ size_t GC::sizeFromClass(SizeClass sc)
 
 template <typename T, typename... Args>
 T* GC::create(Args&&... args) {
-    static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+    static_assert(is_base_of<Cell, T>::value,
+                  "Type T must be derived from Cell");
+
     maybeCollect();
+
     SizeClass sc = sizeClass(sizeof(T));
     size_t allocSize = sizeFromClass(sc);
+    assert(allocSize >= sizeof(T));
+
     // Pre-initialize memory to zero so that if we trigger GC by allocating in a
     // constructor then any pointers in the partially constructed object will be
     // in a valid state.
-    AllocRoot<T*> t(static_cast<T*>(calloc(1, allocSize)));
+    void* data = calloc(1, allocSize);
+
+    AllocRoot<T*> t(static_cast<T*>(data));
+    assert(static_cast<Cell*>(t.get()) == data);
     assert(!isAllocating);
 #ifdef DEBUG
     isAllocating = true;
