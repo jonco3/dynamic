@@ -417,9 +417,8 @@ testcase(interp)
     testInterp("foo = 0\n"
                "foo.bar = 1\n"
                "return foo + foo.bar", "1");
-    // todo: fails to parse with: Illegal LHS for assignment
-    //testInterp("foo = bar = 1\n"
-    //           "return foo", "1");
+    testInterp("foo = bar = 1\n"
+               "return foo", "1");
     testInterp("return 1 | 8", "9");
     testInterp("return 3 ^ 5", "6");
     testInterp("return 3 & 5", "1");

@@ -90,6 +90,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         inAssignTarget_ = true;
         s.left()->accept(*this);
         inAssignTarget_ = false;
+        s.right()->accept(*this);
     }
 
     virtual void visit(const SyntaxTargetList& s) {

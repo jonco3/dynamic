@@ -331,6 +331,18 @@ Syntax* SyntaxParser::parseAugAssign(Token token, Syntax* syntax, BinaryOp op)
     return new SyntaxAugAssign(token, target, expression(), op);
 }
 
+Syntax* SyntaxParser::parseAssignSource()
+{
+    Syntax* expr = parseExprOrExprList();
+    if (!opt(Token_Assign))
+        return expr;
+
+    Token token = currentToken();
+    SyntaxTarget* target = makeAssignTarget(expr);
+    expr = parseAssignSource();
+    return new SyntaxAssign(token, target, expr);
+}
+
 Syntax* SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -363,7 +375,7 @@ Syntax* SyntaxParser::parseSimpleStatement()
     Syntax* expr = parseExprOrExprList();
     if (opt(Token_Assign)) {
         SyntaxTarget* target = makeAssignTarget(expr);
-        return new SyntaxAssign(token, target, parseExprOrExprList());
+        return new SyntaxAssign(token, target, parseAssignSource());
     } else if (opt(Token_AssignPlus)) {
         return parseAugAssign(token, expr, BinaryPlus);
     } else if (opt(Token_AssignMinus)) {
@@ -612,6 +624,7 @@ testcase(parser)
     testParseModule("foo(bar)", "foo(bar)");
     testParseModule("foo(bar, baz)", "foo(bar, baz)");
     testParseModule("a, b = 1, 2", "(a, b) = (1, 2)");
+    testParseModule("a = b = 1", "a = b = 1");
 
     testParseModule("for x in []:\n  pass", "for x in []:\npass");
     testParseModule("for a.x in []:\n  pass", "for a.x in []:\npass");

@@ -340,6 +340,7 @@ struct SyntaxParser : public Parser<Syntax *>
 
     bool maybeExprToken();
     Syntax* parseExprOrExprList();
+    Syntax* parseAssignSource();
     SyntaxBlock* parseBlock();
     SyntaxBlock* parseSuite();
     vector<Parameter> parseParameterList(TokenType endToken);
