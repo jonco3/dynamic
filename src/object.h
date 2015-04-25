@@ -72,7 +72,6 @@ struct Object : public Cell
     void init(Traced<Class*> cls);
 
     virtual void traceChildren(Tracer& t) override;
-    virtual size_t size() const { return sizeof(*this); }
 
     bool hasOwnAttr(Name name) const;
     bool maybeGetOwnAttr(Name name, Value& valueOut, AutoAssertNoGC& nogc) const;

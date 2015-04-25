@@ -30,10 +30,10 @@ static inline void log(const char* s, size_t i, int j) {}
 
 namespace gc {
 static const int8_t epocs = 2;
-static const int8_t invalidEpoc = -1;
 static int8_t currentEpoc = 1;
 static int8_t prevEpoc = 2;
-static vector<Cell*> cells;
+static size_t cellCount = 0;
+static vector<vector<Cell*>> cells;
 static RootBase* rootList;
 static bool isSweeping = false;
 static bool isAllocating = false;
@@ -49,6 +49,13 @@ static size_t collectAt = minCollectAt;
 unsigned unsafeCount = 0;
 }
 
+void gc::init()
+{
+    assert(cellCount == 0);
+    assert(cells.empty());
+    cells.resize(sizeClassCount);
+}
+
 Cell::Cell()
 {
     assert(gc::isAllocating);
@@ -56,13 +63,20 @@ Cell::Cell()
 
     log("created", this);
     epoc_ = gc::currentEpoc;
-    gc::cells.push_back(this);
+    gc::isAllocating = false;
+}
+
+void gc::registerCell(Cell* cell, SizeClass sc)
+{
+    assert(!cells.empty());
+    assert(sc < sizeClassCount);
+    cells[sc].push_back(cell);
+    cellCount++;
 }
 
 Cell::~Cell()
 {
     assert(gc::isSweeping);
-    epoc_ = gc::invalidEpoc;
 }
 
 void Cell::checkValid() const
@@ -86,8 +100,7 @@ bool Cell::isDying() const
 {
     assert(gc::isSweeping);
     assert(epoc_ == gc::currentEpoc ||
-           epoc_ == gc::prevEpoc ||
-           epoc_ == gc::invalidEpoc);
+           epoc_ == gc::prevEpoc);
     return epoc_ != gc::currentEpoc;
 }
 
@@ -110,20 +123,15 @@ void Cell::sweepCell(Cell* cell)
     cell->sweep();
 }
 
-void Cell::destroyCell(Cell* cell)
+void Cell::destroyCell(Cell* cell, size_t size)
 {
     log("  destroy", cell);
     assert(cell->shouldSweep());
-#ifdef DEBUG
-    size_t cellSize = cell->size();
-#endif
     cell->~Cell();
-    free(cell);
 #ifdef DEBUG
-    memset(reinterpret_cast<uint8_t*>(cell) + sizeof(Cell),
-           0xff,
-           cellSize - sizeof(Cell));
+    memset(reinterpret_cast<uint8_t*>(cell), 0xff, size);
 #endif
+    free(cell);
 }
 
 void RootBase::insert()
@@ -177,12 +185,20 @@ struct Marker : public Tracer
     vector<Cell*> stack_;
 };
 
-bool gc::setAllocating(bool state)
+#ifdef DEBUG
+
+bool gc::getAllocating()
 {
-    bool oldState = isAllocating;
-    isAllocating = state;
-    return oldState;
+    return isAllocating;
 }
+
+void gc::setAllocating()
+{
+    assert(!isAllocating);
+    isAllocating = true;
+}
+
+#endif
 
 void gc::maybeCollect()
 {
@@ -191,10 +207,31 @@ void gc::maybeCollect()
         collect();
 }
 
+static vector<Cell*>::iterator sweepCells(vector<Cell*>& cells)
+{
+    auto dying = partition(cells.begin(), cells.end(), [] (Cell* cell) {
+        return !cell->shouldSweep();
+    });
+    for_each(dying, cells.end(), Cell::sweepCell);
+    return dying;
+}
+
+static void destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
+                         size_t size)
+{
+    for_each(dying, cells.end(), [=]  (Cell* cell) {
+        Cell::destroyCell(cell, size);
+    });
+    size_t count = cells.end() - dying;
+    assert(gc::cellCount >= count);
+    gc::cellCount -= count;
+    cells.erase(dying, cells.end());
+}
+
 void gc::collect() {
     assert(!isSweeping);
 
-    log("> gc::collect", cellCount(), currentEpoc);
+    log("> gc::collect", cellCount, currentEpoc);
 
     // Begin new epoc
     prevEpoc = currentEpoc;
@@ -216,23 +253,18 @@ void gc::collect() {
     // Sweep
     log("- sweeping");
     isSweeping = true;
-    auto dying = partition(cells.begin(), cells.end(), [] (Cell* cell) {
-        return !cell->shouldSweep();
-    });
-    for_each(dying, cells.end(), Cell::sweepCell);
-    for_each(dying, cells.end(), Cell::destroyCell);
-    cells.erase(dying, cells.end());
+    vector<vector<Cell*>::iterator> dying(sizeClassCount);
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++)
+        dying[sc] = sweepCells(cells[sc]);
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++)
+        destroyCells(cells[sc], dying[sc], sizeFromClass(sc));
     isSweeping = false;
 
     // Schedule next collection
     collectAt = max(minCollectAt,
-        static_cast<size_t>(static_cast<double>(cellCount()) * scheduleFactor));
+        static_cast<size_t>(static_cast<double>(cellCount) * scheduleFactor));
 
-    log("< gc::collect", cellCount(), currentEpoc);
-}
-
-size_t gc::cellCount() {
-    return cells.size();
+    log("< gc::collect", cellCount, currentEpoc);
 }
 
 #ifdef BUILD_TESTS
@@ -245,8 +277,6 @@ struct TestCell : public Cell
         for (auto i = children_.begin(); i != children_.end(); ++i)
             gc::trace(t, &(*i));
     }
-
-    virtual size_t size() const { return sizeof(*this); }
 
     virtual void print(ostream& s) const {
         s << "TestCell@" << hex << static_cast<const void*>(this);
@@ -264,41 +294,57 @@ testcase(gc)
 {
     using namespace gc;
 
-    collect();
-    size_t initCount = cellCount();
+    testEqual(sizeClass(1), 0u);
+    testEqual(sizeClass(1 << sizeSmallAlignShift), 0u);
+    testEqual(sizeFromClass(0), 1u << sizeSmallAlignShift);
+    testEqual(sizeClass(1 << sizeLargeThresholdShift),
+              (1u << (sizeLargeThresholdShift - sizeSmallAlignShift)) - 1);
+    testEqual(sizeClass((1 << sizeLargeThresholdShift) + 1),
+              1u << (sizeLargeThresholdShift - sizeSmallAlignShift));
+    for (size_t i = 1; i < 1024; i++) {
+        SizeClass sc = sizeClass(i);
+        testTrue(sizeFromClass(sc) >= i);
+    }
+    for (size_t i = sizeSmallAlignShift; i < 32; i++) {
+        SizeClass sc = sizeClass(1u << i);
+        testEqual(sizeFromClass(sc), 1u << i);
+    }
 
-    testEqual(cellCount(), initCount);
     collect();
-    testEqual(cellCount(), initCount);
+    size_t initCount = gc::cellCount;
+
+    testEqual(gc::cellCount, initCount);
+    collect();
+    testEqual(gc::cellCount, initCount);
 
     Root<TestCell*> r;
     collect();
-    testEqual(cellCount(), initCount);
+    testEqual(gc::cellCount, initCount);
     r = gc::create<TestCell>();
-    testEqual(cellCount(), initCount + 1);
+    testEqual(gc::cellCount, initCount + 1);
     collect();
-    testEqual(cellCount(), initCount + 1);
+    testEqual(gc::cellCount, initCount + 1);
     r = nullptr;
     collect();
-    testEqual(cellCount(), initCount);
+    testEqual(gc::cellCount, initCount);
 
     r = gc::create<TestCell>();
     r->addChild(gc::create<TestCell>());
-    testEqual(cellCount(), initCount + 2);
+    testEqual(gc::cellCount, initCount + 2);
     collect();
-    testEqual(cellCount(), initCount + 2);
+    testEqual(gc::cellCount, initCount + 2);
     r = nullptr;
     collect();
-    testEqual(cellCount(), initCount);
+    testEqual(gc::cellCount, initCount);
 
     r = gc::create<TestCell>();
     TestCell* b = gc::create<TestCell>();
     r->addChild(b);
     b->addChild(r);
-    testEqual(cellCount(), initCount + 2);
+    testEqual(gc::cellCount, initCount + 2);
     r = nullptr;
     collect();
-    testEqual(cellCount(), initCount);
+    testEqual(gc::cellCount, initCount);
 }
 
 #endif

@@ -41,7 +41,6 @@ struct Block : public Cell
     }
 
     virtual void traceChildren(Tracer& t) override;
-    virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const;
 
     static Traced<Layout*> layout(Traced<Block*> block) {

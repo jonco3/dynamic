@@ -24,6 +24,7 @@ bool debugMode = true;
 
 void init1()
 {
+    gc::init();
     initObject();
     Native::init();
     Function::init();

@@ -46,7 +46,6 @@ struct FunctionInfo : public Cell
                  unsigned defaultCount = 0, bool takesRest = false,
                  bool isGenerator = false);
 
-    virtual size_t size() const { return sizeof(*this); }
     virtual void traceChildren(Tracer& t) override {
         gc::trace(t, &block_);
     }

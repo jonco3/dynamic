@@ -18,9 +18,9 @@ struct Cell;
 struct Marker;
 
 namespace gc {
+extern void init();
 extern void maybeCollect();
 extern void collect();
-extern size_t cellCount();
 extern bool isDying(const Cell* cell);
 extern unsigned unsafeCount;
 } // namespace gc
@@ -40,7 +40,6 @@ struct Cell
     void checkValid() const;
 
     virtual void traceChildren(Tracer& t) {}
-    virtual size_t size() const = 0;
     virtual void print(ostream& s) const {
         s << "Cell@" << hex << this;
     }
@@ -52,12 +51,13 @@ struct Cell
   private:
     int8_t epoc_;
 
+  public: // todo: refactor gc implementation into friend class
     bool shouldMark();
     bool shouldSweep();
 
     static bool maybeMark(Cell** cellp);
     static void sweepCell(Cell* cell);
-    static void destroyCell(Cell* cell);
+    static void destroyCell(Cell* cell, size_t size);
 
     friend struct Marker;
     friend void gc::collect();
@@ -69,17 +69,6 @@ inline ostream& operator<<(ostream& s, const Cell& cell) {
 }
 
 template <typename T> struct GCTraits {};
-
-/*
-template <>
-struct GCTraits<nullptr_t>
-{
-    static nullptr_t nullValue() { return nullptr; }
-    static bool isNonNull( nullptr_t cell) { return false; }
-    static void checkValid(nullptr_t cell) {}
-    static void trace(Tracer& t, nullptr_t** cellp) {}
-};
-*/
 
 template <typename T>
 struct GCTraits<T*>
@@ -402,8 +391,6 @@ struct TracedVector
 
 namespace gc {
 
-extern bool setAllocating(bool state);
-
 // Root used in allocation that doesn't check its (uninitialised) pointer.
 template <typename T>
 struct AllocRoot : protected RootBase
@@ -426,21 +413,67 @@ struct AllocRoot : protected RootBase
     T ptr_;
 };
 
+// Cell size is divided into classes.  The size class is different depending on
+// whether the cell is large or small -- cells up to 64 bytes are considered
+// small, otherwise they are large.  The threshold is set by
+// sizeLargeThresholdShift.
+//
+// Small cell sizes are rounded up to the next multiple of 8 bytes (this is set
+// by sizeSmallAlignShift).  Large sizes are rounded up to the next power of
+// two.
+
+static const size_t sizeSmallAlignShift = 3;
+static const size_t sizeLargeThresholdShift = 6;
+static const size_t sizeClassCount = 39;
+
+typedef unsigned SizeClass;
+
+static const size_t smallSizeClassCount =
+    (1 << (sizeLargeThresholdShift - sizeSmallAlignShift)) - 1;
+
+inline SizeClass sizeClass(size_t size)
+{
+    assert(sizeLargeThresholdShift >= sizeSmallAlignShift);
+    assert(size > 0);
+    if (size <= (1u << sizeLargeThresholdShift))
+        return (size - 1) >> sizeSmallAlignShift;
+
+    size_t exp = sizeLargeThresholdShift;
+    while ((size_t(1) << exp) < size)
+        exp++;
+    return (exp - sizeLargeThresholdShift) + smallSizeClassCount;
+}
+
+inline size_t sizeFromClass(SizeClass sc)
+{
+    if (sc <= smallSizeClassCount)
+        return (sc + 1) << sizeSmallAlignShift;
+    return 1u << (sc - smallSizeClassCount + sizeLargeThresholdShift);
+}
+
+extern void registerCell(Cell* cell, SizeClass sc);
+
+#ifdef DEBUG
+extern bool getAllocating();
+extern void setAllocating();
+#endif
+
 template <typename T, typename... Args>
 T* create(Args&&... args) {
     static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
     maybeCollect();
+    SizeClass sc = sizeClass(sizeof(T));
+    size_t allocSize = sizeFromClass(sc);
     // Pre-initialize memory to zero so that if we trigger GC by allocating in a
     // constructor then any pointers in the partially constructed object will be
     // in a valid state.
-    AllocRoot<T*> t(static_cast<T*>(calloc(1, sizeof(T))));
+    AllocRoot<T*> t(static_cast<T*>(calloc(1, allocSize)));
 #ifdef DEBUG
-    bool oldAllocState = setAllocating(true);
+    setAllocating();
 #endif
     new (t.get()) T(std::forward<Args>(args)...);
-#ifdef DEBUG
-    setAllocating(oldAllocState);
-#endif
+    assert(!getAllocating());
+    registerCell(t, sc);
     return t;
 }
 

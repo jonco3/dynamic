@@ -94,7 +94,6 @@ struct Instr : public Cell
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
-    virtual size_t size() const { return sizeof(*this); }
     virtual void print(ostream& s) const {
         s << name();
     }
