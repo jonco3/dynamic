@@ -185,7 +185,7 @@ struct Marker : public Tracer
 void GC::maybeCollect()
 {
     assert(unsafeCount == 0);
-    if (cells.size() >= collectAt)
+    if (cellCount >= collectAt)
         collect();
 }
 
