@@ -17,7 +17,7 @@ Callable::Callable(Traced<Class*> cls, Name name,
 
 void Native::init()
 {
-    ObjectClass.init(gc::create<Class>("Native"));
+    ObjectClass.init(gc.create<Class>("Native"));
 }
 
 Native::Native(Name name, Func func, unsigned minArgs, unsigned maxArgs)
@@ -39,7 +39,7 @@ FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
 
 void Function::init()
 {
-    ObjectClass.init(gc::create<Class>("Function"));
+    ObjectClass.init(gc.create<Class>("Function"));
 }
 
 Function::Function(Name name,
@@ -60,6 +60,6 @@ Function::Function(Name name,
 void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
                       unsigned minArgs, unsigned maxArgs)
 {
-    Root<Value> value(gc::create<Native>(name, func, minArgs, maxArgs));
+    Root<Value> value(gc.create<Native>(name, func, minArgs, maxArgs));
     cls->setAttr(name, value);
 }

@@ -54,7 +54,7 @@ char *readOneLine()
 static int runRepl()
 {
     char* line;
-    Root<Object*> globals(gc::create<Object>());
+    Root<Object*> globals(gc.create<Object>());
     while (line = readOneLine(), line != NULL) {
         Value result;
         bool ok = runModule(line, "<none>", globals, &result);
@@ -70,7 +70,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     //todo: args
     //RootVector<String> argStrings(arg_count);
     //for (unsigned i = 0 ; i < arg_count ; ++i)
-    //    argStrings[i] = gc::create<String>(args[i]);
+    //    argStrings[i] = gc.create<String>(args[i]);
     if (!runModule(readFile(filename), filename, None))
         return EX_SOFTWARE;
 

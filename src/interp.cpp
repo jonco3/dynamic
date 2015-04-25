@@ -33,7 +33,7 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
 {
     assert(stackPos() == 0);
-    Root<Frame*> frame(gc::create<Frame>(block));
+    Root<Frame*> frame(gc.create<Frame>(block));
     pushFrame(frame);
     return run(valueOut);
 }
@@ -81,7 +81,7 @@ bool Interpreter::run(Value& valueOut)
 Frame* Interpreter::newFrame(Traced<Function*> function)
 {
     Root<Block*> block(function->block());
-    return gc::create<Frame>(block);
+    return gc.create<Frame>(block);
 }
 
 void Interpreter::pushFrame(Traced<Frame*> frame)
@@ -245,7 +245,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         }
         if (function->isGenerator()) {
             Root<Value> iter(
-                gc::create<GeneratorIter>(function, callFrame));
+                gc.create<GeneratorIter>(function, callFrame));
             callFrame->setAttr("%gen", iter);
             resultOut = iter;
             return CallFinished;
@@ -263,7 +263,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             if (!call(newFunc, newArgs, resultOut))
                 return CallError;
         } else {
-            resultOut = gc::create<Object>(cls);  // todo: do we need this?
+            resultOut = gc.create<Object>(cls);  // todo: do we need this?
         }
         if (resultOut.isInstanceOf(cls)) {
             Root<Value> initFunc;
@@ -290,7 +290,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 Interpreter::CallStatus Interpreter::raise(string className, string message,
                                            Root<Value>& resultOut)
 {
-    resultOut = gc::create<Exception>(className, message);
+    resultOut = gc.create<Exception>(className, message);
     return CallError;
 }
 

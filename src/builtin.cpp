@@ -18,7 +18,7 @@ static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
 {
     Object* n = args[1].toObject();
     if (!n->is<String>()) {
-        resultOut = gc::create<Exception>("TypeError",
+        resultOut = gc.create<Exception>("TypeError",
                                   "hasattr(): attribute name must be string");
         return false;
     }
@@ -30,7 +30,7 @@ static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
 static bool builtin_object(TracedVector<Value> args, Root<Value>& resultOut)
 {
     // todo: the returned object should not allow attributes to be set on it
-    resultOut = gc::create<Object>();
+    resultOut = gc.create<Object>();
     return true;
 }
 
@@ -44,7 +44,7 @@ static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
 
 void initBuiltins(const string& libDir)
 {
-    Builtin.init(gc::create<Object>());
+    Builtin.init(gc.create<Object>());
 
     // Functions
     initNativeMethod(Builtin, "hasattr", builtin_hasattr, 2);

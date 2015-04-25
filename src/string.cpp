@@ -45,14 +45,14 @@ GlobalRoot<String*> String::EmptyString;
 
 void String::init()
 {
-    ObjectClass.init(gc::create<Class>("str"));
+    ObjectClass.init(gc.create<Class>("str"));
     initNativeMethod(ObjectClass, "__add__", str_add, 2);
     initNativeMethod(ObjectClass, "__str__", str_str, 1);
     initNativeMethod(ObjectClass, "__equal__", str_equal, 2);
     initNativeMethod(ObjectClass, "__hash__", str_hash, 1);
     initNativeMethod(ObjectClass, "_print", str_print, 1);
 
-    EmptyString.init(gc::create<String>(""));
+    EmptyString.init(gc.create<String>(""));
 }
 
 String::String(const string& v)
@@ -64,7 +64,7 @@ Value String::get(const string& v)
     if (v == "")
         return Value(EmptyString);
     // todo: can intern short strings here
-    return gc::create<String>(v);
+    return gc.create<String>(v);
 }
 
 void String::print(ostream& s) const {

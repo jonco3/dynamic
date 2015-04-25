@@ -8,7 +8,7 @@ GlobalRoot<Layout*> Frame::InitialLayout;
 
 void Frame::init()
 {
-    ObjectClass.init(gc::create<Class>("Frame"));
+    ObjectClass.init(gc.create<Class>("Frame"));
     InitialLayout.init(Object::InitialLayout);
 }
 
@@ -22,5 +22,5 @@ Frame::Frame(Traced<Block*> block) :
 void Frame::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
-    gc::trace(t, &block_);
+    gc.trace(t, &block_);
 }

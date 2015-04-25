@@ -120,7 +120,7 @@ ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
 void ListBase::traceChildren(Tracer& t)
 {
     for (unsigned i = 0; i < elements_.size(); ++i)
-        gc::trace(t, &elements_[i]);
+        gc.trace(t, &elements_[i]);
 }
 
 bool ListBase::len(Root<Value>& resultOut)
@@ -132,7 +132,7 @@ bool ListBase::len(Root<Value>& resultOut)
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = gc::create<Exception>("TypeError",
+        resultOut = gc.create<Exception>("TypeError",
                                   listName() + " indices must be integers");
         return false;
     }
@@ -141,7 +141,7 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc::create<Exception>("IndexError", listName() + " index out of range");
+        resultOut = gc.create<Exception>("IndexError", listName() + " index out of range");
         return false;
     }
 
@@ -159,7 +159,7 @@ bool ListBase::contains(Traced<Value> element, Root<Value>& resultOut)
 bool ListBase::iter(Root<Value>& resultOut)
 {
     Root<ListBase*> self(this);
-    resultOut = gc::create<ListIter>(self);
+    resultOut = gc.create<ListIter>(self);
     return true;
 }
 
@@ -170,18 +170,18 @@ bool ListBase::operator==(const ListBase& other)
 
 void Tuple::init()
 {
-    Root<Class*> cls(gc::create<Class>("tuple"));
+    Root<Class*> cls(gc.create<Class>("tuple"));
     listBase_initNatives(cls);
     ObjectClass.init(cls);
     RootVector<Value> contents;
-    Empty.init(gc::create<Tuple>(contents));
+    Empty.init(gc.create<Tuple>(contents));
 }
 
 /* static */ Tuple* Tuple::get(const TracedVector<Value>& values)
 {
     if (values.size() == 0)
         return Empty;
-    return gc::create<Tuple>(values);
+    return gc.create<Tuple>(values);
 }
 
 Tuple::Tuple(const TracedVector<Value>& values)
@@ -208,7 +208,7 @@ void Tuple::print(ostream& s) const
 
 void List::init()
 {
-    ObjectClass.init(gc::create<Class>("list"));
+    ObjectClass.init(gc.create<Class>("list"));
     listBase_initNatives(ObjectClass);
     initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
     initNativeMethod(ObjectClass, "append", list_append, 2);
@@ -238,7 +238,7 @@ void List::print(ostream& s) const
 bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = gc::create<Exception>("TypeError",
+        resultOut = gc.create<Exception>("TypeError",
                                   listName() + " indices must be integers");
         return false;
     }
@@ -247,7 +247,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc::create<Exception>("IndexError", listName() + " index out of range");
+        resultOut = gc.create<Exception>("IndexError", listName() + " index out of range");
         return false;
     }
 
@@ -277,7 +277,7 @@ static bool listIter_next(TracedVector<Value> args, Root<Value>& resultOut)
 
 void ListIter::init()
 {
-    ObjectClass.init(gc::create<Class>("listiterator"));
+    ObjectClass.init(gc.create<Class>("listiterator"));
     initNativeMethod(ObjectClass, "__iter__", listIter_iter, 1);
     initNativeMethod(ObjectClass, "next", listIter_next, 1);
 }
@@ -290,7 +290,7 @@ ListIter::ListIter(Traced<ListBase*> list)
 void ListIter::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
-    gc::trace(t, &list_);
+    gc.trace(t, &list_);
 }
 
 bool ListIter::iter(Root<Value>& resultOut)
@@ -305,7 +305,7 @@ bool ListIter::next(Root<Value>& resultOut)
     assert(index_ >= -1);
     if (index_ == -1 || size_t(index_) >= list_->elements_.size()) {
         index_ = -1;
-        resultOut = gc::create<StopIteration>();
+        resultOut = gc.create<StopIteration>();
         return false;
     }
 

@@ -13,19 +13,19 @@ static bool generatorIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
 
 void GeneratorIter::init()
 {
-    ObjectClass.init(gc::create<Class>("GeneratorIterator"));
+    ObjectClass.init(gc.create<Class>("GeneratorIterator"));
     initNativeMethod(ObjectClass, "__iter__", generatorIter_iter, 1);
 
     Root<Layout*> layout(Frame::InitialLayout);
     layout = layout->addName("self");
-    Root<Block*> block(gc::create<Block>(layout));
-    block->append(gc::create<InstrResumeGenerator>());
-    block->append(gc::create<InstrReturn>());
+    Root<Block*> block(gc.create<Block>(layout));
+    block->append(gc.create<InstrResumeGenerator>());
+    block->append(gc.create<InstrReturn>());
     static vector<Name> params = { "self" };
     Root<Frame*> scope; // todo: allow construction of traced for nullptr
     RootVector<Value> defaults; // todo: find a way of passing an empty vector
-    Root<FunctionInfo*> info(gc::create<FunctionInfo>(params, block));
-    Root<Value> value(gc::create<Function>("next", info, defaults, scope));
+    Root<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
+    Root<Value> value(gc.create<Function>("next", info, defaults, scope));
     ObjectClass->setAttr("next", value);
 }
 
@@ -41,10 +41,10 @@ GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Frame*> frame)
 void GeneratorIter::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
-    gc::trace(t, &func_);
-    gc::trace(t, &frame_);
+    gc.trace(t, &func_);
+    gc.trace(t, &frame_);
     for (auto i = savedStack_.begin(); i != savedStack_.end(); i++)
-        gc::trace(t, &*i);
+        gc.trace(t, &*i);
 }
 
 bool GeneratorIter::iter(Root<Value>& resultOut)
@@ -58,7 +58,7 @@ bool GeneratorIter::resume(Interpreter& interp)
 {
     switch (state_) {
       case Running:
-        interp.pushStack(gc::create<Exception>("ValueError",
+        interp.pushStack(gc.create<Exception>("ValueError",
                                                "Generator running"));
         return false;
 
@@ -72,7 +72,7 @@ bool GeneratorIter::resume(Interpreter& interp)
 
       case Finished:
         // todo: not sure about this behaviour, need tests
-        interp.pushStack(gc::create<StopIteration>());
+        interp.pushStack(gc.create<StopIteration>());
         return false;
 
       default:
@@ -87,7 +87,7 @@ bool GeneratorIter::leave(Interpreter& interp)
     assert(state_ == Running);
     interp.popFrame();
     state_ = Finished;
-    interp.pushStack(gc::create<StopIteration>());
+    interp.pushStack(gc.create<StopIteration>());
     return false;
 }
 

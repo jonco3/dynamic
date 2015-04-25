@@ -16,20 +16,78 @@ using namespace std;
 
 struct Cell;
 struct Marker;
-
-namespace gc {
-extern void init();
-extern void maybeCollect();
-extern void collect();
-extern bool isDying(const Cell* cell);
-extern unsigned unsafeCount;
-} // namespace gc
+struct RootBase;
 
 // A visitor that visits edges in the object graph.
 struct Tracer
 {
     virtual void visit(Cell** cellp) = 0;
 };
+
+struct GC
+{
+    GC(size_t minCollectAt, unsigned scheduleFactorPercent);
+
+    template <typename T, typename... Args>
+    inline T* create(Args&&... args);
+
+    void collect();
+
+    template <typename T>
+    inline void trace(Tracer& t, T* ptr);
+
+  private:
+    static const int8_t epochCount = 2;
+
+    // Cell size is divided into classes.  The size class is different depending
+    // on whether the cell is large or small -- cells up to 64 bytes are
+    // considered small, otherwise they are large.  The threshold is set by
+    // sizeLargeThresholdShift.
+    //
+    // Small cell sizes are rounded up to the next multiple of 8 bytes (this is
+    // set by sizeSmallAlignShift).  Large sizes are rounded up to the next
+    // power of two.
+
+    static const size_t sizeSmallAlignShift = 3;
+    static const size_t sizeLargeThresholdShift = 6;
+    static const size_t sizeClassCount = 39;
+    static const size_t smallSizeClassCount =
+        (1 << (sizeLargeThresholdShift - sizeSmallAlignShift)) - 1;
+
+    typedef unsigned SizeClass;
+    static inline SizeClass sizeClass(size_t size);
+    static inline size_t sizeFromClass(SizeClass sc);
+
+    void registerCell(Cell* cell, SizeClass sc);
+
+    bool isDying(const Cell* cell);
+    void maybeCollect();
+
+    vector<Cell*>::iterator sweepCells(vector<Cell*>& cells);
+    void destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
+                      size_t size);
+
+    int8_t currentEpoch;
+    int8_t prevEpoch;
+    size_t cellCount;
+    vector<vector<Cell*>> cells;
+    RootBase* rootList;
+    bool isSweeping;
+#ifdef DEBUG
+    bool isAllocating;
+    unsigned unsafeCount;
+#endif
+    size_t minCollectAt;
+    unsigned scheduleFactorPercent;
+    size_t collectAt;
+
+    friend struct Cell;
+    friend struct RootBase;
+    friend struct AutoAssertNoGC;
+    friend void testcase_body_gc();
+};
+
+extern GC gc;
 
 // Base class for all garbage collected classes.
 struct Cell
@@ -49,9 +107,8 @@ struct Cell
     bool isDying() const;
 
   private:
-    int8_t epoc_;
+    int8_t epoch_;
 
-  public: // todo: refactor gc implementation into friend class
     bool shouldMark();
     bool shouldSweep();
 
@@ -59,8 +116,8 @@ struct Cell
     static void sweepCell(Cell* cell);
     static void destroyCell(Cell* cell, size_t size);
 
+    friend struct GC;
     friend struct Marker;
-    friend void gc::collect();
 };
 
 inline ostream& operator<<(ostream& s, const Cell& cell) {
@@ -95,14 +152,10 @@ struct GCTraits<T*>
     }
 };
 
-namespace gc {
-
 template <typename T>
-inline void trace(Tracer& t, T* ptr) {
+void GC::trace(Tracer& t, T* ptr) {
     GCTraits<T>::trace(t, ptr);
 }
-
-} // namespace gc
 
 struct RootBase
 {
@@ -168,7 +221,7 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
     virtual void trace(Tracer& t) {
-        gc::trace(t, &ptr_);
+        gc.trace(t, &ptr_);
     }
 
   private:
@@ -230,7 +283,7 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     }
 
     virtual void trace(Tracer& t) {
-        gc::trace(t, &ptr_);
+        gc.trace(t, &ptr_);
     }
 
   private:
@@ -268,13 +321,6 @@ struct Traced : public WrapperMixins<Traced<T>, T>
 
     const T& ptr_;
 };
-
-namespace std {
-template <typename T>
-struct hash<Traced<T>> {
-    size_t operator()(Traced<T> t) const { return std::hash<T>()(t.get()); }
-};
-} /* namespace std */
 
 template <typename T>
 struct RootVector : private vector<T>, private RootBase
@@ -319,7 +365,7 @@ struct RootVector : private vector<T>, private RootBase
 
     virtual void trace(Tracer& t) {
         for (auto i = this->begin(); i != this->end(); ++i)
-            gc::trace(t, &*i);
+            gc.trace(t, &*i);
     }
 
     void addUse() {
@@ -389,8 +435,6 @@ struct TracedVector
     TracedVector& operator=(const TracedVector& other) = delete;
 };
 
-namespace gc {
-
 // Root used in allocation that doesn't check its (uninitialised) pointer.
 template <typename T>
 struct AllocRoot : protected RootBase
@@ -406,32 +450,14 @@ struct AllocRoot : protected RootBase
     define_immutable_accessors;
 
     virtual void trace(Tracer& t) {
-        gc::trace(t, &ptr_);
+        gc.trace(t, &ptr_);
     }
 
   private:
     T ptr_;
 };
 
-// Cell size is divided into classes.  The size class is different depending on
-// whether the cell is large or small -- cells up to 64 bytes are considered
-// small, otherwise they are large.  The threshold is set by
-// sizeLargeThresholdShift.
-//
-// Small cell sizes are rounded up to the next multiple of 8 bytes (this is set
-// by sizeSmallAlignShift).  Large sizes are rounded up to the next power of
-// two.
-
-static const size_t sizeSmallAlignShift = 3;
-static const size_t sizeLargeThresholdShift = 6;
-static const size_t sizeClassCount = 39;
-
-typedef unsigned SizeClass;
-
-static const size_t smallSizeClassCount =
-    (1 << (sizeLargeThresholdShift - sizeSmallAlignShift)) - 1;
-
-inline SizeClass sizeClass(size_t size)
+GC::SizeClass GC::sizeClass(size_t size)
 {
     assert(sizeLargeThresholdShift >= sizeSmallAlignShift);
     assert(size > 0);
@@ -444,22 +470,15 @@ inline SizeClass sizeClass(size_t size)
     return (exp - sizeLargeThresholdShift) + smallSizeClassCount;
 }
 
-inline size_t sizeFromClass(SizeClass sc)
+size_t GC::sizeFromClass(SizeClass sc)
 {
     if (sc <= smallSizeClassCount)
         return (sc + 1) << sizeSmallAlignShift;
     return 1u << (sc - smallSizeClassCount + sizeLargeThresholdShift);
 }
 
-extern void registerCell(Cell* cell, SizeClass sc);
-
-#ifdef DEBUG
-extern bool getAllocating();
-extern void setAllocating();
-#endif
-
 template <typename T, typename... Args>
-T* create(Args&&... args) {
+T* GC::create(Args&&... args) {
     static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
     maybeCollect();
     SizeClass sc = sizeClass(sizeof(T));
@@ -468,27 +487,31 @@ T* create(Args&&... args) {
     // constructor then any pointers in the partially constructed object will be
     // in a valid state.
     AllocRoot<T*> t(static_cast<T*>(calloc(1, allocSize)));
+    assert(!isAllocating);
 #ifdef DEBUG
-    setAllocating();
+    isAllocating = true;
 #endif
     new (t.get()) T(std::forward<Args>(args)...);
-    assert(!getAllocating());
+    assert(!isAllocating);
     registerCell(t, sc);
     return t;
 }
-
-} // namespace gc
 
 /*
  * Assert if a collection is possible in the lifetime of the object.
  */
 struct AutoAssertNoGC
 {
-    AutoAssertNoGC() { gc::unsafeCount++; }
-    ~AutoAssertNoGC() {
-        assert(gc::unsafeCount > 0);
-        gc::unsafeCount--;
+#ifdef DEBUG
+    AutoAssertNoGC() {
+        gc.unsafeCount++;
     }
+
+    ~AutoAssertNoGC() {
+        assert(gc.unsafeCount > 0);
+        gc.unsafeCount--;
+    }
+#endif
 };
 
 #undef define_immutable_accessors

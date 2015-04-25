@@ -47,7 +47,7 @@ struct FunctionInfo : public Cell
                  bool isGenerator = false);
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &block_);
+        gc.trace(t, &block_);
     }
 
     size_t paramCount() const { return params_.size(); }
@@ -94,10 +94,10 @@ struct Function : public Callable
 
     virtual void traceChildren(Tracer& t) override {
         Callable::traceChildren(t);
-        gc::trace(t, &info_);
+        gc.trace(t, &info_);
         for (auto i: defaults_)
-            gc::trace(t, &i);
-        gc::trace(t, &scope_);
+            gc.trace(t, &i);
+        gc.trace(t, &scope_);
     }
 
   private:

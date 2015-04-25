@@ -79,7 +79,7 @@ GlobalRoot<Integer*> Integer::Zero;
 
 void Integer::init()
 {
-    Root<Class*> cls(gc::create<Class>("int"));
+    Root<Class*> cls(gc.create<Class>("int"));
     Root<Value> value;
     initNativeMethod(cls, "__str__", intStr, 1);
     initNativeMethod(cls, "__pos__", intUnaryOp<UnaryPlus>, 1);
@@ -106,7 +106,7 @@ void Integer::init()
     initNativeMethod(cls, "__hash__", intUnaryOp<Hash>, 1);
     ObjectClass.init(cls);
 
-    Zero.init(gc::create<Integer>(0));
+    Zero.init(gc.create<Integer>(0));
 }
 
 Integer::Integer(int v)
@@ -125,7 +125,7 @@ Value Integer::get(int v)
 
 Object* Integer::getObject(int v)
 {
-    return gc::create<Integer>(v);
+    return gc.create<Integer>(v);
 }
 
 void Integer::print(ostream& s) const {

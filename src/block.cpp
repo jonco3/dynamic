@@ -51,9 +51,9 @@ void Block::print(ostream& s) const {
 
 void Block::traceChildren(Tracer& t)
 {
-    gc::trace(t, &layout_);
+    gc.trace(t, &layout_);
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i)
-        gc::trace(t, &*i);
+        gc.trace(t, &*i);
 }
 
 #ifdef BUILD_TESTS
@@ -186,7 +186,7 @@ struct BlockBuilder : public SyntaxVisitor
         layout = topLevel->layout();
         build(s);
         if (!block->lastInstr()->is<InstrReturn>())
-            block->append(gc::create<InstrReturn>());
+            block->append(gc.create<InstrReturn>());
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
 #endif
@@ -204,9 +204,9 @@ struct BlockBuilder : public SyntaxVisitor
             layout = layout->addName(i->name);
         build(s);
         if (!block->lastInstr()->is<InstrReturn>()) {
-            block->append(gc::create<InstrPop>());
-            block->append(gc::create<InstrConst>(None));
-            block->append(gc::create<InstrReturn>());
+            block->append(gc.create<InstrPop>());
+            block->append(gc.create<InstrConst>(None));
+            block->append(gc.create<InstrReturn>());
         }
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
@@ -235,9 +235,9 @@ struct BlockBuilder : public SyntaxVisitor
         layout = layout->addName(ClassFunctionParam);
         isClassBlock = true;
         build(s);
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrMakeClassFromFrame>(id));
-        block->append(gc::create<InstrReturn>());
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrMakeClassFromFrame>(id));
+        block->append(gc.create<InstrReturn>());
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
 #endif
@@ -256,8 +256,8 @@ struct BlockBuilder : public SyntaxVisitor
             layout = layout->addName(i->name);
         build(s);
         if (!block->lastInstr()->is<InstrLeaveGenerator>()) {
-            block->append(gc::create<InstrPop>());
-            block->append(gc::create<InstrLeaveGenerator>());
+            block->append(gc.create<InstrPop>());
+            block->append(gc.create<InstrLeaveGenerator>());
         }
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
@@ -280,7 +280,7 @@ struct BlockBuilder : public SyntaxVisitor
         layout = DefinitionFinder::buildLayout(s, layout);
         if (!parent)
             topLevel->extend(layout);
-        block = gc::create<Block>(layout);
+        block = gc.create<Block>(layout);
         s->accept(*this);
     }
 
@@ -304,54 +304,54 @@ struct BlockBuilder : public SyntaxVisitor
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
         s.right()->accept(*this);
-        block->append(gc::create<InstrGetMethod>(name));
-        block->append(gc::create<InstrCall>(1));
+        block->append(gc.create<InstrGetMethod>(name));
+        block->append(gc.create<InstrCall>(1));
     }
 
     template <typename BaseType>
     void callBinaryMethod(const BinarySyntax<BaseType, Syntax, Syntax>& s, string name) {
         s.left()->accept(*this);
-        block->append(gc::create<InstrGetMethod>(name));
+        block->append(gc.create<InstrGetMethod>(name));
         s.right()->accept(*this);
-        block->append(gc::create<InstrCall>(2));
+        block->append(gc.create<InstrCall>(2));
     }
 
     virtual void visit(const SyntaxPass& s) {
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrConst>(None));
     }
 
     virtual void visit(const SyntaxGlobal& s) {
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrConst>(None));
     }
 
     virtual void visit(const SyntaxBlock& s) {
         for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i) {
             if (i != s.stmts().begin())
-                block->append(gc::create<InstrPop>());
+                block->append(gc.create<InstrPop>());
             (*i)->accept(*this);
         }
     }
 
     virtual void visit(const SyntaxInteger& s) {
         Root<Value> v(Integer::get(s.value()));
-        block->append(gc::create<InstrConst>(v));
+        block->append(gc.create<InstrConst>(v));
     }
 
     virtual void visit(const SyntaxString& s) {
         Root<Value> v(String::get(s.value()));
-        block->append(gc::create<InstrConst>(v));
+        block->append(gc.create<InstrConst>(v));
     }
 
     virtual void visit(const SyntaxExprList& s) {
         for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
             (*i)->accept(*this);
-        block->append(gc::create<InstrTuple>(s.elems().size()));
+        block->append(gc.create<InstrTuple>(s.elems().size()));
     }
 
     virtual void visit(const SyntaxList& s) {
         for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
             (*i)->accept(*this);
-        block->append(gc::create<InstrList>(s.elems().size()));
+        block->append(gc.create<InstrList>(s.elems().size()));
     }
 
     virtual void visit(const SyntaxDict& s) {
@@ -359,26 +359,26 @@ struct BlockBuilder : public SyntaxVisitor
             i->first->accept(*this);
             i->second->accept(*this);
         }
-        block->append(gc::create<InstrDict>(s.entries().size()));
+        block->append(gc.create<InstrDict>(s.entries().size()));
     }
 
     virtual void visit(const SyntaxOr& s) {
         s.left()->accept(*this);
-        unsigned branch = block->append(gc::create<InstrOr>());
+        unsigned branch = block->append(gc.create<InstrOr>());
         s.right()->accept(*this);
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxAnd& s) {
         s.left()->accept(*this);
-        unsigned branch = block->append(gc::create<InstrAnd>());
+        unsigned branch = block->append(gc.create<InstrAnd>());
         s.right()->accept(*this);
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxNot& s) {
         s.right()->accept(*this);
-        block->append(gc::create<InstrNot>());
+        block->append(gc.create<InstrNot>());
     }
 
     virtual void visit(const SyntaxPos& s) { callUnaryMethod(s, "__pos__"); }
@@ -388,7 +388,7 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxBinaryOp& s) {
         s.left()->accept(*this);
         s.right()->accept(*this);
-        block->append(gc::create<InstrBinaryOp>(s.op()));
+        block->append(gc.create<InstrBinaryOp>(s.op()));
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
@@ -397,13 +397,13 @@ struct BlockBuilder : public SyntaxVisitor
         // whether the target implements update-in-place methods
         s.left()->accept(*this);
         s.right()->accept(*this);
-        block->append(gc::create<InstrAugAssignUpdate>(s.op()));
+        block->append(gc.create<InstrAugAssignUpdate>(s.op()));
         assert(!inAssignTarget);
         inAssignTarget = true;
         s.left()->accept(*this);
         inAssignTarget = false;
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrConst>(None));
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
@@ -415,7 +415,7 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const syntax& s) {                                     \
         s.left()->accept(*this);                                              \
         s.right()->accept(*this);                                             \
-        block->append(gc::create<instr>());                                   \
+        block->append(gc.create<instr>());                                   \
     }
 
     define_vist_binary_instr(SyntaxIn, InstrIn);
@@ -435,25 +435,25 @@ struct BlockBuilder : public SyntaxVisitor
         Name name = s.id();
         if (inAssignTarget) {
             if (parent && block->layout()->hasName(name))
-                block->append(gc::create<InstrSetLocal>(name));
+                block->append(gc.create<InstrSetLocal>(name));
             else if (unsigned frame = lookupLexical(name))
-                block->append(gc::create<InstrSetLexical>(frame, name));
+                block->append(gc.create<InstrSetLexical>(frame, name));
             else if (topLevel->hasAttr(name))
-                block->append(gc::create<InstrSetGlobal>(topLevel, name));
+                block->append(gc.create<InstrSetGlobal>(topLevel, name));
             else if (Builtin && Builtin->hasAttr(name))
-                block->append(gc::create<InstrSetGlobal>(Builtin, name));
+                block->append(gc.create<InstrSetGlobal>(Builtin, name));
             else
                 throw ParseError(s.token(),
                                  string("Name is not defined: ") + name);
         } else {
             if (parent && block->layout()->hasName(name))
-                block->append(gc::create<InstrGetLocal>(name));
+                block->append(gc.create<InstrGetLocal>(name));
             else if (unsigned frame = lookupLexical(name))
-                block->append(gc::create<InstrGetLexical>(frame, name));
+                block->append(gc.create<InstrGetLexical>(frame, name));
             else if (topLevel->hasAttr(name))
-                block->append(gc::create<InstrGetGlobal>(topLevel, name));
+                block->append(gc.create<InstrGetGlobal>(topLevel, name));
             else if (Builtin && Builtin->hasAttr(name))
-                block->append(gc::create<InstrGetGlobal>(Builtin, name));
+                block->append(gc.create<InstrGetGlobal>(Builtin, name));
             else
                 throw ParseError(s.token(),
                                  string("Name is not defined: ") + name);
@@ -465,9 +465,9 @@ struct BlockBuilder : public SyntaxVisitor
         s.left()->accept(*this);
         Name id = s.right()->id();
         if (wasInAssignTarget)
-            block->append(gc::create<InstrSetAttr>(id));
+            block->append(gc.create<InstrSetAttr>(id));
         else
-            block->append(gc::create<InstrGetAttr>(id));
+            block->append(gc.create<InstrGetAttr>(id));
         setInAssignTarget(wasInAssignTarget);
     }
 
@@ -475,13 +475,13 @@ struct BlockBuilder : public SyntaxVisitor
         bool wasInAssignTarget = setInAssignTarget(false);
         if (wasInAssignTarget) {
             s.left()->accept(*this);
-            block->append(gc::create<InstrGetMethod>("__setitem__"));
+            block->append(gc.create<InstrGetMethod>("__setitem__"));
             s.right()->accept(*this);
             // todo: there may be a better way than this stack manipulation
-            block->append(gc::create<InstrDup>(3));
-            block->append(gc::create<InstrCall>(3));
-            block->append(gc::create<InstrSwap>());
-            block->append(gc::create<InstrPop>());
+            block->append(gc.create<InstrDup>(3));
+            block->append(gc.create<InstrCall>(3));
+            block->append(gc.create<InstrSwap>());
+            block->append(gc.create<InstrPop>());
         } else {
             callBinaryMethod(s, "__getitem__");
         }
@@ -491,11 +491,11 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxTargetList& s) {
         assert(inAssignTarget);
         const auto& targets = s.targets();
-        block->append(gc::create<InstrDestructure>(targets.size()));
+        block->append(gc.create<InstrDestructure>(targets.size()));
         for (unsigned i = 0; i < targets.size(); i++) {
             targets[i]->accept(*this);
             if (i != targets.size() - 1)
-                block->append(gc::create<InstrPop>());
+                block->append(gc.create<InstrPop>());
         }
     }
 
@@ -506,7 +506,7 @@ struct BlockBuilder : public SyntaxVisitor
         if (methodCall) {
             const SyntaxAttrRef* pr = s.left()->as<SyntaxAttrRef>();
             pr->left()->accept(*this);
-            block->append(gc::create<InstrGetMethod>(pr->right()->id()));
+            block->append(gc.create<InstrGetMethod>(pr->right()->id()));
         } else {
             s.left()->accept(*this);
         }
@@ -514,7 +514,7 @@ struct BlockBuilder : public SyntaxVisitor
         for (auto i = s.right().begin(); i != s.right().end(); ++i)
             (*i)->accept(*this);
         unsigned count = s.right().size() + (methodCall ? 1 : 0);
-        block->append(gc::create<InstrCall>(count));
+        block->append(gc.create<InstrCall>(count));
     }
 
     virtual void visit(const SyntaxReturn& s) {
@@ -526,21 +526,21 @@ struct BlockBuilder : public SyntaxVisitor
                 throw ParseError(s.token(),
                                  "SyntaxError: 'return' with argument inside generator");
             }
-            block->append(gc::create<InstrLeaveGenerator>());
+            block->append(gc.create<InstrLeaveGenerator>());
         } else {
             if (s.right())
                 s.right()->accept(*this);
             else
-                block->append(gc::create<InstrConst>(None));
-            block->append(gc::create<InstrReturn>());
+                block->append(gc.create<InstrConst>(None));
+            block->append(gc.create<InstrReturn>());
         }
     }
 
     virtual void visit(const SyntaxCond& s) {
         s.cond()->accept(*this);
-        unsigned altBranch = block->append(gc::create<InstrBranchIfFalse>());
+        unsigned altBranch = block->append(gc.create<InstrBranchIfFalse>());
         s.cons()->accept(*this);
-        unsigned endBranch = block->append(gc::create<InstrBranchAlways>());
+        unsigned endBranch = block->append(gc.create<InstrBranchAlways>());
         block->branchHere(altBranch);
         s.alt()->accept(*this);
         block->branchHere(endBranch);
@@ -555,59 +555,59 @@ struct BlockBuilder : public SyntaxVisitor
             if (i != 0)
                 block->branchHere(lastCondFailed);
             suites[i].cond->accept(*this);
-            lastCondFailed = block->append(gc::create<InstrBranchIfFalse>());
+            lastCondFailed = block->append(gc.create<InstrBranchIfFalse>());
             suites[i].block->accept(*this);
             if (s.elseBranch() || i != suites.size() - 1)
-                branchesToEnd.push_back(block->append(gc::create<InstrBranchAlways>()));
+                branchesToEnd.push_back(block->append(gc.create<InstrBranchAlways>()));
         }
         block->branchHere(lastCondFailed);
         if (s.elseBranch())
             s.elseBranch()->accept(*this);
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
             block->branchHere(branchesToEnd[i]);
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrConst>(None));
     }
 
     virtual void visit(const SyntaxWhile& s) {
         unsigned loopHead = block->nextIndex();
         s.cond()->accept(*this);
-        unsigned branchToEnd = block->append(gc::create<InstrBranchIfFalse>());
+        unsigned branchToEnd = block->append(gc.create<InstrBranchIfFalse>());
         s.suite()->accept(*this);
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrBranchAlways>(block->offsetTo(loopHead)));
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrBranchAlways>(block->offsetTo(loopHead)));
         block->branchHere(branchToEnd);
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrConst>(None));
         // todo: else
     }
 
     virtual void visit(const SyntaxFor& s) {
         // 1. Get iterator
         s.exprs()->accept(*this);
-        block->append(gc::create<InstrGetMethod>("__iter__"));
-        block->append(gc::create<InstrCall>(1));
-        block->append(gc::create<InstrGetMethod>("next"));
+        block->append(gc.create<InstrGetMethod>("__iter__"));
+        block->append(gc.create<InstrCall>(1));
+        block->append(gc.create<InstrGetMethod>("next"));
 
         // 2. Call next on iterator and break if end (loop heap)
-        unsigned loopHead = block->append(gc::create<InstrIteratorNext>());
-        unsigned exitBranch = block->append(gc::create<InstrBranchIfFalse>());
+        unsigned loopHead = block->append(gc.create<InstrIteratorNext>());
+        unsigned exitBranch = block->append(gc.create<InstrBranchIfFalse>());
 
         // 3. Assign results
         assert(!inAssignTarget);
         inAssignTarget = true;
         s.targets()->accept(*this);
         inAssignTarget = false;
-        block->append(gc::create<InstrPop>());
+        block->append(gc.create<InstrPop>());
 
         // 4. Execute loop body
         s.suite()->accept(*this);
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrBranchAlways>(block->offsetTo(loopHead)));
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrBranchAlways>(block->offsetTo(loopHead)));
 
         // 5. Exit
         block->branchHere(exitBranch);
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrPop>());
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrConst>(None));
 
         // todo: else clause
     }
@@ -627,15 +627,15 @@ struct BlockBuilder : public SyntaxVisitor
         bool takesRest = false;
         if (params.size() > 0)
             takesRest = params.back().takesRest;
-        block->append(gc::create<InstrLambda>(defName, names, exprBlock,
-                                              defaultCount, takesRest,
-                                              isGenerator));
+        block->append(gc.create<InstrLambda>(defName, names, exprBlock,
+                                             defaultCount, takesRest,
+                                             isGenerator));
     }
 
     virtual void visit(const SyntaxLambda& s) {
         Root<Block*> exprBlock(
             BlockBuilder().buildLambda(this, s.params(), s.expr()));
-        exprBlock->append(gc::create<InstrReturn>());
+        exprBlock->append(gc.create<InstrReturn>());
         emitLambda("(lambda)", s.params(), exprBlock, false);
     }
 
@@ -650,52 +650,52 @@ struct BlockBuilder : public SyntaxVisitor
         }
         emitLambda(s.id(), s.params(), exprBlock, s.isGenerator());
         if (parent)
-            block->append(gc::create<InstrSetLocal>(s.id()));
+            block->append(gc.create<InstrSetLocal>(s.id()));
         else
-            block->append(gc::create<InstrSetGlobal>(topLevel, s.id()));
+            block->append(gc.create<InstrSetGlobal>(topLevel, s.id()));
     }
 
     virtual void visit(const SyntaxClass& s) {
         Root<Block*> suite(BlockBuilder().buildClass(this, s.id(), s.suite()));
-        suite->append(gc::create<InstrPop>());
-        suite->append(gc::create<InstrMakeClassFromFrame>(s.id()));
-        suite->append(gc::create<InstrReturn>());
+        suite->append(gc.create<InstrPop>());
+        suite->append(gc.create<InstrMakeClassFromFrame>(s.id()));
+        suite->append(gc.create<InstrReturn>());
 
         vector<Name> params = { ClassFunctionParam };
-        block->append(gc::create<InstrLambda>(s.id(), params, suite));
+        block->append(gc.create<InstrLambda>(s.id(), params, suite));
         s.bases()->accept(*this);
-        block->append(gc::create<InstrCall>(1));
+        block->append(gc.create<InstrCall>(1));
         if (parent)
-            block->append(gc::create<InstrSetLocal>(s.id()));
+            block->append(gc.create<InstrSetLocal>(s.id()));
         else
-            block->append(gc::create<InstrSetGlobal>(topLevel, s.id()));
+            block->append(gc.create<InstrSetGlobal>(topLevel, s.id()));
     }
 
     virtual void visit(const SyntaxAssert& s) {
         if (debugMode) {
             s.cond()->accept(*this);
-            unsigned endBranch = block->append(gc::create<InstrBranchIfTrue>());
+            unsigned endBranch = block->append(gc.create<InstrBranchIfTrue>());
             if (s.message()) {
                 s.message()->accept(*this);
-                block->append(gc::create<InstrGetMethod>("__str__"));
-                block->append(gc::create<InstrCall>(1));
+                block->append(gc.create<InstrGetMethod>("__str__"));
+                block->append(gc.create<InstrCall>(1));
             } else {
-                block->append(gc::create<InstrConst>(None));
+                block->append(gc.create<InstrConst>(None));
             }
-            block->append(gc::create<InstrAssertionFailed>());
+            block->append(gc.create<InstrAssertionFailed>());
             block->branchHere(endBranch);
         }
-        block->append(gc::create<InstrConst>(None));
+        block->append(gc.create<InstrConst>(None));
     }
 
     virtual void visit(const SyntaxRaise& s) {
         s.right()->accept(*this);
-        block->append(gc::create<InstrRaise>());
+        block->append(gc.create<InstrRaise>());
     }
 
     virtual void visit(const SyntaxYield& s) {
         s.right()->accept(*this);
-        block->append(gc::create<InstrSuspendGenerator>());
+        block->append(gc.create<InstrSuspendGenerator>());
     }
 };
 
@@ -712,7 +712,7 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     Root<Object*> globals(globalsArg);
     if (globals->isNone())
-        globals = gc::create<Object>();
+        globals = gc.create<Object>();
     blockOut = BlockBuilder().buildModule(globals, syntax.get());
 }
 

@@ -203,7 +203,7 @@ bool Object::getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc)
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == Value(UninitializedSlot)) {
-        valueOut = gc::create<Exception>("UnboundLocalError",
+        valueOut = gc.create<Exception>("UnboundLocalError",
                                  "name '" + name + "' has not been bound");
         return false;
     }
@@ -271,9 +271,9 @@ bool Object::isInstanceOf(Traced<Class*> cls) const
 
 void Object::traceChildren(Tracer& t)
 {
-    gc::trace(t, &layout_);
+    gc.trace(t, &layout_);
     for (auto i = slots_.begin(); i != slots_.end(); ++i)
-        gc::trace(t, &*i);
+        gc.trace(t, &*i);
 }
 
 Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
@@ -309,19 +309,19 @@ NativeClass::NativeClass(string name, Traced<Object*> base, Func createFunc,
 
 void initObject()
 {
-    Object::InitialLayout.init(gc::create<Layout>(nullptr, ClassAttr));
+    Object::InitialLayout.init(gc.create<Layout>(nullptr, ClassAttr));
     Class::InitialLayout.init(
-        gc::create<Layout>(Object::InitialLayout, BaseAttr));
+        gc.create<Layout>(Object::InitialLayout, BaseAttr));
     NativeClass::InitialLayout.init(
-        gc::create<Layout>(Class::InitialLayout, NewAttr));
+        gc.create<Layout>(Class::InitialLayout, NewAttr));
 
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
-    Object::ObjectClass.init(gc::create<Class>("Object"));
-    NoneObject::ObjectClass.init(gc::create<Class>("None"));
-    Class::ObjectClass.init(gc::create<Class>("Class"));
+    Object::ObjectClass.init(gc.create<Class>("Object"));
+    NoneObject::ObjectClass.init(gc.create<Class>("None"));
+    Class::ObjectClass.init(gc.create<Class>("Class"));
 
-    None.init(gc::create<NoneObject>());
+    None.init(gc.create<NoneObject>());
 
     Class::ObjectClass->init(Object::ObjectClass);
     Object::ObjectClass->init(None);
@@ -335,7 +335,7 @@ void initObject()
 
 testcase(object)
 {
-    Root<Object*> o(gc::create<Object>());
+    Root<Object*> o(gc.create<Object>());
 
     Root<Value> v;
     testFalse(o->maybeGetAttr("foo", v));

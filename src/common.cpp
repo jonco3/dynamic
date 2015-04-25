@@ -24,7 +24,6 @@ bool debugMode = true;
 
 void init1()
 {
-    gc::init();
     initObject();
     Native::init();
     Function::init();
@@ -83,7 +82,7 @@ bool runModule(string text, string filename, Traced<Object*> globals, Value* val
     } catch (const ParseError& e) {
         ostringstream s;
         s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
-        result = gc::create<Exception>("SyntaxError", s.str());
+        result = gc.create<Exception>("SyntaxError", s.str());
         ok = false;
     }
 

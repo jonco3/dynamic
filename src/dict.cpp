@@ -29,7 +29,7 @@ static bool dict_setitem(TracedVector<Value> args, Root<Value>& resultOut)
 
 void Dict::init()
 {
-    ObjectClass.init(gc::create<Class>("dict"));
+    ObjectClass.init(gc.create<Class>("dict"));
     initNativeMethod(ObjectClass, "__contains__", dict_contains, 2);
     initNativeMethod(ObjectClass, "__getitem__", dict_getitem, 2);
     initNativeMethod(ObjectClass, "__setitem__", dict_setitem, 3);
@@ -51,9 +51,9 @@ void Dict::traceChildren(Tracer& t)
 #ifdef DEBUG
         Value prior = key;
 #endif
-        gc::trace(t, &key);
+        gc.trace(t, &key);
         assert(key == prior);
-        gc::trace(t, &i->second);
+        gc.trace(t, &i->second);
     }
 }
 
@@ -79,7 +79,7 @@ bool Dict::getitem(Traced<Value> key, Root<Value>& resultOut)
 {
     auto i = entries_.find(key);
     if (i == entries_.end()) {
-        resultOut = gc::create<Exception>("KeyError", repr(key));
+        resultOut = gc.create<Exception>("KeyError", repr(key));
         return false;
     }
 
@@ -122,7 +122,7 @@ size_t Dict::ValueHash::operator()(Value v) const
     Root<Value> result;
     if (hashFunc.isNone()) {
         result =
-            gc::create<TypeError>("Object has no __hash__ method");
+            gc.create<TypeError>("Object has no __hash__ method");
         throw PythonException(result);
     }
 
@@ -133,7 +133,7 @@ size_t Dict::ValueHash::operator()(Value v) const
 
     if (!result.isInt32()) {
         result =
-            gc::create<TypeError>("__hash__ method should return an integer");
+            gc.create<TypeError>("__hash__ method should return an integer");
         throw PythonException(result);
     }
 
@@ -161,7 +161,7 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
     obj = result.toObject();
     if (!obj->is<Boolean>()) {
         result =
-            gc::create<TypeError>("__eq__ method should return an bool");
+            gc.create<TypeError>("__eq__ method should return an bool");
         throw PythonException(result);
     }
 

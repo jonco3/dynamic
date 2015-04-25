@@ -69,7 +69,7 @@ Layout* Layout::addName(Name name)
     if (i != children_.end())
         return i->second;
 
-    Layout* child = gc::create<Layout>(this, name);
+    Layout* child = gc.create<Layout>(this, name);
     children_.emplace(name, child);
     return child;
 }
@@ -84,7 +84,7 @@ Layout* Layout::maybeAddName(Name name)
 
 void Layout::traceChildren(Tracer& t)
 {
-    gc::trace(t, &parent_);
+    gc.trace(t, &parent_);
 }
 
 void Layout::print(ostream& s) const

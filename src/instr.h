@@ -132,7 +132,7 @@ struct InstrConst : public Instr
     Value getValue() { return value; }
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &value);
+        gc.trace(t, &value);
     }
 
   private:
@@ -202,7 +202,7 @@ struct InstrGetGlobal : public IdentInstrBase
     }
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &global);
+        gc.trace(t, &global);
     }
 
   private:
@@ -220,7 +220,7 @@ struct InstrSetGlobal : public IdentInstrBase
     }
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &global);
+        gc.trace(t, &global);
     }
 
   private:
@@ -238,7 +238,7 @@ struct InstrGetMethodInt : public IdentInstrBase
       : IdentInstrBase(name), result_(result) {}
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &result_);
+        gc.trace(t, &result_);
     }
 
   private:
@@ -328,7 +328,7 @@ struct InstrLambda : public Instr
     bool isGenerator() const { return info_->isGenerator_; }
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &info_);
+        gc.trace(t, &info_);
     }
 
     virtual void print(ostream& s) const {
@@ -427,7 +427,7 @@ struct InstrBinaryOpInt : public BinaryOpInstr
       : BinaryOpInstr(op), method_(method) {}
 
     virtual void traceChildren(Tracer& t) override {
-        gc::trace(t, &method_);
+        gc.trace(t, &method_);
     }
 
   private:

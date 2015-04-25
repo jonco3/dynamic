@@ -10,7 +10,7 @@ GlobalRoot<Class*> TypeError::ObjectClass;
 
 void Exception::init()
 {
-    ObjectClass.init(gc::create<NativeClass>("Exception",
+    ObjectClass.init(gc.create<NativeClass>("Exception",
                                              None,
                                              &Exception::create, 2));
     StopIteration::init();
@@ -19,7 +19,7 @@ void Exception::init()
 void StopIteration::init()
 {
     ObjectClass.init(
-        gc::create<NativeClass>("StopIteration",
+        gc.create<NativeClass>("StopIteration",
                                 Exception::ObjectClass,
                                 &StopIteration::create, 1));
 }
@@ -27,7 +27,7 @@ void StopIteration::init()
 void TypeError::init()
 {
     ObjectClass.init(
-        gc::create<NativeClass>("TypeError",
+        gc.create<NativeClass>("TypeError",
                                 Exception::ObjectClass,
                                 &TypeError::create, 2));
 }
@@ -57,7 +57,7 @@ bool Exception::create(TracedVector<Value> args, Root<Value>& resultOut)
     if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
         return false;
 
-    resultOut = gc::create<Exception>("Exception",
+    resultOut = gc.create<Exception>("Exception",
                                       args[1].toObject()->as<String>()->value());
     return true;
 }
@@ -99,7 +99,7 @@ void Exception::print(ostream& os) const
 bool StopIteration::create(TracedVector<Value> args, Root<Value>& resultOut)
 {
     assert(args.size() == 0);
-    resultOut = gc::create<StopIteration>();
+    resultOut = gc.create<StopIteration>();
     return true;
 }
 
@@ -109,7 +109,7 @@ bool TypeError::create(TracedVector<Value> args, Root<Value>& resultOut)
     if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
         return false;
 
-    resultOut = gc::create<TypeError>(args[1].toObject()->as<String>()->value());
+    resultOut = gc.create<TypeError>(args[1].toObject()->as<String>()->value());
     return true;
 }
 
@@ -118,7 +118,7 @@ bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut
     if (!v.isInstanceOf(cls)) {
         string message = "Excpecting" + cls->name() +
             " but got " + v.type()->name();
-        resultOut = gc::create<Exception>("TypeError", message);
+        resultOut = gc.create<Exception>("TypeError", message);
         return false;
     }
 
@@ -133,7 +133,7 @@ bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut
 testcase(exception)
 {
     Root<Exception*> exc;
-    exc = gc::create<Exception>("foo", "bar");
+    exc = gc.create<Exception>("foo", "bar");
     testEqual(exc->className(), "foo");
     testEqual(exc->message(), "bar");
     testEqual(exc->fullMessage(), "foo: bar");

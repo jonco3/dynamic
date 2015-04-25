@@ -28,9 +28,9 @@ struct TestCase
 #define CPP_CONCAT(a, b) CPP_CONCAT_(a, b)
 
 #define testcase(name)                                                                 \
-    static void CPP_CONCAT(testcase_body_, name)();                                          \
+    void CPP_CONCAT(testcase_body_, name)();                                          \
     static TestCase CPP_CONCAT(testcase_obj_, name)(#name, CPP_CONCAT(testcase_body_, name)); \
-    static void CPP_CONCAT(testcase_body_, name)()
+    void CPP_CONCAT(testcase_body_, name)()
 
 extern void abortTests();
 
