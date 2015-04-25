@@ -154,14 +154,24 @@ void Tokenizer::start(const Input& input)
     tokenQueue.clear();
 }
 
+bool Tokenizer::atEnd()
+{
+    assert(index <= source.size());
+    return index == source.size();
+}
+
 char Tokenizer::peekChar()
 {
+    if (atEnd())
+        return '\0';
+
     return source[index];
 }
 
 char Tokenizer::nextChar()
 {
-    char c = source[index++];
+    char c = peekChar();
+    index++;
     if (c == '\n') {
         ++pos.line;
         pos.column = 0;
@@ -224,7 +234,7 @@ void Tokenizer::skipWhitespace()
     if (peekChar() == '#') {
         do
             nextChar();
-        while (!isNewline(peekChar()));
+        while (!atEnd() && !isNewline(peekChar()));
     }
 }
 

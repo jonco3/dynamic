@@ -151,6 +151,7 @@ private:
 
     Token findNextToken();
 
+    bool atEnd();
     char peekChar();
     char nextChar();
     void ungetChar(char c);
