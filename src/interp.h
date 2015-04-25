@@ -85,7 +85,7 @@ struct Interpreter
 
     void resumeGenerator(Traced<Frame*> frame,
                          unsigned ipOffset,
-                         vector<Value> savedStack);
+                         vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
 
   private:

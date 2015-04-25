@@ -107,13 +107,14 @@ void Interpreter::popFrame()
 
 void Interpreter::resumeGenerator(Traced<Frame*> frame,
                                   unsigned ipOffset,
-                                  vector<Value> savedStack)
+                                  vector<Value>& savedStack)
 {
     frame->setReturnPoint(instrp);
     pushFrame(frame);
     instrp += ipOffset;
     for (auto i = savedStack.begin(); i != savedStack.end(); i++)
         pushStack(*i);
+    savedStack.resize(0);
 }
 
 unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
@@ -123,7 +124,7 @@ unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
     unsigned len = pos - frame->stackPos();
     savedStack.resize(len);
     // todo: probably a better way to do this with STL
-    for (unsigned i = 0; i < pos; i++)
+    for (unsigned i = 0; i < len; i++)
         savedStack[i] = stack[i + frame->stackPos()];
     unsigned ipOffset = instrp - frame->block()->startInstr();
     popFrame();
