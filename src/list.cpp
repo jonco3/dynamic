@@ -345,7 +345,7 @@ testcase(list)
 {
     testInterp("[]", "[]");
     testInterp("[1,2]", "[1, 2]");
-    testInterp("[1,2,]", "[1, 2]");
+    testInterp("[3,4,]", "[3, 4]");
     testInterp("[1,]", "[1]");
     testInterp("[1 + 2, 3 + 4]", "[3, 7]");
     testInterp("[1][0]", "1");

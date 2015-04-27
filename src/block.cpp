@@ -425,7 +425,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxAssign& s) {
         s.right()->accept(*this);
-        assert(!inAssignTarget); // todo: python accepts a = b = 1
+        assert(!inAssignTarget);
         inAssignTarget = true;
         s.left()->accept(*this);
         inAssignTarget = false;
@@ -696,6 +696,38 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxYield& s) {
         s.right()->accept(*this);
         block->append(gc.create<InstrSuspendGenerator>());
+    }
+
+    virtual void visit(const SyntaxTry& s) {
+        unsigned handlerBranch = block->append(gc.create<InstrEnterTry>());
+        s.trySuite()->accept(*this);
+        block->append(gc.create<InstrLeaveTry>());
+        vector<unsigned> finallyBranches;
+        for (const auto& e : s.excepts()) {
+            finallyBranches.push_back(
+                block->append(gc.create<InstrBranchAlways>()));
+            block->branchHere(handlerBranch);
+            e->expr()->accept(*this);
+            block->append(gc.create<InstrMatchCurrentException>());
+            handlerBranch = block->append(gc.create<InstrBranchIfFalse>());
+            e->suite()->accept(*this);
+        }
+        if (s.elseSuite()) {
+            finallyBranches.push_back(
+                block->append(gc.create<InstrBranchAlways>()));
+            block->branchHere(handlerBranch);
+            s.elseSuite()->accept(*this);
+        }
+        block->branchHere(handlerBranch);
+        for (unsigned offset: finallyBranches)
+            block->branchHere(offset);
+        if (s.finallySuite())
+            s.trySuite()->accept(*this);
+        block->append(gc.create<InstrReRaiseCurrentException>());
+    }
+
+    virtual void visit(const SyntaxExcept& s) {
+        assert(false); // Handled by visit(const SyntaxTry&) above.
     }
 };
 

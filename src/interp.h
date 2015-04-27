@@ -11,6 +11,8 @@ using namespace std;
 
 struct Block;
 struct Callable;
+struct Exception;
+struct ExceptionHandler;
 struct Function;
 struct Instr;
 
@@ -87,16 +89,25 @@ struct Interpreter
                          vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
 
+    void pushExceptionHandler(unsigned offset);
+    void popExceptionHandler();
+    bool matchCurrentException(Traced<Object*> obj);
+    bool startExceptionHandler(Traced<Exception*> exception);
+    bool reRaiseCurrentException();
+
   private:
     static Interpreter* instance_;
 
     Instr **instrp;
     RootVector<Frame*> frames;
     RootVector<Value> stack;
+    RootVector<ExceptionHandler*> exceptionHandlers;
+    Root<Exception*> currentException;
 
     Interpreter();
     Frame* newFrame(Traced<Function*> function);
     void pushFrame(Traced<Frame*> frame);
+    unsigned currentOffset();
 
     bool run(Root<Value>& resultOut);
 
@@ -112,6 +123,8 @@ struct Interpreter
     CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
                          Root<Value>& resultOut);
     CallStatus raise(string className, string message, Root<Value>& resultOut);
+
+    friend void testInterp(const string& input, const string& expected);
 };
 
 #ifdef BUILD_TESTS

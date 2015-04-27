@@ -5,37 +5,32 @@
 #include "string.h"
 
 GlobalRoot<Class*> Exception::ObjectClass;
-GlobalRoot<Class*> StopIteration::ObjectClass;
-GlobalRoot<Class*> TypeError::ObjectClass;
+
+#define define_exception_class(name)                                          \
+    GlobalRoot<Class*> name::ObjectClass;
+for_each_exception_class(define_exception_class)
+#undef define_exception_class
 
 void Exception::init()
 {
     ObjectClass.init(gc.create<NativeClass>("Exception",
                                              None,
                                              &Exception::create, 2));
-    StopIteration::init();
-}
 
-void StopIteration::init()
-{
-    ObjectClass.init(
-        gc.create<NativeClass>("StopIteration",
-                                Exception::ObjectClass,
-                                &StopIteration::create, 1));
-}
-
-void TypeError::init()
-{
-    ObjectClass.init(
-        gc.create<NativeClass>("TypeError",
-                                Exception::ObjectClass,
-                                &TypeError::create, 2));
+#define init_exception_class(name)                                          \
+    name::ObjectClass.init(                                                 \
+        gc.create<NativeClass>(#name,                                       \
+                               Exception::ObjectClass,                      \
+                               &Exception::create, 2));
+    for_each_exception_class(init_exception_class)
+#undef init_exception_class
 }
 
 Exception::Exception(Traced<Class*> cls, const TokenPos& pos,
                      const string& message)
   : Object(cls), pos_(pos)
 {
+    assert(cls->is<Class>());
     Root<Value> classNameValue, messageValue;
     classNameValue = String::get(cls->name());
     messageValue = String::get(message);
@@ -53,12 +48,20 @@ Exception::Exception(const string& className, const string& message)
 
 bool Exception::create(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    assert(args.size() == 2);
-    if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
+    assert(args.size() >= 1 && args.size() <= 2);
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
+    // todo: check class has exception as a base
+    Root<Class*> cls(args[0].toObject()->as<Class>());
 
-    resultOut = gc.create<Exception>("Exception",
-                                      args[1].toObject()->as<String>()->value());
+    string message = "";
+    if (args.size() == 2) {
+        if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
+            return false;
+        message = args[1].toObject()->as<String>()->value();
+    }
+
+    resultOut = gc.create<Exception>(cls, TokenPos(), message);
     return true;
 }
 
@@ -96,27 +99,10 @@ void Exception::print(ostream& os) const
     os << fullMessage();
 }
 
-bool StopIteration::create(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    assert(args.size() == 0);
-    resultOut = gc.create<StopIteration>();
-    return true;
-}
-
-bool TypeError::create(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    assert(args.size() == 2);
-    if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
-        return false;
-
-    resultOut = gc.create<TypeError>(args[1].toObject()->as<String>()->value());
-    return true;
-}
-
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)
 {
     if (!v.isInstanceOf(cls)) {
-        string message = "Excpecting" + cls->name() +
+        string message = "Expecting " + cls->name() +
             " but got " + v.type()->name();
         resultOut = gc.create<Exception>("TypeError", message);
         return false;
@@ -124,7 +110,6 @@ bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut
 
     return true;
 }
-
 
 #ifdef BUILD_TESTS
 

@@ -473,7 +473,26 @@ Syntax* SyntaxParser::parseCompoundStatement()
         if (opt(Token_Else))
             elseSuite = parseSuite();
         return new SyntaxFor(token, targets, exprs, suite, elseSuite);
-    //} else if (opt(Token_Try)) {
+    } else if (opt(Token_Try)) {
+        Token token = currentToken();
+        unique_ptr<SyntaxBlock> suite(parseSuite());
+        unique_ptr<SyntaxBlock> elseSuite;
+        vector<unique_ptr<SyntaxExcept>> excepts;
+        unique_ptr<SyntaxBlock> finallySuite;
+        while (opt(Token_Except)) {
+            Token token = currentToken();
+            unique_ptr<Syntax> expr(parseExprOrExprList());
+            unique_ptr<SyntaxTarget> as;
+            if (opt(Token_As))
+                as.reset(parseTarget());
+            unique_ptr<SyntaxBlock> suite(parseSuite());
+            excepts.emplace_back(new SyntaxExcept(token, expr, as, suite));
+        }
+        if (!excepts.empty() && opt(Token_Else))
+            elseSuite.reset(parseSuite());
+        if (opt(Token_Finally))
+            finallySuite.reset(parseSuite());
+        return new SyntaxTry(token, suite, excepts, elseSuite, finallySuite);
     //} else if (opt(Token_With)) {
     } else if (opt(Token_Def)) {
         Token name = match(Token_Identifier);

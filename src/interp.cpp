@@ -12,6 +12,29 @@
 
 //#define TRACE_INTERP
 
+struct ExceptionHandler : public Cell
+{
+    ExceptionHandler(Traced<Frame*> frame, unsigned offset);
+    virtual void traceChildren(Tracer& t) override;
+
+    Frame* frame() { return frame_; }
+    unsigned offset() { return offset_; }
+
+  private:
+    Frame* frame_;
+    unsigned offset_;
+};
+
+ExceptionHandler::ExceptionHandler(Traced<Frame*> frame, unsigned offset)
+  : frame_(frame),
+    offset_(offset)
+{}
+
+void ExceptionHandler::traceChildren(Tracer& t)
+{
+    gc.trace(t, &frame_);
+}
+
 Interpreter* Interpreter::instance_ = nullptr;
 
 /* static */ void Interpreter::init()
@@ -27,7 +50,8 @@ Interpreter* Interpreter::instance_ = nullptr;
 }
 
 Interpreter::Interpreter()
-  : instrp(nullptr)
+  : instrp(nullptr),
+    currentException(nullptr)
 {}
 
 bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
@@ -48,7 +72,7 @@ bool Interpreter::run(Root<Value>& resultOut)
         Instr *instr = *instrp++;
 #ifdef TRACE_INTERP
         cerr << "stack:";
-        for (unsigned i = 0; i < pos; ++i)
+        for (unsigned i = 0; i < stackPos(); ++i)
             cerr << " " << stack[i];
         cerr << endl;
         cerr << "frames:";
@@ -58,18 +82,19 @@ bool Interpreter::run(Root<Value>& resultOut)
         cerr << "execute: " << repr(*instr) << endl << endl;
 #endif
         if (!instr->execute(*this)) {
-            resultOut = popStack();
+            Root<Value> value(popStack());
 #ifdef TRACE_INTERP
-            cerr << "Error: " << resultOut << endl;
+            cerr << "Exception: " << value << endl;
 #endif
-#ifdef DEBUG
-            Object* obj = resultOut.asObject();
-#endif
-            assert(obj);
-            assert(obj->isInstanceOf(Exception::ObjectClass));
-            while (instrp)
-                popFrame();
-            return false;
+            assert(value.isInstanceOf(Exception::ObjectClass));
+            Root<Exception*> exception(value.toObject()->as<Exception>());
+            if (!startExceptionHandler(exception)) {
+                while (instrp)
+                    popFrame();
+                resultOut = value;
+                assert(stackPos() == initialPos);
+                return false;
+            }
         }
     }
 
@@ -129,6 +154,71 @@ unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
     unsigned ipOffset = instrp - frame->block()->startInstr();
     popFrame();
     return ipOffset;
+}
+
+unsigned Interpreter::currentOffset()
+{
+    Instr** start = getFrame()->block()->startInstr();
+    assert(instrp >= start + 1);
+    return instrp - start - 1;
+}
+
+void Interpreter::pushExceptionHandler(unsigned offset)
+{
+    assert(offset);
+    Root<Frame*> frame(getFrame());
+    unsigned targetOffset = currentOffset() + offset;
+    Root<ExceptionHandler*> handler(
+        gc.create<ExceptionHandler>(frame, targetOffset));
+    exceptionHandlers.push_back(handler);
+}
+
+void Interpreter::popExceptionHandler()
+{
+#ifdef DEBUG
+    ExceptionHandler* handler = exceptionHandlers.back();
+    assert(handler->frame() == getFrame());
+#endif
+    exceptionHandlers.pop_back();
+}
+
+bool Interpreter::matchCurrentException(Traced<Object*> obj)
+{
+    assert(currentException);
+    if (obj->is<Class>()) {
+        Root<Class*> cls(obj->as<Class>());
+        if (currentException->isInstanceOf(cls)) {
+            currentException = nullptr;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
+{
+    if (exceptionHandlers.empty())
+        return false;
+
+    currentException = exception;
+    ExceptionHandler* handler = exceptionHandlers.back();
+    exceptionHandlers.pop_back();
+    while (getFrame() != handler->frame())
+        popFrame();
+    instrp = getFrame()->block()->startInstr() + handler->offset();
+    return true;
+}
+
+bool Interpreter::reRaiseCurrentException()
+{
+    if (currentException) {
+        pushStack(currentException);
+        currentException = nullptr;
+        return false;
+    }
+
+    pushStack(None);
+    return true;
 }
 
 Frame* Interpreter::getFrame(unsigned reverseIndex)
@@ -314,6 +404,11 @@ void testInterp(const string& input, const string& expected)
 #ifdef TRACE_INTERP
     cout << "testInterp: " << input << endl;
 #endif
+    Interpreter& interp = Interpreter::instance();
+    assert(interp.stack.empty());
+    assert(interp.frames.empty());
+    assert(interp.exceptionHandlers.empty());
+    assert(!interp.currentException);
     Root<Block*> block;
     Block::buildModule(input, None, block);
     Root<Value> result;

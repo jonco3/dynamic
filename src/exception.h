@@ -11,6 +11,7 @@ struct Exception : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     Exception(const string& className, const string& message);
+    Exception(Traced<Class*> cls, const TokenPos& pos, const string& message);
 
     static bool create(TracedVector<Value> args, Root<Value>& resultOut);
 
@@ -21,34 +22,30 @@ struct Exception : public Object
 
     virtual void print(ostream& os) const;
 
-  protected:
-    Exception(Traced<Class*> cls, const TokenPos& pos, const string& message);
-
   private:
     TokenPos pos_;
 
     void init(Traced<Value> className, Traced<Value> message);
 };
 
-struct StopIteration : public Exception
-{
-    static void init();
-    static GlobalRoot<Class*> ObjectClass;
+#define for_each_exception_class(cls)                                         \
+    cls(NameError)                                                            \
+    cls(StopIteration)                                                        \
+    cls(RuntimeError)                                                         \
+    cls(TypeError)
 
-    static bool create(TracedVector<Value> args, Root<Value>& resultOut);
+#define declare_exception_class(name)                                         \
+    struct name : public Exception                                            \
+    {                                                                         \
+        static GlobalRoot<Class*> ObjectClass;                                \
+        name(const string& message = "")                                      \
+          : Exception(ObjectClass, TokenPos(), message)                       \
+        {}                                                                    \
+    };
+for_each_exception_class(declare_exception_class)
+#undef define_exception_class
 
-    StopIteration() : Exception(ObjectClass, TokenPos(), "") {}
-};
-
-struct TypeError : public Exception
-{
-    static void init();
-    static GlobalRoot<Class*> ObjectClass;
-
-    static bool create(TracedVector<Value> args, Root<Value>& resultOut);
-
-    TypeError(string message) : Exception("TypeError", "message") {}
-};
+extern GlobalRoot<StopIteration*> StopIterationException;
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);
 

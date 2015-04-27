@@ -65,7 +65,11 @@ using namespace std;
     instr(AugAssignUpdate)                                                   \
     instr(ResumeGenerator)                                                   \
     instr(LeaveGenerator)                                                    \
-    instr(SuspendGenerator)
+    instr(SuspendGenerator)                                                  \
+    instr(EnterTry)                                                          \
+    instr(LeaveTry)                                                          \
+    instr(MatchCurrentException)                                             \
+    instr(ReRaiseCurrentException)
 
 enum InstrType
 {
@@ -310,8 +314,6 @@ define_branch_instr(BranchIfFalse);
 define_branch_instr(Or);
 define_branch_instr(And);
 
-#undef define_branch_instr
-
 struct InstrLambda : public Instr
 {
     define_instr_members(Instr_Lambda, "Lambda");
@@ -449,6 +451,11 @@ struct InstrAugAssignUpdate : public BinaryOpInstr
 define_simple_instr(ResumeGenerator);
 define_simple_instr(LeaveGenerator);
 define_simple_instr(SuspendGenerator);
+
+define_branch_instr(EnterTry);
+define_simple_instr(LeaveTry);
+define_simple_instr(MatchCurrentException);
+define_simple_instr(ReRaiseCurrentException);
 
 #undef instr_type
 #undef instr_name

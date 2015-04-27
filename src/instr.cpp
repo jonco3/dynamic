@@ -579,3 +579,27 @@ bool InstrSuspendGenerator::execute(Interpreter& interp)
     gen->suspend(interp, value);
     return true;
 }
+
+bool InstrEnterTry::execute(Interpreter& interp)
+{
+    interp.pushExceptionHandler(offset_);
+    return true;
+}
+
+bool InstrLeaveTry::execute(Interpreter& interp)
+{
+    interp.popExceptionHandler();
+    return true;
+}
+
+bool InstrMatchCurrentException::execute(Interpreter& interp)
+{
+    Root<Object*> obj(interp.popStack().toObject());
+    interp.pushStack(Boolean::get(interp.matchCurrentException(obj)));
+    return true;
+}
+
+bool InstrReRaiseCurrentException::execute(Interpreter& interp)
+{
+    return interp.reRaiseCurrentException();
+}

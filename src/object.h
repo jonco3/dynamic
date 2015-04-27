@@ -33,7 +33,7 @@ struct Object : public Cell
     }
 
     template <typename T> T* as() {
-        assert(is<T>());
+        assert(isInstanceOf(T::ObjectClass));
         return static_cast<T*>(this);
     }
 

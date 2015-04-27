@@ -8,16 +8,17 @@ class TestError(RuntimeError):
 caught = False
 try:
     raise TestError("foo")
-except TestError, e:
+except TestError as e:
     caught = True
     assert e.message == "foo"
+    e = None
 assert caught
 
 # Catch exception via superclass
 caught = False
 try:
     raise TestError("foo")
-except RuntimeError, e:
+except RuntimeError as e:
     caught = True
     assert e.message == "foo"
 assert caught
@@ -26,9 +27,9 @@ assert caught
 caught = False
 try:
     raise TestError("foo")
-except NameError, e:
+except NameError as e:
     pass
-except TestError, e:
+except TestError as e:
     caught = True
     assert e.message == "foo"
 assert caught
@@ -37,10 +38,10 @@ assert caught
 caught = False
 try:
     raise TestError("foo")
-except RuntimeError, e:
+except RuntimeError as e:
     caught = True
     assert e.message == "foo"
-except TestError, e:
+except TestError as e:
     pass
 assert caught
 
@@ -51,7 +52,7 @@ def a():
 caught = False
 try:
     a()
-except TestError, e:
+except TestError as e:
     caught = True
     assert e.message == "foo"
 assert caught
@@ -67,7 +68,7 @@ def b1():
     caught = False
     try:
         b2()
-    except TestError, e:
+    except TestError as e:
         caught = True
         assert e.message == "foo"
     assert caught
@@ -111,10 +112,10 @@ exception2 = TestError
 try:
     exception1, exception2 = exception2, exception1
     raise TestError("foo")
-except exception1, e:
+except exception1 as e:
     caught = True
     assert e.message == "foo"
-except exception2, e:
+except exception2 as e:
     assert False
 assert caught
 
@@ -132,7 +133,7 @@ try:
         assert False
     finally:
         finals += 1
-except TestError, e:
+except TestError as e:
     caught = True
     assert e.message == "foo"
 assert caught
