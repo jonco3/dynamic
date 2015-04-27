@@ -56,7 +56,7 @@ static int runRepl()
     char* line;
     Root<Object*> globals(gc.create<Object>());
     while (line = readOneLine(), line != NULL) {
-        Value result;
+        Root<Value> result;
         bool ok = runModule(line, "<none>", globals, &result);
         if (ok)
             cout << result << endl;

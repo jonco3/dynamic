@@ -72,7 +72,7 @@ void initBuiltins(const string& libDir)
     string text = readFile(filename);
     Root<Block*> block;
     Block::buildModule(Input(text, filename), Builtin, block);
-    Value result;
+    Root<Value> result;
     if (!Interpreter::exec(block, result)) {
         printException(result);
         exit(1);

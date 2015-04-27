@@ -17,10 +17,10 @@ struct Instr;
 struct Interpreter
 {
     static void init();
-    static bool exec(Traced<Block*> block, Value& valueOut);
+    static bool exec(Traced<Block*> block, Root<Value>& resultOut);
     static Interpreter& instance() { return *instance_; }
 
-    bool interpret(Traced<Block*> block, Value& valueOut);
+    bool interpret(Traced<Block*> block, Root<Value>& resultOut);
 
     template <typename S>
     void pushStack(const S& element) {
@@ -98,7 +98,7 @@ struct Interpreter
     Frame* newFrame(Traced<Function*> function);
     void pushFrame(Traced<Frame*> frame);
 
-    bool run(Value& valueOut);
+    bool run(Root<Value>& resultOut);
 
     enum CallStatus {
         CallError,

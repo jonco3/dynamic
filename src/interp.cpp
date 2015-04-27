@@ -20,25 +20,25 @@ Interpreter* Interpreter::instance_ = nullptr;
     instance_ = new Interpreter;
 }
 
-/* static */ bool Interpreter::exec(Traced<Block*> block, Value& valueOut)
+/* static */ bool Interpreter::exec(Traced<Block*> block, Root<Value>& resultOut)
 {
     assert(instance_);
-    return instance_->interpret(block, valueOut);
+    return instance_->interpret(block, resultOut);
 }
 
 Interpreter::Interpreter()
   : instrp(nullptr)
 {}
 
-bool Interpreter::interpret(Traced<Block*> block, Value& valueOut)
+bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
 {
     assert(stackPos() == 0);
     Root<Frame*> frame(gc.create<Frame>(block));
     pushFrame(frame);
-    return run(valueOut);
+    return run(resultOut);
 }
 
-bool Interpreter::run(Value& valueOut)
+bool Interpreter::run(Root<Value>& resultOut)
 {
 #ifdef DEBUG
     unsigned initialPos = stackPos();
@@ -58,12 +58,12 @@ bool Interpreter::run(Value& valueOut)
         cerr << "execute: " << repr(*instr) << endl << endl;
 #endif
         if (!instr->execute(*this)) {
-            valueOut = popStack();
+            resultOut = popStack();
 #ifdef TRACE_INTERP
-            cerr << "Error: " << valueOut << endl;
+            cerr << "Error: " << resultOut << endl;
 #endif
 #ifdef DEBUG
-            Object* obj = valueOut.asObject();
+            Object* obj = resultOut.asObject();
 #endif
             assert(obj);
             assert(obj->isInstanceOf(Exception::ObjectClass));
@@ -73,7 +73,7 @@ bool Interpreter::run(Value& valueOut)
         }
     }
 
-    valueOut = popStack();
+    resultOut = popStack();
     assert(stackPos() == initialPos);
     return true;
 }
@@ -156,9 +156,7 @@ bool Interpreter::call(Traced<Value> targetValue,
     if (status == CallFinished)
         return true;
 
-    Value result; // todo: root out param
-    bool ok = run(result);
-    resultOut = result;
+    bool ok = run(resultOut);
     instrp = oldInstrp;
     return ok;
 }
@@ -318,12 +316,12 @@ void testInterp(const string& input, const string& expected)
 #endif
     Root<Block*> block;
     Block::buildModule(input, None, block);
-    Value result;
+    Root<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
-    testEqual(repr(result), expected);
+    testEqual(repr(result.get()), expected);
 }
 
 void testException(const string& input, const string& expected)
@@ -333,7 +331,7 @@ void testException(const string& input, const string& expected)
 #endif
     Root<Block*> block;
     Block::buildModule(input, None, block);
-    Value result;
+    Root<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (ok) {
         cerr << "Expected exception but got: " << result << endl;
@@ -363,12 +361,12 @@ void testReplacement(const string& input,
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
 
-    Value result;
+    Root<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
-    testEqual(repr(result), expected);
+    testEqual(repr(result.get()), expected);
 
     testEqual((*instrp)->type(), replacement);
 }

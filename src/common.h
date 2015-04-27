@@ -15,5 +15,5 @@ extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
 extern bool runModule(string text, string filename, Traced<Object*> global,
-                      Value* valueOut = nullptr);
+                      Root<Value>* maybeResultOut = nullptr);
 #endif

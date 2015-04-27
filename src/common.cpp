@@ -71,9 +71,10 @@ void printException(Value value)
     cerr << ex->fullMessage() << endl;
 }
 
-bool runModule(string text, string filename, Traced<Object*> globals, Value* valueOut)
+bool runModule(string text, string filename, Traced<Object*> globals,
+               Root<Value>* maybeResultOut)
 {
-    Value result;
+    Root<Value> result;
     bool ok;
     try {
         Root<Block*> block;
@@ -88,7 +89,7 @@ bool runModule(string text, string filename, Traced<Object*> globals, Value* val
 
     if (!ok)
         printException(result);
-    if (valueOut)
-        *valueOut = result;
+    if (maybeResultOut)
+        *maybeResultOut = result;
     return ok;
 }
