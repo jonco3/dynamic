@@ -97,5 +97,6 @@ int main(int argc, char *argv[])
     init1();
     init2(libDir);
     TestCase::runAllTests();
+    final();
     return 0;
 }

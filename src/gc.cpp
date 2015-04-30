@@ -252,6 +252,14 @@ void GC::collect()
     log("< GC::collect", cellCount, currentEpoch);
 }
 
+void GC::shutdown()
+{
+    for (RootBase* r = rootList; r; r = r->next())
+        r->clear();
+    collect();
+    assert(cellCount == 0);
+}
+
 #ifdef BUILD_TESTS
 
 #include "test.h"

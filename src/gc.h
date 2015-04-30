@@ -28,6 +28,8 @@ struct GC
 {
     GC(size_t minCollectAt, unsigned scheduleFactorPercent);
 
+    void shutdown();
+
     template <typename T, typename... Args>
     inline T* create(Args&&... args);
 
@@ -162,6 +164,7 @@ struct RootBase
   RootBase() : next_(nullptr), prev_(nullptr) {}
     virtual ~RootBase() {}
     virtual void trace(Tracer& t) = 0;
+    virtual void clear() = 0;
 
     void insert();
     void remove();
@@ -211,6 +214,10 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
         if (GCTraits<T>::isNonNull(ptr))
             insert();
         ptr_ = ptr;
+    }
+
+    virtual void clear() override {
+        ptr_ = GCTraits<T>::nullValue();
     }
 
     define_comparisions;
@@ -280,6 +287,10 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     Root& operator=(const GlobalRoot<T>& other) {
         *this = other.get();
         return *this;
+    }
+
+    virtual void clear() override {
+        ptr_ = GCTraits<T>::nullValue();
     }
 
     virtual void trace(Tracer& t) {
@@ -352,6 +363,10 @@ struct RootVector : private vector<T>, private RootBase
     ~RootVector() {
         assert(useCount == 0);
         remove();
+    }
+
+    virtual void clear() override {
+        VectorBase::resize(0);
     }
 
     Traced<T> ref(unsigned index) {
@@ -448,6 +463,8 @@ struct AllocRoot : protected RootBase
 
     define_comparisions;
     define_immutable_accessors;
+
+    virtual void clear() override {}
 
     virtual void trace(Tracer& t) {
         gc.trace(t, &ptr_);

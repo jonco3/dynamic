@@ -47,6 +47,7 @@ void init2(const string& libDir)
 void final()
 {
     // todo
+    gc.shutdown();
 }
 
 string readFile(string filename)

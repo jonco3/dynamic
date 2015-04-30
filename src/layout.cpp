@@ -13,7 +13,7 @@ void Layout::sweep()
 {
     assert(isDying());
     assert(parent_ != this);
-    if (!parent_->isDying())
+    if (parent_ && !parent_->isDying())
         parent_->removeChild(this);
 }
 
