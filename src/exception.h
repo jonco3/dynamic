@@ -11,10 +11,13 @@ struct Exception : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     Exception(const string& className, const string& message);
-    Exception(Traced<Class*> cls, const TokenPos& pos, const string& message);
+    Exception(Traced<Class*> cls, const string& message);
 
     static bool create(TracedVector<Value> args, Root<Value>& resultOut);
 
+    void setPos(const TokenPos& pos);
+
+    const TokenPos& pos() const { return pos_; }
     string className() const;
     string message() const;
 
@@ -29,6 +32,7 @@ struct Exception : public Object
 };
 
 #define for_each_exception_class(cls)                                         \
+    cls(AttributeError)                                                       \
     cls(NameError)                                                            \
     cls(StopIteration)                                                        \
     cls(RuntimeError)                                                         \
@@ -38,8 +42,8 @@ struct Exception : public Object
     struct name : public Exception                                            \
     {                                                                         \
         static GlobalRoot<Class*> ObjectClass;                                \
-        name(const string& message = "")                                      \
-          : Exception(ObjectClass, TokenPos(), message)                       \
+      name(const string& message = "")                                        \
+          : Exception(ObjectClass, message)                                   \
         {}                                                                    \
     };
 for_each_exception_class(declare_exception_class)

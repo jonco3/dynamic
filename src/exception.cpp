@@ -4,6 +4,8 @@
 #include "singletons.h"
 #include "string.h"
 
+#include <sstream>
+
 GlobalRoot<Class*> Exception::ObjectClass;
 
 #define define_exception_class(name)                                          \
@@ -26,9 +28,8 @@ void Exception::init()
 #undef init_exception_class
 }
 
-Exception::Exception(Traced<Class*> cls, const TokenPos& pos,
-                     const string& message)
-  : Object(cls), pos_(pos)
+Exception::Exception(Traced<Class*> cls, const string& message)
+  : Object(cls)
 {
     assert(cls->is<Class>());
     Root<Value> classNameValue, messageValue;
@@ -61,7 +62,7 @@ bool Exception::create(TracedVector<Value> args, Root<Value>& resultOut)
         message = args[1].toObject()->as<String>()->value();
     }
 
-    resultOut = gc.create<Exception>(cls, TokenPos(), message);
+    resultOut = gc.create<Exception>(cls, message);
     return true;
 }
 
@@ -87,16 +88,29 @@ string Exception::message() const
 
 string Exception::fullMessage() const
 {
+    ostringstream s;
+    s << className();
     string message = this->message();
-    if (message == "")
-        return className();
-    else
-        return className() + ": " + message;
+    if (message != "")
+        s << ": " << message;
+    if (pos_.file != "" || pos_.line != 0) {
+        s << " at";
+        if (pos_.file != "")
+            s << " " << pos_.file;
+        s << " line " << pos_.line;
+    }
+    return s.str();
 }
 
 void Exception::print(ostream& os) const
 {
     os << fullMessage();
+}
+
+void Exception::setPos(const TokenPos& pos)
+{
+    // todo: I get a crash if I try to assign the filename string
+    pos_.line = pos.line;
 }
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)
@@ -122,6 +136,8 @@ testcase(exception)
     testEqual(exc->className(), "foo");
     testEqual(exc->message(), "bar");
     testEqual(exc->fullMessage(), "foo: bar");
+    exc->setPos(TokenPos("", 1, 0));
+    testEqual(exc->fullMessage(), "foo: bar at line 1");
 }
 
 #endif

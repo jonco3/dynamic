@@ -62,7 +62,7 @@ struct Object : public Cell
     void extend(Traced<Layout*> layout);
 
     bool isTrue() const;
-    bool isInstanceOf(Traced<Class*> cls) const;
+    bool isInstanceOf(Class* cls) const;
 
   protected:
     Object(Traced<Class*> cls, Traced<Class*> base,

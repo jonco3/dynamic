@@ -2,6 +2,7 @@
 #define __BLOCK_H__
 
 #include "gcdefs.h"
+#include "token.h"
 
 #include <cassert>
 #include <vector>
@@ -47,6 +48,9 @@ struct Block : public Cell
         return Traced<Layout*>::fromTracedLocation(&block->layout_);
     }
 
+    void setNextPos(const TokenPos& pos);
+    TokenPos getPos(Instr** instrp) const;
+
 #ifdef BUILD_TESTS
     Instr** findInstr(unsigned type);
 #endif
@@ -54,6 +58,8 @@ struct Block : public Cell
   private:
     Layout* layout_;
     vector<Instr*> instrs_;
+    string file_;
+    vector<pair<size_t, unsigned>> offsetLines_;
 };
 
 #endif

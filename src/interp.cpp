@@ -51,7 +51,7 @@ Interpreter* Interpreter::instance_ = nullptr;
 
 Interpreter::Interpreter()
   : instrp(nullptr),
-    currentException(nullptr)
+    currentException_(nullptr)
 {}
 
 bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
@@ -88,6 +88,7 @@ bool Interpreter::run(Root<Value>& resultOut)
 #endif
             assert(value.isInstanceOf(Exception::ObjectClass));
             Root<Exception*> exception(value.toObject()->as<Exception>());
+            exception->setPos(currentPos());
             if (!startExceptionHandler(exception)) {
                 while (instrp)
                     popFrame();
@@ -182,25 +183,12 @@ void Interpreter::popExceptionHandler()
     exceptionHandlers.pop_back();
 }
 
-bool Interpreter::matchCurrentException(Traced<Object*> obj)
-{
-    assert(currentException);
-    if (obj->is<Class>()) {
-        Root<Class*> cls(obj->as<Class>());
-        if (currentException->isInstanceOf(cls)) {
-            currentException = nullptr;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
 {
     if (exceptionHandlers.empty())
         return false;
 
-    currentException = exception;
+    currentException_ = exception;
     ExceptionHandler* handler = exceptionHandlers.back();
     exceptionHandlers.pop_back();
     while (getFrame() != handler->frame())
@@ -209,16 +197,10 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
     return true;
 }
 
-bool Interpreter::reRaiseCurrentException()
+void Interpreter::clearCurrentException()
 {
-    if (currentException) {
-        pushStack(currentException);
-        currentException = nullptr;
-        return false;
-    }
-
-    pushStack(None);
-    return true;
+    assert(currentException_);
+    currentException_ = nullptr;
 }
 
 Frame* Interpreter::getFrame(unsigned reverseIndex)
@@ -232,6 +214,22 @@ void Interpreter::branch(int offset)
     Instr** target = instrp + offset - 1;
     assert(frames.back()->block()->contains(target));
     instrp = target;
+}
+
+TokenPos Interpreter::currentPos()
+{
+    assert(instrp);
+    assert(!frames.empty());
+    return frames.back()->block()->getPos(instrp - 1);
+}
+
+bool Interpreter::raiseAttrError(Traced<Value> value, Name ident)
+{
+    const Class* cls = value.toObject()->type();
+    string message =
+        "'" + cls->name() + "' object has no attribute '" + ident + "'";
+    pushStack(gc.create<AttributeError>(message));
+    return false;
 }
 
 bool Interpreter::call(Traced<Value> targetValue,
@@ -408,7 +406,7 @@ void testInterp(const string& input, const string& expected)
     assert(interp.stack.empty());
     assert(interp.frames.empty());
     assert(interp.exceptionHandlers.empty());
-    assert(!interp.currentException);
+    assert(!interp.currentException_);
     Root<Block*> block;
     Block::buildModule(input, None, block);
     Root<Value> result;
@@ -433,7 +431,7 @@ void testException(const string& input, const string& expected)
         abortTests();
     }
     Object *o = result.toObject();
-    testTrue(o->is<Exception>());
+    testTrue(o->isInstanceOf(Exception::ObjectClass));
     string message = o->as<Exception>()->fullMessage();
     if (message.find(expected) == string::npos) {
         cerr << "Expected message containing: " << expected << endl;

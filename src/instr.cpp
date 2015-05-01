@@ -8,13 +8,6 @@ bool InstrConst::execute(Interpreter& interp)
     return true;
 }
 
-bool IdentInstrBase::raiseAttrError(Traced<Value> value, Interpreter& interp) {
-    const Class* cls = value.toObject()->type();
-    string message = "'" + cls->name() + "' object has no attribute '" + ident + "'";
-    interp.pushStack(gc.create<Exception>("AttributeError", message));
-    return false;
-}
-
 bool InstrGetLocal::execute(Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
@@ -61,7 +54,7 @@ bool InstrGetAttr::execute(Interpreter& interp)
     Root<Value> value(interp.popStack());
     Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
-        return raiseAttrError(value, interp);
+        return interp.raiseAttrError(value, ident);
     assert(result != Value(UninitializedSlot));
     interp.pushStack(result);
     return true;
@@ -79,7 +72,7 @@ bool InstrGetMethod::execute(Interpreter& interp)
     Root<Value> value(interp.popStack());
     Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
-        return raiseAttrError(value, interp);
+        return interp.raiseAttrError(value, ident);
     assert(result != Value(UninitializedSlot));
     interp.pushStack(result);
     interp.pushStack(value);
@@ -111,7 +104,7 @@ bool InstrGetMethodFallback::execute(Interpreter& interp)
     Root<Value> value(interp.popStack());
     Root<Value> result;
     if (!value.maybeGetAttr(ident, result))
-        return raiseAttrError(value, interp);
+        return interp.raiseAttrError(value, ident);
     assert(result != Value(UninitializedSlot));
     interp.pushStack(result);
     interp.pushStack(value);
@@ -595,11 +588,25 @@ bool InstrLeaveTry::execute(Interpreter& interp)
 bool InstrMatchCurrentException::execute(Interpreter& interp)
 {
     Root<Object*> obj(interp.popStack().toObject());
-    interp.pushStack(Boolean::get(interp.matchCurrentException(obj)));
+    Root<Exception*> exception(interp.currentException());
+    assert(exception);
+    bool match = obj->is<Class>() && exception->isInstanceOf(obj->as<Class>());
+    if (match) {
+        interp.pushStack(exception);
+        interp.clearCurrentException();
+    }
+    interp.pushStack(Boolean::get(match));
     return true;
 }
 
-bool InstrReRaiseCurrentException::execute(Interpreter& interp)
+bool InstrReraiseCurrentException::execute(Interpreter& interp)
 {
-    return interp.reRaiseCurrentException();
+    Root<Exception*> exception(interp.currentException());
+    if (exception) {
+        interp.pushStack(exception);
+        interp.clearCurrentException();
+        return false;
+    }
+
+    return true;
 }

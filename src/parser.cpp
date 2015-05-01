@@ -477,7 +477,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
         Token token = currentToken();
         unique_ptr<SyntaxBlock> suite(parseSuite());
         unique_ptr<SyntaxBlock> elseSuite;
-        vector<unique_ptr<SyntaxExcept>> excepts;
+        vector<unique_ptr<ExceptInfo>> excepts;
         unique_ptr<SyntaxBlock> finallySuite;
         while (opt(Token_Except)) {
             Token token = currentToken();
@@ -486,7 +486,7 @@ Syntax* SyntaxParser::parseCompoundStatement()
             if (opt(Token_As))
                 as.reset(parseTarget());
             unique_ptr<SyntaxBlock> suite(parseSuite());
-            excepts.emplace_back(new SyntaxExcept(token, expr, as, suite));
+            excepts.emplace_back(new ExceptInfo(token, expr, as, suite));
         }
         if (!excepts.empty() && opt(Token_Else))
             elseSuite.reset(parseSuite());

@@ -56,6 +56,36 @@ void Block::traceChildren(Tracer& t)
         gc.trace(t, &*i);
 }
 
+TokenPos Block::getPos(Instr** instrp) const
+{
+    assert(contains(instrp));
+
+    // We don't have any information for manually created blocks.
+    if (offsetLines_.empty())
+        return TokenPos();
+
+    size_t offset = instrp - &instrs_.front();
+    for (int i = offsetLines_.size() - 1; i >= 0; --i) {
+        if (offsetLines_[i].first <= offset)
+            return TokenPos(file_, offsetLines_[i].second, 0);
+    }
+    assert(false);
+    return TokenPos();
+}
+
+void Block::setNextPos(const TokenPos& pos)
+{
+    if (offsetLines_.empty()) {
+        file_ = pos.file;
+        offsetLines_.push_back({0, pos.line});
+        return;
+    }
+
+    assert(file_ == pos.file);
+    if (offsetLines_.back().second != pos.line)
+        offsetLines_.emplace_back(offsetLines_.size(), pos.line);
+}
+
 #ifdef BUILD_TESTS
 Instr** Block::findInstr(unsigned type)
 {
@@ -160,6 +190,23 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         s.suite()->accept(*this);
         if (s.elseSuite())
             s.elseSuite()->accept(*this);
+    }
+
+    virtual void visit(const SyntaxTry& s) {
+        assert(!inAssignTarget_);
+        s.trySuite()->accept(*this);
+        for (const auto& except : s.excepts()) {
+            if (except->as()) {
+                inAssignTarget_ = true;
+                except->as()->accept(*this);
+                inAssignTarget_ = false;
+            }
+            except->suite()->accept(*this);
+        }
+        if (s.elseSuite())
+            s.elseSuite()->accept(*this);
+        if (s.finallySuite())
+            s.finallySuite()->accept(*this);
     }
 
   private:
@@ -273,6 +320,7 @@ struct BlockBuilder : public SyntaxVisitor
     bool isClassBlock;
     bool isGenerator;
     bool inAssignTarget;
+    TokenPos currentPos;
 
     void build(const Syntax* s) {
         assert(!block);
@@ -710,6 +758,14 @@ struct BlockBuilder : public SyntaxVisitor
             e->expr()->accept(*this);
             block->append(gc.create<InstrMatchCurrentException>());
             handlerBranch = block->append(gc.create<InstrBranchIfFalse>());
+            if (e->as()) {
+                assert(!inAssignTarget);
+                inAssignTarget = true;
+                e->as()->accept(*this);
+                inAssignTarget = false;
+            }
+            else
+                block->append(gc.create<InstrPop>());
             e->suite()->accept(*this);
         }
         if (s.elseSuite()) {
@@ -723,11 +779,12 @@ struct BlockBuilder : public SyntaxVisitor
             block->branchHere(offset);
         if (s.finallySuite())
             s.trySuite()->accept(*this);
-        block->append(gc.create<InstrReRaiseCurrentException>());
+        block->append(gc.create<InstrReraiseCurrentException>());
     }
 
-    virtual void visit(const SyntaxExcept& s) {
-        assert(false); // Handled by visit(const SyntaxTry&) above.
+    virtual void setPos(const TokenPos& pos)
+    {
+        block->setNextPos(pos);
     }
 };
 

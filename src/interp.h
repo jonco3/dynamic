@@ -2,6 +2,7 @@
 #define __INTERP_H__
 
 #include "frame.h"
+#include "token.h"
 #include "value-inl.h"
 
 #include <cassert>
@@ -74,6 +75,8 @@ struct Interpreter
     Instr** nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 
+    bool raiseAttrError(Traced<Value> value, Name ident);
+
     bool call(Traced<Value> callable, const TracedVector<Value>& args,
               Root<Value>& resultOut);
     bool startCall(Traced<Value> callable, const TracedVector<Value>& args);
@@ -91,9 +94,9 @@ struct Interpreter
 
     void pushExceptionHandler(unsigned offset);
     void popExceptionHandler();
-    bool matchCurrentException(Traced<Object*> obj);
     bool startExceptionHandler(Traced<Exception*> exception);
-    bool reRaiseCurrentException();
+    Exception* currentException() { return currentException_; }
+    void clearCurrentException();
 
   private:
     static Interpreter* instance_;
@@ -102,12 +105,13 @@ struct Interpreter
     RootVector<Frame*> frames;
     RootVector<Value> stack;
     RootVector<ExceptionHandler*> exceptionHandlers;
-    Root<Exception*> currentException;
+    Root<Exception*> currentException_;
 
     Interpreter();
     Frame* newFrame(Traced<Function*> function);
     void pushFrame(Traced<Frame*> frame);
     unsigned currentOffset();
+    TokenPos currentPos();
 
     bool run(Root<Value>& resultOut);
 

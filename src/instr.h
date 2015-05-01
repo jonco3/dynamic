@@ -69,7 +69,7 @@ using namespace std;
     instr(EnterTry)                                                          \
     instr(LeaveTry)                                                          \
     instr(MatchCurrentException)                                             \
-    instr(ReRaiseCurrentException)
+    instr(ReraiseCurrentException)
 
 enum InstrType
 {
@@ -455,7 +455,7 @@ define_simple_instr(SuspendGenerator);
 define_branch_instr(EnterTry);
 define_simple_instr(LeaveTry);
 define_simple_instr(MatchCurrentException);
-define_simple_instr(ReRaiseCurrentException);
+define_simple_instr(ReraiseCurrentException);
 
 #undef instr_type
 #undef instr_name

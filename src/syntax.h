@@ -48,8 +48,7 @@ using namespace std;
     syntax(Global)                                                            \
     syntax(AugAssign)                                                         \
     syntax(Yield)                                                             \
-    syntax(Try)                                                               \
-    syntax(Except)
+    syntax(Try)
 
 enum SyntaxType
 {
@@ -66,14 +65,18 @@ for_each_syntax(forward_declare_syntax)
 struct SyntaxVisitor
 {
     virtual ~SyntaxVisitor() {}
-#define syntax_visitor(name) virtual void visit(const Syntax##name&) = 0;
+    virtual void setPos(const TokenPos& pos) = 0;
+#define syntax_visitor(name)                                                  \
+    virtual void visit(const Syntax##name&) = 0;
     for_each_syntax(syntax_visitor)
 #undef syntax_visitor
 };
 
 struct DefaultSyntaxVisitor : public SyntaxVisitor
 {
-#define syntax_visitor(name) virtual void visit(const Syntax##name&) override {}
+    virtual void setPos(const TokenPos& pos) {}
+#define syntax_visitor(name)                                                  \
+    virtual void visit(const Syntax##name&) override {}
     for_each_syntax(syntax_visitor)
 #undef syntax_visitor
 };
@@ -121,8 +124,8 @@ struct Syntax
     virtual void print(ostream& s) const = 0;
     virtual void accept(SyntaxVisitor& v) const = 0;
 
-  private:
-    Token token_;
+  protected:
+    const Token token_;
 };
 
 inline ostream& operator<<(ostream& s, const Syntax& syntax) {
@@ -138,7 +141,11 @@ inline ostream& operator<<(ostream& s, const Syntax& syntax) {
     virtual string name() const override { return nm; }
 
 #define define_syntax_accept()                                                \
-    virtual void accept(SyntaxVisitor& v) const override { v.visit(*this); }
+    virtual void accept(SyntaxVisitor& v) const override                      \
+    {                                                                         \
+        v.setPos(token_.pos);                                                 \
+        v.visit(*this);                                                       \
+    }
 
 #define define_syntax_members(st, nm)                                         \
     define_syntax_type(Syntax_##st)                                           \
@@ -829,34 +836,25 @@ struct SyntaxGlobal : public Syntax
 
 define_unary_syntax(Yield, "yield");
 
-struct SyntaxExcept : public Syntax
+struct ExceptInfo
 {
-    define_syntax_members(Except, "except");
-
-    SyntaxExcept(const Token& token,
-                 unique_ptr<Syntax>& expr,
-                 unique_ptr<SyntaxTarget>& as,
-                 unique_ptr<SyntaxBlock>& suite)
-      : Syntax(token),
+    ExceptInfo(const Token& token,
+               unique_ptr<Syntax>& expr,
+               unique_ptr<SyntaxTarget>& as,
+               unique_ptr<SyntaxBlock>& suite)
+      : token_(token),
         expr_(move(expr)),
         as_(move(as)),
         suite_(move(suite))
     {}
 
+    const Token& token() const { return token_; }
     const Syntax* expr() const { return expr_.get(); }
     const SyntaxTarget* as() const { return as_.get(); }
     const SyntaxBlock* suite() const { return suite_.get(); }
 
-    virtual void print(ostream& s) const override {
-        // todo: indentation
-        s << "except " << *expr();
-        if (as())
-            s << " as " << *as();
-        s << ":" << endl;
-        s << *suite();
-    }
-
   private:
+    Token token_;
     unique_ptr<Syntax> expr_;
     unique_ptr<SyntaxTarget> as_;
     unique_ptr<SyntaxBlock> suite_;
@@ -868,7 +866,7 @@ struct SyntaxTry : public Syntax
 
     SyntaxTry(const Token& token,
               unique_ptr<SyntaxBlock>& trySuite,
-              vector<unique_ptr<SyntaxExcept>>& excepts,
+              vector<unique_ptr<ExceptInfo>>& excepts,
               unique_ptr<SyntaxBlock>& elseSuite,
               unique_ptr<SyntaxBlock>& finallySuite)
       : Syntax(token),
@@ -879,7 +877,7 @@ struct SyntaxTry : public Syntax
     {}
 
     const SyntaxBlock* trySuite() const { return trySuite_.get(); }
-    const vector<unique_ptr<SyntaxExcept>>& excepts() const { return excepts_; }
+    const vector<unique_ptr<ExceptInfo>>& excepts() const { return excepts_; }
     const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
     const SyntaxBlock* finallySuite() const { return finallySuite_.get(); }
 
@@ -887,8 +885,13 @@ struct SyntaxTry : public Syntax
         // todo: indentation
         s << "try:" << endl;
         s << *trySuite();
-        for (const auto& i: excepts_)
-            s << *i;
+        for (const auto& except: excepts_) {
+            s << "except " << *except->expr();
+            if (except->as())
+                s << " as " << *except->as();
+            s << ":" << endl;
+            s << *except->suite();
+        }
         if (finallySuite()) {
             s << endl << "finally: " << endl;
             s << *finallySuite();
@@ -897,7 +900,7 @@ struct SyntaxTry : public Syntax
 
   private:
     unique_ptr<SyntaxBlock> trySuite_;
-    vector<unique_ptr<SyntaxExcept>> excepts_;
+    vector<unique_ptr<ExceptInfo>> excepts_;
     unique_ptr<SyntaxBlock> elseSuite_;
     unique_ptr<SyntaxBlock> finallySuite_;
 };

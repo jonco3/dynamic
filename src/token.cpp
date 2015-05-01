@@ -355,7 +355,7 @@ Token Tokenizer::findNextToken()
         }
         if (c != delimiter)
             throw TokenError("Unterminated string", pos);
-        return {Token_String, s.str()};
+        return {Token_String, s.str(), startPos};
     }
 
     // Identifiers and keywords

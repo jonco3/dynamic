@@ -258,8 +258,9 @@ bool Object::isTrue() const
         this != Integer::Zero;
 }
 
-bool Object::isInstanceOf(Traced<Class*> cls) const
+bool Object::isInstanceOf(Class* cls) const
 {
+    AutoAssertNoGC nogc;
     Object* obj = getOwnAttr("__class__").toObject();
     do {
         if (obj == cls)
