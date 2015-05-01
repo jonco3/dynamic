@@ -17,9 +17,9 @@ VPATH          = @srcdir@
 CXX            = @CXX@
 LD             = @CXX@
 
-FLAGS          = -Wall -Werror --std=c++11 # --stdlib=libc++
+FLAGS          = -Wall -Werror --std=c++11
 CXXFLAGS       = @CXXFLAGS@ $(FLAGS) -I.. -include config.h
-LDFLAGS        = @LDFLAGS@ $(FLAGS) -lstdc++ -lm
+LDFLAGS        = @LDFLAGS@ $(FLAGS) -lm
 
 TESTCXXFLAGS   = -DBUILD_TESTS
 TESTLDFLAGS    = 
