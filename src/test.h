@@ -122,6 +122,11 @@ extern bool testExpectingException;
     }                                                                             \
     testExpectingException = false
 
-void maybeAbortTests(const runtime_error& exception);
+#ifdef BUILD_TESTS
+void maybeAbortTests(string what);
+#else
+inline void maybeAbortTests(string what) {}
+#endif
+
 
 #endif

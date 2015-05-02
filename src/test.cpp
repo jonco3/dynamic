@@ -59,11 +59,11 @@ void TestCase::runAllTests()
     runningTests = false;
 }
 
-void maybeAbortTests(const runtime_error& exception)
+void maybeAbortTests(string what)
 {
     if (runningTests && !testExpectingException)
     {
-        cerr << "Exception thrown in test: " << exception.what() << endl;
+        cerr << "Exception thrown in test: " << what << endl;
         assert(false);
     }
 }

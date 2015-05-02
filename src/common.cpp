@@ -28,10 +28,10 @@ void init1()
     Native::init();
     Function::init();
     Frame::init();
-    Exception::init();
     Boolean::init();
     Integer::init();
     String::init();
+    Exception::init();
     initList();
     Dict::init();
     initSingletons();

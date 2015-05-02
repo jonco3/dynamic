@@ -109,7 +109,7 @@ TokenError::TokenError(string message, const TokenPos& pos) :
   runtime_error(message + formatPos(pos))
 {
 #ifdef BUILD_TESTS
-    maybeAbortTests(*this);
+    maybeAbortTests("TokenError " + message);
 #endif
 }
 

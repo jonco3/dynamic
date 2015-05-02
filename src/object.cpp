@@ -32,8 +32,6 @@ GlobalRoot<Layout*> Object::InitialLayout;
 GlobalRoot<Class*> Class::ObjectClass;
 GlobalRoot<Layout*> Class::InitialLayout;
 
-GlobalRoot<Layout*> NativeClass::InitialLayout;
-
 GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
 
@@ -278,12 +276,37 @@ void Object::traceChildren(Tracer& t)
 }
 
 Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name)
+  Object(ObjectClass, initialLayout), name_(name), nativeConstructor_(nullptr)
 {
     assert(base == None || base->is<Class>());
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass)
         setAttr(BaseAttr, base);
+}
+
+Class::Class(string name, Traced<Object*> base,
+             Func createFunc, unsigned minArgs, unsigned maxArgs,
+             Traced<Layout*> initialLayout) :
+  Object(ObjectClass, initialLayout), name_(name), nativeConstructor_(nullptr)
+{
+    assert(base == None || base->is<Class>());
+    assert(initialLayout->subsumes(InitialLayout));
+    if (Class::ObjectClass)
+        setAttr(BaseAttr, base);
+    nativeConstructor_ =
+        gc.create<Native>("crate_" + name, createFunc, minArgs, maxArgs);
+}
+
+Object* Class::base()
+{
+    Root<Value> value(getAttr(BaseAttr));
+    return value.asObject();
+}
+
+void Class::traceChildren(Tracer& t)
+{
+    gc.trace(t, &nativeConstructor_);
+    Object::traceChildren(t);
 }
 
 void Class::init(Traced<Object*> base)
@@ -297,24 +320,11 @@ void Class::print(ostream& s) const
     s << "Class " << name_;
 }
 
-NativeClass::NativeClass(string name, Traced<Object*> base, Func createFunc,
-                         unsigned minArgs, unsigned maxArgs,
-                         Traced<Layout*> initialLayout)
-  : Class(name, base, initialLayout)
-{
-    assert(minArgs >= 1); // Class is passed as first argument.
-    assert(initialLayout->subsumes(InitialLayout));
-    Root<NativeClass*> self(this);
-    initNativeMethod(self, "__new__", createFunc, minArgs, maxArgs);
-}
-
 void initObject()
 {
     Object::InitialLayout.init(gc.create<Layout>(nullptr, ClassAttr));
     Class::InitialLayout.init(
         gc.create<Layout>(Object::InitialLayout, BaseAttr));
-    NativeClass::InitialLayout.init(
-        gc.create<Layout>(Class::InitialLayout, NewAttr));
 
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 

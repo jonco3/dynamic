@@ -305,7 +305,7 @@ bool ListIter::next(Root<Value>& resultOut)
     assert(index_ >= -1);
     if (index_ == -1 || size_t(index_) >= list_->elements_.size()) {
         index_ = -1;
-        resultOut = gc.create<StopIteration>();
+        resultOut = StopIterationException;
         return false;
     }
 

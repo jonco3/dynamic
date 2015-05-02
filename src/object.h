@@ -13,6 +13,7 @@
 using namespace std;
 
 struct Class;
+struct Native;
 struct Object;
 
 extern GlobalRoot<Object*> None;
@@ -96,28 +97,26 @@ struct Class : public Object
     Class(string name, Traced<Object*> base = None,
           Traced<Layout*> initialLayout = InitialLayout);
 
-    const string& name() const { return name_; }
+    typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
+    Class(string name, Traced<Object*> base,
+          Func createFunc, unsigned minArgs, unsigned maxArgs = 0,
+          Traced<Layout*> initialLayout = InitialLayout);
 
+    Object* base();
+    const string& name() const { return name_; }
+    Native* nativeConstructor() const { return nativeConstructor_; }
+
+    virtual void traceChildren(Tracer& t) override;
     virtual void print(ostream& s) const;
 
   private:
     string name_;
+    Native* nativeConstructor_;
 
     // Only for use during initialization
     void init(Traced<Object*> base);
 
     friend void initObject();
-};
-
-struct NativeClass : public Class
-{
-    static GlobalRoot<Layout*> InitialLayout;
-
-    typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
-
-    NativeClass(string name, Traced<Object*> base, Func createFunc,
-                unsigned minArgs, unsigned maxArgs = 0,
-                Traced<Layout*> initialLayout = InitialLayout);
 };
 
 #endif

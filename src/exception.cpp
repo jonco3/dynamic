@@ -3,6 +3,7 @@
 #include "callable.h"
 #include "singletons.h"
 #include "string.h"
+#include "test.h"
 
 #include <sstream>
 
@@ -13,24 +14,29 @@ GlobalRoot<Class*> Exception::ObjectClass;
 for_each_exception_class(define_exception_class)
 #undef define_exception_class
 
+GlobalRoot<StopIteration*> StopIterationException;
+
 void Exception::init()
 {
-    ObjectClass.init(gc.create<NativeClass>("Exception",
-                                             None,
-                                             &Exception::create, 2));
+    ObjectClass.init(gc.create<Class>("Exception",
+                                      None,
+                                      &Exception::create, 2));
 
 #define init_exception_class(name)                                          \
     name::ObjectClass.init(                                                 \
-        gc.create<NativeClass>(#name,                                       \
-                               Exception::ObjectClass,                      \
-                               &Exception::create, 2));
+        gc.create<Class>(#name,                                             \
+                         Exception::ObjectClass,                            \
+                         &Exception::create, 2));
     for_each_exception_class(init_exception_class)
 #undef init_exception_class
+
+    StopIterationException.init(gc.create<StopIteration>());
 }
 
 Exception::Exception(Traced<Class*> cls, const string& message)
   : Object(cls)
 {
+    maybeAbortTests(cls->name() + " " + message);
     assert(cls->is<Class>());
     Root<Value> classNameValue, messageValue;
     classNameValue = String::get(cls->name());
@@ -41,6 +47,7 @@ Exception::Exception(Traced<Class*> cls, const string& message)
 Exception::Exception(const string& className, const string& message)
   : Object(ObjectClass)
 {
+    maybeAbortTests(className + " " + message);
     Root<Value> classNameValue, messageValue;
     classNameValue = String::get(className);
     messageValue = String::get(message);
@@ -132,12 +139,14 @@ bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut
 testcase(exception)
 {
     Root<Exception*> exc;
+    testExpectingException = true;
     exc = gc.create<Exception>("foo", "bar");
     testEqual(exc->className(), "foo");
     testEqual(exc->message(), "bar");
     testEqual(exc->fullMessage(), "foo: bar");
     exc->setPos(TokenPos("", 1, 0));
     testEqual(exc->fullMessage(), "foo: bar at line 1");
+    testExpectingException = false;
 }
 
 #endif

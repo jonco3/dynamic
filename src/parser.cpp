@@ -14,7 +14,7 @@ ParseError::ParseError(const Token& token, string message) :
   runtime_error(message), pos(token.pos)
 {
 #ifdef BUILD_TESTS
-    maybeAbortTests(*this);
+    maybeAbortTests("ParseError: " + message);
 #endif
 }
 

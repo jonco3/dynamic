@@ -340,6 +340,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         pushFrame(callFrame);
         return CallStarted;
     } else if (target->is<Class>()) {
+        // todo: this is messy and needs refactoring
         Root<Class*> cls(target->as<Class>());
         Root<Value> newFunc;
         if (target->maybeGetAttr("__new__", newFunc)) {
@@ -350,7 +351,26 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             if (!call(newFunc, newArgs, resultOut))
                 return CallError;
         } else {
-            resultOut = gc.create<Object>(cls);  // todo: do we need this?
+            Root<Class*> base = cls;
+            while (!base->nativeConstructor()) {
+                Root<Object*> obj(base->base());
+                if (obj == None)
+                    break;
+                base = obj->as<Class>();
+            }
+            if (base->nativeConstructor()) {
+                Root<Native*> native(base->nativeConstructor());
+                RootVector<Value> newArgs;
+                newArgs.push_back(Value(cls));
+                for (unsigned i = 0; i < args.size(); i++)
+                    newArgs.push_back(args[i]);
+                if (!checkArguments(native, newArgs, resultOut))
+                    return CallError;
+                if (!native->call(newArgs, resultOut))
+                    return CallError;
+            } else {
+                resultOut = gc.create<Object>(cls);  // todo: do we need this?
+            }
         }
         if (resultOut.isInstanceOf(cls)) {
             Root<Value> initFunc;
@@ -425,7 +445,9 @@ void testException(const string& input, const string& expected)
     Root<Block*> block;
     Block::buildModule(input, None, block);
     Root<Value> result;
+    testExpectingException = true;
     bool ok = Interpreter::exec(block, result);
+    testExpectingException = false;
     if (ok) {
         cerr << "Expected exception but got: " << result << endl;
         abortTests();
