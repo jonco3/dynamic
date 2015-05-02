@@ -132,8 +132,8 @@ bool ListBase::len(Root<Value>& resultOut)
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = gc.create<Exception>("TypeError",
-                                  listName() + " indices must be integers");
+        resultOut = gc.create<TypeError>(
+            listName() + " indices must be integers");
         return false;
     }
 
@@ -141,7 +141,8 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<Exception>("IndexError", listName() + " index out of range");
+        resultOut = gc.create<IndexError>(
+            listName() + " index out of range");
         return false;
     }
 
@@ -238,8 +239,8 @@ void List::print(ostream& s) const
 bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut)
 {
     if (!index.isInt32()) {
-        resultOut = gc.create<Exception>("TypeError",
-                                  listName() + " indices must be integers");
+        resultOut = gc.create<TypeError>(
+            listName() + " indices must be integers");
         return false;
     }
 
@@ -247,7 +248,8 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<Exception>("IndexError", listName() + " index out of range");
+        resultOut = gc.create<IndexError>(
+            listName() + " index out of range");
         return false;
     }
 

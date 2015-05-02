@@ -10,10 +10,11 @@ struct Exception : public Object
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    Exception(const string& className, const string& message);
     Exception(Traced<Class*> cls, const string& message);
 
-    static bool create(TracedVector<Value> args, Root<Value>& resultOut);
+    static Object* createInstance(Traced<Class*> cls);
+    Exception(Traced<Class*> cls);
+    bool init(TracedVector<Value> args, Root<Value>& resultOut);
 
     void setPos(const TokenPos& pos);
 
@@ -28,15 +29,22 @@ struct Exception : public Object
   private:
     TokenPos pos_;
 
-    void init(Traced<Value> className, Traced<Value> message);
+    void init(Traced<Value> message);
 };
 
 #define for_each_exception_class(cls)                                         \
+    cls(AssertionError)                                                       \
     cls(AttributeError)                                                       \
+    cls(IndexError)                                                           \
+    cls(KeyError)                                                             \
     cls(NameError)                                                            \
-    cls(StopIteration)                                                        \
+    cls(NotImplementedError)                                                  \
     cls(RuntimeError)                                                         \
-    cls(TypeError)
+    cls(StopIteration)                                                        \
+    cls(SyntaxError)                                                          \
+    cls(TypeError)                                                            \
+    cls(UnboundLocalError)                                                    \
+    cls(ValueError)
 
 #define declare_exception_class(name)                                         \
     struct name : public Exception                                            \

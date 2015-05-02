@@ -71,8 +71,7 @@ bool GeneratorIter::resume(Interpreter& interp)
     switch (state_) {
       case Running:
         assert(savedStack_.empty());
-        interp.pushStack(gc.create<Exception>("ValueError",
-                                               "Generator running"));
+        interp.pushStack(gc.create<ValueError>("Generator running"));
         return false;
 
       case Suspended: {

@@ -18,8 +18,8 @@ static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
 {
     Object* n = args[1].toObject();
     if (!n->is<String>()) {
-        resultOut = gc.create<Exception>("TypeError",
-                                  "hasattr(): attribute name must be string");
+        resultOut = gc.create<TypeError>(
+            "hasattr(): attribute name must be string");
         return false;
     }
     Name name = n->as<String>()->value();

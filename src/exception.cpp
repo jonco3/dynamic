@@ -16,75 +16,77 @@ for_each_exception_class(define_exception_class)
 
 GlobalRoot<StopIteration*> StopIterationException;
 
+static bool exceptionInit(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    return args[0].toObject()->as<Exception>()->init(args, resultOut);
+}
+
 void Exception::init()
 {
     ObjectClass.init(gc.create<Class>("Exception",
-                                      None,
-                                      &Exception::create, 2));
+                                      Object::ObjectClass,
+                                      Exception::createInstance));
+    initNativeMethod(ObjectClass, "__init__", exceptionInit, 1, 2);
 
 #define init_exception_class(name)                                          \
     name::ObjectClass.init(                                                 \
         gc.create<Class>(#name,                                             \
                          Exception::ObjectClass,                            \
-                         &Exception::create, 2));
+                         Exception::createInstance));                       \
+    initNativeMethod(name::ObjectClass, "__init__", exceptionInit, 1, 2);
     for_each_exception_class(init_exception_class)
 #undef init_exception_class
 
     StopIterationException.init(gc.create<StopIteration>());
 }
 
+Exception::Exception(Traced<Class*> cls)
+  : Object(cls)
+{
+    assert(cls->is<Class>()); // todo: check derives from Exception
+}
+
 Exception::Exception(Traced<Class*> cls, const string& message)
   : Object(cls)
 {
-    maybeAbortTests(cls->name() + " " + message);
     assert(cls->is<Class>());
-    Root<Value> classNameValue, messageValue;
-    classNameValue = String::get(cls->name());
-    messageValue = String::get(message);
-    init(classNameValue, messageValue);
+    Root<Value> messageValue(String::get(message));
+    init(messageValue);
 }
 
-Exception::Exception(const string& className, const string& message)
-  : Object(ObjectClass)
+Object* Exception::createInstance(Traced<Class*> cls)
 {
-    maybeAbortTests(className + " " + message);
-    Root<Value> classNameValue, messageValue;
-    classNameValue = String::get(className);
-    messageValue = String::get(message);
-    init(classNameValue, messageValue);
+    // todo: check class has exception as a base
+    return gc.create<Exception>(cls);
 }
 
-bool Exception::create(TracedVector<Value> args, Root<Value>& resultOut)
+bool Exception::init(TracedVector<Value> args, Root<Value>& resultOut)
 {
     assert(args.size() >= 1 && args.size() <= 2);
-    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
-        return false;
-    // todo: check class has exception as a base
-    Root<Class*> cls(args[0].toObject()->as<Class>());
 
-    string message = "";
+    Root<Value> message(String::EmptyString);
     if (args.size() == 2) {
         if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
             return false;
-        message = args[1].toObject()->as<String>()->value();
+        message = args[1];
     }
+    init(message);
 
-    resultOut = gc.create<Exception>(cls, message);
+    resultOut = None;
     return true;
 }
 
-void Exception::init(Traced<Value> className, Traced<Value> message)
+void Exception::init(Traced<Value> message)
 {
-    assert(className.asObject()->is<String>()); // todo: check
     assert(message.asObject()->is<String>()); // todo: check
-    setAttr("className", className);
+    maybeAbortTests(
+        className() + " " + message.asObject()->as<String>()->value());
     setAttr("message", message);
 }
 
 string Exception::className() const
 {
-    Root<Value> value(getAttr("className"));
-    return value.get().toObject()->as<String>()->value();
+    return type()->name();
 }
 
 string Exception::message() const
@@ -125,7 +127,7 @@ bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut
     if (!v.isInstanceOf(cls)) {
         string message = "Expecting " + cls->name() +
             " but got " + v.type()->name();
-        resultOut = gc.create<Exception>("TypeError", message);
+        resultOut = gc.create<TypeError>(message);
         return false;
     }
 
@@ -140,12 +142,25 @@ testcase(exception)
 {
     Root<Exception*> exc;
     testExpectingException = true;
-    exc = gc.create<Exception>("foo", "bar");
-    testEqual(exc->className(), "foo");
+    exc = gc.create<Exception>(Exception::ObjectClass, "bar");
+    testEqual(exc->className(), "Exception");
     testEqual(exc->message(), "bar");
-    testEqual(exc->fullMessage(), "foo: bar");
+    testEqual(exc->fullMessage(), "Exception: bar");
     exc->setPos(TokenPos("", 1, 0));
-    testEqual(exc->fullMessage(), "foo: bar at line 1");
+    testEqual(exc->fullMessage(), "Exception: bar at line 1");
+
+    exc = gc.create<Exception>(TypeError::ObjectClass, "baz");
+    testEqual(exc->fullMessage(), "TypeError: baz");
+
+    exc = Exception::createInstance(TypeError::ObjectClass)->as<Exception>();
+    RootVector<Value> args(2);
+    args[0] = TypeError::ObjectClass;
+    args[1] = String::get("foo");
+    Root<Value> result;
+    testTrue(exc->init(args, result));
+    testEqual(result.toObject(), None.get());
+    testEqual(exc->fullMessage(), "TypeError: foo");
+
     testExpectingException = false;
 }
 

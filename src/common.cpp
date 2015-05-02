@@ -84,7 +84,7 @@ bool runModule(string text, string filename, Traced<Object*> globals,
     } catch (const ParseError& e) {
         ostringstream s;
         s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
-        result = gc.create<Exception>("SyntaxError", s.str());
+        result = gc.create<SyntaxError>(s.str());
         ok = false;
     }
 

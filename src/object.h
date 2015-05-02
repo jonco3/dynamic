@@ -25,6 +25,8 @@ struct Object : public Cell
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
 
+    static Object* createInstance(Traced<Class*> cls);
+
     Object(Traced<Class*> cls = ObjectClass,
            Traced<Layout*> layout = InitialLayout);
     virtual ~Object() {}
@@ -94,24 +96,23 @@ struct Class : public Object
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
 
-    Class(string name, Traced<Object*> base = None,
+    Class(string name, Traced<Class*> base = Object::ObjectClass,
           Traced<Layout*> initialLayout = InitialLayout);
 
-    typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
-    Class(string name, Traced<Object*> base,
-          Func createFunc, unsigned minArgs, unsigned maxArgs = 0,
+    typedef Object* (*NativeConstructor)(Traced<Class*> cls);
+    Class(string name, Traced<Class*> maybeBase,
+          NativeConstructor constructor,
           Traced<Layout*> initialLayout = InitialLayout);
 
     Object* base();
     const string& name() const { return name_; }
-    Native* nativeConstructor() const { return nativeConstructor_; }
+    NativeConstructor nativeConstructor() const { return constructor_; }
 
-    virtual void traceChildren(Tracer& t) override;
     virtual void print(ostream& s) const;
 
   private:
     string name_;
-    Native* nativeConstructor_;
+    NativeConstructor constructor_;
 
     // Only for use during initialization
     void init(Traced<Object*> base);

@@ -285,7 +285,7 @@ bool Interpreter::checkArguments(Traced<Callable*> callable,
             s << " was given";
         else
             s << " were given";
-        return raise("TypeError", s.str(), resultOut);
+        return raiseTypeError(s.str(), resultOut);
     }
     return true;
 }
@@ -342,35 +342,18 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     } else if (target->is<Class>()) {
         // todo: this is messy and needs refactoring
         Root<Class*> cls(target->as<Class>());
-        Root<Value> newFunc;
-        if (target->maybeGetAttr("__new__", newFunc)) {
-            RootVector<Value> newArgs;
-            newArgs.push_back(Value(cls));
-            for (unsigned i = 0; i < args.size(); i++)
-                newArgs.push_back(args[i]);
-            if (!call(newFunc, newArgs, resultOut))
+        Root<Value> func;
+        RootVector<Value> funcArgs(args.size() + 1);
+        for (unsigned i = 0; i < args.size(); i++)
+            funcArgs[i + 1] = args[i];
+        if (target->maybeGetAttr("__new__", func)) {
+            // Create a new instance by calling static __new__ method
+            funcArgs[0] = Value(cls);
+            if (!call(func, funcArgs, resultOut))
                 return CallError;
         } else {
-            Root<Class*> base = cls;
-            while (!base->nativeConstructor()) {
-                Root<Object*> obj(base->base());
-                if (obj == None)
-                    break;
-                base = obj->as<Class>();
-            }
-            if (base->nativeConstructor()) {
-                Root<Native*> native(base->nativeConstructor());
-                RootVector<Value> newArgs;
-                newArgs.push_back(Value(cls));
-                for (unsigned i = 0; i < args.size(); i++)
-                    newArgs.push_back(args[i]);
-                if (!checkArguments(native, newArgs, resultOut))
-                    return CallError;
-                if (!native->call(newArgs, resultOut))
-                    return CallError;
-            } else {
-                resultOut = gc.create<Object>(cls);  // todo: do we need this?
-            }
+            // Call the class' native constructor to create an instance
+            resultOut = cls->nativeConstructor()(cls);
         }
         if (resultOut.isInstanceOf(cls)) {
             Root<Value> initFunc;
@@ -383,21 +366,22 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 if (!call(initFunc, initArgs, initResult))
                     return CallError;
                 if (initResult.get().toObject() != None) {
-                    return raise("TypeError",
-                                 "__init__() should return None", resultOut);
+                    return raiseTypeError(
+                        "__init__() should return None", resultOut);
                 }
             }
         }
         return CallFinished;
     } else {
-        return raise("TypeError", "object is not callable:" + repr(target), resultOut);
+        return raiseTypeError(
+            "object is not callable:" + repr(target), resultOut);
     }
 }
 
-Interpreter::CallStatus Interpreter::raise(string className, string message,
-                                           Root<Value>& resultOut)
+Interpreter::CallStatus Interpreter::raiseTypeError(string message,
+                                                    Root<Value>& resultOut)
 {
-    resultOut = gc.create<Exception>(className, message);
+    resultOut = gc.create<TypeError>(message);
     return CallError;
 }
 

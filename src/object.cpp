@@ -35,6 +35,11 @@ GlobalRoot<Layout*> Class::InitialLayout;
 GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
 
+Object* Object::createInstance(Traced<Class*> cls)
+{
+    return gc.create<Object>(cls);
+}
+
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
   : layout_(layout)
 {
@@ -201,8 +206,8 @@ bool Object::getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc)
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == Value(UninitializedSlot)) {
-        valueOut = gc.create<Exception>("UnboundLocalError",
-                                 "name '" + name + "' has not been bound");
+        valueOut = gc.create<UnboundLocalError>(
+            "name '" + name + "' has not been bound");
         return false;
     }
     valueOut = slots_[slot];
@@ -275,38 +280,39 @@ void Object::traceChildren(Tracer& t)
         gc.trace(t, &*i);
 }
 
-Class::Class(string name, Traced<Object*> base, Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name), nativeConstructor_(nullptr)
+Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
+  Object(ObjectClass, initialLayout), name_(name)
 {
-    assert(base == None || base->is<Class>());
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass)
         setAttr(BaseAttr, base);
+    constructor_ = base->nativeConstructor();
 }
 
-Class::Class(string name, Traced<Object*> base,
-             Func createFunc, unsigned minArgs, unsigned maxArgs,
+Class::Class(string name, Traced<Class*> maybeBase,
+             NativeConstructor constructor,
              Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name), nativeConstructor_(nullptr)
+  Object(ObjectClass, initialLayout), name_(name)
 {
-    assert(base == None || base->is<Class>());
+    assert(!maybeBase || maybeBase->is<Class>());
     assert(initialLayout->subsumes(InitialLayout));
-    if (Class::ObjectClass)
-        setAttr(BaseAttr, base);
-    nativeConstructor_ =
-        gc.create<Native>("crate_" + name, createFunc, minArgs, maxArgs);
+    if (Class::ObjectClass) {
+        Root<Value> baseAttr(maybeBase ? maybeBase : None);
+        setAttr(BaseAttr, baseAttr);
+    }
+    if (constructor) {
+        constructor_ = constructor;
+    } else {
+        assert(maybeBase);
+        constructor_ = maybeBase->nativeConstructor();
+    }
+    assert(constructor_);
 }
 
 Object* Class::base()
 {
     Root<Value> value(getAttr(BaseAttr));
     return value.asObject();
-}
-
-void Class::traceChildren(Tracer& t)
-{
-    gc.trace(t, &nativeConstructor_);
-    Object::traceChildren(t);
 }
 
 void Class::init(Traced<Object*> base)
@@ -328,7 +334,9 @@ void initObject()
 
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
-    Object::ObjectClass.init(gc.create<Class>("Object"));
+    Root<Class*> objectBase(nullptr);
+    Object::ObjectClass.init(gc.create<Class>("Object", objectBase,
+                                              Object::createInstance));
     NoneObject::ObjectClass.init(gc.create<Class>("None"));
     Class::ObjectClass.init(gc.create<Class>("Class"));
 

@@ -138,7 +138,7 @@ bool InstrIn::execute(Interpreter& interp)
     Root<Value> value(interp.popStack());
     Root<Value> contains;
     if (!container->maybeGetAttr("__contains__", contains)) {
-        interp.pushStack(gc.create<Exception>("TypeError", "Argument is not iterable"));
+        interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }
 
@@ -289,7 +289,7 @@ bool InstrAssertionFailed::execute(Interpreter& interp)
     Object* obj = interp.popStack().toObject();
     assert(obj->is<String>() || obj == None);
     string message = obj != None ? obj->as<String>()->value() : "";
-    interp.pushStack(gc.create<Exception>("AssertionError", message));
+    interp.pushStack(gc.create<AssertionError>(message));
     return false;
 }
 
@@ -310,29 +310,26 @@ bool InstrMakeClassFromFrame::execute(Interpreter& interp)
         layout = layout->addName(*i);
     Root<Value> bases;
     if (!frame->maybeGetAttr("__bases__", bases)) {
-        interp.pushStack(gc.create<Exception>("AttributeError",
-                                              "Missing __bases__"));
+        interp.pushStack(gc.create<AttributeError>("Missing __bases__"));
         return false;
     }
     if (!bases.toObject()->is<Tuple>()) {
-        interp.pushStack(gc.create<Exception>("TypeError",
-                                              "__bases__ is not a tuple"));
+        interp.pushStack(gc.create<TypeError>("__bases__ is not a tuple"));
         return false;
     }
     Root<Tuple*> tuple(bases.toObject()->as<Tuple>());
-    Root<Object*> base = None;
+    Root<Class*> base(Object::ObjectClass);
     if (tuple->len() > 1) {
-        interp.pushStack(gc.create<Exception>("Error",
-                                              "Multiple inheritance not NYI"));
+        interp.pushStack(gc.create<NotImplementedError>(
+                             "Multiple inheritance not NYI"));
         return false;
     } else if (tuple->len() == 1) {
         Root<Value> value(tuple->getitem(0));
         if (!value.toObject()->is<Class>()) {
-            interp.pushStack(gc.create<Exception>("TypeError",
-                                                  "__bases__[0] is not a class"));
+            interp.pushStack(gc.create<TypeError>("__bases__[0] is not a class"));
             return false;
         }
-        base = value.toObject();
+        base = value.toObject()->as<Class>();
     }
     Class* cls = gc.create<Class>(ident, base, layout);
     Root<Value> value;
@@ -349,15 +346,13 @@ bool InstrDestructure::execute(Interpreter& interp)
     Root<Value> seq(interp.popStack());
     Root<Value> lenFunc;
     if (!seq.maybeGetAttr("__len__", lenFunc)) {
-        interp.pushStack(gc.create<Exception>("TypeError",
-                                              "Argument is not iterable"));
+        interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }
 
     Root<Value> getitemFunc;
     if (!seq.maybeGetAttr("__getitem__", getitemFunc)) {
-        interp.pushStack(gc.create<Exception>("TypeError",
-                                              "Argument is not iterable"));
+        interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }
 
@@ -370,20 +365,17 @@ bool InstrDestructure::execute(Interpreter& interp)
     }
 
     if (!result.isInt32()) {
-        interp.pushStack(gc.create<Exception>("TypeError",
-                                              "__len__ didn't return an integer"));
+        interp.pushStack(gc.create<TypeError>("__len__ didn't return an integer"));
         return false;
     }
 
     int32_t len = result.asInt32();
     if (len < 0) {
-        interp.pushStack(gc.create<Exception>("ValueError",
-                                              "__len__ returned negative value"));
+        interp.pushStack(gc.create<ValueError>("__len__ returned negative value"));
         return false;
     }
     if (size_t(len) != count_) {
-        interp.pushStack(gc.create<Exception>("ValueError",
-                                              "too many values to unpack"));
+        interp.pushStack(gc.create<ValueError>("too many values to unpack"));
         return false;
     }
 
@@ -511,8 +503,8 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
         }
     }
 
-    interp.pushStack(gc.create<Exception>("TypeError",
-                                          "unsupported operand type(s) for augmented assignment"));
+    interp.pushStack(gc.create<TypeError>(
+                         "unsupported operand type(s) for augmented assignment"));
         return false;
 }
 
@@ -544,8 +536,8 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
         interp.pushStack(result);
         return true;
     } else {
-        interp.pushStack(gc.create<Exception>("TypeError",
-                                              "unsupported operand type(s) for augmented assignment"));
+        interp.pushStack(gc.create<TypeError>(
+                             "unsupported operand type(s) for augmented assignment"));
         return false;
     }
 }
