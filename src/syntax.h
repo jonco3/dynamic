@@ -338,17 +338,10 @@ struct SyntaxDict : public Syntax
 {
     define_syntax_members(Dict, "dict");
 
-    typedef pair<Syntax*, Syntax*> Entry;
+    typedef pair<unique_ptr<Syntax>, unique_ptr<Syntax>> Entry;
 
-    SyntaxDict(const Token& token, const vector<Entry>& entries)
-      : Syntax(token), entries_(entries) {}
-
-    ~SyntaxDict() {
-        for (auto i = entries_.begin(); i != entries_.end(); ++i) {
-            delete i->first;
-            delete i->second;
-        }
-    }
+    SyntaxDict(const Token& token, vector<Entry>& entries)
+      : Syntax(token), entries_(move(entries)) {}
 
     const vector<Entry>& entries() const { return entries_; }
 
@@ -550,8 +543,12 @@ struct SyntaxCond : public Syntax
 
 struct Parameter
 {
+    Parameter(Name name, unique_ptr<Syntax> maybeDefault, bool takesRest)
+      : name(name), maybeDefault(move(maybeDefault)), takesRest(takesRest)
+    {}
+
     Name name;
-    Syntax* maybeDefault;
+    unique_ptr<Syntax> maybeDefault;
     bool takesRest;
 };
 
@@ -559,15 +556,10 @@ struct SyntaxLambda : public Syntax
 {
     define_syntax_members(Lambda, "lambda");
 
-    SyntaxLambda(const Token& token, const vector<Parameter>& params,
+    SyntaxLambda(const Token& token, vector<Parameter>& params,
                  Syntax* expr)
-        : Syntax(token), params_(params), expr_(expr)
+        : Syntax(token), params_(move(params)), expr_(expr)
     {}
-
-    ~SyntaxLambda() {
-        for (auto i = params_.begin(); i != params_.end(); ++i)
-            delete i->maybeDefault;
-    }
 
     const vector<Parameter>& params() const { return params_; }
     Syntax* expr() const { return expr_.get(); }
@@ -596,12 +588,12 @@ struct SyntaxDef : public Syntax
 
     SyntaxDef(const Token& token,
               Name id,
-              const vector<Parameter>& params,
+              vector<Parameter>& params,
               Syntax* expr,
               bool isGenerator)
       : Syntax(token),
         id_(id),
-        params_(params),
+        params_(move(params)),
         expr_(expr),
         isGenerator_(isGenerator)
     {}
@@ -639,22 +631,18 @@ struct SyntaxIf : public Syntax
 
     struct Branch
     {
-        Syntax* cond;
-        SyntaxBlock* block;
+        Branch(unique_ptr<Syntax> cond, unique_ptr<SyntaxBlock> block)
+          : cond(move(cond)), block(move(block))
+        {}
+
+        unique_ptr<Syntax> cond;
+        unique_ptr<SyntaxBlock> block;
     };
 
     SyntaxIf(const Token& token) : Syntax(token) {}
 
-    ~SyntaxIf() {
-        for (auto i = branches_.begin(); i != branches_.end(); ++i) {
-            Branch& branch = *i;
-            delete branch.cond;
-            delete branch.block;
-        }
-    }
-
-    void addBranch(Syntax* cond, SyntaxBlock* block) {
-        branches_.push_back({ cond, block });
+    void addBranch(unique_ptr<Syntax>& cond, unique_ptr<SyntaxBlock>& block) {
+        branches_.emplace_back(move(cond), move(block));
     }
 
     void setElse(SyntaxBlock* block) {
@@ -668,8 +656,8 @@ struct SyntaxIf : public Syntax
         // todo: indentation
         for (unsigned i = 0; i < branches_.size(); ++i) {
             s << (i == 0 ? "if" : "elif") << " ";
-            s << branches_[i].cond << ":" << endl;
-            s << branches_[i].block << endl;
+            s << branches_[i].cond.get() << ":" << endl;
+            s << branches_[i].block.get() << endl;
         }
         if (else_) {
             s << "else:" << endl << else_.get() << endl;

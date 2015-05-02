@@ -595,7 +595,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxIf& s) {
-        auto suites = s.branches();
+        const auto& suites = s.branches();
         assert(suites.size() != 0);
         vector<unsigned> branchesToEnd;
         unsigned lastCondFailed = 0;

@@ -123,10 +123,10 @@ SyntaxParser::SyntaxParser()
     addPrefixHandler(Token_CBra, [] (ParserT& parser, Token token) -> Syntax* {
         vector<SyntaxDict::Entry> entries;
         while (!parser.opt(Token_CKet)) {
-            Syntax* key = parser.expression();
+            unique_ptr<Syntax> key(parser.expression());
             parser.match(Token_Colon);
-            Syntax* value = parser.expression();
-            entries.push_back(SyntaxDict::Entry(key, value));
+            unique_ptr<Syntax> value(parser.expression());
+            entries.emplace_back(move(key), move(value));
             if (parser.opt(Token_CKet))
                 break;
             parser.match(Token_Comma);
@@ -450,22 +450,19 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         if (hadRest)
             throw ParseError(t, "Parameter following rest parameter");
         Name name = t.text;
-        Syntax* defaultExpr = nullptr;
+        unique_ptr<Syntax> defaultExpr;
         if (opt(Token_Assign)) {
             if (takesRest)
                 throw ParseError(t, "Rest parameter can't take default");
-            defaultExpr = expression();
+            defaultExpr.reset(expression());
             hadDefault = true;
         } else if (hadDefault && !takesRest) {
-            // todo: use unique_ptr or something to do this automatically
-            for (auto i = params.begin(); i != params.end(); i++)
-                delete i->maybeDefault;
             throw ParseError(t, "Non-default parameter following default parameter");
         }
         for (auto i = params.begin(); i != params.end(); i++)
             if (name == i->name)
                 throw ParseError(t, "Duplicate parameter name: " + name);
-        params.push_back({name, defaultExpr, takesRest});
+        params.emplace_back(name, move(defaultExpr), takesRest);
         if (opt(endToken))
             break;
         match(Token_Comma);
@@ -480,8 +477,8 @@ Syntax* SyntaxParser::parseCompoundStatement()
     if (opt(Token_If)) {
         SyntaxIf* ifStmt = new SyntaxIf(token);
         do {
-            Syntax* cond = expression();
-            SyntaxBlock* suite = parseSuite();
+            unique_ptr<Syntax> cond(expression());
+            unique_ptr<SyntaxBlock> suite(parseSuite());
             ifStmt->addBranch(cond, suite);
         } while (opt(Token_Elif));
         if (opt(Token_Else)) {
