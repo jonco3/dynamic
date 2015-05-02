@@ -283,6 +283,7 @@ void Object::traceChildren(Tracer& t)
 Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
 {
+    assert(base);
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass)
         setAttr(BaseAttr, base);
@@ -294,6 +295,7 @@ Class::Class(string name, Traced<Class*> maybeBase,
              Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
 {
+    assert(!Class::ObjectClass || maybeBase);
     assert(!maybeBase || maybeBase->is<Class>());
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass) {
