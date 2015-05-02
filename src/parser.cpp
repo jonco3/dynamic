@@ -216,17 +216,17 @@ bool SyntaxParser::maybeExprToken()
 Syntax* SyntaxParser::parseExprOrExprList()
 {
     Token startToken = currentToken();
-    vector<Syntax*> exprs;
-    exprs.push_back(expression());
+    vector<unique_ptr<Syntax>> exprs;
+    exprs.emplace_back(expression());
     bool singleExpr = true;
     while (opt(Token_Comma)) {
         singleExpr = false;
         if (!maybeExprToken())
             break;
-        exprs.push_back(expression());
+        exprs.emplace_back(expression());
     }
     if (singleExpr)
-        return exprs[0];
+        return exprs[0].release();
     return new SyntaxExprList(startToken, exprs);
 }
 
@@ -234,20 +234,19 @@ SyntaxTarget* SyntaxParser::makeAssignTarget(Syntax* target)
 {
     if (target->is<SyntaxExprList>()) {
         SyntaxExprList* exprs = target->as<SyntaxExprList>();
-        const vector<Syntax*>& elems = exprs->elems();
+        vector<unique_ptr<Syntax>>& elems = exprs->elems();
         vector<SyntaxTarget*> targets(elems.size());
         for (unsigned i = 0; i < elems.size(); i++)
-            targets[i] = makeAssignTarget(elems[i]);
+            targets[i] = makeAssignTarget(elems[i].release());
         SyntaxTargetList* result = new SyntaxTargetList(exprs->token(), targets);
-        exprs->release();
         delete exprs;
         return result;
     } else if (target->is<SyntaxList>()) {
         SyntaxList* list = target->as<SyntaxList>();
-        const vector<Syntax*>& elems = list->elems();
+        vector<unique_ptr<Syntax>>& elems = list->elems();
         vector<SyntaxTarget*> targets(elems.size());
         for (unsigned i = 0; i < elems.size(); i++)
-            targets[i] = makeAssignTarget(elems[i]);
+            targets[i] = makeAssignTarget(elems[i].release());
         SyntaxTargetList* result = new SyntaxTargetList(list->token(), targets);
         list->release();
         delete list;

@@ -81,25 +81,6 @@ struct DefaultSyntaxVisitor : public SyntaxVisitor
 #undef syntax_visitor
 };
 
-// todo: work out how to use vector<unique_ptr<>> for this
-template <typename T>
-struct OwningVector : public vector<T*>
-{
-    OwningVector() {}
-
-    OwningVector(const vector<T*>& other) : vector<T*>(other) {}
-
-    OwningVector(OwningVector<T>&& other) : vector<T*>(other) {
-        printf("Move constructor called\n");
-        other.clear();
-    }
-
-    ~OwningVector() {
-        for (auto i = this->begin(); i != this->end(); i++)
-            delete *i;
-    }
-};
-
 struct Syntax
 {
     Syntax(const Token& token) : token_(token) {}
@@ -230,8 +211,8 @@ struct SyntaxBlock : public Syntax
     define_syntax_members(Block, "block");
     SyntaxBlock(const Token& token) : Syntax(token) {}
 
-    void append(Syntax* s) { statements.push_back(s); }
-    const vector<Syntax *>& stmts() const { return statements; }
+    void append(Syntax* s) { statements.emplace_back(s); }
+    const vector<unique_ptr<Syntax>>& stmts() const { return statements; }
 
     virtual void print(ostream& s) const override {
         for (auto i = statements.begin(); i != statements.end(); ++i) {
@@ -242,7 +223,7 @@ struct SyntaxBlock : public Syntax
     }
 
   private:
-    OwningVector<Syntax> statements;
+    vector<unique_ptr<Syntax>> statements;
 };
 
 struct SyntaxInteger : public Syntax
@@ -302,13 +283,19 @@ struct SyntaxExprList : public Syntax
 
     SyntaxExprList(const Token& token) : Syntax(token) {}
 
-    SyntaxExprList(const Token& token, const vector<Syntax*> elems)
-      : Syntax(token), elements(elems)
+    SyntaxExprList(const Token& token, const vector<Syntax*>& elems)
+      : Syntax(token)
+    {
+        for (auto s : elems)
+            elements.emplace_back(s);
+    }
+
+    SyntaxExprList(const Token& token, vector<unique_ptr<Syntax>>& elems)
+      : Syntax(token), elements(move(elems))
     {}
 
-    const vector<Syntax *>& elems() const { return elements; }
-
-    void release() { elements.clear(); }
+    const vector<unique_ptr<Syntax>>& elems() const { return elements; }
+    vector<unique_ptr<Syntax>>& elems() { return elements; }
 
     virtual void print(ostream& s) const override {
         s << "(";
@@ -323,17 +310,25 @@ struct SyntaxExprList : public Syntax
     }
 
   private:
-    OwningVector<Syntax> elements;
+    vector<unique_ptr<Syntax>> elements;
 };
 
 struct SyntaxList : public Syntax
 {
     define_syntax_members(List, "list");
 
-    SyntaxList(const Token& token, const vector<Syntax*> elems)
-      : Syntax(token), elements(elems) {}
+    SyntaxList(const Token& token, const vector<Syntax*>& elems)
+      : Syntax(token)
+    {
+        for (auto s : elems)
+            elements.emplace_back(s);
+    }
 
-    const vector<Syntax *>& elems() const { return elements; }
+    SyntaxList(const Token& token, vector<unique_ptr<Syntax>>& elems)
+      : Syntax(token), elements(move(elems)) {}
+
+    const vector<unique_ptr<Syntax>>& elems() const { return elements; }
+    vector<unique_ptr<Syntax>>& elems() { return elements; }
 
     void release() { elements.clear(); }
 
@@ -348,7 +343,7 @@ struct SyntaxList : public Syntax
     }
 
   private:
-    OwningVector<Syntax> elements;
+    vector<unique_ptr<Syntax>> elements;
 };
 
 struct SyntaxDict : public Syntax
@@ -475,10 +470,18 @@ struct SyntaxTargetList : SyntaxTarget
     define_syntax_members(TargetList, "targetList");
 
     SyntaxTargetList(const Token& token, const vector<SyntaxTarget*>& targets)
-      : SyntaxTarget(token), targets_(targets)
+      : SyntaxTarget(token)
+    {
+        for (auto s : targets)
+            targets_.emplace_back(s);
+    }
+
+    SyntaxTargetList(const Token& token,
+                     vector<unique_ptr<SyntaxTarget>>& targets)
+      : SyntaxTarget(token), targets_(move(targets))
     {}
 
-    const vector<SyntaxTarget*>& targets() const { return targets_; }
+    const vector<unique_ptr<SyntaxTarget>>& targets() const { return targets_; }
 
     virtual void print(ostream& s) const override {
         s << "(";
@@ -491,7 +494,7 @@ struct SyntaxTargetList : SyntaxTarget
     }
 
   private:
-    OwningVector<SyntaxTarget> targets_;
+    vector<unique_ptr<SyntaxTarget>> targets_;
 };
 
 define_binary_syntax(Syntax, SyntaxTarget, Syntax, Assign, "=");
@@ -514,11 +517,18 @@ struct SyntaxCall : public Syntax
     define_syntax_members(Call, "call");
 
     SyntaxCall(const Token& token, Syntax* l, const vector<Syntax *>& r)
-      : Syntax(token), left_(l), right_(r)
+      : Syntax(token), left_(l)
+    {
+        for (auto s : r)
+            right_.emplace_back(s);
+    }
+
+    SyntaxCall(const Token& token, Syntax* l, vector<unique_ptr<Syntax>>& r)
+      : Syntax(token), left_(l), right_(move(r))
     {}
 
     const Syntax* left() const { return left_.get(); }
-    const vector<Syntax*>& right() const { return right_; }
+    const vector<unique_ptr<Syntax>>& right() const { return right_; }
 
     virtual void print(ostream& s) const override {
         s << *left() << "(";
@@ -532,7 +542,7 @@ struct SyntaxCall : public Syntax
 
   private:
     unique_ptr<Syntax> left_;
-    OwningVector<Syntax> right_;
+    vector<unique_ptr<Syntax>> right_;
 };
 
 struct SyntaxReturn : public UnarySyntax
