@@ -135,7 +135,14 @@ inline ostream& operator<<(ostream& s, const Syntax& syntax) {
 
 struct UnarySyntax : public Syntax
 {
-    UnarySyntax(const Token& token, Syntax* r) : Syntax(token), right_(r) {}
+    UnarySyntax(const Token& token, Syntax* r)
+      : Syntax(token), right_(r)
+    {}
+
+    UnarySyntax(const Token& token, unique_ptr<Syntax>& r)
+      : Syntax(token), right_(move(r))
+    {}
+
     const Syntax* right() const { return right_.get(); }
 
     virtual void print(ostream& s) const override {
@@ -600,7 +607,7 @@ struct SyntaxDef : public Syntax
 
     Name id() const { return id_; }
     const vector<Parameter>& params() const { return params_; }
-    Syntax* expr() const { return expr_; }
+    Syntax* expr() const { return expr_.get(); }
     bool isGenerator() const { return isGenerator_; }
 
     virtual void print(ostream& s) const override {
@@ -621,7 +628,7 @@ struct SyntaxDef : public Syntax
   private:
     Name id_;
     vector<Parameter> params_;
-    Syntax* expr_;
+    unique_ptr<Syntax> expr_;
     bool isGenerator_;
 };
 
@@ -722,8 +729,11 @@ struct SyntaxClass : public Syntax
 {
     define_syntax_members(Class, "class");
 
-    SyntaxClass(const Token& token, Name id, SyntaxExprList* bases, SyntaxBlock* suite)
-      : Syntax(token), id_(id), bases_(bases), suite_(suite)
+    SyntaxClass(const Token& token,
+                Name id,
+                unique_ptr<SyntaxExprList>& bases,
+                unique_ptr<SyntaxBlock>& suite)
+      : Syntax(token), id_(id), bases_(move(bases)), suite_(move(suite))
     {}
 
     Name id() const { return id_; }
@@ -746,7 +756,8 @@ struct SyntaxClass : public Syntax
 
 struct SyntaxRaise : public UnarySyntax
 {
-    SyntaxRaise(const Token& token, Syntax* right) : UnarySyntax(token, right) {}
+    SyntaxRaise(const Token& token, unique_ptr<Syntax>& right)
+      : UnarySyntax(token, right) {}
     define_syntax_type(Syntax_Raise)
     define_syntax_name("raise")
     define_syntax_accept()

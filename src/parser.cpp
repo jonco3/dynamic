@@ -386,7 +386,7 @@ Syntax* SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_Pass)) {
         return new SyntaxPass(token);
     } else if (opt(Token_Raise)) {
-        Syntax* expr = expression();
+        unique_ptr<Syntax> expr(expression());
         if (opt(Token_Comma))
             throw ParseError(token,
                              "Multiple exressions for raise not supported"); // todo
@@ -535,10 +535,9 @@ Syntax* SyntaxParser::parseCompoundStatement()
         vector<unique_ptr<Syntax>> bases;
         if (opt(Token_Bra))
             bases = exprListTrailingUnique(Token_Comma, Token_Ket);
-        return new SyntaxClass(token,
-                               name.text,
-                               new SyntaxExprList(token, bases),
-                               parseSuite());
+        unique_ptr<SyntaxExprList> baseList(new SyntaxExprList(token, bases));
+        unique_ptr<SyntaxBlock> suite(parseSuite());
+        return new SyntaxClass(token, name.text, baseList, suite);
     } else {
         Syntax* stmt = parseSimpleStatement();
         if (!atEnd())
