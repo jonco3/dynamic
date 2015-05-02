@@ -209,9 +209,11 @@ struct SyntaxPass : public Syntax
 struct SyntaxBlock : public Syntax
 {
     define_syntax_members(Block, "block");
-    SyntaxBlock(const Token& token) : Syntax(token) {}
 
-    void append(Syntax* s) { statements.emplace_back(s); }
+    SyntaxBlock(const Token& token, vector<unique_ptr<Syntax>>& stmts)
+      : Syntax(token), statements(move(stmts))
+    {}
+
     const vector<unique_ptr<Syntax>>& stmts() const { return statements; }
 
     virtual void print(ostream& s) const override {
@@ -283,13 +285,6 @@ struct SyntaxExprList : public Syntax
 
     SyntaxExprList(const Token& token) : Syntax(token) {}
 
-    SyntaxExprList(const Token& token, const vector<Syntax*>& elems)
-      : Syntax(token)
-    {
-        for (auto s : elems)
-            elements.emplace_back(s);
-    }
-
     SyntaxExprList(const Token& token, vector<unique_ptr<Syntax>>& elems)
       : Syntax(token), elements(move(elems))
     {}
@@ -316,13 +311,6 @@ struct SyntaxExprList : public Syntax
 struct SyntaxList : public Syntax
 {
     define_syntax_members(List, "list");
-
-    SyntaxList(const Token& token, const vector<Syntax*>& elems)
-      : Syntax(token)
-    {
-        for (auto s : elems)
-            elements.emplace_back(s);
-    }
 
     SyntaxList(const Token& token, vector<unique_ptr<Syntax>>& elems)
       : Syntax(token), elements(move(elems)) {}
@@ -469,13 +457,6 @@ struct SyntaxTargetList : SyntaxTarget
 {
     define_syntax_members(TargetList, "targetList");
 
-    SyntaxTargetList(const Token& token, const vector<SyntaxTarget*>& targets)
-      : SyntaxTarget(token)
-    {
-        for (auto s : targets)
-            targets_.emplace_back(s);
-    }
-
     SyntaxTargetList(const Token& token,
                      vector<unique_ptr<SyntaxTarget>>& targets)
       : SyntaxTarget(token), targets_(move(targets))
@@ -515,13 +496,6 @@ struct SyntaxSubscript : public BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>
 struct SyntaxCall : public Syntax
 {
     define_syntax_members(Call, "call");
-
-    SyntaxCall(const Token& token, Syntax* l, const vector<Syntax *>& r)
-      : Syntax(token), left_(l)
-    {
-        for (auto s : r)
-            right_.emplace_back(s);
-    }
 
     SyntaxCall(const Token& token, Syntax* l, vector<unique_ptr<Syntax>>& r)
       : Syntax(token), left_(l), right_(move(r))

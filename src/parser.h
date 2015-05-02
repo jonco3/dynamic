@@ -77,6 +77,13 @@ struct Parser
     vector<T> exprList(TokenType separator, TokenType end);
     vector<T> exprListTrailing(TokenType separator, TokenType end);
 
+    // todo: these will eventually go when T becomes unique_ptr<Syntax>
+    vector<unique_ptr<typename remove_pointer<T>::type>>
+    exprListUnique(TokenType separator, TokenType end);
+
+    vector<unique_ptr<typename remove_pointer<T>::type>>
+    exprListTrailingUnique(TokenType separator, TokenType end);
+
     const Token& currentToken() { return token; }
     void nextToken();
     T prefix(Token token);

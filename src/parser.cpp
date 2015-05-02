@@ -55,6 +55,37 @@ vector<T> Parser<T>::exprListTrailing(TokenType separator,
     return exprs;
 }
 
+template <typename T>
+vector<unique_ptr<typename remove_pointer<T>::type>>
+Parser<T>::exprListUnique(TokenType separator, TokenType end)
+{
+    vector<unique_ptr<typename remove_pointer<T>::type>> exprs;
+    if (opt(end))
+        return exprs;
+
+    for (;;) {
+        exprs.emplace_back(expression());
+        if (opt(end))
+            break;
+        match(separator);
+    }
+    return exprs;
+}
+
+template <typename T>
+vector<unique_ptr<typename remove_pointer<T>::type>>
+Parser<T>::exprListTrailingUnique(TokenType separator, TokenType end)
+{
+    vector<unique_ptr<typename remove_pointer<T>::type>> exprs;
+    while (!opt(end)) {
+        exprs.emplace_back(expression());
+        if (opt(end))
+            break;
+        match(separator);
+    }
+    return exprs;
+}
+
 SyntaxParser::SyntaxParser()
   : Parser(tokenizer), inFunction(false), isGenerator(false)
 {
@@ -84,8 +115,9 @@ SyntaxParser::SyntaxParser()
     });
 
     addPrefixHandler(Token_SBra, [] (ParserT& parser, Token token) -> Syntax* {
-        return new SyntaxList(token,
-                              parser.exprListTrailing(Token_Comma, Token_SKet));
+        vector<unique_ptr<Syntax>> elems =
+            parser.exprListTrailingUnique(Token_Comma, Token_SKet);
+        return new SyntaxList(token, elems);
     });
 
     addPrefixHandler(Token_CBra, [] (ParserT& parser, Token token) -> Syntax* {
@@ -173,11 +205,11 @@ SyntaxParser::SyntaxParser()
     });
 
     addInfixHandler(Token_Bra, 200, [] (ParserT& parser, Token token, Syntax* l) {
-        vector<Syntax*> args;
+        vector<unique_ptr<Syntax>> args;
         while (!parser.opt(Token_Ket)) {
             if (!args.empty())
                 parser.match(Token_Comma);
-            args.push_back(parser.expression());
+            args.emplace_back(parser.expression());
         }
         return new SyntaxCall(token, l, args);
     });
@@ -235,18 +267,18 @@ SyntaxTarget* SyntaxParser::makeAssignTarget(Syntax* target)
     if (target->is<SyntaxExprList>()) {
         SyntaxExprList* exprs = target->as<SyntaxExprList>();
         vector<unique_ptr<Syntax>>& elems = exprs->elems();
-        vector<SyntaxTarget*> targets(elems.size());
+        vector<unique_ptr<SyntaxTarget>> targets;
         for (unsigned i = 0; i < elems.size(); i++)
-            targets[i] = makeAssignTarget(elems[i].release());
+            targets.emplace_back(makeAssignTarget(elems[i].release()));
         SyntaxTargetList* result = new SyntaxTargetList(exprs->token(), targets);
         delete exprs;
         return result;
     } else if (target->is<SyntaxList>()) {
         SyntaxList* list = target->as<SyntaxList>();
         vector<unique_ptr<Syntax>>& elems = list->elems();
-        vector<SyntaxTarget*> targets(elems.size());
+        vector<unique_ptr<SyntaxTarget>> targets;
         for (unsigned i = 0; i < elems.size(); i++)
-            targets[i] = makeAssignTarget(elems[i].release());
+            targets.emplace_back(makeAssignTarget(elems[i].release()));
         SyntaxTargetList* result = new SyntaxTargetList(list->token(), targets);
         list->release();
         delete list;
@@ -298,17 +330,17 @@ SyntaxTarget* SyntaxParser::parseTarget()
 SyntaxTarget* SyntaxParser::parseTargetList()
 {
     Token startToken = currentToken();
-    vector<SyntaxTarget*> targets;
-    targets.push_back(parseTarget());
+    vector<unique_ptr<SyntaxTarget>> targets;
+    targets.emplace_back(parseTarget());
     bool singleTarget = true;
     while (opt(Token_Comma)) {
         singleTarget = false;
         if (!maybeExprToken())
             break;
-        targets.push_back(parseTarget());
+        targets.emplace_back(parseTarget());
     }
     if (singleTarget)
-        return targets[0];
+        return targets[0].release();
     return new SyntaxTargetList(startToken, targets);
 }
 
@@ -503,9 +535,9 @@ Syntax* SyntaxParser::parseCompoundStatement()
         return new SyntaxDef(token, name.text, params, suite, isGenerator);
     } else if (opt(Token_Class)) {
         Token name = match(Token_Identifier);
-        vector<Syntax*> bases;
+        vector<unique_ptr<Syntax>> bases;
         if (opt(Token_Bra))
-            bases = exprListTrailing(Token_Comma, Token_Ket);
+            bases = exprListTrailingUnique(Token_Comma, Token_Ket);
         return new SyntaxClass(token,
                                name.text,
                                new SyntaxExprList(token, bases),
@@ -520,40 +552,43 @@ Syntax* SyntaxParser::parseCompoundStatement()
 
 SyntaxBlock* SyntaxParser::parseBlock()
 {
-    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock(currentToken()));
+    Token token = currentToken();
+    vector<unique_ptr<Syntax>> stmts;
     match(Token_Indent);
     while (!opt(Token_Dedent)) {
-        syntax->append(parseCompoundStatement());
+        stmts.emplace_back(parseCompoundStatement());
     }
-    return syntax.release();
+    return new SyntaxBlock(token, stmts);
 }
 
 SyntaxBlock* SyntaxParser::parseSuite()
 {
-    unique_ptr<SyntaxBlock> suite(new SyntaxBlock(currentToken()));
+    Token token = currentToken();
+    vector<unique_ptr<Syntax>> stmts;
     match(Token_Colon);
     if (opt(Token_Newline)) {
         match(Token_Indent);
         while (!opt(Token_Dedent)) {
-            suite->append(parseCompoundStatement());
+            stmts.emplace_back(parseCompoundStatement());
         }
     } else {
         do {
-            suite->append(parseSimpleStatement());
+            stmts.emplace_back(parseSimpleStatement());
             if (atEnd() || opt(Token_Newline))
                 break;
             match(Token_Semicolon);
         } while (!atEnd() && !opt(Token_Newline));
     }
-    return suite.release();
+    return new SyntaxBlock(token, stmts);
 }
 
 SyntaxBlock* SyntaxParser::parseModule()
 {
-    unique_ptr<SyntaxBlock> syntax(new SyntaxBlock(currentToken()));
+    Token token = currentToken();
+    vector<unique_ptr<Syntax>> stmts;
     while (!atEnd())
-        syntax->append(parseCompoundStatement());
-    return syntax.release();
+        stmts.emplace_back(parseCompoundStatement());
+    return new SyntaxBlock(token, stmts);
 }
 
 #ifdef BUILD_TESTS
