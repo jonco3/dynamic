@@ -17,6 +17,25 @@ struct ExceptionHandler;
 struct Function;
 struct Instr;
 
+struct ExceptionHandler : public Cell
+{
+    enum Type {
+        CatchHandler, FinallyHandler
+    };
+
+    ExceptionHandler(Type type, Traced<Frame*> frame, unsigned offset);
+    virtual void traceChildren(Tracer& t) override;
+
+    Type type() { return type_; }
+    Frame* frame() { return frame_; }
+    unsigned offset() { return offset_; }
+
+  protected:
+    const Type type_;
+    Frame* frame_;
+    unsigned offset_;
+};
+
 struct Interpreter
 {
     static void init();
@@ -83,6 +102,7 @@ struct Interpreter
 
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
+    void returnFromFrame(Value value);
 
     void replaceInstr(Instr* current, Instr* newInstr);
     bool replaceInstrAndRestart(Instr* current, Instr* newInstr);
@@ -92,11 +112,16 @@ struct Interpreter
                          vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
 
-    void pushExceptionHandler(unsigned offset);
-    void popExceptionHandler();
+    void pushExceptionHandler(ExceptionHandler::Type type, unsigned offset);
+    void popExceptionHandler(ExceptionHandler::Type type);
     bool startExceptionHandler(Traced<Exception*> exception);
-    Exception* currentException() { return currentException_; }
-    void clearCurrentException();
+    void startFinallySuite(ExceptionHandler* handler, Value returnValue);
+    bool isHandlingException() const;
+    bool isHandlingDeferredReturn() const;
+    Exception* currentException();
+    Value currentDeferredReturn();
+    ExceptionHandler* currentExceptionHandler();
+    void finishHandlingException();
 
   private:
     static Interpreter* instance_;
@@ -104,8 +129,11 @@ struct Interpreter
     Instr **instrp;
     RootVector<Frame*> frames;
     RootVector<Value> stack;
+
     RootVector<ExceptionHandler*> exceptionHandlers;
-    Root<Exception*> currentException_;
+    bool inExceptionHandler_;
+    bool exceptionIsReturn_;
+    Root<Value> exceptionOrReturn_;
 
     Interpreter();
     Frame* newFrame(Traced<Function*> function);

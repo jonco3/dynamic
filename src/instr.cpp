@@ -124,8 +124,7 @@ bool InstrCall::execute(Interpreter& interp)
 bool InstrReturn::execute(Interpreter& interp)
 {
     Value value = interp.popStack();
-    interp.popFrame();
-    interp.pushStack(value);
+    interp.returnFromFrame(value);
     return true;
 }
 
@@ -565,15 +564,15 @@ bool InstrSuspendGenerator::execute(Interpreter& interp)
     return true;
 }
 
-bool InstrEnterTry::execute(Interpreter& interp)
+bool InstrEnterCatchRegion::execute(Interpreter& interp)
 {
-    interp.pushExceptionHandler(offset_);
+    interp.pushExceptionHandler(ExceptionHandler::CatchHandler, offset_);
     return true;
 }
 
-bool InstrLeaveTry::execute(Interpreter& interp)
+bool InstrLeaveCatchRegion::execute(Interpreter& interp)
 {
-    interp.popExceptionHandler();
+    interp.popExceptionHandler(ExceptionHandler::CatchHandler);
     return true;
 }
 
@@ -581,23 +580,42 @@ bool InstrMatchCurrentException::execute(Interpreter& interp)
 {
     Root<Object*> obj(interp.popStack().toObject());
     Root<Exception*> exception(interp.currentException());
-    assert(exception);
     bool match = obj->is<Class>() && exception->isInstanceOf(obj->as<Class>());
     if (match) {
+        interp.finishHandlingException();
         interp.pushStack(exception);
-        interp.clearCurrentException();
     }
     interp.pushStack(Boolean::get(match));
     return true;
 }
 
-bool InstrReraiseCurrentException::execute(Interpreter& interp)
+bool InstrEnterFinallyRegion::execute(Interpreter& interp)
 {
-    Root<Exception*> exception(interp.currentException());
-    if (exception) {
+    interp.pushExceptionHandler(ExceptionHandler::FinallyHandler, offset_);
+    return true;
+}
+
+bool InstrLeaveFinallyRegion::execute(Interpreter& interp)
+{
+    interp.popExceptionHandler(ExceptionHandler::FinallyHandler);
+    return true;
+}
+
+bool InstrFinishExceptionHandler::execute(Interpreter& interp)
+{
+    if (interp.isHandlingException()) {
+        // Re-raise current exception.
+        Root<Exception*> exception(interp.currentException());
+        interp.finishHandlingException();
         interp.pushStack(exception);
-        interp.clearCurrentException();
         return false;
+    }
+
+    if (interp.isHandlingDeferredReturn()) {
+        Root<Value> value(interp.currentDeferredReturn());
+        interp.finishHandlingException();
+        interp.returnFromFrame(value);
+        return true;
     }
 
     return true;

@@ -66,10 +66,12 @@ using namespace std;
     instr(ResumeGenerator)                                                   \
     instr(LeaveGenerator)                                                    \
     instr(SuspendGenerator)                                                  \
-    instr(EnterTry)                                                          \
-    instr(LeaveTry)                                                          \
+    instr(EnterCatchRegion)                                                  \
+    instr(LeaveCatchRegion)                                                  \
     instr(MatchCurrentException)                                             \
-    instr(ReraiseCurrentException)
+    instr(EnterFinallyRegion)                                                \
+    instr(LeaveFinallyRegion)                                                \
+    instr(FinishExceptionHandler)
 
 enum InstrType
 {
@@ -452,10 +454,12 @@ define_simple_instr(ResumeGenerator);
 define_simple_instr(LeaveGenerator);
 define_simple_instr(SuspendGenerator);
 
-define_branch_instr(EnterTry);
-define_simple_instr(LeaveTry);
+define_branch_instr(EnterCatchRegion);
+define_simple_instr(LeaveCatchRegion);
 define_simple_instr(MatchCurrentException);
-define_simple_instr(ReraiseCurrentException);
+define_branch_instr(EnterFinallyRegion);
+define_simple_instr(LeaveFinallyRegion);
+define_simple_instr(FinishExceptionHandler);
 
 #undef instr_type
 #undef instr_name

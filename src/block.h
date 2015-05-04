@@ -30,6 +30,7 @@ struct Block : public Cell
     unsigned nextIndex() { return instrs_.size(); }
     unsigned append(Instr* instr);
     void branchHere(unsigned source);
+    int offsetFrom(unsigned source);
     int offsetTo(unsigned dest);
 
     const Instr* lastInstr() {

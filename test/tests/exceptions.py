@@ -82,20 +82,20 @@ def c2():
     try:
         raise TestError('foo')
     finally:
-        finals += 1
+        finals |= 1
 
 def c1():
     global finals
     try:
         c2()
     finally:
-        finals += 1
+        finals |= 2
 
 try:
     c1()
 except TestError:
     pass
-assert finals == 2
+assert finals == 3
 
 # finally can clobber return value
 def foo():

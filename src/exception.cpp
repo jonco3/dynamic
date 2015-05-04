@@ -44,6 +44,7 @@ Exception::Exception(Traced<Class*> cls)
   : Object(cls)
 {
     assert(cls->is<Class>()); // todo: check derives from Exception
+    setAttr("message", String::EmptyString);
 }
 
 Exception::Exception(Traced<Class*> cls, const string& message)
@@ -118,6 +119,8 @@ void Exception::print(ostream& os) const
 
 void Exception::setPos(const TokenPos& pos)
 {
+    if (pos_.line != 0)
+        return;
     pos_ = pos;
 }
 

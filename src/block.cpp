@@ -28,17 +28,23 @@ unsigned Block::append(Instr* instr)
     return index;
 }
 
-void Block::branchHere(unsigned source)
+int Block::offsetFrom(unsigned source)
 {
     assert(source < instrs_.size() - 1);
-    Branch* b = instrs_[source]->asBranch();
-    b->setOffset(instrs_.size() - source);
+    return instrs_.size() - source;
 }
 
 int Block::offsetTo(unsigned dest)
 {
     assert(dest < instrs_.size() - 1);
     return dest - instrs_.size();
+}
+
+void Block::branchHere(unsigned source)
+{
+    assert(source < instrs_.size() - 1);
+    Branch* b = instrs_[source]->asBranch();
+    b->setOffset(offsetFrom(source));
 }
 
 void Block::print(ostream& s) const {
@@ -373,6 +379,11 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxBlock& s) {
+        if (s.stmts().empty()) {
+            block->append(gc.create<InstrConst>(None));
+            return;
+        }
+
         for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i) {
             if (i != s.stmts().begin())
                 block->append(gc.create<InstrPop>());
@@ -747,12 +758,34 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxTry& s) {
-        unsigned handlerBranch = block->append(gc.create<InstrEnterTry>());
+        unsigned finallyBranch = 0;
+        if (s.finallySuite())
+            finallyBranch = block->append(gc.create<InstrEnterFinallyRegion>());
+        if (s.excepts().size() != 0) {
+            emitTryCatch(s);
+        } else {
+            s.trySuite()->accept(*this);
+            block->append(gc.create<InstrPop>());
+        }
+        if (s.finallySuite()) {
+            block->append(gc.create<InstrLeaveFinallyRegion>());
+            block->branchHere(finallyBranch);
+            s.finallySuite()->accept(*this);
+            block->append(gc.create<InstrPop>());
+            block->append(gc.create<InstrFinishExceptionHandler>());
+        }
+        block->append(gc.create<InstrConst>(None));
+    }
+
+    virtual void emitTryCatch(const SyntaxTry& s) {
+        unsigned handlerBranch =
+            block->append(gc.create<InstrEnterCatchRegion>());
         s.trySuite()->accept(*this);
-        block->append(gc.create<InstrLeaveTry>());
-        vector<unsigned> finallyBranches;
+        block->append(gc.create<InstrPop>());
+        block->append(gc.create<InstrLeaveCatchRegion>());
+        vector<unsigned> handledBranches;
         for (const auto& e : s.excepts()) {
-            finallyBranches.push_back(
+            handledBranches.push_back(
                 block->append(gc.create<InstrBranchAlways>()));
             block->branchHere(handlerBranch);
             e->expr()->accept(*this);
@@ -764,22 +797,21 @@ struct BlockBuilder : public SyntaxVisitor
                 e->as()->accept(*this);
                 inAssignTarget = false;
             }
-            else
-                block->append(gc.create<InstrPop>());
+            block->append(gc.create<InstrPop>());
             e->suite()->accept(*this);
+            block->append(gc.create<InstrPop>());
         }
         if (s.elseSuite()) {
-            finallyBranches.push_back(
+            handledBranches.push_back(
                 block->append(gc.create<InstrBranchAlways>()));
             block->branchHere(handlerBranch);
             s.elseSuite()->accept(*this);
+            block->append(gc.create<InstrPop>());
         }
         block->branchHere(handlerBranch);
-        for (unsigned offset: finallyBranches)
+        block->append(gc.create<InstrFinishExceptionHandler>());
+        for (unsigned offset: handledBranches)
             block->branchHere(offset);
-        if (s.finallySuite())
-            s.trySuite()->accept(*this);
-        block->append(gc.create<InstrReraiseCurrentException>());
     }
 
     virtual void setPos(const TokenPos& pos)

@@ -12,22 +12,9 @@
 
 //#define TRACE_INTERP
 
-struct ExceptionHandler : public Cell
-{
-    ExceptionHandler(Traced<Frame*> frame, unsigned offset);
-    virtual void traceChildren(Tracer& t) override;
-
-    Frame* frame() { return frame_; }
-    unsigned offset() { return offset_; }
-
-  private:
-    Frame* frame_;
-    unsigned offset_;
-};
-
-ExceptionHandler::ExceptionHandler(Traced<Frame*> frame, unsigned offset)
-  : frame_(frame),
-    offset_(offset)
+ExceptionHandler::ExceptionHandler(Type type, Traced<Frame*> frame,
+                                   unsigned offset)
+  : type_(type), frame_(frame), offset_(offset)
 {}
 
 void ExceptionHandler::traceChildren(Tracer& t)
@@ -51,7 +38,9 @@ Interpreter* Interpreter::instance_ = nullptr;
 
 Interpreter::Interpreter()
   : instrp(nullptr),
-    currentException_(nullptr)
+    inExceptionHandler_(false),
+    exceptionIsReturn_(false),
+    exceptionOrReturn_(None)
 {}
 
 bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
@@ -79,7 +68,8 @@ bool Interpreter::run(Root<Value>& resultOut)
         for (unsigned i = 0; i < frames.size(); i++)
             cerr << " " << frames[i];
         cerr << endl << endl;
-        cerr << "execute: " << repr(*instr) << endl << endl;
+        cerr << "execute: " << repr(*instr);
+        cerr << " line " << dec << currentPos().line << endl << endl;
 #endif
         if (!instr->execute(*this)) {
             Root<Value> value(popStack());
@@ -121,13 +111,35 @@ void Interpreter::popFrame()
 {
     assert(!frames.empty());
     Frame* frame = frames.back();
+    assert(exceptionHandlers.empty() ||
+           exceptionHandlers.back()->frame() != frame);
     assert(frame->stackPos() <= stackPos());
+
     stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
 #ifdef TRACE_INTERP
     cout << "  return to " << (void*)instrp << endl;
 #endif
     frames.pop_back();
+}
+
+void Interpreter::returnFromFrame(Value value)
+{
+    AutoAssertNoGC nogo;
+
+    Frame* frame = getFrame();
+    while (ExceptionHandler* handler = currentExceptionHandler()) {
+        exceptionHandlers.pop_back();
+        if (handler->type() == ExceptionHandler::FinallyHandler) {
+            // Defer return and run finally suite.
+            startFinallySuite(handler, value);
+            return;
+        }
+    }
+
+    // Normal return path.
+    popFrame();
+    pushStack(value);
 }
 
 void Interpreter::resumeGenerator(Traced<Frame*> frame,
@@ -164,21 +176,23 @@ unsigned Interpreter::currentOffset()
     return instrp - start - 1;
 }
 
-void Interpreter::pushExceptionHandler(unsigned offset)
+void Interpreter::pushExceptionHandler(ExceptionHandler::Type type,
+                                       unsigned offset)
 {
     assert(offset);
     Root<Frame*> frame(getFrame());
-    unsigned targetOffset = currentOffset() + offset;
+    // todo: Why do we store instruct offsets rather than indices?
     Root<ExceptionHandler*> handler(
-        gc.create<ExceptionHandler>(frame, targetOffset));
+        gc.create<ExceptionHandler>(type, frame, offset + currentOffset()));
     exceptionHandlers.push_back(handler);
 }
 
-void Interpreter::popExceptionHandler()
+void Interpreter::popExceptionHandler(ExceptionHandler::Type type)
 {
 #ifdef DEBUG
     ExceptionHandler* handler = exceptionHandlers.back();
     assert(handler->frame() == getFrame());
+    assert(handler->type() == type);
 #endif
     exceptionHandlers.pop_back();
 }
@@ -188,7 +202,9 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
     if (exceptionHandlers.empty())
         return false;
 
-    currentException_ = exception;
+    inExceptionHandler_ = true;
+    exceptionIsReturn_ = false;
+    exceptionOrReturn_ = exception;
     ExceptionHandler* handler = exceptionHandlers.back();
     exceptionHandlers.pop_back();
     while (getFrame() != handler->frame())
@@ -197,10 +213,54 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
     return true;
 }
 
-void Interpreter::clearCurrentException()
+void Interpreter::startFinallySuite(ExceptionHandler* handler, Value returnValue)
 {
-    assert(currentException_);
-    currentException_ = nullptr;
+    inExceptionHandler_ = true;
+    exceptionIsReturn_ = true;
+    exceptionOrReturn_ = returnValue;
+    instrp = getFrame()->block()->startInstr() + handler->offset();
+}
+
+bool Interpreter::isHandlingException() const
+{
+    return inExceptionHandler_ && !exceptionIsReturn_;
+}
+
+bool Interpreter::isHandlingDeferredReturn() const
+{
+    return inExceptionHandler_ && exceptionIsReturn_;
+}
+
+Exception* Interpreter::currentException()
+{
+    assert(isHandlingException());
+    return exceptionOrReturn_.asObject()->as<Exception>();
+}
+
+Value Interpreter::currentDeferredReturn()
+{
+    assert(isHandlingDeferredReturn());
+    return exceptionOrReturn_;
+}
+
+void Interpreter::finishHandlingException()
+{
+    assert(inExceptionHandler_);
+    inExceptionHandler_ = false;
+    exceptionIsReturn_ = false;
+    exceptionOrReturn_ = None;
+}
+
+ExceptionHandler* Interpreter::currentExceptionHandler()
+{
+    if (exceptionHandlers.empty())
+        return nullptr;
+
+    ExceptionHandler* handler = exceptionHandlers.back();
+    if (handler->frame() != getFrame())
+        return nullptr;
+
+    return handler;
 }
 
 Frame* Interpreter::getFrame(unsigned reverseIndex)
@@ -410,7 +470,8 @@ void testInterp(const string& input, const string& expected)
     assert(interp.stack.empty());
     assert(interp.frames.empty());
     assert(interp.exceptionHandlers.empty());
-    assert(!interp.currentException_);
+    assert(!interp.isHandlingException());
+    assert(!interp.isHandlingDeferredReturn());
     Root<Block*> block;
     Block::buildModule(input, None, block);
     Root<Value> result;
