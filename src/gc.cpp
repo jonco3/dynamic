@@ -65,7 +65,9 @@ Cell::Cell()
 
     log("created", this);
     epoch_ = gc.currentEpoch;
+#ifdef DEBUG
     gc.isAllocating = false;
+#endif
 }
 
 Cell::~Cell()

@@ -263,7 +263,9 @@ bool Object::isTrue() const
 
 bool Object::isInstanceOf(Class* cls) const
 {
+#ifdef DEBUG
     AutoAssertNoGC nogc;
+#endif
     Object* obj = getOwnAttr("__class__").toObject();
     do {
         if (obj == cls)
