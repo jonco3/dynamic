@@ -36,10 +36,10 @@ struct Parser
 
     typedef Parser<T> ParserT;
     typedef function<T (ParserT& parser, Token token)> PrefixHandler;
-    typedef function<T (ParserT& parser, Token token, const T leftValue)> InfixHandler;
+    typedef function<T (ParserT& parser, Token token, T leftValue)> InfixHandler;
     typedef function<T (Token token)> WordHandler;
-    typedef function<T (Token token, const T leftValue, const T rightValue)> BinaryOpHandler;
-    typedef function<T (Token token, const T rightValue)> UnaryOpHandler;
+    typedef function<T (Token token, T leftValue, T rightValue)> BinaryOpHandler;
+    typedef function<T (Token token, T rightValue)> UnaryOpHandler;
 
     // Add a generic handler to call for a token in prefix position
     void addPrefixHandler(TokenType type, PrefixHandler handler);
@@ -59,14 +59,18 @@ struct Parser
 
     // Add a handler that creates a new node of type N for a token in prefix
     // position
-    template<typename N> void createNodeForUnary(TokenType type, unsigned bindRight = 500);  // todo: hardcoded constant
+    template<typename N> void createNodeForUnary(TokenType type,
+                                                 unsigned bindRight = 500);
+    // todo: hardcoded constant
 
     // Add a handler that creates a new node of type N for a token in infix
     // position
     template<typename N> void createNodeForBinary(TokenType type,
-                                                  unsigned bindLeft, Assoc assoc);
+                                                  unsigned bindLeft,
+                                                  Assoc assoc);
     template<typename N, typename X>
-    void createNodeForBinary(TokenType type, unsigned bindLeft, Assoc assoc, X x);
+    void createNodeForBinary(TokenType type, unsigned bindLeft,
+                             Assoc assoc, X x);
 
     bool notFollowedBy(TokenType type) { return token.type != type; }
     bool opt(TokenType type);
@@ -77,18 +81,11 @@ struct Parser
     vector<T> exprList(TokenType separator, TokenType end);
     vector<T> exprListTrailing(TokenType separator, TokenType end);
 
-    // todo: these will eventually go when T becomes unique_ptr<Syntax>
-    vector<unique_ptr<typename remove_pointer<T>::type>>
-    exprListUnique(TokenType separator, TokenType end);
-
-    vector<unique_ptr<typename remove_pointer<T>::type>>
-    exprListTrailingUnique(TokenType separator, TokenType end);
-
     const Token& currentToken() { return token; }
     void nextToken();
     T prefix(Token token);
     unsigned getBindLeft(Token token);
-    T infix(Token token, const T leftValue);
+    T infix(Token token, T leftValue);
 
   private:
     struct PrefixAction
@@ -146,9 +143,9 @@ void Parser<T>::addBinaryOp(TokenType type, unsigned bindLeft, Assoc assoc,
     addInfixHandler(type,
                     bindLeft,
                     [=] (Parser<T>& parser, Token token,
-                         const T leftValue) {
+                         T leftValue) {
                         T rightValue = parser.expression(bindRight);
-                        return handler(token, leftValue, rightValue);
+                        return handler(token, move(leftValue), move(rightValue));
                     });
 }
 
@@ -169,7 +166,7 @@ void Parser<T>::createNodeForAtom(TokenType type)
 {
     addPrefixHandler(type,
                      [=] (Parser<T>& parser, Token token) {
-                         return new N(token);
+                         return make_unique<N>(token);
                      });
 }
 
@@ -179,7 +176,7 @@ void Parser<T>::createNodeForUnary(TokenType type, unsigned bindRight)
 {
     addPrefixHandler(type,
                      [=] (Parser<T>& parser, Token token) {
-                         return new N(token, parser.expression(bindRight));
+                         return make_unique<N>(token, parser.expression(bindRight));
                      });
 }
 
@@ -195,9 +192,11 @@ void Parser<T>::createNodeForBinary(TokenType type, unsigned bindLeft,
     addInfixHandler(type,
                     bindLeft,
                     [=] (Parser<T>& parser, Token token,
-                         const T leftValue) {
+                         T leftValue) {
                         T rightValue = parser.expression(bindRight);
-                        return new N(token, leftValue, rightValue);
+                        return make_unique<N>(token,
+                                              move(leftValue), move(
+                                                  rightValue));
                     });
 }
 
@@ -212,10 +211,11 @@ void Parser<T>::createNodeForBinary(TokenType type, unsigned bindLeft,
     unsigned bindRight = bindLeft + assoc;
     addInfixHandler(type,
                     bindLeft,
-                    [=] (Parser<T>& parser, Token token,
-                         const T leftValue) {
+                    [=] (Parser<T>& parser, Token token, T leftValue) {
                         T rightValue = parser.expression(bindRight);
-                        return new N(token, leftValue, rightValue, x);
+                        return make_unique<N>(token,
+                                              move(leftValue),
+                                              move(rightValue), x);
                     });
 }
 
@@ -297,7 +297,7 @@ T Parser<T>::expression(unsigned bindRight)
     while (bindRight < getBindLeft(token)) {
         t = token;
         nextToken();
-        left = infix(t, left);
+        left = infix(t, move(left));
     }
     return left;
 }
@@ -323,22 +323,22 @@ unsigned Parser<T>::getBindLeft(Token token)
 }
 
 template <typename T>
-T Parser<T>::infix(Token token, const T leftValue)
+T Parser<T>::infix(Token token, T leftValue)
 {
     const auto& action = infixActions[token.type];
     if (!action.present) {
         throw ParseError(token, "Unexpected " + tokenizer.typeName(token.type));
         // todo + " in " + name + " context"
     }
-    return action.handler(*this, token, leftValue);
+    return action.handler(*this, token, move(leftValue));
 }
 
-struct SyntaxParser : public Parser<Syntax *>
+struct SyntaxParser : public Parser<unique_ptr<Syntax>>
 {
     SyntaxParser();
-    Syntax* parseSimpleStatement();
-    Syntax* parseCompoundStatement();
-    SyntaxBlock* parseModule();
+    unique_ptr<Syntax> parseSimpleStatement();
+    unique_ptr<Syntax> parseCompoundStatement();
+    unique_ptr<SyntaxBlock> parseModule();
 
   private:
     Tokenizer tokenizer;
@@ -346,18 +346,19 @@ struct SyntaxParser : public Parser<Syntax *>
     bool isGenerator;
 
     bool maybeExprToken();
-    Syntax* parseExprOrExprList();
-    Syntax* parseAssignSource();
-    SyntaxBlock* parseBlock();
-    SyntaxBlock* parseSuite();
+    unique_ptr<Syntax> parseExprOrExprList();
+    unique_ptr<Syntax> parseAssignSource();
+    unique_ptr<SyntaxBlock> parseBlock();
+    unique_ptr<SyntaxBlock> parseSuite();
     vector<Parameter> parseParameterList(TokenType endToken);
 
-    SyntaxTarget* makeAssignTarget(Syntax* s);
+    unique_ptr<SyntaxTarget> makeAssignTarget(unique_ptr<Syntax> s);
 
-    SyntaxTarget* parseTarget();
-    SyntaxTarget* parseTargetList();
+    unique_ptr<SyntaxTarget> parseTarget();
+    unique_ptr<SyntaxTarget> parseTargetList();
 
-    Syntax* parseAugAssign(Token token, Syntax* target, BinaryOp op);
+    unique_ptr<Syntax> parseAugAssign(Token token, unique_ptr<Syntax> target,
+                                      BinaryOp op);
 };
 
 #endif
