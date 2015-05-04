@@ -275,6 +275,7 @@ struct BlockBuilder : public SyntaxVisitor
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s);
+        emit<InstrReturn>();
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
 #endif
@@ -691,15 +692,13 @@ struct BlockBuilder : public SyntaxVisitor
         bool takesRest = false;
         if (params.size() > 0)
             takesRest = params.back().takesRest;
-        block->append(gc.create<InstrLambda>(defName, names, exprBlock,
-                                             defaultCount, takesRest,
-                                             isGenerator));
+        emit<InstrLambda>(defName, names, exprBlock, defaultCount, takesRest,
+                          isGenerator);
     }
 
     virtual void visit(const SyntaxLambda& s) {
         Root<Block*> exprBlock(
             BlockBuilder().buildLambda(this, s.params(), s.expr()));
-        exprBlock->append(gc.create<InstrReturn>());
         emitLambda("(lambda)", s.params(), exprBlock, false);
     }
 
@@ -721,10 +720,6 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxClass& s) {
         Root<Block*> suite(BlockBuilder().buildClass(this, s.id(), s.suite()));
-        suite->append(gc.create<InstrPop>());
-        suite->append(gc.create<InstrMakeClassFromFrame>(s.id()));
-        suite->append(gc.create<InstrReturn>());
-
         vector<Name> params = { ClassFunctionParam };
         emit<InstrLambda>(s.id(), params, suite);
         s.bases()->accept(*this);
