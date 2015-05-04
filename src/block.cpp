@@ -221,9 +221,9 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     vector<Name> globals_;
 };
 
-struct BlockBuilder : public SyntaxVisitor
+struct ByteCompiler : public SyntaxVisitor
 {
-    BlockBuilder()
+    ByteCompiler()
       : parent(nullptr),
         topLevel(nullptr),
         layout(Frame::InitialLayout),
@@ -246,7 +246,7 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    Block* buildFunctionBody(BlockBuilder* parent,
+    Block* buildFunctionBody(ByteCompiler* parent,
                              const vector<Parameter>& params,
                              const Syntax* s)
     {
@@ -267,7 +267,7 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    Block* buildLambda(BlockBuilder* parent, const vector<Parameter>& params,
+    Block* buildLambda(ByteCompiler* parent, const vector<Parameter>& params,
                        const Syntax* s) {
         assert(parent);
         this->parent = parent;
@@ -282,7 +282,7 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    Block* buildClass(BlockBuilder* parent, Name id, const Syntax* s) {
+    Block* buildClass(ByteCompiler* parent, Name id, const Syntax* s) {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
@@ -298,7 +298,7 @@ struct BlockBuilder : public SyntaxVisitor
         return block;
     }
 
-    Block* buildGenerator(BlockBuilder* parent,
+    Block* buildGenerator(ByteCompiler* parent,
                           const vector<Parameter>& params,
                           const Syntax* s)
     {
@@ -320,7 +320,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
   private:
-    BlockBuilder* parent;
+    ByteCompiler* parent;
     Root<Object*> topLevel;
     Root<Layout*> layout;
     Root<Block*> block;
@@ -361,7 +361,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     unsigned lookupLexical(Name name) {
         int count = 1;
-        BlockBuilder* b = parent;
+        ByteCompiler* b = parent;
         while (b && b->parent) {
             if (b->block->layout()->hasName(name))
                 return count;
@@ -707,7 +707,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxLambda& s) {
         Root<Block*> exprBlock(
-            BlockBuilder().buildLambda(this, s.params(), s.expr()));
+            ByteCompiler().buildLambda(this, s.params(), s.expr()));
         emitLambda("(lambda)", s.params(), exprBlock, false);
     }
 
@@ -715,10 +715,10 @@ struct BlockBuilder : public SyntaxVisitor
         Root<Block*> exprBlock;
         if (s.isGenerator()) {
             exprBlock =
-                BlockBuilder().buildGenerator(this, s.params(), s.expr());
+                ByteCompiler().buildGenerator(this, s.params(), s.expr());
         } else {
             exprBlock =
-                BlockBuilder().buildFunctionBody(this, s.params(), s.expr());
+                ByteCompiler().buildFunctionBody(this, s.params(), s.expr());
         }
         emitLambda(s.id(), s.params(), exprBlock, s.isGenerator());
         if (parent)
@@ -728,7 +728,7 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxClass& s) {
-        Root<Block*> suite(BlockBuilder().buildClass(this, s.id(), s.suite()));
+        Root<Block*> suite(ByteCompiler().buildClass(this, s.id(), s.suite()));
         vector<Name> params = { ClassFunctionParam };
         emit<InstrLambda>(s.id(), params, suite);
         compile(s.bases());
@@ -843,7 +843,7 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
     Root<Object*> globals(globalsArg);
     if (globals->isNone())
         globals = gc.create<Object>();
-    blockOut = BlockBuilder().buildModule(globals, syntax.get());
+    blockOut = ByteCompiler().buildModule(globals, syntax.get());
 }
 
 #ifdef BUILD_TESTS
