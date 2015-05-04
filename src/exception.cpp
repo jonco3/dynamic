@@ -118,8 +118,7 @@ void Exception::print(ostream& os) const
 
 void Exception::setPos(const TokenPos& pos)
 {
-    // todo: I get a crash if I try to assign the filename string
-    pos_.line = pos.line;
+    pos_ = pos;
 }
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)

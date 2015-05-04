@@ -83,7 +83,7 @@ void Block::setNextPos(const TokenPos& pos)
 
     assert(file_ == pos.file);
     if (offsetLines_.back().second != pos.line)
-        offsetLines_.emplace_back(offsetLines_.size(), pos.line);
+        offsetLines_.emplace_back(instrs_.size(), pos.line);
 }
 
 #ifdef BUILD_TESTS
