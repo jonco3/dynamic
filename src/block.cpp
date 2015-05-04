@@ -334,6 +334,15 @@ struct BlockBuilder : public SyntaxVisitor
         return block->append(gc.create<T>(forward<Args>(args)...));
     }
 
+    void compile(const Syntax* s) {
+        s->accept(*this);
+    }
+
+    template <typename T>
+    void compile(const unique_ptr<T>& s) {
+        s->accept(*this);
+    }
+
     void build(const Syntax* s) {
         assert(!block);
         assert(topLevel);
@@ -341,7 +350,7 @@ struct BlockBuilder : public SyntaxVisitor
         if (!parent)
             topLevel->extend(layout);
         block = gc.create<Block>(layout);
-        s->accept(*this);
+        compile(s);
     }
 
     bool setInAssignTarget(bool newValue) {
@@ -363,16 +372,16 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
-        s.right()->accept(*this);
+        compile(s.right());
         emit<InstrGetMethod>(name);
         emit<InstrCall>(1);
     }
 
     template <typename BaseType>
     void callBinaryMethod(const BinarySyntax<BaseType, Syntax, Syntax>& s, string name) {
-        s.left()->accept(*this);
+        compile(s.left());
         emit<InstrGetMethod>(name);
-        s.right()->accept(*this);
+        compile(s.right());
         emit<InstrCall>(2);
     }
 
@@ -393,7 +402,7 @@ struct BlockBuilder : public SyntaxVisitor
         for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i) {
             if (i != s.stmts().begin())
                 emit<InstrPop>();
-            (*i)->accept(*this);
+            compile((*i));
         }
     }
 
@@ -409,40 +418,40 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxExprList& s) {
         for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
-            (*i)->accept(*this);
+            compile((*i));
         emit<InstrTuple>(s.elems().size());
     }
 
     virtual void visit(const SyntaxList& s) {
         for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
-            (*i)->accept(*this);
+            compile((*i));
         emit<InstrList>(s.elems().size());
     }
 
     virtual void visit(const SyntaxDict& s) {
         for (auto i = s.entries().begin(); i != s.entries().end(); ++i) {
-            i->first->accept(*this);
-            i->second->accept(*this);
+            compile(i->first);
+            compile(i->second);
         }
         emit<InstrDict>(s.entries().size());
     }
 
     virtual void visit(const SyntaxOr& s) {
-        s.left()->accept(*this);
+        compile(s.left());
         unsigned branch = emit<InstrOr>();
-        s.right()->accept(*this);
+        compile(s.right());
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxAnd& s) {
-        s.left()->accept(*this);
+        compile(s.left());
         unsigned branch = emit<InstrAnd>();
-        s.right()->accept(*this);
+        compile(s.right());
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxNot& s) {
-        s.right()->accept(*this);
+        compile(s.right());
         emit<InstrNot>();
     }
 
@@ -451,8 +460,8 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
 
     virtual void visit(const SyntaxBinaryOp& s) {
-        s.left()->accept(*this);
-        s.right()->accept(*this);
+        compile(s.left());
+        compile(s.right());
         emit<InstrBinaryOp>(s.op());
     }
 
@@ -460,12 +469,12 @@ struct BlockBuilder : public SyntaxVisitor
         // todo: what's __itruediv__?
         // todo: we'll need to change this if we want to specialise depending on
         // whether the target implements update-in-place methods
-        s.left()->accept(*this);
-        s.right()->accept(*this);
+        compile(s.left());
+        compile(s.right());
         emit<InstrAugAssignUpdate>(s.op());
         assert(!inAssignTarget);
         inAssignTarget = true;
-        s.left()->accept(*this);
+        compile(s.left());
         inAssignTarget = false;
         emit<InstrPop>();
         emit<InstrConst>(None);
@@ -478,8 +487,8 @@ struct BlockBuilder : public SyntaxVisitor
 
 #define define_vist_binary_instr(syntax, instr)                               \
     virtual void visit(const syntax& s) {                                     \
-        s.left()->accept(*this);                                              \
-        s.right()->accept(*this);                                             \
+        compile(s.left());                                              \
+        compile(s.right());                                             \
         emit<instr>();                                   \
     }
 
@@ -489,10 +498,10 @@ struct BlockBuilder : public SyntaxVisitor
 #undef define_vist_binary_instr
 
     virtual void visit(const SyntaxAssign& s) {
-        s.right()->accept(*this);
+        compile(s.right());
         assert(!inAssignTarget);
         inAssignTarget = true;
-        s.left()->accept(*this);
+        compile(s.left());
         inAssignTarget = false;
     }
 
@@ -527,7 +536,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxAttrRef& s) {
         bool wasInAssignTarget = setInAssignTarget(false);
-        s.left()->accept(*this);
+        compile(s.left());
         Name id = s.right()->id();
         if (wasInAssignTarget)
             emit<InstrSetAttr>(id);
@@ -539,9 +548,9 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void visit(const SyntaxSubscript& s) {
         bool wasInAssignTarget = setInAssignTarget(false);
         if (wasInAssignTarget) {
-            s.left()->accept(*this);
+            compile(s.left());
             emit<InstrGetMethod>("__setitem__");
-            s.right()->accept(*this);
+            compile(s.right());
             // todo: there may be a better way than this stack manipulation
             emit<InstrDup>(3);
             emit<InstrCall>(3);
@@ -558,7 +567,7 @@ struct BlockBuilder : public SyntaxVisitor
         const auto& targets = s.targets();
         emit<InstrDestructure>(targets.size());
         for (unsigned i = 0; i < targets.size(); i++) {
-            targets[i]->accept(*this);
+            compile(targets[i]);
             if (i != targets.size() - 1)
                 emit<InstrPop>();
         }
@@ -570,14 +579,14 @@ struct BlockBuilder : public SyntaxVisitor
 
         if (methodCall) {
             const SyntaxAttrRef* pr = s.left()->as<SyntaxAttrRef>();
-            pr->left()->accept(*this);
+            compile(pr->left());
             emit<InstrGetMethod>(pr->right()->id());
         } else {
-            s.left()->accept(*this);
+            compile(s.left());
         }
 
         for (auto i = s.right().begin(); i != s.right().end(); ++i)
-            (*i)->accept(*this);
+            compile((*i));
         unsigned count = s.right().size() + (methodCall ? 1 : 0);
         emit<InstrCall>(count);
     }
@@ -594,7 +603,7 @@ struct BlockBuilder : public SyntaxVisitor
             emit<InstrLeaveGenerator>();
         } else {
             if (s.right())
-                s.right()->accept(*this);
+                compile(s.right());
             else
                 emit<InstrConst>(None);
             emit<InstrReturn>();
@@ -602,12 +611,12 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxCond& s) {
-        s.cond()->accept(*this);
+        compile(s.cond());
         unsigned altBranch = emit<InstrBranchIfFalse>();
-        s.cons()->accept(*this);
+        compile(s.cons());
         unsigned endBranch = emit<InstrBranchAlways>();
         block->branchHere(altBranch);
-        s.alt()->accept(*this);
+        compile(s.alt());
         block->branchHere(endBranch);
     }
 
@@ -619,15 +628,15 @@ struct BlockBuilder : public SyntaxVisitor
         for (unsigned i = 0; i != suites.size(); ++i) {
             if (i != 0)
                 block->branchHere(lastCondFailed);
-            suites[i].cond->accept(*this);
+            compile(suites[i].cond);
             lastCondFailed = emit<InstrBranchIfFalse>();
-            suites[i].block->accept(*this);
+            compile(suites[i].block);
             if (s.elseBranch() || i != suites.size() - 1)
                 branchesToEnd.push_back(emit<InstrBranchAlways>());
         }
         block->branchHere(lastCondFailed);
         if (s.elseBranch())
-            s.elseBranch()->accept(*this);
+            compile(s.elseBranch());
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
             block->branchHere(branchesToEnd[i]);
         emit<InstrConst>(None);
@@ -635,9 +644,9 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxWhile& s) {
         unsigned loopHead = block->nextIndex();
-        s.cond()->accept(*this);
+        compile(s.cond());
         unsigned branchToEnd = emit<InstrBranchIfFalse>();
-        s.suite()->accept(*this);
+        compile(s.suite());
         emit<InstrPop>();
         emit<InstrBranchAlways>(block->offsetTo(loopHead));
         block->branchHere(branchToEnd);
@@ -647,7 +656,7 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxFor& s) {
         // 1. Get iterator
-        s.exprs()->accept(*this);
+        compile(s.exprs());
         emit<InstrGetMethod>("__iter__");
         emit<InstrCall>(1);
         emit<InstrGetMethod>("next");
@@ -659,12 +668,12 @@ struct BlockBuilder : public SyntaxVisitor
         // 3. Assign results
         assert(!inAssignTarget);
         inAssignTarget = true;
-        s.targets()->accept(*this);
+        compile(s.targets());
         inAssignTarget = false;
         emit<InstrPop>();
 
         // 4. Execute loop body
-        s.suite()->accept(*this);
+        compile(s.suite());
         emit<InstrPop>();
         emit<InstrBranchAlways>(block->offsetTo(loopHead));
 
@@ -686,7 +695,7 @@ struct BlockBuilder : public SyntaxVisitor
             names.push_back(i->name);
             if (i->maybeDefault) {
                 defaultCount++;
-                i->maybeDefault->accept(*this);
+                compile(i->maybeDefault);
             }
         }
         bool takesRest = false;
@@ -722,7 +731,7 @@ struct BlockBuilder : public SyntaxVisitor
         Root<Block*> suite(BlockBuilder().buildClass(this, s.id(), s.suite()));
         vector<Name> params = { ClassFunctionParam };
         emit<InstrLambda>(s.id(), params, suite);
-        s.bases()->accept(*this);
+        compile(s.bases());
         emit<InstrCall>(1);
         if (parent)
             emit<InstrSetLocal>(s.id());
@@ -732,10 +741,10 @@ struct BlockBuilder : public SyntaxVisitor
 
     virtual void visit(const SyntaxAssert& s) {
         if (debugMode) {
-            s.cond()->accept(*this);
+            compile(s.cond());
             unsigned endBranch = emit<InstrBranchIfTrue>();
             if (s.message()) {
-                s.message()->accept(*this);
+                compile(s.message());
                 emit<InstrGetMethod>("__str__");
                 emit<InstrCall>(1);
             } else {
@@ -748,12 +757,12 @@ struct BlockBuilder : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxRaise& s) {
-        s.right()->accept(*this);
+        compile(s.right());
         emit<InstrRaise>();
     }
 
     virtual void visit(const SyntaxYield& s) {
-        s.right()->accept(*this);
+        compile(s.right());
         emit<InstrSuspendGenerator>();
     }
 
@@ -764,13 +773,13 @@ struct BlockBuilder : public SyntaxVisitor
         if (s.excepts().size() != 0) {
             emitTryCatch(s);
         } else {
-            s.trySuite()->accept(*this);
+            compile(s.trySuite());
             emit<InstrPop>();
         }
         if (s.finallySuite()) {
             emit<InstrLeaveFinallyRegion>();
             block->branchHere(finallyBranch);
-            s.finallySuite()->accept(*this);
+            compile(s.finallySuite());
             emit<InstrPop>();
             emit<InstrFinishExceptionHandler>();
         }
@@ -780,7 +789,7 @@ struct BlockBuilder : public SyntaxVisitor
     virtual void emitTryCatch(const SyntaxTry& s) {
         unsigned handlerBranch =
             emit<InstrEnterCatchRegion>();
-        s.trySuite()->accept(*this);
+        compile(s.trySuite());
         emit<InstrPop>();
         emit<InstrLeaveCatchRegion>();
         vector<unsigned> handledBranches;
@@ -788,24 +797,24 @@ struct BlockBuilder : public SyntaxVisitor
             handledBranches.push_back(
                 emit<InstrBranchAlways>());
             block->branchHere(handlerBranch);
-            e->expr()->accept(*this);
+            compile(e->expr());
             emit<InstrMatchCurrentException>();
             handlerBranch = emit<InstrBranchIfFalse>();
             if (e->as()) {
                 assert(!inAssignTarget);
                 inAssignTarget = true;
-                e->as()->accept(*this);
+                compile(e->as());
                 inAssignTarget = false;
             }
             emit<InstrPop>();
-            e->suite()->accept(*this);
+            compile(e->suite());
             emit<InstrPop>();
         }
         if (s.elseSuite()) {
             handledBranches.push_back(
                 emit<InstrBranchAlways>());
             block->branchHere(handlerBranch);
-            s.elseSuite()->accept(*this);
+            compile(s.elseSuite());
             emit<InstrPop>();
         }
         block->branchHere(handlerBranch);
