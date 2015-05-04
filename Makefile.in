@@ -43,6 +43,7 @@ SRCS = \
 	src/exception.cpp \
 	src/integer.cpp \
 	src/string.cpp \
+	src/syntax.cpp \
 	src/list.cpp \
 	src/dict.cpp \
 	src/builtin.cpp \

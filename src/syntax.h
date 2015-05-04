@@ -102,7 +102,6 @@ struct Syntax
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
     virtual string name() const = 0;
-    virtual void print(ostream& s) const = 0;
     virtual void accept(SyntaxVisitor& v) const = 0;
 
   protected:
@@ -115,10 +114,7 @@ static unique_ptr<T> unique_ptr_as(S&& p)
     return unique_ptr<T>(p.release()->template as<T>());
 }
 
-inline ostream& operator<<(ostream& s, const Syntax& syntax) {
-    syntax.print(s);
-    return s;
-}
+ostream& operator<<(ostream& s, const Syntax& syntax);
 
 #define define_syntax_type(st)                                                \
     static const SyntaxType Type = st;                                        \
@@ -147,10 +143,6 @@ struct UnarySyntax : public Syntax
 
     const Syntax* right() const { return right_.get(); }
 
-    virtual void print(ostream& s) const override {
-        s << name() << " " << *right();
-    }
-
   private:
     unique_ptr<Syntax> right_;
 };
@@ -164,10 +156,6 @@ struct BinarySyntax : public Base
 
     const L* left() const { return left_.get(); }
     const R* right() const { return right_.get(); }
-
-    virtual void print(ostream& s) const override {
-        s << *left() << " " << this->name() << " " << *right();
-    }
 
   private:
     unique_ptr<L> left_;
@@ -213,10 +201,6 @@ struct SyntaxPass : public Syntax
 {
     define_syntax_members(Pass, "pass");
     SyntaxPass(const Token& token) : Syntax(token) {}
-
-    virtual void print(ostream& s) const override {
-        s << "pass";
-    }
 };
 
 struct SyntaxBlock : public Syntax
@@ -228,14 +212,6 @@ struct SyntaxBlock : public Syntax
     {}
 
     const vector<unique_ptr<Syntax>>& stmts() const { return statements; }
-
-    virtual void print(ostream& s) const override {
-        for (auto i = statements.begin(); i != statements.end(); ++i) {
-            if (i != statements.begin())
-                s << endl;
-            s << **i;
-        }
-    }
 
   private:
     vector<unique_ptr<Syntax>> statements;
@@ -252,10 +228,6 @@ struct SyntaxInteger : public Syntax
 
     int value() const { return value_; }
 
-    virtual void print(ostream& s) const override {
-        s << value_;
-    }
-
   private:
     int value_;
 };
@@ -266,10 +238,6 @@ struct SyntaxString : public Syntax
     SyntaxString(const Token& token) : Syntax(token), value_(token.text) {}
 
     const string& value() const { return value_; }
-
-    virtual void print(ostream& s) const override {
-        s << "'" << value_ << "'";
-    }
 
   private:
     string value_;
@@ -283,10 +251,6 @@ struct SyntaxName : public SyntaxSingleTarget
       : SyntaxSingleTarget(token), id_(token.text) {}
 
     Name id() const { return id_; }
-
-    virtual void print(ostream& s) const override {
-        s << id_;
-    }
 
   private:
     Name id_;
@@ -305,18 +269,6 @@ struct SyntaxExprList : public Syntax
     const vector<unique_ptr<Syntax>>& elems() const { return elements; }
     vector<unique_ptr<Syntax>>& elems() { return elements; }
 
-    virtual void print(ostream& s) const override {
-        s << "(";
-        for (auto i = elements.begin(); i != elements.end(); ++i) {
-            if (i != elements.begin())
-                s << ", ";
-            s << **i;
-        }
-        if (elements.size() == 1)
-                s << ",";
-        s << ")";
-    }
-
   private:
     vector<unique_ptr<Syntax>> elements;
 };
@@ -333,16 +285,6 @@ struct SyntaxList : public Syntax
 
     void release() { elements.clear(); }
 
-    virtual void print(ostream& s) const override {
-        s << "[";
-        for (auto i = elements.begin(); i != elements.end(); ++i) {
-            if (i != elements.begin())
-                s << ", ";
-            s << **i;
-        }
-        s << "]";
-    }
-
   private:
     vector<unique_ptr<Syntax>> elements;
 };
@@ -357,16 +299,6 @@ struct SyntaxDict : public Syntax
       : Syntax(token), entries_(move(entries)) {}
 
     const vector<Entry>& entries() const { return entries_; }
-
-    virtual void print(ostream& s) const override {
-        s << "{";
-        for (auto i = entries_.begin(); i != entries_.end(); ++i) {
-            if (i != entries_.begin())
-                s << ", ";
-            s << *i->first << ": " << *i->second;
-        }
-        s << "}";
-    }
 
   private:
     vector<Entry> entries_;
@@ -459,17 +391,6 @@ struct SyntaxAttrRef : public BinarySyntax<SyntaxSingleTarget,
                   unique_ptr<SyntaxName> r)
       : Base(token, move(l), move(r))
     {}
-
-    virtual void print(ostream& s) const override {
-        if (left()->is<SyntaxName>() || left()->is<SyntaxExprList>() ||
-            left()->is<SyntaxAttrRef>())
-        {
-            s << *left();
-        } else {
-            s << "(" << *left() << ")";
-        }
-        s << "." << *right();
-    }
 };
 
 struct SyntaxTargetList : SyntaxTarget
@@ -482,16 +403,6 @@ struct SyntaxTargetList : SyntaxTarget
     {}
 
     const vector<unique_ptr<SyntaxTarget>>& targets() const { return targets_; }
-
-    virtual void print(ostream& s) const override {
-        s << "(";
-        for (auto i = targets_.begin(); i != targets_.end(); i++) {
-            if (i != targets_.begin())
-                s << ", ";
-            s << **i;
-        }
-        s << ")";
-    }
 
   private:
     vector<unique_ptr<SyntaxTarget>> targets_;
@@ -506,12 +417,10 @@ struct SyntaxSubscript : public BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>
     SyntaxSubscript(const Token& token,
                     unique_ptr<Syntax> l,
                     unique_ptr<Syntax> r)
-      : BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>(token, move(l), move(r))
+      : BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>(token,
+                                                         move(l),
+                                                         move(r))
     {}
-
-    virtual void print(ostream& s) const override {
-        s << *left() << "[" << *right() << "]";
-    }
 };
 
 struct SyntaxCall : public Syntax
@@ -526,16 +435,6 @@ struct SyntaxCall : public Syntax
 
     const Syntax* left() const { return left_.get(); }
     const vector<unique_ptr<Syntax>>& right() const { return right_; }
-
-    virtual void print(ostream& s) const override {
-        s << *left() << "(";
-        for (auto i = right_.begin(); i != right_.end(); ++i) {
-            if (i != right_.begin())
-                s << ", ";
-            s << **i;
-        }
-        s << ")";
-    }
 
   private:
     unique_ptr<Syntax> left_;
@@ -568,10 +467,6 @@ struct SyntaxCond : public Syntax
     const Syntax* cond() const { return cond_.get(); }
     const Syntax* alt() const { return alt_.get(); }
 
-    virtual void print(ostream& s) const override {
-        s << *cons() << " if " << *cond() << " else " << *alt();
-    }
-
   private:
     unique_ptr<Syntax> cons_;
     unique_ptr<Syntax> cond_;
@@ -601,19 +496,6 @@ struct SyntaxLambda : public Syntax
     const vector<Parameter>& params() const { return params_; }
     Syntax* expr() const { return expr_.get(); }
 
-    virtual void print(ostream& s) const override {
-        s << "lambda";
-        for (auto i = params_.begin(); i != params_.end(); ++i) {
-            if (i->takesRest)
-                s << "*";
-            s << " " << i->name;
-            if (i->maybeDefault)
-                s << " = " << *i->maybeDefault;
-        }
-        s << ": ";
-        expr_->print(s);
-    }
-
   private:
     vector<Parameter> params_;
     unique_ptr<Syntax> expr_;
@@ -639,21 +521,6 @@ struct SyntaxDef : public Syntax
     const vector<Parameter>& params() const { return params_; }
     Syntax* expr() const { return expr_.get(); }
     bool isGenerator() const { return isGenerator_; }
-
-    virtual void print(ostream& s) const override {
-        s << "def " << id_ << "(";
-        for (auto i = params_.begin(); i != params_.end(); ++i) {
-            if (i != params_.begin())
-                s << ", ";
-            if (i->takesRest)
-                s << "*";
-            s << i->name;
-            if (i->maybeDefault)
-                s << " = " << *i->maybeDefault;
-        }
-        s << "):" << endl;
-        expr_->print(s);
-    }
 
   private:
     Name id_;
@@ -689,18 +556,6 @@ struct SyntaxIf : public Syntax
     const vector<Branch>& branches() const { return branches_; }
     const SyntaxBlock* elseBranch() const { return else_.get(); }
 
-    virtual void print(ostream& s) const override {
-        // todo: indentation
-        for (unsigned i = 0; i < branches_.size(); ++i) {
-            s << (i == 0 ? "if" : "elif") << " ";
-            s << branches_[i].cond.get() << ":" << endl;
-            s << branches_[i].block.get() << endl;
-        }
-        if (else_) {
-            s << "else:" << endl << else_.get() << endl;
-        }
-    }
-
   private:
     vector<Branch> branches_;
     unique_ptr<SyntaxBlock> else_;
@@ -724,14 +579,6 @@ struct SyntaxWhile : public Syntax
     const Syntax* suite() const { return suite_.get(); }
     const Syntax* elseSuite() const { return elseSuite_.get(); }
 
-    virtual void print(ostream& s) const override {
-        // todo: indentation
-        s << "while " << cond() << ": " << endl;
-        s << suite() << endl;
-        if (elseSuite())
-            s << elseSuite() << endl;
-    }
-
   private:
     unique_ptr<Syntax> cond_;
     unique_ptr<SyntaxBlock> suite_;
@@ -750,12 +597,6 @@ struct SyntaxAssert : public Syntax
 
     const Syntax* cond() const { return cond_.get(); }
     const Syntax* message() const { return message_.get(); }
-
-    virtual void print(ostream& s) const override {
-        s << "assert " << cond();
-        if (message_)
-            s << ", " << message();
-    }
 
   private:
     unique_ptr<Syntax> cond_;
@@ -776,14 +617,6 @@ struct SyntaxClass : public Syntax
     Name id() const { return id_; }
     const SyntaxExprList* bases() const { return bases_.get(); }
     const Syntax* suite() const { return suite_.get(); }
-
-    virtual void print(ostream& s) const override {
-        // todo: indentation
-        s << "class " << id();
-        if (!bases_->elems().empty())
-            s << bases() << " ";
-        s << ":" << endl << suite() << endl;
-    }
 
   private:
     Name id_;
@@ -821,16 +654,6 @@ struct SyntaxFor : public Syntax
     const SyntaxBlock* suite() const { return suite_.get(); }
     const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
 
-    virtual void print(ostream& s) const override {
-        // todo: indentation
-        s << "for " << *targets() << " in " << *exprs() << ":" << endl;
-        s << *suite();
-        if (elseSuite()) {
-            s << endl << "else: " << endl;
-            s << *elseSuite();
-        }
-    }
-
   private:
     unique_ptr<SyntaxTarget> targets_;
     unique_ptr<Syntax> exprs_;
@@ -846,15 +669,6 @@ struct SyntaxGlobal : public Syntax
         : Syntax(token), names_(names) {}
 
     const vector<Name>& names() const { return names_; }
-
-    virtual void print(ostream& s) const override {
-        s << "global ";
-        for (auto i = names_.begin(); i != names_.end(); i++) {
-            if (i != names_.begin())
-                s << ", ";
-            s << *i;
-        }
-    }
 
   private:
     vector<Name> names_;
@@ -906,23 +720,6 @@ struct SyntaxTry : public Syntax
     const vector<unique_ptr<ExceptInfo>>& excepts() const { return excepts_; }
     const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
     const SyntaxBlock* finallySuite() const { return finallySuite_.get(); }
-
-    virtual void print(ostream& s) const override {
-        // todo: indentation
-        s << "try:" << endl;
-        s << *trySuite();
-        for (const auto& except: excepts_) {
-            s << "except " << *except->expr();
-            if (except->as())
-                s << " as " << *except->as();
-            s << ":" << endl;
-            s << *except->suite();
-        }
-        if (finallySuite()) {
-            s << endl << "finally: " << endl;
-            s << *finallySuite();
-        }
-    }
 
   private:
     unique_ptr<SyntaxBlock> trySuite_;
