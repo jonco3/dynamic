@@ -8,6 +8,7 @@
 #include "repr.h"
 #include "string.h"
 #include "syntax.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <memory>
@@ -106,7 +107,13 @@ Instr** Block::findInstr(unsigned type)
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
-    DefinitionFinder(Layout* layout) : inAssignTarget_(false), layout_(layout) {}
+    DefinitionFinder(Layout* layout)
+      : inAssignTarget_(false), layout_(layout)
+    {}
+
+    ~DefinitionFinder() {
+        assert(!inAssignTarget_);
+    }
 
     static Layout* buildLayout(const Syntax *s, Layout* layout) {
         DefinitionFinder df(layout);
@@ -122,10 +129,11 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     // Record assignments and definintions
 
     virtual void visit(const SyntaxAssign& s) {
-        assert(!inAssignTarget_);
-        inAssignTarget_ = true;
-        s.left()->accept(*this);
-        inAssignTarget_ = false;
+        {
+            assert(!inAssignTarget_);
+            AutoSetAndRestore setInAssign(inAssignTarget_, true);
+            s.left()->accept(*this);
+        }
         s.right()->accept(*this);
     }
 
@@ -189,10 +197,11 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     virtual void visit(const SyntaxFor& s) {
-        assert(!inAssignTarget_);
-        inAssignTarget_ = true;
-        s.targets()->accept(*this);
-        inAssignTarget_ = false;
+        {
+            assert(!inAssignTarget_);
+            AutoSetAndRestore setInAssign(inAssignTarget_, true);
+            s.targets()->accept(*this);
+        }
         s.suite()->accept(*this);
         if (s.elseSuite())
             s.elseSuite()->accept(*this);
@@ -203,9 +212,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         s.trySuite()->accept(*this);
         for (const auto& except : s.excepts()) {
             if (except->as()) {
-                inAssignTarget_ = true;
+                AutoSetAndRestore setInAssign(inAssignTarget_, true);
                 except->as()->accept(*this);
-                inAssignTarget_ = false;
             }
             except->suite()->accept(*this);
         }
@@ -230,8 +238,14 @@ struct ByteCompiler : public SyntaxVisitor
         block(nullptr),
         isClassBlock(false),
         isGenerator(false),
-        inAssignTarget(false)
+        inAssignTarget(false),
+        inLoop(false)
     {}
+
+    ~ByteCompiler() {
+        assert(!inAssignTarget);
+        assert(!inLoop);
+    }
 
     Block* buildModule(Traced<Object*> globals, const Syntax* s) {
         assert(globals);
@@ -327,6 +341,7 @@ struct ByteCompiler : public SyntaxVisitor
     bool isClassBlock;
     bool isGenerator;
     bool inAssignTarget;
+    bool inLoop;
     TokenPos currentPos;
 
     template <typename T, typename... Args>
@@ -351,12 +366,6 @@ struct ByteCompiler : public SyntaxVisitor
             topLevel->extend(layout);
         block = gc.create<Block>(layout);
         compile(s);
-    }
-
-    bool setInAssignTarget(bool newValue) {
-        bool oldValue = inAssignTarget;
-        inAssignTarget = newValue;
-        return oldValue;
     }
 
     unsigned lookupLexical(Name name) {
@@ -472,10 +481,11 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s.left());
         compile(s.right());
         emit<InstrAugAssignUpdate>(s.op());
-        assert(!inAssignTarget);
-        inAssignTarget = true;
-        compile(s.left());
-        inAssignTarget = false;
+        {
+            assert(!inAssignTarget);
+            AutoSetAndRestore setInAssign(inAssignTarget, true);
+            compile(s.left());
+        }
         emit<InstrPop>();
         emit<InstrConst>(None);
     }
@@ -500,9 +510,8 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxAssign& s) {
         compile(s.right());
         assert(!inAssignTarget);
-        inAssignTarget = true;
+        AutoSetAndRestore setInAssign(inAssignTarget, true);
         compile(s.left());
-        inAssignTarget = false;
     }
 
     virtual void visit(const SyntaxName& s) {
@@ -535,18 +544,19 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxAttrRef& s) {
-        bool wasInAssignTarget = setInAssignTarget(false);
+        bool wasInAssignTarget = inAssignTarget;
+        AutoSetAndRestore clearInAssign(inAssignTarget, false);
         compile(s.left());
         Name id = s.right()->id();
         if (wasInAssignTarget)
             emit<InstrSetAttr>(id);
         else
             emit<InstrGetAttr>(id);
-        setInAssignTarget(wasInAssignTarget);
     }
 
     virtual void visit(const SyntaxSubscript& s) {
-        bool wasInAssignTarget = setInAssignTarget(false);
+        bool wasInAssignTarget = inAssignTarget;
+        AutoSetAndRestore clearInAssign(inAssignTarget, false);
         if (wasInAssignTarget) {
             compile(s.left());
             emit<InstrGetMethod>("__setitem__");
@@ -559,7 +569,6 @@ struct ByteCompiler : public SyntaxVisitor
         } else {
             callBinaryMethod(s, "__getitem__");
         }
-        setInAssignTarget(wasInAssignTarget);
     }
 
     virtual void visit(const SyntaxTargetList& s) {
@@ -646,7 +655,10 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned loopHead = block->nextIndex();
         compile(s.cond());
         unsigned branchToEnd = emit<InstrBranchIfFalse>();
-        compile(s.suite());
+        {
+            AutoSetAndRestore setInLoop(inLoop, true);
+            compile(s.suite());
+        }
         emit<InstrPop>();
         emit<InstrBranchAlways>(block->offsetTo(loopHead));
         block->branchHere(branchToEnd);
@@ -666,14 +678,18 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned exitBranch = emit<InstrBranchIfFalse>();
 
         // 3. Assign results
-        assert(!inAssignTarget);
-        inAssignTarget = true;
-        compile(s.targets());
-        inAssignTarget = false;
+        {
+            assert(!inAssignTarget);
+            AutoSetAndRestore setInAssign(inAssignTarget, true);
+            compile(s.targets());
+        }
         emit<InstrPop>();
 
         // 4. Execute loop body
-        compile(s.suite());
+        {
+            AutoSetAndRestore setInLoop(inLoop, true);
+            compile(s.suite());
+        }
         emit<InstrPop>();
         emit<InstrBranchAlways>(block->offsetTo(loopHead));
 
@@ -802,9 +818,8 @@ struct ByteCompiler : public SyntaxVisitor
             handlerBranch = emit<InstrBranchIfFalse>();
             if (e->as()) {
                 assert(!inAssignTarget);
-                inAssignTarget = true;
+                AutoSetAndRestore setInAssign(inAssignTarget, true);
                 compile(e->as());
-                inAssignTarget = false;
             }
             emit<InstrPop>();
             compile(e->suite());
