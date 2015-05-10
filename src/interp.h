@@ -112,15 +112,24 @@ struct Interpreter
                          vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
 
+    void loopControlJump(unsigned finallyCount, unsigned target);
+
+    enum class JumpKind {
+        None,
+        Exception,
+        Return,
+        LoopControl
+    };
+
     void pushExceptionHandler(ExceptionHandler::Type type, unsigned offset);
     void popExceptionHandler(ExceptionHandler::Type type);
     bool startExceptionHandler(Traced<Exception*> exception);
-    void startFinallySuite(ExceptionHandler* handler, Value returnValue);
     bool isHandlingException() const;
     bool isHandlingDeferredReturn() const;
+    bool isHandlingLoopControl() const;
     Exception* currentException();
-    Value currentDeferredReturn();
     ExceptionHandler* currentExceptionHandler();
+    bool maybeContinueHandlingException();
     void finishHandlingException();
 
   private:
@@ -132,8 +141,11 @@ struct Interpreter
 
     RootVector<ExceptionHandler*> exceptionHandlers;
     bool inExceptionHandler_;
-    bool exceptionIsReturn_;
-    Root<Value> exceptionOrReturn_;
+    JumpKind jumpKind_;
+    Root<Exception*> currentException_;
+    Root<Value> deferredReturnValue_;
+    unsigned remainingFinallyCount_;
+    unsigned loopControlTarget_;
 
     Interpreter();
     Frame* newFrame(Traced<Function*> function);
@@ -142,6 +154,8 @@ struct Interpreter
     TokenPos currentPos();
 
     bool run(Root<Value>& resultOut);
+
+    bool startNextFinallySuite(JumpKind jumpKind);
 
     enum CallStatus {
         CallError,

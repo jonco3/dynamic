@@ -239,12 +239,14 @@ struct ByteCompiler : public SyntaxVisitor
         isClassBlock(false),
         isGenerator(false),
         inAssignTarget(false),
-        inLoop(false)
+        loopHeadOffset(0)
     {}
 
     ~ByteCompiler() {
         assert(!inAssignTarget);
-        assert(!inLoop);
+        assert(contextStack.empty());
+        assert(loopHeadOffset == 0);
+        assert(breakInstrs.empty());
     }
 
     Block* buildModule(Traced<Object*> globals, const Syntax* s) {
@@ -334,6 +336,11 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
   private:
+    enum class Context {
+        Loop,
+        Finally
+    };
+
     ByteCompiler* parent;
     Root<Object*> topLevel;
     Root<Layout*> layout;
@@ -341,8 +348,17 @@ struct ByteCompiler : public SyntaxVisitor
     bool isClassBlock;
     bool isGenerator;
     bool inAssignTarget;
-    bool inLoop;
+    vector<Context> contextStack;
+    unsigned loopHeadOffset;
+    vector<unsigned> breakInstrs;
     TokenPos currentPos;
+
+    using AutoPushContext = AutoPushStack<Context>;
+    using AutoSetAndRestoreOffset = AutoSetAndRestoreValue<unsigned>;
+
+    bool inLoop() {
+        return contains(contextStack, Context::Loop);
+    }
 
     template <typename T, typename... Args>
     unsigned emit(Args&& ...args) {
@@ -356,6 +372,16 @@ struct ByteCompiler : public SyntaxVisitor
     template <typename T>
     void compile(const unique_ptr<T>& s) {
         s->accept(*this);
+    }
+
+    void setBreakTargets() {
+        unsigned pos = block->instrCount();
+        for (unsigned source : breakInstrs) {
+            InstrLoopControlJump *instr =
+                block->instr(source)->as<InstrLoopControlJump>();
+            instr->setTarget(pos);
+        }
+        breakInstrs.clear();
     }
 
     void build(const Syntax* s) {
@@ -652,16 +678,20 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxWhile& s) {
-        unsigned loopHead = block->nextIndex();
+        AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
+        vector<unsigned> oldBreakInstrs = move(breakInstrs);
+        breakInstrs.clear();
         compile(s.cond());
         unsigned branchToEnd = emit<InstrBranchIfFalse>();
         {
-            AutoSetAndRestore setInLoop(inLoop, true);
+            AutoPushContext enterLoop(contextStack, Context::Loop);
             compile(s.suite());
         }
         emit<InstrPop>();
-        emit<InstrBranchAlways>(block->offsetTo(loopHead));
+        emit<InstrBranchAlways>(block->offsetTo(loopHeadOffset));
         block->branchHere(branchToEnd);
+        setBreakTargets();
+        breakInstrs = move(oldBreakInstrs);
         emit<InstrConst>(None);
         // todo: else
     }
@@ -674,7 +704,10 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrGetMethod>("next");
 
         // 2. Call next on iterator and break if end (loop heap)
-        unsigned loopHead = emit<InstrIteratorNext>();
+        AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
+        vector<unsigned> oldBreakInstrs = move(breakInstrs);
+        breakInstrs.clear();
+        emit<InstrIteratorNext>();
         unsigned exitBranch = emit<InstrBranchIfFalse>();
 
         // 3. Assign results
@@ -687,14 +720,16 @@ struct ByteCompiler : public SyntaxVisitor
 
         // 4. Execute loop body
         {
-            AutoSetAndRestore setInLoop(inLoop, true);
+            AutoPushContext enterLoop(contextStack, Context::Loop);
             compile(s.suite());
         }
         emit<InstrPop>();
-        emit<InstrBranchAlways>(block->offsetTo(loopHead));
+        emit<InstrBranchAlways>(block->offsetTo(loopHeadOffset));
 
         // 5. Exit
         block->branchHere(exitBranch);
+        setBreakTargets();
+        breakInstrs = move(oldBreakInstrs);
         emit<InstrPop>();
         emit<InstrPop>();
         emit<InstrConst>(None);
@@ -784,8 +819,10 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxTry& s) {
         unsigned finallyBranch = 0;
-        if (s.finallySuite())
+        if (s.finallySuite()) {
+            contextStack.push_back(Context::Finally);
             finallyBranch = emit<InstrEnterFinallyRegion>();
+        }
         if (s.excepts().size() != 0) {
             emitTryCatch(s);
         } else {
@@ -798,6 +835,8 @@ struct ByteCompiler : public SyntaxVisitor
             compile(s.finallySuite());
             emit<InstrPop>();
             emit<InstrFinishExceptionHandler>();
+            assert(contextStack.back() == Context::Finally);
+            contextStack.pop_back();
         }
         emit<InstrConst>(None);
     }
@@ -838,20 +877,38 @@ struct ByteCompiler : public SyntaxVisitor
             block->branchHere(offset);
     }
 
+    enum class LoopExit {
+        Break,
+        Continue
+    };
+
+    unsigned countFinallyBlocksInLoop() {
+        unsigned count = 0;
+        for (auto i = contextStack.rbegin(); i != contextStack.rend(); i++) {
+            if (*i == Context::Finally)
+                count++;
+            else if (*i == Context::Loop)
+                break;
+        }
+        return count;
+    }
+
     virtual void visit(const SyntaxBreak& s) {
-        if (!inLoop)
+        if (!inLoop())
             throw ParseError(s.token(), "SyntaxError: 'break' outside loop");
-        assert(false); // todo: not implemented
+        unsigned finallyCount = countFinallyBlocksInLoop();
+        unsigned offset = emit<InstrLoopControlJump>(finallyCount);
+        breakInstrs.push_back(offset);
     }
 
     virtual void visit(const SyntaxContinue& s) {
-        if (!inLoop)
+        if (!inLoop())
             throw ParseError(s.token(), "SyntaxError: 'continue' outside loop");
-        assert(false); // todo: not implemented
+        unsigned finallyCount = countFinallyBlocksInLoop();
+        emit<InstrLoopControlJump>(finallyCount, loopHeadOffset);
     }
 
-    virtual void setPos(const TokenPos& pos)
-    {
+    virtual void setPos(const TokenPos& pos) {
         block->setNextPos(pos);
     }
 };

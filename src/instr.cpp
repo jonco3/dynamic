@@ -502,6 +502,8 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
         }
     }
 
+    cerr << left.type()->name() << " " << right.type()->name() << endl;
+
     interp.pushStack(gc.create<TypeError>(
                          "unsupported operand type(s) for augmented assignment"));
         return false;
@@ -535,6 +537,7 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
         interp.pushStack(result);
         return true;
     } else {
+        cerr << value.type()->name() << " " << update.type()->name() << endl;
         interp.pushStack(gc.create<TypeError>(
                              "unsupported operand type(s) for augmented assignment"));
         return false;
@@ -603,20 +606,11 @@ bool InstrLeaveFinallyRegion::execute(Interpreter& interp)
 
 bool InstrFinishExceptionHandler::execute(Interpreter& interp)
 {
-    if (interp.isHandlingException()) {
-        // Re-raise current exception.
-        Root<Exception*> exception(interp.currentException());
-        interp.finishHandlingException();
-        interp.pushStack(exception);
-        return false;
-    }
+    return interp.maybeContinueHandlingException();
+}
 
-    if (interp.isHandlingDeferredReturn()) {
-        Root<Value> value(interp.currentDeferredReturn());
-        interp.finishHandlingException();
-        interp.returnFromFrame(value);
-        return true;
-    }
-
+bool InstrLoopControlJump::execute(Interpreter& interp)
+{
+    interp.loopControlJump(finallyCount_, target_);
     return true;
 }

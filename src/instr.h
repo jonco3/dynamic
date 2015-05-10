@@ -71,7 +71,8 @@ using namespace std;
     instr(MatchCurrentException)                                             \
     instr(EnterFinallyRegion)                                                \
     instr(LeaveFinallyRegion)                                                \
-    instr(FinishExceptionHandler)
+    instr(FinishExceptionHandler)                                            \
+    instr(LoopControlJump)
 
 enum InstrType
 {
@@ -277,7 +278,7 @@ define_simple_instr(Not);
 
 struct Branch : public Instr
 {
-    Branch() : offset_(0) {}
+    Branch(int offset = 0) : offset_(offset) {}
     virtual bool isBranch() const { return true; };
 
     void setOffset(int offset) {
@@ -302,7 +303,7 @@ inline Branch* Instr::asBranch()
 struct InstrBranchAlways : public Branch
 {
     define_instr_members(Instr_BranchAlways, "BranchAlways");
-    InstrBranchAlways(int offset = 0) { offset_ = offset; }
+    InstrBranchAlways(int offset = 0) : Branch(offset) {}
 };
 
 #define define_branch_instr(name)                                             \
@@ -460,6 +461,29 @@ define_simple_instr(MatchCurrentException);
 define_branch_instr(EnterFinallyRegion);
 define_simple_instr(LeaveFinallyRegion);
 define_simple_instr(FinishExceptionHandler);
+
+struct InstrLoopControlJump : public Instr
+{
+    define_instr_members(Instr_LoopControlJump, "LoopControlJump");
+
+    InstrLoopControlJump(unsigned finallyCount, unsigned target = 0)
+      : finallyCount_(finallyCount), target_(target)
+    {}
+
+    void setTarget(unsigned target) {
+        assert(!target_);
+        assert(target);
+        target_ = target;
+    }
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << finallyCount_ << " " << target_;
+    }
+
+  private:
+    unsigned finallyCount_;
+    unsigned target_;
+};
 
 #undef instr_type
 #undef instr_name

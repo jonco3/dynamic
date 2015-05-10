@@ -39,8 +39,11 @@ Interpreter* Interpreter::instance_ = nullptr;
 Interpreter::Interpreter()
   : instrp(nullptr),
     inExceptionHandler_(false),
-    exceptionIsReturn_(false),
-    exceptionOrReturn_(None)
+    jumpKind_(JumpKind::None),
+    currentException_(nullptr),
+    deferredReturnValue_(None),
+    remainingFinallyCount_(0),
+    loopControlTarget_(0)
 {}
 
 bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
@@ -125,21 +128,32 @@ void Interpreter::popFrame()
 
 void Interpreter::returnFromFrame(Value value)
 {
-    AutoAssertNoGC nogo;
+    AutoAssertNoGC nogc;
 
-    Frame* frame = getFrame();
-    while (ExceptionHandler* handler = currentExceptionHandler()) {
-        exceptionHandlers.pop_back();
-        if (handler->type() == ExceptionHandler::FinallyHandler) {
-            // Defer return and run finally suite.
-            startFinallySuite(handler, value);
-            return;
-        }
+    // If we are in a finally block, defer the return and run the finally suite.
+    // todo: we can determine this statically
+    if (startNextFinallySuite(JumpKind::Return)) {
+        deferredReturnValue_ = value;
+        return;
     }
 
     // Normal return path.
     popFrame();
     pushStack(value);
+}
+
+void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
+{
+    if (finallyCount) {
+        bool ok = startNextFinallySuite(JumpKind::LoopControl);
+        assert(ok);
+        remainingFinallyCount_ = finallyCount - 1;
+        loopControlTarget_ = target;
+        return;
+    }
+
+    instrp = getFrame()->block()->startInstr() + target;
+    return;
 }
 
 void Interpreter::resumeGenerator(Traced<Frame*> frame,
@@ -203,8 +217,8 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
         return false;
 
     inExceptionHandler_ = true;
-    exceptionIsReturn_ = false;
-    exceptionOrReturn_ = exception;
+    jumpKind_ = JumpKind::Exception;
+    currentException_ = exception;
     ExceptionHandler* handler = exceptionHandlers.back();
     exceptionHandlers.pop_back();
     while (getFrame() != handler->frame())
@@ -213,42 +227,93 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
     return true;
 }
 
-void Interpreter::startFinallySuite(ExceptionHandler* handler, Value returnValue)
+bool Interpreter::startNextFinallySuite(JumpKind jumpKind)
 {
-    inExceptionHandler_ = true;
-    exceptionIsReturn_ = true;
-    exceptionOrReturn_ = returnValue;
-    instrp = getFrame()->block()->startInstr() + handler->offset();
+    assert(jumpKind == JumpKind::Return || jumpKind == JumpKind::LoopControl);
+    Frame* frame = getFrame();
+    while (ExceptionHandler* handler = currentExceptionHandler()) {
+        if (handler->frame() != frame)
+            break;
+        exceptionHandlers.pop_back();
+        if (handler->type() == ExceptionHandler::FinallyHandler) {
+            inExceptionHandler_ = true;
+            jumpKind_ = jumpKind;
+            instrp = getFrame()->block()->startInstr() + handler->offset();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool Interpreter::isHandlingException() const
 {
-    return inExceptionHandler_ && !exceptionIsReturn_;
+    return inExceptionHandler_ && jumpKind_ == JumpKind::Exception;
 }
 
 bool Interpreter::isHandlingDeferredReturn() const
 {
-    return inExceptionHandler_ && exceptionIsReturn_;
+    return inExceptionHandler_ && jumpKind_ == JumpKind::Return;
+}
+
+bool Interpreter::isHandlingLoopControl() const
+{
+    return inExceptionHandler_ && jumpKind_ == JumpKind::LoopControl;
 }
 
 Exception* Interpreter::currentException()
 {
     assert(isHandlingException());
-    return exceptionOrReturn_.asObject()->as<Exception>();
+    assert(currentException_);
+    return currentException_;
 }
 
-Value Interpreter::currentDeferredReturn()
+bool Interpreter::maybeContinueHandlingException()
 {
-    assert(isHandlingDeferredReturn());
-    return exceptionOrReturn_;
+    switch (jumpKind_) {
+      case JumpKind::Exception: {
+        // Re-raise current exception.
+        assert(currentException_);
+        Root<Exception*> exception(currentException_);
+        finishHandlingException();
+        if (!startExceptionHandler(exception)) {
+            pushStack(exception);
+            return false;
+        }
+        break;
+      }
+
+      case JumpKind::Return: {
+        Root<Value> value(deferredReturnValue_);
+        finishHandlingException();
+        returnFromFrame(value);
+        break;
+      }
+
+      case JumpKind::LoopControl: {
+        unsigned finallyCount = remainingFinallyCount_;
+        unsigned offset = loopControlTarget_;
+        finishHandlingException();
+        loopControlJump(finallyCount, offset);
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    return true;
 }
 
 void Interpreter::finishHandlingException()
 {
     assert(inExceptionHandler_);
     inExceptionHandler_ = false;
-    exceptionIsReturn_ = false;
-    exceptionOrReturn_ = None;
+    jumpKind_ = JumpKind::None;
+    currentException_ = nullptr;
+    deferredReturnValue_ = None;
+    remainingFinallyCount_ = 0;
+    loopControlTarget_ = 0;
 }
 
 ExceptionHandler* Interpreter::currentExceptionHandler()

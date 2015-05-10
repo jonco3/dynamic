@@ -1,21 +1,56 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
-struct AutoSetAndRestore
+#include <vector>
+
+template <typename T>
+struct AutoSetAndRestoreValue
 {
-    AutoSetAndRestore(bool& var, bool newValue)
+    AutoSetAndRestoreValue(T& var, T newValue)
       : var_(var), prevValue_(var)
     {
         var_ = newValue;
     }
 
-    ~AutoSetAndRestore() {
+    ~AutoSetAndRestoreValue() {
         var_ = prevValue_;
     }
 
   private:
-    bool& var_;
-    bool prevValue_;
+    T& var_;
+    T prevValue_;
 };
+
+using AutoSetAndRestore = AutoSetAndRestoreValue<bool>;
+
+template <typename T>
+struct AutoPushStack
+{
+    AutoPushStack(vector<T>& stack, T value)
+      : stack_(stack)
+    {
+        stack_.push_back(value);
+#ifdef DEBUG
+        value_ = value;
+#endif
+    }
+
+    ~AutoPushStack() {
+        assert(stack_.back() == value_);
+        stack_.pop_back();
+    }
+
+  private:
+    vector<T>& stack_;
+#ifdef DEBUG
+    T value_;
+#endif
+};
+
+template <typename T>
+inline bool contains(const vector<T>& v, T value)
+{
+    return find(v.begin(), v.end(), value) != v.end();
+}
 
 #endif
