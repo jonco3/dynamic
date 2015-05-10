@@ -12,6 +12,7 @@ struct SyntaxPrinter : public SyntaxVisitor
 
     void setPos(const TokenPos& pos) override {}
 
+    void visitNullary(const Syntax& s);
     void visitUnary(const UnarySyntax& s);
 
     template <typename BaseT, typename LeftT, typename RightT>
@@ -36,6 +37,11 @@ void SyntaxPrinter::printList(const vector<T>& elems, string seperator)
     }
 }
 
+void SyntaxPrinter::visitNullary(const Syntax& s)
+{
+    os_ << s.name();
+}
+
 void SyntaxPrinter::visitUnary(const UnarySyntax& s)
 {
     os_ << s.name() << " " << *s.right();
@@ -45,11 +51,6 @@ template <typename BaseT, typename LeftT, typename RightT>
 void SyntaxPrinter::visitBinary(const BinarySyntax<BaseT, LeftT, RightT>& s)
 {
     os_ << *s.left() << " " << s.name() << " " << *s.right();
-}
-
-void SyntaxPrinter::visit(const SyntaxPass& s)
-{
-    os_ << "pass";
 }
 
 void SyntaxPrinter::visit(const SyntaxBlock& s)
@@ -100,6 +101,10 @@ void SyntaxPrinter::visit(const SyntaxDict& s)
     }
     os_ << "}";
 }
+
+void SyntaxPrinter::visit(const SyntaxPass& s) { visitNullary(s); }
+void SyntaxPrinter::visit(const SyntaxBreak& s) { visitNullary(s); }
+void SyntaxPrinter::visit(const SyntaxContinue& s) { visitNullary(s); }
 
 void SyntaxPrinter::visit(const SyntaxNeg& s) { visitUnary(s); }
 void SyntaxPrinter::visit(const SyntaxPos& s) { visitUnary(s); }

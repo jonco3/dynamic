@@ -370,6 +370,10 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_Yield)) {
         isGenerator = true;
         return make_unique<SyntaxYield>(token, expression());
+    } else if (opt(Token_Break)) {
+        return make_unique<SyntaxBreak>(token);
+    } else if (opt(Token_Continue)) {
+        return make_unique<SyntaxContinue>(token);
     }
 
     unique_ptr<Syntax> expr = parseExprOrExprList();

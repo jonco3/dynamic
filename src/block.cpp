@@ -838,6 +838,18 @@ struct ByteCompiler : public SyntaxVisitor
             block->branchHere(offset);
     }
 
+    virtual void visit(const SyntaxBreak& s) {
+        if (!inLoop)
+            throw ParseError(s.token(), "SyntaxError: 'break' outside loop");
+        assert(false); // todo: not implemented
+    }
+
+    virtual void visit(const SyntaxContinue& s) {
+        if (!inLoop)
+            throw ParseError(s.token(), "SyntaxError: 'continue' outside loop");
+        assert(false); // todo: not implemented
+    }
+
     virtual void setPos(const TokenPos& pos)
     {
         block->setNextPos(pos);

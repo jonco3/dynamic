@@ -48,7 +48,9 @@ using namespace std;
     syntax(Global)                                                            \
     syntax(AugAssign)                                                         \
     syntax(Yield)                                                             \
-    syntax(Try)
+    syntax(Try)                                                               \
+    syntax(Break)                                                             \
+    syntax(Continue)
 
 enum SyntaxType
 {
@@ -162,6 +164,24 @@ struct BinarySyntax : public Base
     unique_ptr<R> right_;
 };
 
+#define define_nullary_syntax(name, nameStr)                                  \
+    struct Syntax##name : public Syntax                                       \
+    {                                                                         \
+        define_syntax_members(name, nameStr);                                 \
+        Syntax##name(const Token& token)                                      \
+          : Syntax(token)                                                     \
+        {}                                                                    \
+    }
+
+#define define_unary_syntax(name, nameStr)                                    \
+    struct Syntax##name : public UnarySyntax                                  \
+    {                                                                         \
+        define_syntax_members(name, nameStr);                                 \
+        Syntax##name(const Token& token, unique_ptr<Syntax> r)                \
+          : UnarySyntax(token, move(r))                                       \
+        {}                                                                    \
+    }
+
 #define define_binary_syntax(BaseType, LeftType, RightType, name, nameStr)    \
     struct Syntax##name : public BinarySyntax<BaseType, LeftType, RightType>  \
     {                                                                         \
@@ -178,15 +198,6 @@ struct BinarySyntax : public Base
 #define define_simple_binary_syntax(name, nameStr)                            \
     define_binary_syntax(Syntax, Syntax, Syntax, name, nameStr)
 
-#define define_unary_syntax(name, nameStr)                                    \
-    struct Syntax##name : public UnarySyntax                                  \
-    {                                                                         \
-        define_syntax_members(name, nameStr);                                 \
-        Syntax##name(const Token& token, unique_ptr<Syntax> r)                \
-          : UnarySyntax(token, move(r))                                       \
-        {}                                                                    \
-    }
-
 struct SyntaxTarget : Syntax
 {
     SyntaxTarget(const Token& token) : Syntax(token) {}
@@ -197,11 +208,9 @@ struct SyntaxSingleTarget : SyntaxTarget
     SyntaxSingleTarget(const Token& token) : SyntaxTarget(token) {}
 };
 
-struct SyntaxPass : public Syntax
-{
-    define_syntax_members(Pass, "pass");
-    SyntaxPass(const Token& token) : Syntax(token) {}
-};
+define_nullary_syntax(Pass, "pass");
+define_nullary_syntax(Break, "break");
+define_nullary_syntax(Continue, "continue");
 
 struct SyntaxBlock : public Syntax
 {
