@@ -502,8 +502,6 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
         }
     }
 
-    cerr << left.type()->name() << " " << right.type()->name() << endl;
-
     interp.pushStack(gc.create<TypeError>(
                          "unsupported operand type(s) for augmented assignment"));
         return false;
@@ -537,7 +535,6 @@ bool InstrAugAssignUpdate::execute(Interpreter& interp)
         interp.pushStack(result);
         return true;
     } else {
-        cerr << value.type()->name() << " " << update.type()->name() << endl;
         interp.pushStack(gc.create<TypeError>(
                              "unsupported operand type(s) for augmented assignment"));
         return false;
