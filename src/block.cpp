@@ -239,7 +239,8 @@ struct ByteCompiler : public SyntaxVisitor
         isClassBlock(false),
         isGenerator(false),
         inAssignTarget(false),
-        loopHeadOffset(0)
+        loopHeadOffset(0),
+        stackDepth(0)
     {}
 
     ~ByteCompiler() {
@@ -351,6 +352,7 @@ struct ByteCompiler : public SyntaxVisitor
     vector<Context> contextStack;
     unsigned loopHeadOffset;
     vector<unsigned> breakInstrs;
+    unsigned stackDepth;
     TokenPos currentPos;
 
     using AutoPushContext = AutoPushStack<Context>;
@@ -384,9 +386,9 @@ struct ByteCompiler : public SyntaxVisitor
         breakInstrs.clear();
     }
 
-    void maybeAssertStackDepth(unsigned expected) {
+    void maybeAssertStackDepth(unsigned delta = 0) {
 #if defined(DEBUG) && !defined(BUILD_TESTS)
-        emit<InstrAssertStackDepth>(expected);
+        emit<InstrAssertStackDepth>(stackDepth + delta);
 #endif
     }
 
@@ -397,8 +399,10 @@ struct ByteCompiler : public SyntaxVisitor
         if (!parent)
             topLevel->extend(layout);
         block = gc.create<Block>(layout);
-        maybeAssertStackDepth(0);
+        assert(stackDepth == 0);
+        maybeAssertStackDepth();
         compile(s);
+        assert(stackDepth == 0);
         maybeAssertStackDepth(1);
     }
 
@@ -437,15 +441,19 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxBlock& s) {
+        maybeAssertStackDepth();
         if (s.stmts().empty()) {
             emit<InstrConst>(None);
             return;
         }
 
-        for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i) {
-            if (i != s.stmts().begin())
+        bool first = true;
+        for (const auto& i : s.stmts()) {
+            if (!first)
                 emit<InstrPop>();
-            compile((*i));
+            compile(i);
+            maybeAssertStackDepth(1);
+            first = false;
         }
     }
 
@@ -674,12 +682,15 @@ struct ByteCompiler : public SyntaxVisitor
             compile(suites[i].cond);
             lastCondFailed = emit<InstrBranchIfFalse>();
             compile(suites[i].block);
+            emit<InstrPop>();
             if (s.elseBranch() || i != suites.size() - 1)
                 branchesToEnd.push_back(emit<InstrBranchAlways>());
         }
         block->branchHere(lastCondFailed);
-        if (s.elseBranch())
+        if (s.elseBranch()) {
             compile(s.elseBranch());
+            emit<InstrPop>();
+        }
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
             block->branchHere(branchesToEnd[i]);
         emit<InstrConst>(None);
@@ -694,8 +705,8 @@ struct ByteCompiler : public SyntaxVisitor
         {
             AutoPushContext enterLoop(contextStack, Context::Loop);
             compile(s.suite());
+            emit<InstrPop>();
         }
-        emit<InstrPop>();
         emit<InstrBranchAlways>(block->offsetTo(loopHeadOffset));
         block->branchHere(branchToEnd);
         setBreakTargets();
@@ -710,6 +721,7 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrGetMethod>("__iter__");
         emit<InstrCall>(1);
         emit<InstrGetMethod>("next");
+        stackDepth += 2; // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop heap)
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
@@ -723,15 +735,15 @@ struct ByteCompiler : public SyntaxVisitor
             assert(!inAssignTarget);
             AutoSetAndRestore setInAssign(inAssignTarget, true);
             compile(s.targets());
+            emit<InstrPop>();
         }
-        emit<InstrPop>();
 
         // 4. Execute loop body
         {
             AutoPushContext enterLoop(contextStack, Context::Loop);
             compile(s.suite());
+            emit<InstrPop>();
         }
-        emit<InstrPop>();
         emit<InstrBranchAlways>(block->offsetTo(loopHeadOffset));
 
         // 5. Exit
@@ -740,6 +752,7 @@ struct ByteCompiler : public SyntaxVisitor
         breakInstrs = move(oldBreakInstrs);
         emit<InstrPop>();
         emit<InstrPop>();
+        stackDepth -= 2;
         emit<InstrConst>(None);
 
         // todo: else clause
