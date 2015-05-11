@@ -384,6 +384,12 @@ struct ByteCompiler : public SyntaxVisitor
         breakInstrs.clear();
     }
 
+    void maybeAssertStackDepth(unsigned expected) {
+#if defined(DEBUG) && !defined(BUILD_TESTS)
+        emit<InstrAssertStackDepth>(expected);
+#endif
+    }
+
     void build(const Syntax* s) {
         assert(!block);
         assert(topLevel);
@@ -391,7 +397,9 @@ struct ByteCompiler : public SyntaxVisitor
         if (!parent)
             topLevel->extend(layout);
         block = gc.create<Block>(layout);
+        maybeAssertStackDepth(0);
         compile(s);
+        maybeAssertStackDepth(1);
     }
 
     unsigned lookupLexical(Name name) {

@@ -126,6 +126,15 @@ void Interpreter::popFrame()
     frames.pop_back();
 }
 
+#ifdef DEBUG
+unsigned Interpreter::frameStackDepth()
+{
+    assert(!frames.empty());
+    Frame* frame = frames.back();
+    return stackPos() - frame->stackPos();
+}
+#endif
+
 void Interpreter::returnFromFrame(Value value)
 {
     AutoAssertNoGC nogc;

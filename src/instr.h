@@ -72,7 +72,8 @@ using namespace std;
     instr(EnterFinallyRegion)                                                \
     instr(LeaveFinallyRegion)                                                \
     instr(FinishExceptionHandler)                                            \
-    instr(LoopControlJump)
+    instr(LoopControlJump)                                                   \
+    instr(AssertStackDepth)
 
 enum InstrType
 {
@@ -483,6 +484,19 @@ struct InstrLoopControlJump : public Instr
   private:
     unsigned finallyCount_;
     unsigned target_;
+};
+
+struct InstrAssertStackDepth : public Instr
+{
+    define_instr_members(Instr_AssertStackDepth, "AssertStackDepth");
+    InstrAssertStackDepth(unsigned expected) : expected_(expected) {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << expected_;
+    }
+
+  private:
+    unsigned expected_;
 };
 
 #undef instr_type

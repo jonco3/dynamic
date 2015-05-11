@@ -23,6 +23,7 @@ struct GeneratorIter : public Object
   private:
     enum State
     {
+        Initial,
         Suspended,
         Running,
         Finished

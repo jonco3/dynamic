@@ -237,6 +237,7 @@ bool InstrLambda::execute(Interpreter& interp)
     TracedVector<Value> defaults(
         interp.stackSlice(defaultCount()));
     Object* obj = gc.create<Function>(funcName_, info, defaults, frame);
+    interp.popStack(defaultCount());
     interp.pushStack(Value(obj));
     return true;
 }
@@ -609,5 +610,18 @@ bool InstrFinishExceptionHandler::execute(Interpreter& interp)
 bool InstrLoopControlJump::execute(Interpreter& interp)
 {
     interp.loopControlJump(finallyCount_, target_);
+    return true;
+}
+
+bool InstrAssertStackDepth::execute(Interpreter& interp)
+{
+    unsigned actual = interp.frameStackDepth();
+    if (actual != expected_) {
+        cerr << "Excpected stack depth " << dec << expected_;
+        cerr << " but got " << actual << " in: " << endl;
+        interp.getFrame()->block()->print(cerr);
+        cerr << endl;
+        assert(actual == expected_);
+    }
     return true;
 }

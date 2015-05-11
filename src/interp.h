@@ -103,6 +103,9 @@ struct Interpreter
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
     void returnFromFrame(Value value);
+#ifdef DEBUG
+    unsigned frameStackDepth();
+#endif
 
     void replaceInstr(Instr* current, Instr* newInstr);
     bool replaceInstrAndRestart(Instr* current, Instr* newInstr);

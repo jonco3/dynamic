@@ -41,7 +41,7 @@ void GeneratorIter::init()
 
 GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Frame*> frame)
   : Object(ObjectClass),
-    state_(Suspended),
+    state_(Initial),
     func_(func),
     frame_(frame),
     ipOffset_(0)
@@ -69,19 +69,21 @@ bool GeneratorIter::resume(Interpreter& interp)
 {
     log("GeneratorIter::resume", this, state_);
     switch (state_) {
-      case Running:
-        assert(savedStack_.empty());
-        interp.pushStack(gc.create<ValueError>("Generator running"));
-        return false;
-
-      case Suspended: {
+      case Initial: {
+      case Suspended:
         Root<Frame*> frame(frame_); // todo: Heap<T>
         interp.resumeGenerator(frame, ipOffset_, savedStack_);
-        interp.pushStack(None);
+        if (state_ == Suspended)
+            interp.pushStack(None);
         state_ = Running;
         assert(savedStack_.empty());
         return true;
       }
+
+      case Running:
+        assert(savedStack_.empty());
+        interp.pushStack(gc.create<ValueError>("Generator running"));
+        return false;
 
       case Finished:
         assert(savedStack_.empty());
