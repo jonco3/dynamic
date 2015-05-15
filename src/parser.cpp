@@ -480,12 +480,22 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
         unique_ptr<SyntaxBlock> elseSuite;
         vector<unique_ptr<ExceptInfo>> excepts;
         unique_ptr<SyntaxBlock> finallySuite;
+        bool hadExpr = true;
         while (opt(Token_Except)) {
+            if (!hadExpr) {
+                throw ParseError(token,
+                                 "Expresion-less except clause must be last");
+            }
             Token token = currentToken();
-            unique_ptr<Syntax> expr(parseExprOrExprList());
+            unique_ptr<Syntax> expr;
             unique_ptr<SyntaxTarget> as;
-            if (opt(Token_As))
-                as = parseTarget();
+            if (token.type != Token_Colon) {
+                expr = parseExprOrExprList();
+                if (opt(Token_As))
+                    as = parseTarget();
+            } else {
+                hadExpr = false;
+            }
             unique_ptr<SyntaxBlock> suite(parseSuite());
             excepts.emplace_back(new ExceptInfo(token, move(expr), move(as), move(suite)));
         }

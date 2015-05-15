@@ -4,6 +4,14 @@ class TestError(RuntimeError):
     def __init__(self, message):
         self.message = message
 
+# Catch exception
+caught = False
+try:
+    raise TestError("foo")
+except:
+    caught = True
+assert caught
+
 # Catch exception via exact class
 caught = False
 try:
@@ -11,7 +19,6 @@ try:
 except TestError as e:
     caught = True
     assert e.message == "foo"
-    e = None
 assert caught
 
 # Catch exception via superclass
@@ -20,7 +27,6 @@ try:
     raise TestError("foo")
 except RuntimeError as e:
     caught = True
-    assert e.message == "foo"
 assert caught
 
 # Catch exception with multiple except blocks
@@ -31,7 +37,6 @@ except NameError as e:
     pass
 except TestError as e:
     caught = True
-    assert e.message == "foo"
 assert caught
 
 # Catch exception with multiple except blocks
@@ -40,9 +45,28 @@ try:
     raise TestError("foo")
 except RuntimeError as e:
     caught = True
-    assert e.message == "foo"
 except TestError as e:
     pass
+assert caught
+
+# Catch exception with multiple except blocks
+caught = False
+try:
+    raise TestError("foo")
+except TestError as e:
+    caught = True
+except:
+    pass
+assert caught
+
+# Catch exception with multiple except blocks
+caught = False
+try:
+    raise TestError("foo")
+except NameError as e:
+    pass
+except:
+    caught = True
 assert caught
 
 # Catch exception from called function
@@ -54,7 +78,6 @@ try:
     a()
 except TestError as e:
     caught = True
-    assert e.message == "foo"
 assert caught
 
 # Catch exception from called function
@@ -70,8 +93,7 @@ def b1():
         b2()
     except TestError as e:
         caught = True
-        assert e.message == "foo"
-    assert caught
+        assert caught
 
 b1()
 
@@ -114,7 +136,6 @@ try:
     raise TestError("foo")
 except exception1 as e:
     caught = True
-    assert e.message == "foo"
 except exception2 as e:
     assert False
 assert caught
@@ -135,8 +156,16 @@ try:
         finals += 1
 except TestError as e:
     caught = True
-    assert e.message == "foo"
 assert caught
 assert finals == 1
+
+elseRan = False
+try:
+    pass
+except:
+    pass
+else:
+    elseRan = True
+assert elseRan
 
 print('ok')

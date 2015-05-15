@@ -590,6 +590,12 @@ bool InstrMatchCurrentException::execute(Interpreter& interp)
     return true;
 }
 
+bool InstrHandleCurrentException::execute(Interpreter& interp)
+{
+    interp.finishHandlingException();
+    return true;
+}
+
 bool InstrEnterFinallyRegion::execute(Interpreter& interp)
 {
     interp.pushExceptionHandler(ExceptionHandler::FinallyHandler, offset_);

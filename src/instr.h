@@ -69,6 +69,7 @@ using namespace std;
     instr(EnterCatchRegion)                                                  \
     instr(LeaveCatchRegion)                                                  \
     instr(MatchCurrentException)                                             \
+    instr(HandleCurrentException)                                            \
     instr(EnterFinallyRegion)                                                \
     instr(LeaveFinallyRegion)                                                \
     instr(FinishExceptionHandler)                                            \
@@ -459,6 +460,7 @@ define_simple_instr(SuspendGenerator);
 define_branch_instr(EnterCatchRegion);
 define_simple_instr(LeaveCatchRegion);
 define_simple_instr(MatchCurrentException);
+define_simple_instr(HandleCurrentException);
 define_branch_instr(EnterFinallyRegion);
 define_simple_instr(LeaveFinallyRegion);
 define_simple_instr(FinishExceptionHandler);

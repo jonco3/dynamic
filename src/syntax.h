@@ -5,6 +5,7 @@
 #include "specials.h"
 #include "token.h"
 
+#include <cassert>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -695,7 +696,10 @@ struct ExceptInfo
         expr_(move(expr)),
         as_(move(as)),
         suite_(move(suite))
-    {}
+    {
+        assert(!as_ || expr_);
+        assert(suite_);
+    }
 
     const Token& token() const { return token_; }
     const Syntax* expr() const { return expr_.get(); }

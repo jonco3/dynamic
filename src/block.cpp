@@ -863,38 +863,47 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void emitTryCatch(const SyntaxTry& s) {
-        unsigned handlerBranch =
-            emit<InstrEnterCatchRegion>();
+        unsigned handlerBranch = emit<InstrEnterCatchRegion>();
         compile(s.trySuite());
         emit<InstrPop>();
         emit<InstrLeaveCatchRegion>();
-        vector<unsigned> handledBranches;
+        unsigned suiteEndBranch = emit<InstrBranchAlways>();
+
+        bool fullyHandled = false;
+        vector<unsigned> exceptEndBranches;
         for (const auto& e : s.excepts()) {
-            handledBranches.push_back(
-                emit<InstrBranchAlways>());
+            assert(!fullyHandled);
             block->branchHere(handlerBranch);
-            compile(e->expr());
-            emit<InstrMatchCurrentException>();
-            handlerBranch = emit<InstrBranchIfFalse>();
-            if (e->as()) {
-                assert(!inAssignTarget);
-                AutoSetAndRestore setInAssign(inAssignTarget, true);
-                compile(e->as());
+            if (e->expr()) {
+                compile(e->expr());
+                emit<InstrMatchCurrentException>();
+                handlerBranch = emit<InstrBranchIfFalse>();
+                if (e->as()) {
+                    assert(!inAssignTarget);
+                    AutoSetAndRestore setInAssign(inAssignTarget, true);
+                    compile(e->as());
+                }
+                emit<InstrPop>();
+            } else {
+                assert(!e->as());
+                fullyHandled = true;
+                emit<InstrHandleCurrentException>();
             }
-            emit<InstrPop>();
             compile(e->suite());
             emit<InstrPop>();
+            exceptEndBranches.push_back(emit<InstrBranchAlways>());
         }
+
+        block->branchHere(suiteEndBranch);
         if (s.elseSuite()) {
-            handledBranches.push_back(
-                emit<InstrBranchAlways>());
-            block->branchHere(handlerBranch);
             compile(s.elseSuite());
             emit<InstrPop>();
         }
-        block->branchHere(handlerBranch);
+
+        if (!fullyHandled)
+            block->branchHere(handlerBranch);
         emit<InstrFinishExceptionHandler>();
-        for (unsigned offset: handledBranches)
+        for (unsigned offset: exceptEndBranches)
             block->branchHere(offset);
     }
 
