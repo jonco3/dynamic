@@ -107,22 +107,26 @@ Instr** Block::findInstr(unsigned type)
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
-    DefinitionFinder(Layout* layout)
-      : inAssignTarget_(false), layout_(layout)
+    DefinitionFinder(Layout* layout, vector<Name>& globalsOut)
+      : inAssignTarget_(false),
+        layout_(layout),
+        globals_(globalsOut)
     {}
 
     ~DefinitionFinder() {
         assert(!inAssignTarget_);
     }
 
-    static Layout* buildLayout(const Syntax *s, Layout* layout) {
-        DefinitionFinder df(layout);
+    static Layout* buildLayout(const Syntax *s, Layout* layout,
+                               vector<Name>& globalsOut)
+    {
+        DefinitionFinder df(layout, globalsOut);
         s->accept(df);
         return df.layout_;
     }
 
     void addName(Name name) {
-        if (find(globals_.begin(), globals_.end(), name) == globals_.end())
+        if (!contains(globals_, name) && !contains(nonLocals_, name))
             layout_ = layout_->maybeAddName(name);
     }
 
@@ -145,11 +149,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     virtual void visit(const SyntaxName& s) {
-        if (inAssignTarget_ &&
-            find(globals_.begin(), globals_.end(), s.id()) == globals_.end())
-        {
+        if (inAssignTarget_)
             addName(s.id());
-        }
     }
 
     virtual void visit(const SyntaxDef& s) {
@@ -160,19 +161,26 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         addName(s.id());
     }
 
-    virtual void visit(const SyntaxGlobal& s) {
-        const vector<Name>& names = s.names();
-        for (auto i = names.begin(); i != names.end(); i++) {
-            if (layout_->hasName(*i)) {
-                throw ParseError(s.token(),
-                    "name " + *i + " is assigned to before global declaration");
-            }
+    void addGlobalOrNonLocalNames(const Token& token,
+                                  const vector<Name>& names,
+                                  vector<Name>& dest,
+                                  const vector<Name>& others)
+    {
+        for (auto name : names) {
+            if (layout_->hasName(name))
+                throw ParseError(token, "name assigned to before declaration");
+            if (contains(others, name))
+                throw ParseError(token, "name is nonlocal and global");
+            dest.push_back(name);
         }
-        globals_.insert(globals_.end(), names.begin(), names.end());
+    }
+
+    virtual void visit(const SyntaxGlobal& s) {
+        addGlobalOrNonLocalNames(s.token(), s.names(), globals_, nonLocals_);
     }
 
     virtual void visit(const SyntaxNonLocal& s) {
-        // todo
+        addGlobalOrNonLocalNames(s.token(), s.names(), nonLocals_, globals_);
     }
 
     // Recurse into local blocks
@@ -230,7 +238,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
   private:
     bool inAssignTarget_;
     Root<Layout*> layout_;
-    vector<Name> globals_;
+    vector<Name>& globals_;
+    vector<Name> nonLocals_;
 };
 
 struct ByteCompiler : public SyntaxVisitor
@@ -352,6 +361,7 @@ struct ByteCompiler : public SyntaxVisitor
     ByteCompiler* parent;
     Root<Object*> topLevel;
     Root<Layout*> layout;
+    vector<Name> globals;
     Root<Block*> block;
     bool isClassBlock;
     bool isGenerator;
@@ -406,7 +416,7 @@ struct ByteCompiler : public SyntaxVisitor
     void build(const Syntax* s) {
         assert(!block);
         assert(topLevel);
-        layout = DefinitionFinder::buildLayout(s, layout);
+        layout = DefinitionFinder::buildLayout(s, layout, globals);
         if (!parent)
             topLevel->extend(layout);
         block = gc.create<Block>(layout);
@@ -415,18 +425,6 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s);
         assert(stackDepth == 0);
         maybeAssertStackDepth(1);
-    }
-
-    unsigned lookupLexical(Name name) {
-        int count = 1;
-        ByteCompiler* b = parent;
-        while (b && b->parent) {
-            if (b->block->layout()->hasName(name))
-                return count;
-            ++count;
-            b = b->parent;
-        }
-        return 0;
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
@@ -576,29 +574,50 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s.targets());
     }
 
+    bool lookupLocal(Name name) {
+        return parent && block->layout()->hasName(name);
+    }
+
+    unsigned lookupLexical(Name name) {
+        if (contains(globals, name))
+            return 0;
+
+        int count = 1;
+        ByteCompiler* b = parent;
+        while (b && b->parent) {
+            if (b->block->layout()->hasName(name))
+                return count;
+            ++count;
+            b = b->parent;
+        }
+        return 0;
+    }
+
+    bool lookupGlobal(Name name) {
+        return topLevel->hasAttr(name) || contains(globals, name);
+    }
+
     virtual void visit(const SyntaxName& s) {
         Name name = s.id();
         switch(contextStack.back()) {
           case Context::Assign:
-            if (parent && block->layout()->hasName(name))
+            if (lookupLocal(name))
                 emit<InstrSetLocal>(name);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrSetLexical>(frame, name);
-            else if (topLevel->hasAttr(name))
+            else if (lookupGlobal(name))
                 emit<InstrSetGlobal>(topLevel, name);
-            else if (Builtin && Builtin->hasAttr(name))
-                emit<InstrSetGlobal>(Builtin, name);
             else
                 throw ParseError(s.token(),
                                  string("Name is not defined: ") + name);
             break;
 
           case Context::Delete:
-            if (parent && block->layout()->hasName(name))
+            if (lookupLocal(name))
                 emit<InstrDelLocal>(name);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrDelLexical>(frame, name);
-            else if (topLevel->hasAttr(name))
+            else if (lookupGlobal(name))
                 emit<InstrDelGlobal>(topLevel, name);
             else
                 throw ParseError(s.token(),
@@ -607,17 +626,17 @@ struct ByteCompiler : public SyntaxVisitor
             break;
 
           default:
-            if (parent && block->layout()->hasName(name))
+            if (lookupLocal(name))
                 emit<InstrGetLocal>(name);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrGetLexical>(frame, name);
-            else if (topLevel->hasAttr(name))
+            else if (lookupGlobal(name))
                 emit<InstrGetGlobal>(topLevel, name);
             else if (Builtin && Builtin->hasAttr(name))
                 emit<InstrGetGlobal>(Builtin, name);
             else
-                throw ParseError(s.token(),
-                                 string("Name is not defined: ") + name);
+                // todo: this is wrong, we need a scope chain that's checked at rutime with inner topLevel and then Builtins
+                emit<InstrGetGlobal>(topLevel, name);
             break;
         }
     }
