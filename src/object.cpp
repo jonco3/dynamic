@@ -99,7 +99,7 @@ int Object::findOwnAttr(Name name) const
 
 bool Object::hasOwnAttr(Name name) const
 {
-    return findOwnAttr(name) != -1;
+    return findOwnAttr(name) != Layout::NotFound;
 }
 
 bool Object::hasAttr(Name name) const
@@ -127,7 +127,7 @@ bool Object::hasAttr(Name name) const
 int Object::findAttr(Name name, Root<Class*>& classOut) const
 {
     int slot = findOwnAttr(name);
-    if (slot != -1) {
+    if (slot != Layout::NotFound) {
         classOut = nullptr;
         return slot;
     }
@@ -141,7 +141,7 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
 
     while (Class* cls = base.toObject()->as<Class>()) {
         slot = cls->findOwnAttr(name);
-        if (slot != -1) {
+        if (slot != Layout::NotFound) {
             classOut = cls;
             return slot;
         }
@@ -156,7 +156,7 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
 bool Object::maybeGetOwnAttr(Name name, Value& valueOut, AutoAssertNoGC& nogc) const
 {
     int slot = layout_->lookupName(name);
-    if (slot == -1)
+    if (slot == Layout::NotFound)
         return false;
     return getSlot(name, slot, valueOut, nogc);
 }
@@ -217,7 +217,7 @@ bool Object::getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc)
 void Object::setAttr(Name name, Traced<Value> value)
 {
     int slot = layout_->lookupName(name);
-    if (slot == -1) {
+    if (slot == Layout::NotFound) {
         layout_ = layout_->addName(name);
         slot = slots_.size();
         assert(layout_->lookupName(name) == slot);
@@ -225,6 +225,35 @@ void Object::setAttr(Name name, Traced<Value> value)
     }
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     slots_[slot] = value;
+}
+
+bool Object::maybeDelOwnAttr(Name name)
+{
+    Layout* layout = layout_->findAncestor(name);
+    if (!layout)
+        return false;
+
+    if (layout == layout_) {
+        // Deleting the last slot is simple.
+        assert(layout->slotCount() == slots_.size());
+        slots_.resize(slots_.size() - 1);
+        layout_ = layout_->parent();
+        return true;
+    }
+
+    int count = layout_->slotCount() - layout->slotCount();
+    assert(count >= 0);
+    vector<Name> names;
+    names.reserve(count);
+    while (layout_ != layout) {
+        names.push_back(layout_->name());
+        layout_ = layout_->parent();
+    }
+    slots_.erase(slots_.begin() + layout_->slotIndex());
+    layout_ = layout_->parent();
+    for (int i = names.size() - 1; i >= 0; i--)
+        layout_ = layout_->addName(names[i]);
+    return true;
 }
 
 void Object::print(ostream& s) const
@@ -332,7 +361,7 @@ void Class::print(ostream& s) const
 
 void initObject()
 {
-    Object::InitialLayout.init(gc.create<Layout>(nullptr, ClassAttr));
+    Object::InitialLayout.init(gc.create<Layout>(Layout::None, ClassAttr));
     Class::InitialLayout.init(
         gc.create<Layout>(Object::InitialLayout, BaseAttr));
 
@@ -361,14 +390,42 @@ testcase(object)
     Root<Object*> o(gc.create<Object>());
 
     Root<Value> v;
+    testFalse(o->hasAttr("foo"));
     testFalse(o->maybeGetAttr("foo", v));
-    Root<Value> one(Integer::get(1));
-    o->setAttr("foo", one);
-    testTrue(o->maybeGetAttr("foo", v));
 
+    Root<Value> value(Integer::get(1));
+    o->setAttr("foo", value);
+    testTrue(o->hasAttr("foo"));
+    testTrue(o->maybeGetAttr("foo", v));
     Root<Object*> obj(v.toObject());
-    testTrue(obj->is<Integer>());
-    testEqual(obj->as<Integer>()->value(), 1);
+    testEqual(v.toObject()->as<Integer>()->value(), 1);
+
+    value = Integer::get(2);
+    o->setAttr("bar", value);
+    value = Integer::get(3);
+    o->setAttr("baz", value);
+    testTrue(o->hasAttr("foo"));
+    testTrue(o->hasAttr("bar"));
+    testTrue(o->hasAttr("baz"));
+
+    testFalse(o->maybeDelOwnAttr("missing"));
+
+    testTrue(o->maybeDelOwnAttr("bar"));
+    testTrue(o->hasAttr("foo"));
+    testFalse(o->hasAttr("bar"));
+    testTrue(o->hasAttr("baz"));
+    testEqual(o->getAttr("foo").toObject()->as<Integer>()->value(), 1);
+    testEqual(o->getAttr("baz").toObject()->as<Integer>()->value(), 3);
+
+    testTrue(o->maybeDelOwnAttr("baz"));
+    testTrue(o->hasAttr("foo"));
+    testFalse(o->hasAttr("baz"));
+    testEqual(o->getAttr("foo").toObject()->as<Integer>()->value(), 1);
+
+    testTrue(o->maybeDelOwnAttr("foo"));
+    testFalse(o->hasAttr("foo"));
+
+    testFalse(o->maybeDelOwnAttr("foo"));
 
     testFalse(None->isTrue());
     testFalse(Integer::get(0).isTrue());

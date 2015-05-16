@@ -105,6 +105,11 @@ static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
     return list->setitem(args[1], args[2], resultOut);
 }
 
+static bool list_delitem(TracedVector<Value> args, Root<Value>& resultOut) {
+    List* list = args[0].toObject()->as<List>();
+    return list->delitem(args[1], resultOut);
+}
+
 static bool list_append(TracedVector<Value> args, Root<Value>& resultOut) {
     List* list = args[0].toObject()->as<List>();
     return list->append(args[1], resultOut);
@@ -115,6 +120,15 @@ ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
 {
     for (unsigned i = 0; i < values.size(); ++i)
         elements_[i] = values[i];
+}
+
+ListBase::ListBase(Traced<Class*> cls, size_t size)
+  : Object(cls), elements_(size)
+{
+#ifdef DEBUG
+    for (unsigned i = 0; i < size; ++i)
+        elements_[i] = None;
+#endif
 }
 
 void ListBase::traceChildren(Tracer& t)
@@ -185,8 +199,22 @@ void Tuple::init()
     return gc.create<Tuple>(values);
 }
 
+/* static */ Tuple* Tuple::createUninitialised(size_t size)
+{
+    return gc.create<Tuple>(size);
+}
+
 Tuple::Tuple(const TracedVector<Value>& values)
   : ListBase(ObjectClass, values) {}
+
+Tuple::Tuple(size_t size)
+  : ListBase(ObjectClass, size) {}
+
+void Tuple::initElement(size_t index, const Value& value)
+{
+    assert(elements_[index].asObject() == None);
+    elements_[index] = value;
+}
 
 const string& Tuple::listName() const
 {
@@ -212,6 +240,7 @@ void List::init()
     ObjectClass.init(gc.create<Class>("list"));
     listBase_initNatives(ObjectClass);
     initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
+    initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
     initNativeMethod(ObjectClass, "append", list_append, 2);
 }
 
@@ -255,6 +284,28 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
 
     elements_[i] = value;
     resultOut = value;
+    return true;
+}
+
+bool List::delitem(Traced<Value> index, Root<Value>& resultOut)
+{
+    if (!index.isInt32()) {
+        resultOut = gc.create<TypeError>(
+            listName() + " indices must be integers");
+        return false;
+    }
+
+    int32_t i = index.asInt32();
+    if (i < 0)
+        i = elements_.size() + i;
+    if (i < 0 || size_t(i) >= elements_.size()) {
+        resultOut = gc.create<IndexError>(
+            listName() + " index out of range");
+        return false;
+    }
+
+    elements_.erase(elements_.begin() + i);
+    resultOut = None;
     return true;
 }
 

@@ -171,6 +171,10 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         globals_.insert(globals_.end(), names.begin(), names.end());
     }
 
+    virtual void visit(const SyntaxNonLocal& s) {
+        // todo
+    }
+
     // Recurse into local blocks
 
     virtual void visit(const SyntaxBlock& s) {
@@ -238,14 +242,14 @@ struct ByteCompiler : public SyntaxVisitor
         block(nullptr),
         isClassBlock(false),
         isGenerator(false),
-        inAssignTarget(false),
+        contextStack({Context::None}),
         loopHeadOffset(0),
         stackDepth(0)
     {}
 
     ~ByteCompiler() {
-        assert(!inAssignTarget);
-        assert(contextStack.empty());
+        assert(contextStack.size() == 1);
+        assert(contextStack.back() == Context::None);
         assert(loopHeadOffset == 0);
         assert(breakInstrs.empty());
     }
@@ -338,8 +342,11 @@ struct ByteCompiler : public SyntaxVisitor
 
   private:
     enum class Context {
+        None,
         Loop,
-        Finally
+        Finally,
+        Assign,
+        Delete
     };
 
     ByteCompiler* parent;
@@ -348,7 +355,6 @@ struct ByteCompiler : public SyntaxVisitor
     Root<Block*> block;
     bool isClassBlock;
     bool isGenerator;
-    bool inAssignTarget;
     vector<Context> contextStack;
     unsigned loopHeadOffset;
     vector<unsigned> breakInstrs;
@@ -360,6 +366,11 @@ struct ByteCompiler : public SyntaxVisitor
 
     bool inLoop() {
         return contains(contextStack, Context::Loop);
+    }
+
+    bool inTarget() {
+        return contextStack.back() == Context::Assign ||
+               contextStack.back() == Context::Delete;
     }
 
     template <typename T, typename... Args>
@@ -437,6 +448,10 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxGlobal& s) {
+        emit<InstrConst>(None);
+    }
+
+    virtual void visit(const SyntaxNonLocal& s) {
         emit<InstrConst>(None);
     }
 
@@ -524,8 +539,7 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s.right());
         emit<InstrAugAssignUpdate>(s.op());
         {
-            assert(!inAssignTarget);
-            AutoSetAndRestore setInAssign(inAssignTarget, true);
+            AutoPushContext enterAssign(contextStack, Context::Assign);
             compile(s.left());
         }
         emit<InstrPop>();
@@ -533,6 +547,8 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
+        // todo: == should fall back to comparing identity if __eq__ not
+        // implemented
         callBinaryMethod(s, CompareOpMethodNames[s.op()]);
     }
 
@@ -551,14 +567,19 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxAssign& s) {
         compile(s.right());
-        assert(!inAssignTarget);
-        AutoSetAndRestore setInAssign(inAssignTarget, true);
+        AutoPushContext enterAssign(contextStack, Context::Assign);
         compile(s.left());
+    }
+
+    virtual void visit(const SyntaxDel& s) {
+        AutoPushContext enterDelete(contextStack, Context::Delete);
+        compile(s.targets());
     }
 
     virtual void visit(const SyntaxName& s) {
         Name name = s.id();
-        if (inAssignTarget) {
+        switch(contextStack.back()) {
+          case Context::Assign:
             if (parent && block->layout()->hasName(name))
                 emit<InstrSetLocal>(name);
             else if (unsigned frame = lookupLexical(name))
@@ -570,7 +591,22 @@ struct ByteCompiler : public SyntaxVisitor
             else
                 throw ParseError(s.token(),
                                  string("Name is not defined: ") + name);
-        } else {
+            break;
+
+          case Context::Delete:
+            if (parent && block->layout()->hasName(name))
+                emit<InstrDelLocal>(name);
+            else if (unsigned frame = lookupLexical(name))
+                emit<InstrDelLexical>(frame, name);
+            else if (topLevel->hasAttr(name))
+                emit<InstrDelGlobal>(topLevel, name);
+            else
+                throw ParseError(s.token(),
+                                 string("Name is not defined: ") + name);
+            emit<InstrConst>(None);
+            break;
+
+          default:
             if (parent && block->layout()->hasName(name))
                 emit<InstrGetLocal>(name);
             else if (unsigned frame = lookupLexical(name))
@@ -582,24 +618,37 @@ struct ByteCompiler : public SyntaxVisitor
             else
                 throw ParseError(s.token(),
                                  string("Name is not defined: ") + name);
+            break;
         }
     }
 
     virtual void visit(const SyntaxAttrRef& s) {
-        bool wasInAssignTarget = inAssignTarget;
-        AutoSetAndRestore clearInAssign(inAssignTarget, false);
-        compile(s.left());
+        {
+            AutoPushContext clearContext(contextStack, Context::None);
+            compile(s.left());
+        }
         Name id = s.right()->id();
-        if (wasInAssignTarget)
+
+        switch(contextStack.back()) {
+          case Context::Assign:
             emit<InstrSetAttr>(id);
-        else
+            break;
+
+          case Context::Delete:
+            emit<InstrDelAttr>(id);
+            emit<InstrConst>(None);
+            break;
+
+          default:
             emit<InstrGetAttr>(id);
+            break;
+        }
     }
 
     virtual void visit(const SyntaxSubscript& s) {
-        bool wasInAssignTarget = inAssignTarget;
-        AutoSetAndRestore clearInAssign(inAssignTarget, false);
-        if (wasInAssignTarget) {
+        switch(contextStack.back()) {
+          case Context::Assign: {
+            AutoPushContext clearContext(contextStack, Context::None);
             compile(s.left());
             emit<InstrGetMethod>("__setitem__");
             compile(s.right());
@@ -608,15 +657,26 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrCall>(3);
             emit<InstrSwap>();
             emit<InstrPop>();
-        } else {
+            break;
+          }
+
+          case Context::Delete: {
+            AutoPushContext clearContext(contextStack, Context::None);
+            callBinaryMethod(s, "__delitem__");
+            break;
+          }
+
+          default:
             callBinaryMethod(s, "__getitem__");
+            break;
         }
     }
 
     virtual void visit(const SyntaxTargetList& s) {
-        assert(inAssignTarget);
+        assert(inTarget());
         const auto& targets = s.targets();
-        emit<InstrDestructure>(targets.size());
+        if (contextStack.back() == Context::Assign)
+            emit<InstrDestructure>(targets.size());
         for (unsigned i = 0; i < targets.size(); i++) {
             compile(targets[i]);
             if (i != targets.size() - 1)
@@ -732,8 +792,7 @@ struct ByteCompiler : public SyntaxVisitor
 
         // 3. Assign results
         {
-            assert(!inAssignTarget);
-            AutoSetAndRestore setInAssign(inAssignTarget, true);
+            AutoPushContext enterAssign(contextStack, Context::Assign);
             compile(s.targets());
             emit<InstrPop>();
         }
@@ -879,8 +938,7 @@ struct ByteCompiler : public SyntaxVisitor
                 emit<InstrMatchCurrentException>();
                 handlerBranch = emit<InstrBranchIfFalse>();
                 if (e->as()) {
-                    assert(!inAssignTarget);
-                    AutoSetAndRestore setInAssign(inAssignTarget, true);
+                    AutoPushContext enterAssign(contextStack, Context::Assign);
                     compile(e->as());
                 }
                 emit<InstrPop>();

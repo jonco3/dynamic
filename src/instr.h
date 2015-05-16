@@ -28,12 +28,16 @@ using namespace std;
     instr(Const)                                                             \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
+    instr(DelLocal)                                                          \
     instr(GetLexical)                                                        \
     instr(SetLexical)                                                        \
+    instr(DelLexical)                                                        \
     instr(GetGlobal)                                                         \
     instr(SetGlobal)                                                         \
+    instr(DelGlobal)                                                         \
     instr(GetAttr)                                                           \
     instr(SetAttr)                                                           \
+    instr(DelAttr)                                                           \
     instr(GetMethod)                                                         \
     instr(GetMethodInt)                                                      \
     instr(GetMethodFallback)                                                 \
@@ -171,6 +175,7 @@ struct IdentInstrBase : public Instr
 
 define_ident_instr(GetLocal);
 define_ident_instr(SetLocal);
+define_ident_instr(DelLocal);
 
 struct InstrGetLexical : public IdentInstrBase
 {
@@ -190,6 +195,20 @@ struct InstrSetLexical : public IdentInstrBase
 {
     define_instr_members(Instr_SetLexical, "SetLexical");
     InstrSetLexical(unsigned frame, Name ident)
+      : IdentInstrBase(ident), frameIndex(frame) {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << frameIndex << " " << ident;
+    }
+
+  private:
+    unsigned frameIndex;
+};
+
+struct InstrDelLexical : public IdentInstrBase
+{
+    define_instr_members(Instr_DelLexical, "DelLexical");
+    InstrDelLexical(unsigned frame, Name ident)
       : IdentInstrBase(ident), frameIndex(frame) {}
 
     virtual void print(ostream& s) const {
@@ -236,8 +255,27 @@ struct InstrSetGlobal : public IdentInstrBase
     Object* global;
 };
 
+struct InstrDelGlobal : public IdentInstrBase
+{
+    define_instr_members(Instr_DelGlobal, "DelGlobal");
+
+    InstrDelGlobal(Object* global, Name ident)
+      : IdentInstrBase(ident), global(global)
+    {
+        assert(global);
+    }
+
+    virtual void traceChildren(Tracer& t) override {
+        gc.trace(t, &global);
+    }
+
+  private:
+    Object* global;
+};
+
 define_ident_instr(GetAttr);
 define_ident_instr(SetAttr);
+define_ident_instr(DelAttr);
 define_ident_instr(GetMethod);
 
 struct InstrGetMethodInt : public IdentInstrBase

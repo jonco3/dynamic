@@ -95,6 +95,7 @@ struct Interpreter
     unsigned stackPos() { return stack.size(); }
 
     bool raiseAttrError(Traced<Value> value, Name ident);
+    bool raiseNameError(Name ident);
 
     bool call(Traced<Value> callable, const TracedVector<Value>& args,
               Root<Value>& resultOut);

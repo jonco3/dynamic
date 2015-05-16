@@ -61,6 +61,8 @@ struct Object : public Cell
 
     void setAttr(Name name, Traced<Value> value);
 
+    bool maybeDelOwnAttr(Name name);
+
     // Add uninitialised attributes for all names in layout.
     void extend(Traced<Layout*> layout);
 

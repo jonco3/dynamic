@@ -3,10 +3,13 @@
 #include <cassert>
 #include <iostream>
 
-Layout::Layout(Layout* parent, Name name)
+GlobalRoot<Layout*> Layout::None;
+
+Layout::Layout(Traced<Layout*> parent, Name name)
   : parent_(parent), name_(name)
 {
     assert(parent_ != this);
+    slot_ = parent_ ? parent_->slotIndex() + 1 : 0;
 }
 
 void Layout::sweep()
@@ -24,17 +27,6 @@ void Layout::removeChild(Layout* child)
     children_.erase(i);
 }
 
-unsigned Layout::slotCount()
-{
-    Layout* layout = this;
-    unsigned count = 0;
-    while (layout) {
-        ++count;
-        layout = layout->parent_;
-    }
-    return count;
-}
-
 bool Layout::subsumes(Layout* other)
 {
     if (!other || this == other)
@@ -49,7 +41,8 @@ bool Layout::subsumes(Layout* other)
     return false;
 }
 
-int Layout::lookupName(Name name) {
+Layout* Layout::findAncestor(Name name)
+{
     Layout* layout = this;
     while (layout) {
         if (layout->name_ == name)
@@ -57,26 +50,31 @@ int Layout::lookupName(Name name) {
         assert(layout->parent_ != layout);
         layout = layout->parent_;
     }
-    if (!layout)
-        return -1;
-    return layout->slotCount() - 1;
+    return layout;
+}
+
+int Layout::lookupName(Name name)
+{
+    Layout* layout = findAncestor(name);
+    return layout ? layout->slotIndex() : NotFound;
 }
 
 Layout* Layout::addName(Name name)
 {
-    assert(lookupName(name) == -1);
+    assert(!hasName(name));
     auto i = children_.find(name);
     if (i != children_.end())
         return i->second;
 
-    Layout* child = gc.create<Layout>(this, name);
+    Root<Layout*> self(this);
+    Layout* child = gc.create<Layout>(self, name);
     children_.emplace(name, child);
     return child;
 }
 
 Layout* Layout::maybeAddName(Name name)
 {
-    if (lookupName(name) != -1)
+    if (hasName(name))
         return this;
 
     return addName(name);
@@ -99,3 +97,40 @@ void Layout::print(ostream& s) const
     }
     s << "}";
 }
+
+#ifdef BUILD_TESTS
+
+#include "test.h"
+#include "integer.h"
+
+testcase(layout)
+{
+    Root<Layout*> l1(gc.create<Layout>(Layout::None, "root"));
+
+    testEqual(l1->parent(), Layout::None.get());
+    testEqual(l1->slotCount(), 1u);
+    testEqual(l1->slotIndex(), 0u);
+    testEqual(l1->name(), "root");
+    testTrue(l1->hasName("root"));
+    testEqual(l1->findAncestor("root"), l1);
+    testEqual(l1->lookupName("root"), 0);
+
+    Root<Layout*> l2(l1->addName("a"));
+    testEqual(l2->parent(), l1);
+    testEqual(l2->slotCount(), 2u);
+    testEqual(l2->slotIndex(), 1u);
+    testEqual(l2->name(), "a");
+    testTrue(l2->hasName("a"));
+    testTrue(l2->hasName("root"));
+    testEqual(l2->findAncestor("a"), l2);
+    testEqual(l2->findAncestor("root"), l1);
+    testEqual(l2->lookupName("a"), 1);
+    testEqual(l2->lookupName("root"), 0);
+
+    Root<Layout*> l3(l2->addName("b"));
+    testEqual(l3->slotCount(), 3u);
+    testTrue(l3->hasName("a"));
+    testTrue(l3->hasName("b"));
+}
+
+#endif

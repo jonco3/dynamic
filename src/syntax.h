@@ -47,11 +47,13 @@ using namespace std;
     syntax(Raise)                                                             \
     syntax(For)                                                               \
     syntax(Global)                                                            \
+    syntax(NonLocal)                                                          \
     syntax(AugAssign)                                                         \
     syntax(Yield)                                                             \
     syntax(Try)                                                               \
     syntax(Break)                                                             \
-    syntax(Continue)
+    syntax(Continue)                                                          \
+    syntax(Del)
 
 enum SyntaxType
 {
@@ -671,17 +673,31 @@ struct SyntaxFor : public Syntax
     unique_ptr<SyntaxBlock> elseSuite_;
 };
 
-struct SyntaxGlobal : public Syntax
+struct NameListSyntax : public Syntax
 {
-    define_syntax_members(Global, "global");
-
-    SyntaxGlobal(const Token& token, vector<Name> names)
+    NameListSyntax(const Token& token, vector<Name> names)
         : Syntax(token), names_(names) {}
 
     const vector<Name>& names() const { return names_; }
 
   private:
     vector<Name> names_;
+};
+
+struct SyntaxGlobal : public NameListSyntax
+{
+    define_syntax_members(Global, "global");
+
+    SyntaxGlobal(const Token& token, vector<Name> names)
+        : NameListSyntax(token, names) {}
+};
+
+struct SyntaxNonLocal : public NameListSyntax
+{
+    define_syntax_members(NonLocal, "nonlocal");
+
+    SyntaxNonLocal(const Token& token, vector<Name> names)
+        : NameListSyntax(token, names) {}
 };
 
 define_unary_syntax(Yield, "yield");
@@ -739,6 +755,20 @@ struct SyntaxTry : public Syntax
     vector<unique_ptr<ExceptInfo>> excepts_;
     unique_ptr<SyntaxBlock> elseSuite_;
     unique_ptr<SyntaxBlock> finallySuite_;
+};
+
+struct SyntaxDel : public Syntax
+{
+    define_syntax_members(Del, "del");
+
+    SyntaxDel(const Token& token, unique_ptr<SyntaxTarget> targets)
+      : Syntax(token), targets_(move(targets))
+    {}
+
+    const SyntaxTarget* targets() const { return targets_.get(); }
+
+  private:
+    unique_ptr<SyntaxTarget> targets_;
 };
 
 #undef define_syntax_type

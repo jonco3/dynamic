@@ -7,8 +7,6 @@ struct ListIter;
 
 struct ListBase : public Object
 {
-    ListBase(Traced<Class*> cls, const TracedVector<Value>& values);
-
     bool len(Root<Value>& resultOut);
     bool getitem(Traced<Value> index, Root<Value>& resultOut);
     bool contains(Traced<Value> element, Root<Value>& resultOut);
@@ -28,6 +26,9 @@ struct ListBase : public Object
   protected:
     vector<Value> elements_;
     friend struct ListIter;
+
+    ListBase(Traced<Class*> cls, const TracedVector<Value>& values);
+    ListBase(Traced<Class*> cls, size_t size);
 };
 
 struct Tuple : public ListBase
@@ -40,10 +41,14 @@ struct Tuple : public ListBase
 
     static Tuple* get(const TracedVector<Value>& values);
 
+    static Tuple* createUninitialised(size_t size);
+    void initElement(size_t index, const Value& value);
+
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
 
     Tuple(const TracedVector<Value>& values);
+    Tuple(size_t size);
 };
 
 struct List : public ListBase
@@ -58,6 +63,7 @@ struct List : public ListBase
     virtual void print(ostream& os) const;
 
     bool setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut);
+    bool delitem(Traced<Value> index, Root<Value>& resultOut);
     bool append(Traced<Value> element, Root<Value>& resultOut);
 };
 

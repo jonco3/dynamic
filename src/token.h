@@ -26,6 +26,7 @@ using namespace std;
     token(As)                                                                 \
     token(Elif)                                                               \
     token(Global)                                                             \
+    token(NonLocal)                                                           \
     token(Or)                                                                 \
     token(With)                                                               \
     token(Assert)                                                             \

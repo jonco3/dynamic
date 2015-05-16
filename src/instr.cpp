@@ -11,7 +11,11 @@ bool InstrConst::execute(Interpreter& interp)
 bool InstrGetLocal::execute(Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
-    interp.pushStack(frame->getAttr(ident));
+    Root<Value> value;
+    // Name was present when compiled, but may have been deleted.
+    if (!frame->maybeGetAttr(ident, value))
+        return interp.raiseNameError(ident);
+    interp.pushStack(value);
     return true;
 }
 
@@ -22,10 +26,23 @@ bool InstrSetLocal::execute(Interpreter& interp)
     return true;
 }
 
+bool InstrDelLocal::execute(Interpreter& interp)
+{
+    Frame* frame = interp.getFrame();
+    // Name was present when compiled, but may have been deleted.
+    if (!frame->maybeDelOwnAttr(ident))
+        return interp.raiseNameError(ident);
+    return true;
+}
+
 bool InstrGetLexical::execute(Interpreter& interp)
 {
     Frame* frame = interp.getFrame(frameIndex);
-    interp.pushStack(frame->getAttr(ident));
+    Root<Value> value;
+    // Name was present when compiled, but may have been deleted.
+    if (!frame->maybeGetAttr(ident, value))
+        return interp.raiseNameError(ident);
+    interp.pushStack(value);
     return true;
 }
 
@@ -36,9 +53,21 @@ bool InstrSetLexical::execute(Interpreter& interp)
     return true;
 }
 
+bool InstrDelLexical::execute(Interpreter& interp)
+{
+    Frame* frame = interp.getFrame(frameIndex);
+    if (!frame->maybeDelOwnAttr(ident))
+        return interp.raiseNameError(ident);
+    return true;
+}
+
 bool InstrGetGlobal::execute(Interpreter& interp)
 {
-    interp.pushStack(global->getAttr(ident));
+    Root<Value> value;
+    // Name was present when compiled, but may have been deleted.
+    if (!global->maybeGetAttr(ident, value))
+        return interp.raiseNameError(ident);
+    interp.pushStack(value);
     return true;
 }
 
@@ -46,6 +75,13 @@ bool InstrSetGlobal::execute(Interpreter& interp)
 {
     Root<Value> value(interp.peekStack(0));
     global->setAttr(ident, value);
+    return true;
+}
+
+bool InstrDelGlobal::execute(Interpreter& interp)
+{
+    if (!global->maybeDelOwnAttr(ident))
+        return interp.raiseNameError(ident);
     return true;
 }
 
@@ -64,6 +100,14 @@ bool InstrSetAttr::execute(Interpreter& interp)
 {
     Root<Value> value(interp.peekStack(1));
     interp.popStack().toObject()->setAttr(ident, value);
+    return true;
+}
+
+bool InstrDelAttr::execute(Interpreter& interp)
+{
+    Root<Value> value(interp.popStack());
+    if (!value.toObject()->maybeDelOwnAttr(ident))
+        return interp.raiseAttrError(value, ident);
     return true;
 }
 

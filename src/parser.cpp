@@ -367,6 +367,13 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
             names.push_back(t.text);
         } while (opt(Token_Comma));
         return make_unique<SyntaxGlobal>(token, move(names));
+    } else if (opt(Token_NonLocal)) {
+        vector<Name> names;
+        do {
+            Token t = match(Token_Identifier);
+            names.push_back(t.text);
+        } while (opt(Token_Comma));
+        return make_unique<SyntaxNonLocal>(token, move(names));
     } else if (opt(Token_Yield)) {
         isGenerator = true;
         return make_unique<SyntaxYield>(token, expression());
@@ -374,6 +381,9 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         return make_unique<SyntaxBreak>(token);
     } else if (opt(Token_Continue)) {
         return make_unique<SyntaxContinue>(token);
+    } else if (opt(Token_Del)) {
+        unique_ptr<SyntaxTarget> targets(parseTargetList());
+        return make_unique<SyntaxDel>(token, move(targets));
     }
 
     unique_ptr<Syntax> expr = parseExprOrExprList();

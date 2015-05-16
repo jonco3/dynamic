@@ -366,6 +366,13 @@ bool Interpreter::raiseAttrError(Traced<Value> value, Name ident)
     return false;
 }
 
+bool Interpreter::raiseNameError(Name ident)
+{
+    string message = "name '" + ident + "' is not defined";
+    pushStack(gc.create<NameError>(message));
+    return false;
+}
+
 bool Interpreter::call(Traced<Value> targetValue,
                        const TracedVector<Value>& args,
                        Root<Value>& resultOut)

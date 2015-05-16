@@ -18,6 +18,8 @@ struct SyntaxPrinter : public SyntaxVisitor
     template <typename BaseT, typename LeftT, typename RightT>
     void visitBinary(const BinarySyntax<BaseT, LeftT, RightT>& s);
 
+    void visitNameList(const NameListSyntax& s);
+
     template <typename T>
     void printList(const vector<T>& elems, string seperator = ", ");
 
@@ -51,6 +53,17 @@ template <typename BaseT, typename LeftT, typename RightT>
 void SyntaxPrinter::visitBinary(const BinarySyntax<BaseT, LeftT, RightT>& s)
 {
     os_ << *s.left() << " " << s.name() << " " << *s.right();
+}
+
+void SyntaxPrinter::visitNameList(const NameListSyntax& s)
+{
+    os_ << s.name() << " ";
+    bool first = true;
+    for (const auto& n : s.names()) {
+        if (!first)
+            os_ << ", ";
+        os_ << n;
+    }
 }
 
 void SyntaxPrinter::visit(const SyntaxBlock& s)
@@ -122,6 +135,10 @@ void SyntaxPrinter::visit(const SyntaxAssign& s) { visitBinary(s); }
 void SyntaxPrinter::visit(const SyntaxBinaryOp& s) { visitBinary(s); }
 void SyntaxPrinter::visit(const SyntaxAugAssign& s) { visitBinary(s); }
 void SyntaxPrinter::visit(const SyntaxCompareOp& s) { visitBinary(s); }
+
+void SyntaxPrinter::visit(const SyntaxGlobal& s) { visitNameList(s); }
+void SyntaxPrinter::visit(const SyntaxNonLocal& s) { visitNameList(s); }
+
 
 void SyntaxPrinter::visit(const SyntaxAttrRef& s)
 {
@@ -241,18 +258,6 @@ void SyntaxPrinter::visit(const SyntaxFor& s)
     }
 }
 
-void SyntaxPrinter::visit(const SyntaxGlobal& s)
-{
-    os_ << "global ";
-    bool first = true;
-    for (const auto& i : s.names()) {
-        if (!first)
-            os_ << ", ";
-        os_ << i;
-        first = false;
-    }
-}
-
 void SyntaxPrinter::visit(const SyntaxTry& s)
 {
     // todo: indentation
@@ -269,6 +274,11 @@ void SyntaxPrinter::visit(const SyntaxTry& s)
         os_ << endl << "finally: " << endl;
         os_ << *s.finallySuite();
     }
+}
+
+void SyntaxPrinter::visit(const SyntaxDel& s)
+{
+    os_ << s.name() << " " << s.targets();
 }
 
 inline ostream& operator<<(ostream& s, const Syntax& syntax) {

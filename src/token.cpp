@@ -23,6 +23,7 @@ static const Keyword keywordList[] = {
     { "as", Token_As },
     { "elif", Token_Elif },
     { "global", Token_Global },
+    { "nonlocal", Token_NonLocal },
     { "or", Token_Or },
     { "with", Token_With },
     { "assert", Token_Assert },

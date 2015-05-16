@@ -14,9 +14,14 @@ struct Dict : public Object
     virtual void traceChildren(Tracer& t) override;
     virtual void print(ostream& os) const;
 
+    bool len(Root<Value>& resultOut);
     bool contains(Traced<Value> key, Root<Value>& resultOut);
     bool getitem(Traced<Value> key, Root<Value>& resultOut);
     bool setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOut);
+    bool delitem(Traced<Value> key, Root<Value>& resultOut);
+    bool keys(Root<Value>& resultOut);
+
+    // Methods __eq__ and __ne__ are supplied by lib/internals.py
 
   private:
     struct ValueHash {

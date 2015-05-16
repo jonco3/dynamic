@@ -15,15 +15,21 @@ using namespace std;
 
 struct Layout : public Cell
 {
-    Layout(Layout* parent, Name name);
+    static const int NotFound = -1;
+
+    static GlobalRoot<Layout*> None;
+
+    Layout(Traced<Layout*> parent, Name name);
 
     Layout* parent() const { return parent_; }
+    unsigned slotIndex() { return slot_; }
+    unsigned slotCount() { return slot_ + 1; }
     const string& name() const { return name_; }
 
-    unsigned slotCount();
     bool subsumes(Layout* other);
+    Layout* findAncestor(Name name);
     int lookupName(Name name);
-    int hasName(Name name) { return lookupName(name) != -1; }
+    int hasName(Name name) { return lookupName(name) != NotFound; }
 
     Layout* addName(Name name);
     Layout* maybeAddName(Name name);
@@ -34,6 +40,7 @@ struct Layout : public Cell
 
   private:
     Layout* parent_;
+    unsigned slot_;
     Name name_;
     unordered_map<Name, Layout*> children_;
 

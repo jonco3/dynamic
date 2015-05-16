@@ -3,11 +3,18 @@
 #include "bool.h"
 #include "callable.h"
 #include "exception.h"
+#include "list.h"
 #include "repr.h"
 
 #include <stdexcept>
 
 GlobalRoot<Class*> Dict::ObjectClass;
+
+static bool dict_len(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->len(resultOut);
+}
 
 static bool dict_contains(TracedVector<Value> args, Root<Value>& resultOut)
 {
@@ -27,12 +34,27 @@ static bool dict_setitem(TracedVector<Value> args, Root<Value>& resultOut)
     return dict->setitem(args[1], args[2], resultOut);
 }
 
+static bool dict_delitem(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->delitem(args[1], resultOut);
+}
+
+static bool dict_keys(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->keys(resultOut);
+}
+
 void Dict::init()
 {
     ObjectClass.init(gc.create<Class>("dict"));
+    initNativeMethod(ObjectClass, "__len__", dict_len, 1);
     initNativeMethod(ObjectClass, "__contains__", dict_contains, 2);
     initNativeMethod(ObjectClass, "__getitem__", dict_getitem, 2);
     initNativeMethod(ObjectClass, "__setitem__", dict_setitem, 3);
+    initNativeMethod(ObjectClass, "__delitem__", dict_delitem, 2);
+    initNativeMethod(ObjectClass, "keys", dict_keys, 1);
 }
 
 Dict::Dict(const TracedVector<Value>& values)
@@ -68,6 +90,12 @@ void Dict::print(ostream& s) const
     s << "}";
 }
 
+bool Dict::len(Root<Value>& resultOut)
+{
+    resultOut = Integer::get(entries_.size());
+    return true;
+}
+
 bool Dict::contains(Traced<Value> key, Root<Value>& resultOut)
 {
     bool found = entries_.find(key) != entries_.end();
@@ -91,6 +119,30 @@ bool Dict::setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOu
 {
     entries_[key] = value;
     resultOut = value;
+    return true;
+}
+
+bool Dict::delitem(Traced<Value> key, Root<Value>& resultOut)
+{
+    auto i = entries_.find(key);
+    if (i == entries_.end()) {
+        resultOut = gc.create<KeyError>(repr(key));
+        return false;
+    }
+
+    entries_.erase(i);
+    resultOut = None;
+    return true;
+}
+
+bool Dict::keys(Root<Value>& resultOut)
+{
+    // todo: should be some kind of iterator?
+    Root<Tuple*> keys(Tuple::createUninitialised(entries_.size()));
+    size_t index = 0;
+    for (const auto& i : entries_)
+        keys->initElement(index++, i.first);
+    resultOut = keys;
     return true;
 }
 

@@ -2,6 +2,7 @@
 #include "builtin.h"
 #include "callable.h"
 #include "common.h"
+#include "dict.h"
 #include "exception.h"
 #include "input.h"
 #include "integer.h"
@@ -61,6 +62,7 @@ void initBuiltins(const string& libDir)
     // Classes
     value = List::ObjectClass; Builtin->setAttr("list", value);
     value = Tuple::ObjectClass; Builtin->setAttr("tuple", value);
+    value = Dict::ObjectClass; Builtin->setAttr("dict", value);
     value = Boolean::ObjectClass; Builtin->setAttr("bool", value);
     value = Integer::ObjectClass; Builtin->setAttr("int", value);
     value = String::ObjectClass; Builtin->setAttr("str", value);
