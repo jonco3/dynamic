@@ -281,7 +281,7 @@ void SyntaxPrinter::visit(const SyntaxDel& s)
     os_ << s.name() << " " << s.targets();
 }
 
-inline ostream& operator<<(ostream& s, const Syntax& syntax) {
+ostream& operator<<(ostream& s, const Syntax& syntax) {
     SyntaxPrinter printer(s);
     syntax.accept(printer);
     return s;

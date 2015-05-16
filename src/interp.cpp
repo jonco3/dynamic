@@ -137,7 +137,9 @@ unsigned Interpreter::frameStackDepth()
 
 void Interpreter::returnFromFrame(Value value)
 {
+#ifdef DEBUG
     AutoAssertNoGC nogc;
+#endif
 
     // If we are in a finally block, defer the return and run the finally suite.
     // todo: we can determine this statically
@@ -151,11 +153,16 @@ void Interpreter::returnFromFrame(Value value)
     pushStack(value);
 }
 
+#ifdef DEBUG
+#define alwaysTrue(x) assert(x)
+#else
+#define alwaysTrue(x) x
+#endif
+
 void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
 {
     if (finallyCount) {
-        bool ok = startNextFinallySuite(JumpKind::LoopControl);
-        assert(ok);
+        alwaysTrue(startNextFinallySuite(JumpKind::LoopControl));
         remainingFinallyCount_ = finallyCount - 1;
         loopControlTarget_ = target;
         return;

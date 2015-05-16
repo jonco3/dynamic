@@ -665,6 +665,7 @@ bool InstrLoopControlJump::execute(Interpreter& interp)
 
 bool InstrAssertStackDepth::execute(Interpreter& interp)
 {
+#ifdef DEBUG
     unsigned actual = interp.frameStackDepth();
     if (actual != expected_) {
         cerr << "Excpected stack depth " << dec << expected_;
@@ -673,5 +674,6 @@ bool InstrAssertStackDepth::execute(Interpreter& interp)
         cerr << endl;
         assert(actual == expected_);
     }
+#endif
     return true;
 }
