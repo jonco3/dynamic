@@ -7,7 +7,16 @@ def str(x):
     return x.__str__()
 
 def repr(x):
-    return x.__repr__()
+    if hasattr(x, "__repr__"):
+        return x.__repr__()
+    else:
+        return str(x)
+
+def dump(x):
+    if hasattr(x, "__dump__"):
+        x.__dump__()
+    else:
+        print(repr(x))
 
 def print(x):
     str(x)._print()

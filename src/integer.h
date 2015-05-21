@@ -16,7 +16,7 @@ struct Integer : public Object
 
     Integer(int v);
     int value() { return value_; }
-    virtual void print(ostream& os) const;
+    void print(ostream& s) const override;
 
   private:
     int value_;

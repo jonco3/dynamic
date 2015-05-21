@@ -17,7 +17,10 @@ struct NoneObject : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     NoneObject() : Object(ObjectClass) {}
-    virtual void print(ostream& s) const { s << "None"; }
+
+    void print(ostream& s) const override {
+        s << "None";
+    }
 
     friend void initObject();
 };
@@ -35,6 +38,11 @@ GlobalRoot<Layout*> Class::InitialLayout;
 GlobalRoot<Object*> None;
 GlobalRoot<Class*> NoneObject::ObjectClass;
 
+Object* Object::create()
+{
+    return gc.create<Object>(ObjectClass);
+}
+
 Object* Object::createInstance(Traced<Class*> cls)
 {
     return gc.create<Object>(cls);
@@ -48,7 +56,7 @@ Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
     if (Class::ObjectClass)
-        initAttrs(base);
+        initAttrs(cls);
 }
 
 Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
@@ -311,6 +319,13 @@ void Object::traceChildren(Tracer& t)
         gc.trace(t, &*i);
 }
 
+static bool object_dump(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    args[0].toObject()->print(cout);
+    resultOut = None;
+    return true;
+}
+
 Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
 {
@@ -378,6 +393,8 @@ void initObject()
     Class::ObjectClass->init(Object::ObjectClass);
     Object::ObjectClass->init(None);
     NoneObject::ObjectClass->init(Class::ObjectClass);
+
+    initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
 }
 
 #ifdef BUILD_TESTS
@@ -387,7 +404,7 @@ void initObject()
 
 testcase(object)
 {
-    Root<Object*> o(gc.create<Object>());
+    Root<Object*> o(Object::create());
 
     Root<Value> v;
     testFalse(o->hasAttr("foo"));

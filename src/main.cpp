@@ -54,7 +54,7 @@ char *readOneLine()
 static int runRepl()
 {
     char* line;
-    Root<Object*> globals(gc.create<Object>());
+    Root<Object*> globals(Object::create());
     while (line = readOneLine(), line != NULL) {
         Root<Value> result;
         bool ok = runModule(line, "<none>", globals, &result);

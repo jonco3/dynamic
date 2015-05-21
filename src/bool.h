@@ -15,7 +15,7 @@ struct Boolean : public Object
     static Boolean* get(bool v) { return v ? True : False; }
 
     bool value() { return value_; }
-    virtual void print(ostream& os) const;
+    void print(ostream& s) const override;
 
     Boolean(bool v);
 

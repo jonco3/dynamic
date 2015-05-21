@@ -17,7 +17,7 @@ Boolean::Boolean(bool v)
   : Object(ObjectClass), value_(v)
 {}
 
-void Boolean::print(ostream& os) const
+void Boolean::print(ostream& s) const
 {
-    os << (value_ ? "True" : "False");
+    s << (value_ ? "True" : "False");
 }

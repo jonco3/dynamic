@@ -109,4 +109,6 @@ struct Function : public Callable
 void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
                       unsigned minArgs, unsigned maxArgs = 0);
 
+bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);
+
 #endif

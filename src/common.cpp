@@ -11,6 +11,7 @@
 #include "list.h"
 #include "object.h"
 #include "parser.h"
+#include "reflect.h"
 #include "singletons.h"
 #include "string.h"
 #include "test.h"
@@ -37,6 +38,7 @@ void init1()
     initSingletons();
     Interpreter::init();
     GeneratorIter::init();
+    initReflect();
 }
 
 void init2(const string& libDir)

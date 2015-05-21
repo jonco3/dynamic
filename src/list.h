@@ -45,7 +45,7 @@ struct Tuple : public ListBase
     void initElement(size_t index, const Value& value);
 
     virtual const string& listName() const;
-    virtual void print(ostream& os) const;
+    void print(ostream& s) const override;
 
     Tuple(const TracedVector<Value>& values);
     Tuple(size_t size);

@@ -112,9 +112,9 @@ string Exception::fullMessage() const
     return s.str();
 }
 
-void Exception::print(ostream& os) const
+void Exception::print(ostream& s) const
 {
-    os << fullMessage();
+    s << fullMessage();
 }
 
 void Exception::setPos(const TokenPos& pos)
@@ -122,18 +122,6 @@ void Exception::setPos(const TokenPos& pos)
     if (pos_.line != 0)
         return;
     pos_ = pos;
-}
-
-bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)
-{
-    if (!v.isInstanceOf(cls)) {
-        string message = "Expecting " + cls->name() +
-            " but got " + v.type()->name();
-        resultOut = gc.create<TypeError>(message);
-        return false;
-    }
-
-    return true;
 }
 
 #ifdef BUILD_TESTS

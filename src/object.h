@@ -25,10 +25,10 @@ struct Object : public Cell
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
 
+    static Object* create();
     static Object* createInstance(Traced<Class*> cls);
 
-    Object(Traced<Class*> cls = ObjectClass,
-           Traced<Layout*> layout = InitialLayout);
+    Object(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout);
     virtual ~Object() {}
 
     template <typename T> bool is() {
@@ -44,7 +44,7 @@ struct Object : public Cell
         return this == None;
     }
 
-    virtual void print(ostream& os) const;
+    void print(ostream& s) const override;
 
     Layout* layout() const { return layout_; }
     Class* type() const;
@@ -110,7 +110,7 @@ struct Class : public Object
     const string& name() const { return name_; }
     NativeConstructor nativeConstructor() const { return constructor_; }
 
-    virtual void print(ostream& s) const;
+    void print(ostream& s) const override;
 
   private:
     string name_;

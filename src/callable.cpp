@@ -1,5 +1,6 @@
 #include "callable.h"
 
+#include "exception.h"
 #include "object.h"
 
 #include <climits>
@@ -61,5 +62,18 @@ void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
                       unsigned minArgs, unsigned maxArgs)
 {
     Root<Value> value(gc.create<Native>(name, func, minArgs, maxArgs));
+    // todo: assert(value.type()) here fails
     cls->setAttr(name, value);
+}
+
+bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)
+{
+    if (!v.isInstanceOf(cls)) {
+        string message = "Expecting " + cls->name() +
+            " but got " + v.type()->name();
+        resultOut = gc.create<TypeError>(message);
+        return false;
+    }
+
+    return true;
 }

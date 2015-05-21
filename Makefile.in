@@ -49,7 +49,8 @@ SRCS = \
 	src/builtin.cpp \
 	src/instr.cpp \
 	src/specials.cpp \
-	src/generator.cpp
+	src/generator.cpp \
+	src/reflect.cpp
 
 TESTSRCS = src/test.cpp $(SRCS)
 MAINSRCS = src/main.cpp $(SRCS)

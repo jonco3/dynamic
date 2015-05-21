@@ -1033,7 +1033,7 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     Root<Object*> globals(globalsArg);
     if (globals->isNone())
-        globals = gc.create<Object>();
+        globals = Object::create();
     blockOut = ByteCompiler().buildModule(globals, syntax.get());
 }
 

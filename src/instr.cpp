@@ -670,8 +670,7 @@ bool InstrAssertStackDepth::execute(Interpreter& interp)
     if (actual != expected_) {
         cerr << "Excpected stack depth " << dec << expected_;
         cerr << " but got " << actual << " in: " << endl;
-        interp.getFrame()->block()->print(cerr);
-        cerr << endl;
+        cerr << *interp.getFrame()->block() << endl;
         assert(actual == expected_);
     }
 #endif

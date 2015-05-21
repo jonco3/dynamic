@@ -11,8 +11,8 @@ struct Dict : public Object
 
     Dict(const TracedVector<Value>& values);
 
-    virtual void traceChildren(Tracer& t) override;
-    virtual void print(ostream& os) const;
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
 
     bool len(Root<Value>& resultOut);
     bool contains(Traced<Value> key, Root<Value>& resultOut);

@@ -24,7 +24,7 @@ struct Exception : public Object
 
     string fullMessage() const;
 
-    virtual void print(ostream& os) const;
+    void print(ostream& s) const override;
 
   private:
     TokenPos pos_;
@@ -58,7 +58,5 @@ for_each_exception_class(declare_exception_class)
 #undef define_exception_class
 
 extern GlobalRoot<StopIteration*> StopIterationException;
-
-bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);
 
 #endif

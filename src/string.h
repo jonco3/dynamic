@@ -16,7 +16,7 @@ struct String : public Object
     static Value get(const string& v);
 
     const string& value() { return value_; }
-    virtual void print(ostream& os) const;
+    void print(ostream& s) const override;
 
     String(const string& v);
 

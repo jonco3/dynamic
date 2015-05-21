@@ -100,9 +100,7 @@ struct Cell
     void checkValid() const;
 
     virtual void traceChildren(Tracer& t) {}
-    virtual void print(ostream& s) const {
-        s << "Cell@" << hex << this;
-    }
+    virtual void print(ostream& s) const;
     virtual void sweep() {}
 
   protected:

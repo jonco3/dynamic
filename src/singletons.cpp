@@ -8,7 +8,9 @@ struct NotImplementedObject : public Object
     static void init();
 
     NotImplementedObject() : Object(ObjectClass) {}
-    virtual void print(ostream& s) const { s << "NotImplemented"; }
+    void print(ostream& s) const override {
+        s << "NotImplemented";
+    }
 };
 
 struct UninitializedSlotObject : public Object
@@ -17,7 +19,9 @@ struct UninitializedSlotObject : public Object
     static void init();
 
     UninitializedSlotObject() : Object(ObjectClass) {}
-    virtual void print(ostream& s) const { s << "UninitializedSlot"; }
+    void print(ostream& s) const override {
+        s << "UninitializedSlot";
+    }
 };
 
 GlobalRoot<Object*> NotImplemented;

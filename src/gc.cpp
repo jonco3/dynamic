@@ -75,6 +75,10 @@ Cell::~Cell()
     assert(gc.isSweeping);
 }
 
+void Cell::print(ostream& s) const {
+    s << "Cell@" << hex << this;
+}
+
 void Cell::checkValid() const
 {
     assert(epoch_ == gc.currentEpoch || epoch_ == gc.prevEpoch);
@@ -273,7 +277,7 @@ struct TestCell : public Cell
             gc.trace(t, &(*i));
     }
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << "TestCell@" << hex << static_cast<const void*>(this);
     }
 

@@ -34,9 +34,9 @@ struct Layout : public Cell
     Layout* addName(Name name);
     Layout* maybeAddName(Name name);
 
-    virtual void traceChildren(Tracer& t) override;
-    virtual void print(ostream& s) const;
-    virtual void sweep();
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
+    void sweep() override;
 
   private:
     Layout* parent_;
