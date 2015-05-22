@@ -16,11 +16,6 @@ Callable::Callable(Traced<Class*> cls, Name name,
     maxArgs_(maxArgs)
 {}
 
-void Native::init()
-{
-    ObjectClass.init(gc.create<Class>("Native"));
-}
-
 Native::Native(Name name, Func func, unsigned minArgs, unsigned maxArgs)
   : Callable(ObjectClass, name, minArgs, maxArgs ? maxArgs : minArgs),
     func_(func)
@@ -36,11 +31,6 @@ FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
     isGenerator_(isGenerator)
 {
     assert(!takesRest || params_.size() > 0);
-}
-
-void Function::init()
-{
-    ObjectClass.init(gc.create<Class>("Function"));
 }
 
 Function::Function(Name name,
@@ -62,7 +52,6 @@ void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
                       unsigned minArgs, unsigned maxArgs)
 {
     Root<Value> value(gc.create<Native>(name, func, minArgs, maxArgs));
-    // todo: assert(value.type()) here fails
     cls->setAttr(name, value);
 }
 

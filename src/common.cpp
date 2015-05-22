@@ -26,8 +26,6 @@ bool debugMode = true;
 void init1()
 {
     initObject();
-    Native::init();
-    Function::init();
     Frame::init();
     Boolean::init();
     Integer::init();

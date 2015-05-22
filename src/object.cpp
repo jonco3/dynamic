@@ -11,6 +11,7 @@
 #include <cassert>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 struct NoneObject : public Object
 {
@@ -118,14 +119,14 @@ bool Object::hasAttr(Name name) const
     AutoAssertNoGC nogc;
 
     // lookup attribute in class hierarchy
-    Value base;
-    if (!maybeGetOwnAttr(ClassAttr, base, nogc))
+    Root<Value> base;
+    if (!maybeGetOwnAttr(ClassAttr, base))
         return false;
 
     while (Object* obj = base.toObject()) {
         if (obj->hasOwnAttr(name))
             return true;
-        if (!obj->maybeGetOwnAttr(BaseAttr, base, nogc))
+        if (!obj->maybeGetOwnAttr(BaseAttr, base))
             break;
     }
 
@@ -143,8 +144,8 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
     AutoAssertNoGC nogc;
 
     // lookup attribute in class hierarchy
-    Value base;
-    if (!maybeGetOwnAttr(ClassAttr, base, nogc))
+    Root<Value> base;
+    if (!maybeGetOwnAttr(ClassAttr, base))
         return false;
 
     while (Class* cls = base.toObject()->as<Class>()) {
@@ -153,7 +154,7 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
             classOut = cls;
             return slot;
         }
-        if (!cls->maybeGetOwnAttr(BaseAttr, base, nogc))
+        if (!cls->maybeGetOwnAttr(BaseAttr, base))
             break;
     }
 
@@ -161,30 +162,28 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
     return -1;
 }
 
-bool Object::maybeGetOwnAttr(Name name, Value& valueOut, AutoAssertNoGC& nogc) const
+bool Object::maybeGetOwnAttr(Name name, Root<Value>& valueOut) const
 {
     int slot = layout_->lookupName(name);
     if (slot == Layout::NotFound)
         return false;
-    return getSlot(name, slot, valueOut, nogc);
+    return getSlot(name, slot, valueOut);
 }
 
 bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
-    AutoAssertNoGC nogc;
-
-    if (maybeGetOwnAttr(name, valueOut, nogc))
+    if (maybeGetOwnAttr(name, valueOut))
         return true;
 
     // lookup attribute in class hierarchy
-    Value base;
-    if (!maybeGetOwnAttr(ClassAttr, base, nogc))
+    Root<Value> base;
+    if (!maybeGetOwnAttr(ClassAttr, base))
         return false;
 
     while (Object* obj = base.toObject()) {
-        if (obj->maybeGetOwnAttr(name, valueOut, nogc))
+        if (obj->maybeGetOwnAttr(name, valueOut))
             return true;
-        if (!obj->maybeGetOwnAttr(BaseAttr, base, nogc))
+        if (!obj->maybeGetOwnAttr(BaseAttr, base))
             break;
     }
 
@@ -202,15 +201,14 @@ Value Object::getAttr(Name name) const
 
 Value Object::getOwnAttr(Name name) const
 {
-    AutoAssertNoGC nogc;
     Root<Value> value;
-    bool ok = maybeGetOwnAttr(name, value, nogc);
+    bool ok = maybeGetOwnAttr(name, value);
     assert(ok);
     (void)ok;
     return value;
 }
 
-bool Object::getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc) const
+bool Object::getSlot(Name name, int slot, Root<Value>& valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == Value(UninitializedSlot)) {
@@ -224,6 +222,11 @@ bool Object::getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc)
 
 void Object::setAttr(Name name, Traced<Value> value)
 {
+    if (value.isObject()) {
+        assert(value.asObject());
+        assert(value.asObject() != UninitializedSlot);
+    }
+
     int slot = layout_->lookupName(name);
     if (slot == Layout::NotFound) {
         layout_ = layout_->addName(name);
@@ -319,13 +322,6 @@ void Object::traceChildren(Tracer& t)
         gc.trace(t, &*i);
 }
 
-static bool object_dump(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    args[0].toObject()->print(cout);
-    resultOut = None;
-    return true;
-}
-
 Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
   Object(ObjectClass, initialLayout), name_(name)
 {
@@ -374,6 +370,24 @@ void Class::print(ostream& s) const
     s << "Class " << name_;
 }
 
+static bool object_str(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Object* obj = args[0].toObject();
+    ostringstream s;
+    s << "<" << obj->type()->name();
+    s << " at 0x" << hex << reinterpret_cast<uintptr_t>(obj) << ">";
+    resultOut = String::get(s.str());
+    return true;
+}
+
+static bool object_dump(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Object* obj = args[0].toObject();
+    obj->print(cout);
+    resultOut = None;
+    return true;
+}
+
 void initObject()
 {
     Object::InitialLayout.init(gc.create<Layout>(Layout::None, ClassAttr));
@@ -394,6 +408,12 @@ void initObject()
     Object::ObjectClass->init(None);
     NoneObject::ObjectClass->init(Class::ObjectClass);
 
+    // Create classes for callables here as this is necessary before we can add
+    // methods to objects.
+    Native::ObjectClass.init(gc.create<Class>("Native"));
+    Function::ObjectClass.init(gc.create<Class>("Function"));
+
+    initNativeMethod(Object::ObjectClass, "__str__", object_str, 1);
     initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
 }
 

@@ -14,6 +14,11 @@ void CodeObject::traceChildren(Tracer& t)
     gc.trace(t, &block_);
 }
 
+void CodeObject::dump() const
+{
+    cout << *block_ << endl;
+}
+
 static bool codeObject_dump(TracedVector<Value> args, Root<Value>& resultOut)
 {
     if (!checkInstanceOf(args[0], CodeObject::ObjectClass, resultOut))
@@ -21,11 +26,6 @@ static bool codeObject_dump(TracedVector<Value> args, Root<Value>& resultOut)
     args[0].asObject()->as<CodeObject>()->dump();
     resultOut = None;
     return true;
-}
-
-void CodeObject::dump() const
-{
-    cout << *block_ << endl;
 }
 
 void initReflect()

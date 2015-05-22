@@ -25,7 +25,6 @@ struct Callable : public Object
 
 struct Native : public Callable
 {
-    static void init();
     static GlobalRoot<Class*> ObjectClass;
 
     typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
@@ -61,7 +60,6 @@ struct FunctionInfo : public Cell
 
 struct Function : public Callable
 {
-    static void init();
     static GlobalRoot<Class*> ObjectClass;
 
     Function(Name name,

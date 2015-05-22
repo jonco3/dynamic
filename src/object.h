@@ -79,8 +79,8 @@ struct Object : public Cell
     virtual void traceChildren(Tracer& t) override;
 
     bool hasOwnAttr(Name name) const;
-    bool maybeGetOwnAttr(Name name, Value& valueOut, AutoAssertNoGC& nogc) const;
-    bool getSlot(Name name, int slot, Value& valueOut, AutoAssertNoGC& nogc) const;
+    bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
+    bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
 
   private:
     Layout* layout_;
