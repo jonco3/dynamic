@@ -8,6 +8,20 @@
 #include "block.h"
 #include "object.h"
 
+#include <memory>
+
+struct ParseTree : public Object
+{
+    static GlobalRoot<Class*> ObjectClass;
+
+    ParseTree(unique_ptr<Syntax> syntax);
+
+    void dump() const;
+
+  private:
+    unique_ptr<Syntax> syntax_;
+};
+
 struct CodeObject : public Object
 {
     static GlobalRoot<Class*> ObjectClass;

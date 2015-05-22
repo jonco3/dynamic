@@ -14,6 +14,7 @@
 #include "value-inl.h"
 
 #include <iostream>
+#include <sstream>
 
 GlobalRoot<Object*> Builtin;
 
@@ -42,6 +43,26 @@ static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
     // todo: support tuples etc for classInfo
     Root<Class*> cls(args[1].toObject()->as<Class>());
     resultOut = Boolean::get(args[0].toObject()->isInstanceOf(cls));
+    return true;
+}
+
+static bool builtin_parse(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
+        return false;
+
+    string source = args[0].asObject()->as<String>()->value();
+    SyntaxParser parser;
+    parser.start(source);
+    try {
+        resultOut = gc.create<ParseTree>(parser.parseModule());
+    } catch (const ParseError& e) {
+        ostringstream s;
+        s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
+        resultOut = gc.create<SyntaxError>(s.str());
+        return false;
+    }
+
     return true;
 }
 
@@ -74,6 +95,7 @@ void initBuiltins(const string& libDir)
     initNativeMethod(Builtin, "object", builtin_object, 0);
     initNativeMethod(Builtin, "isinstance", builtin_isinstance, 2);
     initNativeMethod(Builtin, "compile", builtin_compile, 1);
+    initNativeMethod(Builtin, "parse", builtin_parse, 1);
 
     // Constants
     Root<Value> value;
