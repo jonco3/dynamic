@@ -237,18 +237,18 @@ unique_ptr<SyntaxTarget> SyntaxParser::makeAssignTarget(unique_ptr<Syntax> targe
 {
     if (target->is<SyntaxExprList>()) {
         unique_ptr<SyntaxExprList> exprs(target.release()->as<SyntaxExprList>());
-        vector<unique_ptr<Syntax>>& elems = exprs->elems();
+        vector<unique_ptr<Syntax>>& elems = exprs->elements;
         vector<unique_ptr<SyntaxTarget>> targets;
         for (unsigned i = 0; i < elems.size(); i++)
             targets.push_back(makeAssignTarget(move(elems[i])));
-        return make_unique<SyntaxTargetList>(exprs->token(), move(targets));
+        return make_unique<SyntaxTargetList>(exprs->token, move(targets));
     } else if (target->is<SyntaxList>()) {
         unique_ptr<SyntaxList> list(unique_ptr_as<SyntaxList>(target));
-        vector<unique_ptr<Syntax>>& elems = list->elems();
+        vector<unique_ptr<Syntax>>& elems = list->elements;
         vector<unique_ptr<SyntaxTarget>> targets;
         for (unsigned i = 0; i < elems.size(); i++)
             targets.push_back(makeAssignTarget(move(elems[i])));
-        return make_unique<SyntaxTargetList>(list->token(), move(targets));
+        return make_unique<SyntaxTargetList>(list->token, move(targets));
     } else if (target->is<SyntaxName>()) {
         return unique_ptr<SyntaxTarget>(unique_ptr_as<SyntaxName>(target));
     } else if (target->is<SyntaxAttrRef>()) {
@@ -256,7 +256,7 @@ unique_ptr<SyntaxTarget> SyntaxParser::makeAssignTarget(unique_ptr<Syntax> targe
     } else if (target->is<SyntaxSubscript>()) {
         return unique_ptr_as<SyntaxSubscript>(target);
     } else {
-        throw ParseError(target->token(),
+        throw ParseError(target->token,
                          "Illegal target for assignment: " + target->name());
     }
 }
@@ -445,7 +445,7 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         for (auto i = params.begin(); i != params.end(); i++)
             if (name == i->name)
                 throw ParseError(t, "Duplicate parameter name: " + name);
-        params.emplace_back(name, move(defaultExpr), takesRest);
+        params.push_back({name, move(defaultExpr), takesRest});
         if (opt(endToken))
             break;
         match(Token_Comma);
@@ -458,14 +458,16 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
 {
     Token token = currentToken();
     if (opt(Token_If)) {
-        unique_ptr<SyntaxIf> ifStmt = make_unique<SyntaxIf>(token);
+        vector<IfBranch> branches;
         do {
             unique_ptr<Syntax> cond(expression());
-            ifStmt->addBranch(move(cond), parseSuite());
+            unique_ptr<SyntaxBlock> suite(parseSuite());
+            branches.push_back({move(cond), move(suite)});
         } while (opt(Token_Elif));
+        unique_ptr<SyntaxBlock> elseSuite;
         if (opt(Token_Else))
-            ifStmt->setElse(parseSuite());
-        return move(ifStmt);
+            elseSuite = parseSuite();
+        return make_unique<SyntaxIf>(token, move(branches), move(elseSuite));
     } else if (opt(Token_While)) {
         unique_ptr<Syntax> cond(expression());
         unique_ptr<SyntaxBlock> suite(parseSuite());
@@ -642,7 +644,7 @@ testcase(parser)
     sp.start("f = 1 + 2");
     unique_ptr<Syntax> expr(sp.parseCompoundStatement());
     testTrue(expr.get()->is<SyntaxAssign>());
-    testTrue(expr.get()->as<SyntaxAssign>()->left()->is<SyntaxName>());
+    testTrue(expr.get()->as<SyntaxAssign>()->left->is<SyntaxName>());
 
     testParseModule("1\n2", "1\n2");
     testParseModule("1; 2; 3", "1\n2\n3");
@@ -654,7 +656,7 @@ testcase(parser)
     expr = sp.parseModule();
     testEqual(repr(*expr.get()), "not a in b");
     testTrue(expr->is<SyntaxBlock>());
-    testTrue(expr->as<SyntaxBlock>()->stmts()[0]->is<SyntaxNot>());
+    testTrue(expr->as<SyntaxBlock>()->statements[0]->is<SyntaxNot>());
 
     testParseExpression("a.x", "a.x");
     testParseExpression("(a + 1).x", "(a + 1).x");

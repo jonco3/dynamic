@@ -88,7 +88,7 @@ struct DefaultSyntaxVisitor : public SyntaxVisitor
 
 struct Syntax
 {
-    Syntax(const Token& token) : token_(token) {}
+    Syntax(const Token& token) : token(token) {}
 
     template <typename T> bool is() const { return type() == T::Type; }
 
@@ -102,15 +102,12 @@ struct Syntax
         return static_cast<const T*>(this);
     }
 
-    const Token& token() const { return token_; }
-
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
     virtual string name() const = 0;
     virtual void accept(SyntaxVisitor& v) const = 0;
 
-  protected:
-    const Token token_;
+    const Token token;
 };
 
 template <typename T, typename S>
@@ -131,7 +128,7 @@ ostream& operator<<(ostream& s, const Syntax& syntax);
 #define define_syntax_accept()                                                \
     virtual void accept(SyntaxVisitor& v) const override                      \
     {                                                                         \
-        v.setPos(token_.pos);                                                 \
+        v.setPos(token.pos);                                                 \
         v.visit(*this);                                                       \
     }
 
@@ -143,28 +140,21 @@ ostream& operator<<(ostream& s, const Syntax& syntax);
 struct UnarySyntax : public Syntax
 {
     UnarySyntax(const Token& token, unique_ptr<Syntax> r)
-      : Syntax(token), right_(move(r))
+      : Syntax(token), right(move(r))
     {}
 
-    const Syntax* right() const { return right_.get(); }
-
-  private:
-    unique_ptr<Syntax> right_;
+    const unique_ptr<Syntax> right;
 };
 
-template <typename Base, typename L, typename R>
-struct BinarySyntax : public Base
+template <typename BaseT, typename LeftT, typename RightT>
+struct BinarySyntax : public BaseT
 {
-    BinarySyntax(const Token& token, unique_ptr<L> l, unique_ptr<R> r)
-      : Base(token), left_(move(l)), right_(move(r))
+    BinarySyntax(const Token& token, unique_ptr<LeftT> l, unique_ptr<RightT> r)
+      : BaseT(token), left(move(l)), right(move(r))
     {}
 
-    const L* left() const { return left_.get(); }
-    const R* right() const { return right_.get(); }
-
-  private:
-    unique_ptr<L> left_;
-    unique_ptr<R> right_;
+    const unique_ptr<LeftT> left;
+    const unique_ptr<RightT> right;
 };
 
 #define define_nullary_syntax(name, nameStr)                                  \
@@ -223,10 +213,7 @@ struct SyntaxBlock : public Syntax
       : Syntax(token), statements(move(stmts))
     {}
 
-    const vector<unique_ptr<Syntax>>& stmts() const { return statements; }
-
-  private:
-    vector<unique_ptr<Syntax>> statements;
+    const vector<unique_ptr<Syntax>> statements;
 };
 
 struct SyntaxInteger : public Syntax
@@ -235,24 +222,18 @@ struct SyntaxInteger : public Syntax
 
     // todo: this probably doesn't correctly parse all python integers
     SyntaxInteger(const Token& token)
-      : Syntax(token), value_(atoi(token.text.c_str()))
+      : Syntax(token), value(atoi(token.text.c_str()))
     {}
 
-    int value() const { return value_; }
-
-  private:
-    int value_;
+    const int value;
 };
 
 struct SyntaxString : public Syntax
 {
     define_syntax_members(String, "string");
-    SyntaxString(const Token& token) : Syntax(token), value_(token.text) {}
+    SyntaxString(const Token& token) : Syntax(token), value(token.text) {}
 
-    const string& value() const { return value_; }
-
-  private:
-    string value_;
+    const string value;
 };
 
 struct SyntaxName : public SyntaxSingleTarget
@@ -260,12 +241,9 @@ struct SyntaxName : public SyntaxSingleTarget
     define_syntax_members(Name, "name");
 
     SyntaxName(const Token& token)
-      : SyntaxSingleTarget(token), id_(token.text) {}
+      : SyntaxSingleTarget(token), id(token.text) {}
 
-    Name id() const { return id_; }
-
-  private:
-    Name id_;
+    const Name id;
 };
 
 struct SyntaxExprList : public Syntax
@@ -278,10 +256,8 @@ struct SyntaxExprList : public Syntax
       : Syntax(token), elements(move(elems))
     {}
 
-    const vector<unique_ptr<Syntax>>& elems() const { return elements; }
-    vector<unique_ptr<Syntax>>& elems() { return elements; }
-
-  private:
+    // todo: non-const because of converstion to SyntaxTargetList in
+    // SyntaxParser::makeAssignTarget()
     vector<unique_ptr<Syntax>> elements;
 };
 
@@ -292,12 +268,8 @@ struct SyntaxList : public Syntax
     SyntaxList(const Token& token, vector<unique_ptr<Syntax>> elems)
       : Syntax(token), elements(move(elems)) {}
 
-    const vector<unique_ptr<Syntax>>& elems() const { return elements; }
-    vector<unique_ptr<Syntax>>& elems() { return elements; }
-
-    void release() { elements.clear(); }
-
-  private:
+    // todo: non-const because of converstion to SyntaxTargetList in
+    // SyntaxParser::makeAssignTarget()
     vector<unique_ptr<Syntax>> elements;
 };
 
@@ -308,12 +280,9 @@ struct SyntaxDict : public Syntax
     typedef pair<unique_ptr<Syntax>, unique_ptr<Syntax>> Entry;
 
     SyntaxDict(const Token& token, vector<Entry> entries)
-      : Syntax(token), entries_(move(entries)) {}
+      : Syntax(token), entries(move(entries)) {}
 
-    const vector<Entry>& entries() const { return entries_; }
-
-  private:
-    vector<Entry> entries_;
+    const vector<Entry> entries;
 };
 
 define_unary_syntax(Neg, "-");
@@ -335,17 +304,14 @@ struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
                    unique_ptr<Syntax> l,
                    unique_ptr<Syntax> r,
                    BinaryOp op)
-      : BinarySyntax<Syntax, Syntax, Syntax>(token, move(l), move(r)), op_(op)
+      : BinarySyntax<Syntax, Syntax, Syntax>(token, move(l), move(r)), op(op)
     {}
 
     virtual string name() const override {
-        return BinaryOpNames[op_];
+        return BinaryOpNames[op];
     }
 
-    BinaryOp op() const { return op_; }
-
-  private:
-    BinaryOp op_;
+    const BinaryOp op;
 };
 
 struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
@@ -358,17 +324,14 @@ struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
                     unique_ptr<SyntaxSingleTarget> l,
                     unique_ptr<Syntax> r,
                     BinaryOp op)
-      : Base(token, move(l), move(r)), op_(op)
+      : Base(token, move(l), move(r)), op(op)
     {}
 
     virtual string name() const override {
-        return AugAssignNames[op_];
+        return AugAssignNames[op];
     }
 
-    BinaryOp op() const { return op_; }
-
-  private:
-    BinaryOp op_;
+    const BinaryOp op;
 };
 
 struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
@@ -379,17 +342,14 @@ struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
     SyntaxCompareOp(const Token& token,
                     unique_ptr<Syntax> l,
                     unique_ptr<Syntax> r, CompareOp op)
-      : BinarySyntax<Syntax, Syntax, Syntax>(token, move(l), move(r)), op_(op)
+      : BinarySyntax<Syntax, Syntax, Syntax>(token, move(l), move(r)), op(op)
     {}
 
     virtual string name() const override {
-        return CompareOpNames[op()];
+        return CompareOpNames[op];
     }
 
-    CompareOp op() const { return op_; }
-
-  private:
-    CompareOp op_;
+    const CompareOp op;
 };
 
 struct SyntaxAttrRef : public BinarySyntax<SyntaxSingleTarget,
@@ -411,13 +371,10 @@ struct SyntaxTargetList : SyntaxTarget
 
     SyntaxTargetList(const Token& token,
                      vector<unique_ptr<SyntaxTarget>> targets)
-      : SyntaxTarget(token), targets_(move(targets))
+      : SyntaxTarget(token), targets(move(targets))
     {}
 
-    const vector<unique_ptr<SyntaxTarget>>& targets() const { return targets_; }
-
-  private:
-    vector<unique_ptr<SyntaxTarget>> targets_;
+    const vector<unique_ptr<SyntaxTarget>> targets;
 };
 
 define_binary_syntax(Syntax, SyntaxTarget, Syntax, Assign, "=");
@@ -442,15 +399,11 @@ struct SyntaxCall : public Syntax
     SyntaxCall(const Token& token,
                unique_ptr<Syntax> l,
                vector<unique_ptr<Syntax>> r)
-      : Syntax(token), left_(move(l)), right_(move(r))
+      : Syntax(token), left(move(l)), right(move(r))
     {}
 
-    const Syntax* left() const { return left_.get(); }
-    const vector<unique_ptr<Syntax>>& right() const { return right_; }
-
-  private:
-    unique_ptr<Syntax> left_;
-    vector<unique_ptr<Syntax>> right_;
+    const unique_ptr<Syntax> left;
+    const vector<unique_ptr<Syntax>> right;
 };
 
 struct SyntaxReturn : public UnarySyntax
@@ -470,27 +423,18 @@ struct SyntaxCond : public Syntax
                unique_ptr<Syntax> cond,
                unique_ptr<Syntax> alt)
       : Syntax(token),
-        cons_(move(cons)),
-        cond_(move(cond)),
-        alt_(move(alt))
+        cons(move(cons)),
+        cond(move(cond)),
+        alt(move(alt))
     {}
 
-    const Syntax* cons() const { return cons_.get(); }
-    const Syntax* cond() const { return cond_.get(); }
-    const Syntax* alt() const { return alt_.get(); }
-
-  private:
-    unique_ptr<Syntax> cons_;
-    unique_ptr<Syntax> cond_;
-    unique_ptr<Syntax> alt_;
+    const unique_ptr<Syntax> cons;
+    const unique_ptr<Syntax> cond;
+    const unique_ptr<Syntax> alt;
 };
 
 struct Parameter
 {
-    Parameter(Name name, unique_ptr<Syntax> maybeDefault, bool takesRest)
-      : name(name), maybeDefault(move(maybeDefault)), takesRest(takesRest)
-    {}
-
     Name name;
     unique_ptr<Syntax> maybeDefault;
     bool takesRest;
@@ -502,15 +446,11 @@ struct SyntaxLambda : public Syntax
 
     SyntaxLambda(const Token& token, vector<Parameter> params,
                  unique_ptr<Syntax> expr)
-        : Syntax(token), params_(move(params)), expr_(move(expr))
+        : Syntax(token), params(move(params)), expr(move(expr))
     {}
 
-    const vector<Parameter>& params() const { return params_; }
-    Syntax* expr() const { return expr_.get(); }
-
-  private:
-    vector<Parameter> params_;
-    unique_ptr<Syntax> expr_;
+    const vector<Parameter> params;
+    const unique_ptr<Syntax> expr;
 };
 
 struct SyntaxDef : public Syntax
@@ -523,54 +463,36 @@ struct SyntaxDef : public Syntax
               unique_ptr<Syntax> expr,  // todo: should be block?
               bool isGenerator)
       : Syntax(token),
-        id_(id),
-        params_(move(params)),
-        expr_(move(expr)),
-        isGenerator_(isGenerator)
+        id(id),
+        params(move(params)),
+        expr(move(expr)),
+        isGenerator(isGenerator)
     {}
 
-    Name id() const { return id_; }
-    const vector<Parameter>& params() const { return params_; }
-    Syntax* expr() const { return expr_.get(); }
-    bool isGenerator() const { return isGenerator_; }
+    const Name id;
+    const vector<Parameter> params;
+    const unique_ptr<Syntax> expr;
+    const bool isGenerator;
+};
 
-  private:
-    Name id_;
-    vector<Parameter> params_;
-    unique_ptr<Syntax> expr_;
-    bool isGenerator_;
+struct IfBranch
+{
+    unique_ptr<Syntax> cond;
+    unique_ptr<SyntaxBlock> suite;
 };
 
 struct SyntaxIf : public Syntax
 {
     define_syntax_members(If, "if");
 
-    struct Branch
-    {
-        Branch(unique_ptr<Syntax> cond, unique_ptr<SyntaxBlock> block)
-          : cond(move(cond)), block(move(block))
-        {}
+    SyntaxIf(const Token& token,
+             vector<IfBranch> branches,
+             unique_ptr<SyntaxBlock> elseSuite)
+        : Syntax(token), branches(move(branches)), elseSuite(move(elseSuite))
+    {}
 
-        unique_ptr<Syntax> cond;
-        unique_ptr<SyntaxBlock> block;
-    };
-
-    SyntaxIf(const Token& token) : Syntax(token) {}
-
-    void addBranch(unique_ptr<Syntax> cond, unique_ptr<SyntaxBlock> block) {
-        branches_.emplace_back(move(cond), move(block));
-    }
-
-    void setElse(unique_ptr<SyntaxBlock> block) {
-        else_ = move(block);
-    }
-
-    const vector<Branch>& branches() const { return branches_; }
-    const SyntaxBlock* elseBranch() const { return else_.get(); }
-
-  private:
-    vector<Branch> branches_;
-    unique_ptr<SyntaxBlock> else_;
+    const vector<IfBranch> branches;
+    const unique_ptr<SyntaxBlock> elseSuite;
 };
 
 struct SyntaxWhile : public Syntax
@@ -582,19 +504,14 @@ struct SyntaxWhile : public Syntax
                 unique_ptr<SyntaxBlock> suite,
                 unique_ptr<SyntaxBlock> elseSuite)
       : Syntax(token),
-        cond_(move(cond)),
-        suite_(move(suite)),
-        elseSuite_(move(elseSuite))
+        cond(move(cond)),
+        suite(move(suite)),
+        elseSuite(move(elseSuite))
     {}
 
-    const Syntax* cond() const { return cond_.get(); }
-    const Syntax* suite() const { return suite_.get(); }
-    const Syntax* elseSuite() const { return elseSuite_.get(); }
-
-  private:
-    unique_ptr<Syntax> cond_;
-    unique_ptr<SyntaxBlock> suite_;
-    unique_ptr<SyntaxBlock> elseSuite_;
+    const unique_ptr<Syntax> cond;
+    const unique_ptr<SyntaxBlock> suite;
+    const unique_ptr<SyntaxBlock> elseSuite;
 };
 
 struct SyntaxAssert : public Syntax
@@ -604,15 +521,11 @@ struct SyntaxAssert : public Syntax
     SyntaxAssert(const Token& token,
                  unique_ptr<Syntax> cond,
                  unique_ptr<Syntax> message)
-        : Syntax(token), cond_(move(cond)), message_(move(message))
+        : Syntax(token), cond(move(cond)), message(move(message))
     {}
 
-    const Syntax* cond() const { return cond_.get(); }
-    const Syntax* message() const { return message_.get(); }
-
-  private:
-    unique_ptr<Syntax> cond_;
-    unique_ptr<Syntax> message_;
+    const unique_ptr<Syntax> cond;
+    const unique_ptr<Syntax> message;
 };
 
 struct SyntaxClass : public Syntax
@@ -623,26 +536,20 @@ struct SyntaxClass : public Syntax
                 Name id,
                 unique_ptr<SyntaxExprList> bases,
                 unique_ptr<SyntaxBlock> suite)
-      : Syntax(token), id_(id), bases_(move(bases)), suite_(move(suite))
+      : Syntax(token), id(id), bases(move(bases)), suite(move(suite))
     {}
 
-    Name id() const { return id_; }
-    const SyntaxExprList* bases() const { return bases_.get(); }
-    const Syntax* suite() const { return suite_.get(); }
-
-  private:
-    Name id_;
-    unique_ptr<SyntaxExprList> bases_;
-    unique_ptr<SyntaxBlock> suite_;
+    const Name id;
+    const unique_ptr<SyntaxExprList> bases;
+    const unique_ptr<SyntaxBlock> suite;
 };
 
 struct SyntaxRaise : public UnarySyntax
 {
+    define_syntax_members(Raise, "raise");
+
     SyntaxRaise(const Token& token, unique_ptr<Syntax> right)
       : UnarySyntax(token, move(right)) {}
-    define_syntax_type(Syntax_Raise)
-    define_syntax_name("raise")
-    define_syntax_accept()
 };
 
 struct SyntaxFor : public Syntax
@@ -655,33 +562,24 @@ struct SyntaxFor : public Syntax
               unique_ptr<SyntaxBlock> suite,
               unique_ptr<SyntaxBlock> elseSuite)
       : Syntax(token),
-        targets_(move(targets)),
-        exprs_(move(exprs)),
-        suite_(move(suite)),
-        elseSuite_(move(elseSuite))
+        targets(move(targets)),
+        exprs(move(exprs)),
+        suite(move(suite)),
+        elseSuite(move(elseSuite))
     {}
 
-    const SyntaxTarget* targets() const { return targets_.get(); }
-    const Syntax* exprs() const { return exprs_.get(); }
-    const SyntaxBlock* suite() const { return suite_.get(); }
-    const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
-
-  private:
-    unique_ptr<SyntaxTarget> targets_;
-    unique_ptr<Syntax> exprs_;
-    unique_ptr<SyntaxBlock> suite_;
-    unique_ptr<SyntaxBlock> elseSuite_;
+    const unique_ptr<SyntaxTarget> targets;
+    const unique_ptr<Syntax> exprs;
+    const unique_ptr<SyntaxBlock> suite;
+    const unique_ptr<SyntaxBlock> elseSuite;
 };
 
 struct NameListSyntax : public Syntax
 {
     NameListSyntax(const Token& token, vector<Name> names)
-        : Syntax(token), names_(names) {}
+        : Syntax(token), names(names) {}
 
-    const vector<Name>& names() const { return names_; }
-
-  private:
-    vector<Name> names_;
+    const vector<Name> names;
 };
 
 struct SyntaxGlobal : public NameListSyntax
@@ -708,25 +606,19 @@ struct ExceptInfo
                unique_ptr<Syntax> expr,
                unique_ptr<SyntaxTarget> as,
                unique_ptr<SyntaxBlock> suite)
-      : token_(token),
-        expr_(move(expr)),
-        as_(move(as)),
-        suite_(move(suite))
+      : token(token),
+        expr(move(expr)),
+        as(move(as)),
+        suite(move(suite))
     {
-        assert(!as_ || expr_);
-        assert(suite_);
+        assert(!this->as || this->expr);
+        assert(this->suite);
     }
 
-    const Token& token() const { return token_; }
-    const Syntax* expr() const { return expr_.get(); }
-    const SyntaxTarget* as() const { return as_.get(); }
-    const SyntaxBlock* suite() const { return suite_.get(); }
-
-  private:
-    Token token_;
-    unique_ptr<Syntax> expr_;
-    unique_ptr<SyntaxTarget> as_;
-    unique_ptr<SyntaxBlock> suite_;
+    const Token token;
+    const unique_ptr<Syntax> expr;
+    const unique_ptr<SyntaxTarget> as;
+    const unique_ptr<SyntaxBlock> suite;
 };
 
 struct SyntaxTry : public Syntax
@@ -739,22 +631,16 @@ struct SyntaxTry : public Syntax
               unique_ptr<SyntaxBlock> elseSuite,
               unique_ptr<SyntaxBlock> finallySuite)
       : Syntax(token),
-        trySuite_(move(trySuite)),
-        excepts_(move(excepts)),
-        elseSuite_(move(elseSuite)),
-        finallySuite_(move(finallySuite))
+        trySuite(move(trySuite)),
+        excepts(move(excepts)),
+        elseSuite(move(elseSuite)),
+        finallySuite(move(finallySuite))
     {}
 
-    const SyntaxBlock* trySuite() const { return trySuite_.get(); }
-    const vector<unique_ptr<ExceptInfo>>& excepts() const { return excepts_; }
-    const SyntaxBlock* elseSuite() const { return elseSuite_.get(); }
-    const SyntaxBlock* finallySuite() const { return finallySuite_.get(); }
-
-  private:
-    unique_ptr<SyntaxBlock> trySuite_;
-    vector<unique_ptr<ExceptInfo>> excepts_;
-    unique_ptr<SyntaxBlock> elseSuite_;
-    unique_ptr<SyntaxBlock> finallySuite_;
+    const unique_ptr<SyntaxBlock> trySuite;
+    const vector<unique_ptr<ExceptInfo>> excepts;
+    const unique_ptr<SyntaxBlock> elseSuite;
+    const unique_ptr<SyntaxBlock> finallySuite;
 };
 
 struct SyntaxDel : public Syntax
@@ -762,13 +648,10 @@ struct SyntaxDel : public Syntax
     define_syntax_members(Del, "del");
 
     SyntaxDel(const Token& token, unique_ptr<SyntaxTarget> targets)
-      : Syntax(token), targets_(move(targets))
+      : Syntax(token), targets(move(targets))
     {}
 
-    const SyntaxTarget* targets() const { return targets_.get(); }
-
-  private:
-    unique_ptr<SyntaxTarget> targets_;
+    const unique_ptr<SyntaxTarget> targets;
 };
 
 #undef define_syntax_type

@@ -117,11 +117,11 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         assert(!inAssignTarget_);
     }
 
-    static Layout* buildLayout(const Syntax *s, Layout* layout,
+    static Layout* buildLayout(const Syntax& s, Layout* layout,
                                vector<Name>& globalsOut)
     {
         DefinitionFinder df(layout, globalsOut);
-        s->accept(df);
+        s.accept(df);
         return df.layout_;
     }
 
@@ -136,29 +136,28 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         {
             assert(!inAssignTarget_);
             AutoSetAndRestore setInAssign(inAssignTarget_, true);
-            s.left()->accept(*this);
+            s.left->accept(*this);
         }
-        s.right()->accept(*this);
+        s.right->accept(*this);
     }
 
     virtual void visit(const SyntaxTargetList& s) {
         assert(inAssignTarget_);
-        const auto& targets = s.targets();
-        for (auto i = targets.begin(); i != targets.end(); i++)
-            (*i)->accept(*this);
+        for (const auto& i : s.targets)
+            i->accept(*this);
     }
 
     virtual void visit(const SyntaxName& s) {
         if (inAssignTarget_)
-            addName(s.id());
+            addName(s.id);
     }
 
     virtual void visit(const SyntaxDef& s) {
-        addName(s.id());
+        addName(s.id);
     }
 
     virtual void visit(const SyntaxClass& s) {
-        addName(s.id());
+        addName(s.id);
     }
 
     void addGlobalOrNonLocalNames(const Token& token,
@@ -176,63 +175,63 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     virtual void visit(const SyntaxGlobal& s) {
-        addGlobalOrNonLocalNames(s.token(), s.names(), globals_, nonLocals_);
+        addGlobalOrNonLocalNames(s.token, s.names, globals_, nonLocals_);
     }
 
     virtual void visit(const SyntaxNonLocal& s) {
-        addGlobalOrNonLocalNames(s.token(), s.names(), nonLocals_, globals_);
+        addGlobalOrNonLocalNames(s.token, s.names, nonLocals_, globals_);
     }
 
     // Recurse into local blocks
 
     virtual void visit(const SyntaxBlock& s) {
-        for (auto i = s.stmts().begin(); i != s.stmts().end(); ++i)
-            (*i)->accept(*this);
+        for (const auto& i : s.statements)
+            i->accept(*this);
     }
 
     virtual void visit(const SyntaxCond& s) {
-        s.cons()->accept(*this);
-        s.alt()->accept(*this);
+        s.cons->accept(*this);
+        s.alt->accept(*this);
     }
 
     virtual void visit(const SyntaxIf& s) {
-        for (auto i = s.branches().begin(); i != s.branches().end(); ++i)
-            (*i).block->accept(*this);
-        if (s.elseBranch())
-            s.elseBranch()->accept(*this);
+        for (const auto& i : s.branches)
+            i.suite->accept(*this);
+        if (s.elseSuite)
+            s.elseSuite->accept(*this);
     }
 
     virtual void visit(const SyntaxWhile& s) {
-        s.suite()->accept(*this);
-        if (s.elseSuite())
-            s.elseSuite()->accept(*this);
+        s.suite->accept(*this);
+        if (s.elseSuite)
+            s.elseSuite->accept(*this);
     }
 
     virtual void visit(const SyntaxFor& s) {
         {
             assert(!inAssignTarget_);
             AutoSetAndRestore setInAssign(inAssignTarget_, true);
-            s.targets()->accept(*this);
+            s.targets->accept(*this);
         }
-        s.suite()->accept(*this);
-        if (s.elseSuite())
-            s.elseSuite()->accept(*this);
+        s.suite->accept(*this);
+        if (s.elseSuite)
+            s.elseSuite->accept(*this);
     }
 
     virtual void visit(const SyntaxTry& s) {
         assert(!inAssignTarget_);
-        s.trySuite()->accept(*this);
-        for (const auto& except : s.excepts()) {
-            if (except->as()) {
+        s.trySuite->accept(*this);
+        for (const auto& except : s.excepts) {
+            if (except->as) {
                 AutoSetAndRestore setInAssign(inAssignTarget_, true);
-                except->as()->accept(*this);
+                except->as->accept(*this);
             }
-            except->suite()->accept(*this);
+            except->suite->accept(*this);
         }
-        if (s.elseSuite())
-            s.elseSuite()->accept(*this);
-        if (s.finallySuite())
-            s.finallySuite()->accept(*this);
+        if (s.elseSuite)
+            s.elseSuite->accept(*this);
+        if (s.finallySuite)
+            s.finallySuite->accept(*this);
     }
 
   private:
@@ -267,7 +266,7 @@ struct ByteCompiler : public SyntaxVisitor
         assert(globals);
         topLevel = globals;
         layout = topLevel->layout();
-        build(s);
+        build(*s);
         if (!block->lastInstr()->is<InstrReturn>())
             emit<InstrReturn>();
 #ifdef TRACE_BUILD
@@ -278,7 +277,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     Block* buildFunctionBody(ByteCompiler* parent,
                              const vector<Parameter>& params,
-                             const Syntax* s)
+                             const Syntax& s)
     {
         assert(parent);
         this->parent = parent;
@@ -298,7 +297,7 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildLambda(ByteCompiler* parent, const vector<Parameter>& params,
-                       const Syntax* s) {
+                       const Syntax& s) {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
@@ -312,7 +311,7 @@ struct ByteCompiler : public SyntaxVisitor
         return block;
     }
 
-    Block* buildClass(ByteCompiler* parent, Name id, const Syntax* s) {
+    Block* buildClass(ByteCompiler* parent, Name id, const Syntax& s) {
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
@@ -330,7 +329,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     Block* buildGenerator(ByteCompiler* parent,
                           const vector<Parameter>& params,
-                          const Syntax* s)
+                          const Syntax& s)
     {
         assert(parent);
         this->parent = parent;
@@ -389,7 +388,11 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     void compile(const Syntax* s) {
-        s->accept(*this);
+        compile(*s);
+    }
+
+    void compile(const Syntax& s) {
+        s.accept(*this);
     }
 
     template <typename T>
@@ -413,7 +416,7 @@ struct ByteCompiler : public SyntaxVisitor
 #endif
     }
 
-    void build(const Syntax* s) {
+    void build(const Syntax& s) {
         assert(!block);
         assert(topLevel);
         layout = DefinitionFinder::buildLayout(s, layout, globals);
@@ -428,16 +431,18 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
-        compile(s.right());
+        compile(s.right);
         emit<InstrGetMethod>(name);
         emit<InstrCall>(1);
     }
 
     template <typename BaseType>
-    void callBinaryMethod(const BinarySyntax<BaseType, Syntax, Syntax>& s, string name) {
-        compile(s.left());
+    void callBinaryMethod(const BinarySyntax<BaseType, Syntax, Syntax>& s,
+                          string name)
+    {
+        compile(s.left);
         emit<InstrGetMethod>(name);
-        compile(s.right());
+        compile(s.right);
         emit<InstrCall>(2);
     }
 
@@ -455,67 +460,64 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxBlock& s) {
         maybeAssertStackDepth();
-        if (s.stmts().empty()) {
-            emit<InstrConst>(None);
-            return;
-        }
-
         bool first = true;
-        for (const auto& i : s.stmts()) {
+        for (const auto& i : s.statements) {
             if (!first)
                 emit<InstrPop>();
             compile(i);
             maybeAssertStackDepth(1);
             first = false;
         }
+        if (first)
+            emit<InstrConst>(None);
     }
 
     virtual void visit(const SyntaxInteger& s) {
-        Root<Value> v(Integer::get(s.value()));
+        Root<Value> v(Integer::get(s.value));
         emit<InstrConst>(v);
     }
 
     virtual void visit(const SyntaxString& s) {
-        Root<Value> v(String::get(s.value()));
+        Root<Value> v(String::get(s.value));
         emit<InstrConst>(v);
     }
 
     virtual void visit(const SyntaxExprList& s) {
-        for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
-            compile((*i));
-        emit<InstrTuple>(s.elems().size());
+        for (const auto& i : s.elements)
+            compile(*i);
+        emit<InstrTuple>(s.elements.size());
     }
 
     virtual void visit(const SyntaxList& s) {
-        for (auto i = s.elems().begin(); i != s.elems().end(); ++i)
-            compile((*i));
-        emit<InstrList>(s.elems().size());
+        for (const auto& i : s.elements)
+            compile(*i);
+        emit<InstrList>(s.elements.size());
     }
 
     virtual void visit(const SyntaxDict& s) {
-        for (auto i = s.entries().begin(); i != s.entries().end(); ++i) {
-            compile(i->first);
-            compile(i->second);
+        for (const auto& i : s.entries) {
+            compile(i.first);
+            compile(i.second);
         }
-        emit<InstrDict>(s.entries().size());
+        emit<InstrDict>(s.entries.size());
     }
 
     virtual void visit(const SyntaxOr& s) {
-        compile(s.left());
+        compile(s.left);
         unsigned branch = emit<InstrOr>();
-        compile(s.right());
+        compile(s.right);
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxAnd& s) {
-        compile(s.left());
+        compile(s.left);
         unsigned branch = emit<InstrAnd>();
-        compile(s.right());
+        compile(s.right);
         block->branchHere(branch);
     }
 
     virtual void visit(const SyntaxNot& s) {
-        compile(s.right());
+        compile(s.right);
         emit<InstrNot>();
     }
 
@@ -524,21 +526,21 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
 
     virtual void visit(const SyntaxBinaryOp& s) {
-        compile(s.left());
-        compile(s.right());
-        emit<InstrBinaryOp>(s.op());
+        compile(s.left);
+        compile(s.right);
+        emit<InstrBinaryOp>(s.op);
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
         // todo: what's __itruediv__?
         // todo: we'll need to change this if we want to specialise depending on
         // whether the target implements update-in-place methods
-        compile(s.left());
-        compile(s.right());
-        emit<InstrAugAssignUpdate>(s.op());
+        compile(s.left);
+        compile(s.right);
+        emit<InstrAugAssignUpdate>(s.op);
         {
             AutoPushContext enterAssign(contextStack, Context::Assign);
-            compile(s.left());
+            compile(s.left);
         }
         emit<InstrPop>();
         emit<InstrConst>(None);
@@ -547,15 +549,15 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxCompareOp& s) {
         // todo: == should fall back to comparing identity if __eq__ not
         // implemented
-        callBinaryMethod(s, CompareOpMethodNames[s.op()]);
+        callBinaryMethod(s, CompareOpMethodNames[s.op]);
     }
 
 
 #define define_vist_binary_instr(syntax, instr)                               \
     virtual void visit(const syntax& s) {                                     \
-        compile(s.left());                                              \
-        compile(s.right());                                             \
-        emit<instr>();                                   \
+        compile(s.left);                                                      \
+        compile(s.right);                                                     \
+        emit<instr>();                                                        \
     }
 
     define_vist_binary_instr(SyntaxIn, InstrIn);
@@ -564,14 +566,14 @@ struct ByteCompiler : public SyntaxVisitor
 #undef define_vist_binary_instr
 
     virtual void visit(const SyntaxAssign& s) {
-        compile(s.right());
+        compile(s.right);
         AutoPushContext enterAssign(contextStack, Context::Assign);
-        compile(s.left());
+        compile(s.left);
     }
 
     virtual void visit(const SyntaxDel& s) {
         AutoPushContext enterDelete(contextStack, Context::Delete);
-        compile(s.targets());
+        compile(s.targets);
     }
 
     bool lookupLocal(Name name) {
@@ -598,7 +600,7 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxName& s) {
-        Name name = s.id();
+        Name name = s.id;
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name))
@@ -608,7 +610,7 @@ struct ByteCompiler : public SyntaxVisitor
             else if (lookupGlobal(name))
                 emit<InstrSetGlobal>(topLevel, name);
             else
-                throw ParseError(s.token(),
+                throw ParseError(s.token,
                                  string("Name is not defined: ") + name);
             break;
 
@@ -620,7 +622,7 @@ struct ByteCompiler : public SyntaxVisitor
             else if (lookupGlobal(name))
                 emit<InstrDelGlobal>(topLevel, name);
             else
-                throw ParseError(s.token(),
+                throw ParseError(s.token,
                                  string("Name is not defined: ") + name);
             emit<InstrConst>(None);
             break;
@@ -644,9 +646,9 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxAttrRef& s) {
         {
             AutoPushContext clearContext(contextStack, Context::None);
-            compile(s.left());
+            compile(s.left);
         }
-        Name id = s.right()->id();
+        Name id = s.right->id;
 
         switch(contextStack.back()) {
           case Context::Assign:
@@ -668,9 +670,9 @@ struct ByteCompiler : public SyntaxVisitor
         switch(contextStack.back()) {
           case Context::Assign: {
             AutoPushContext clearContext(contextStack, Context::None);
-            compile(s.left());
+            compile(s.left);
             emit<InstrGetMethod>("__setitem__");
-            compile(s.right());
+            compile(s.right);
             // todo: there may be a better way than this stack manipulation
             emit<InstrDup>(3);
             emit<InstrCall>(3);
@@ -693,7 +695,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxTargetList& s) {
         assert(inTarget());
-        const auto& targets = s.targets();
+        const auto& targets = s.targets;
         if (contextStack.back() == Context::Assign)
             emit<InstrDestructure>(targets.size());
         for (unsigned i = 0; i < targets.size(); i++) {
@@ -705,35 +707,35 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxCall& s) {
         // todo: check this actually how python works
-        bool methodCall = s.left()->is<SyntaxAttrRef>();
+        bool methodCall = s.left->is<SyntaxAttrRef>();
 
         if (methodCall) {
-            const SyntaxAttrRef* pr = s.left()->as<SyntaxAttrRef>();
-            compile(pr->left());
-            emit<InstrGetMethod>(pr->right()->id());
+            const SyntaxAttrRef* pr = s.left->as<SyntaxAttrRef>();
+            compile(pr->left);
+            emit<InstrGetMethod>(pr->right->id);
         } else {
-            compile(s.left());
+            compile(s.left);
         }
 
-        for (auto i = s.right().begin(); i != s.right().end(); ++i)
-            compile((*i));
-        unsigned count = s.right().size() + (methodCall ? 1 : 0);
+        for (const auto& i : s.right)
+            compile(*i);
+        unsigned count = s.right.size() + (methodCall ? 1 : 0);
         emit<InstrCall>(count);
     }
 
     virtual void visit(const SyntaxReturn& s) {
         if (isClassBlock) {
-            throw ParseError(s.token(),
+            throw ParseError(s.token,
                              "Return statement not allowed in class body");
         } else if (isGenerator) {
-            if (s.right()) {
-                throw ParseError(s.token(),
+            if (s.right) {
+                throw ParseError(s.token,
                                  "SyntaxError: 'return' with argument inside generator");
             }
             emit<InstrLeaveGenerator>();
         } else {
-            if (s.right())
-                compile(s.right());
+            if (s.right)
+                compile(s.right);
             else
                 emit<InstrConst>(None);
             emit<InstrReturn>();
@@ -741,17 +743,17 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxCond& s) {
-        compile(s.cond());
+        compile(s.cond);
         unsigned altBranch = emit<InstrBranchIfFalse>();
-        compile(s.cons());
+        compile(s.cons);
         unsigned endBranch = emit<InstrBranchAlways>();
         block->branchHere(altBranch);
-        compile(s.alt());
+        compile(s.alt);
         block->branchHere(endBranch);
     }
 
     virtual void visit(const SyntaxIf& s) {
-        const auto& suites = s.branches();
+        const auto& suites = s.branches;
         assert(suites.size() != 0);
         vector<unsigned> branchesToEnd;
         unsigned lastCondFailed = 0;
@@ -760,14 +762,14 @@ struct ByteCompiler : public SyntaxVisitor
                 block->branchHere(lastCondFailed);
             compile(suites[i].cond);
             lastCondFailed = emit<InstrBranchIfFalse>();
-            compile(suites[i].block);
+            compile(suites[i].suite);
             emit<InstrPop>();
-            if (s.elseBranch() || i != suites.size() - 1)
+            if (s.elseSuite || i != suites.size() - 1)
                 branchesToEnd.push_back(emit<InstrBranchAlways>());
         }
         block->branchHere(lastCondFailed);
-        if (s.elseBranch()) {
-            compile(s.elseBranch());
+        if (s.elseSuite) {
+            compile(s.elseSuite);
             emit<InstrPop>();
         }
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
@@ -779,11 +781,11 @@ struct ByteCompiler : public SyntaxVisitor
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
         vector<unsigned> oldBreakInstrs = move(breakInstrs);
         breakInstrs.clear();
-        compile(s.cond());
+        compile(s.cond);
         unsigned branchToEnd = emit<InstrBranchIfFalse>();
         {
             AutoPushContext enterLoop(contextStack, Context::Loop);
-            compile(s.suite());
+            compile(s.suite);
             emit<InstrPop>();
         }
         emit<InstrBranchAlways>(block->offsetTo(loopHeadOffset));
@@ -796,7 +798,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxFor& s) {
         // 1. Get iterator
-        compile(s.exprs());
+        compile(s.exprs);
         emit<InstrGetMethod>("__iter__");
         emit<InstrCall>(1);
         emit<InstrGetMethod>("next");
@@ -812,14 +814,14 @@ struct ByteCompiler : public SyntaxVisitor
         // 3. Assign results
         {
             AutoPushContext enterAssign(contextStack, Context::Assign);
-            compile(s.targets());
+            compile(s.targets);
             emit<InstrPop>();
         }
 
         // 4. Execute loop body
         {
             AutoPushContext enterLoop(contextStack, Context::Loop);
-            compile(s.suite());
+            compile(s.suite);
             emit<InstrPop>();
         }
         emit<InstrBranchAlways>(block->offsetTo(loopHeadOffset));
@@ -857,44 +859,44 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxLambda& s) {
         Root<Block*> exprBlock(
-            ByteCompiler().buildLambda(this, s.params(), s.expr()));
-        emitLambda("(lambda)", s.params(), exprBlock, false);
+            ByteCompiler().buildLambda(this, s.params, *s.expr));
+        emitLambda("(lambda)", s.params, exprBlock, false);
     }
 
     virtual void visit(const SyntaxDef& s) {
         Root<Block*> exprBlock;
-        if (s.isGenerator()) {
+        if (s.isGenerator) {
             exprBlock =
-                ByteCompiler().buildGenerator(this, s.params(), s.expr());
+                ByteCompiler().buildGenerator(this, s.params, *s.expr);
         } else {
             exprBlock =
-                ByteCompiler().buildFunctionBody(this, s.params(), s.expr());
+                ByteCompiler().buildFunctionBody(this, s.params, *s.expr);
         }
-        emitLambda(s.id(), s.params(), exprBlock, s.isGenerator());
+        emitLambda(s.id, s.params, exprBlock, s.isGenerator);
         if (parent)
-            emit<InstrSetLocal>(s.id());
+            emit<InstrSetLocal>(s.id);
         else
-            emit<InstrSetGlobal>(topLevel, s.id());
+            emit<InstrSetGlobal>(topLevel, s.id);
     }
 
     virtual void visit(const SyntaxClass& s) {
-        Root<Block*> suite(ByteCompiler().buildClass(this, s.id(), s.suite()));
+        Root<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
         vector<Name> params = { ClassFunctionParam };
-        emit<InstrLambda>(s.id(), params, suite);
-        compile(s.bases());
+        emit<InstrLambda>(s.id, params, suite);
+        compile(s.bases);
         emit<InstrCall>(1);
         if (parent)
-            emit<InstrSetLocal>(s.id());
+            emit<InstrSetLocal>(s.id);
         else
-            emit<InstrSetGlobal>(topLevel, s.id());
+            emit<InstrSetGlobal>(topLevel, s.id);
     }
 
     virtual void visit(const SyntaxAssert& s) {
         if (debugMode) {
-            compile(s.cond());
+            compile(s.cond);
             unsigned endBranch = emit<InstrBranchIfTrue>();
-            if (s.message()) {
-                compile(s.message());
+            if (s.message) {
+                compile(s.message);
                 emit<InstrGetMethod>("__str__");
                 emit<InstrCall>(1);
             } else {
@@ -907,31 +909,31 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxRaise& s) {
-        compile(s.right());
+        compile(s.right);
         emit<InstrRaise>();
     }
 
     virtual void visit(const SyntaxYield& s) {
-        compile(s.right());
+        compile(s.right);
         emit<InstrSuspendGenerator>();
     }
 
     virtual void visit(const SyntaxTry& s) {
         unsigned finallyBranch = 0;
-        if (s.finallySuite()) {
+        if (s.finallySuite) {
             contextStack.push_back(Context::Finally);
             finallyBranch = emit<InstrEnterFinallyRegion>();
         }
-        if (s.excepts().size() != 0) {
+        if (s.excepts.size() != 0) {
             emitTryCatch(s);
         } else {
-            compile(s.trySuite());
+            compile(s.trySuite);
             emit<InstrPop>();
         }
-        if (s.finallySuite()) {
+        if (s.finallySuite) {
             emit<InstrLeaveFinallyRegion>();
             block->branchHere(finallyBranch);
-            compile(s.finallySuite());
+            compile(s.finallySuite);
             emit<InstrPop>();
             emit<InstrFinishExceptionHandler>();
             assert(contextStack.back() == Context::Finally);
@@ -942,38 +944,38 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void emitTryCatch(const SyntaxTry& s) {
         unsigned handlerBranch = emit<InstrEnterCatchRegion>();
-        compile(s.trySuite());
+        compile(s.trySuite);
         emit<InstrPop>();
         emit<InstrLeaveCatchRegion>();
         unsigned suiteEndBranch = emit<InstrBranchAlways>();
 
         bool fullyHandled = false;
         vector<unsigned> exceptEndBranches;
-        for (const auto& e : s.excepts()) {
+        for (const auto& e : s.excepts) {
             assert(!fullyHandled);
             block->branchHere(handlerBranch);
-            if (e->expr()) {
-                compile(e->expr());
+            if (e->expr) {
+                compile(e->expr);
                 emit<InstrMatchCurrentException>();
                 handlerBranch = emit<InstrBranchIfFalse>();
-                if (e->as()) {
+                if (e->as) {
                     AutoPushContext enterAssign(contextStack, Context::Assign);
-                    compile(e->as());
+                    compile(e->as);
                 }
                 emit<InstrPop>();
             } else {
-                assert(!e->as());
+                assert(!e->as);
                 fullyHandled = true;
                 emit<InstrHandleCurrentException>();
             }
-            compile(e->suite());
+            compile(e->suite);
             emit<InstrPop>();
             exceptEndBranches.push_back(emit<InstrBranchAlways>());
         }
 
         block->branchHere(suiteEndBranch);
-        if (s.elseSuite()) {
-            compile(s.elseSuite());
+        if (s.elseSuite) {
+            compile(s.elseSuite);
             emit<InstrPop>();
         }
 
@@ -1002,7 +1004,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxBreak& s) {
         if (!inLoop())
-            throw ParseError(s.token(), "SyntaxError: 'break' outside loop");
+            throw ParseError(s.token, "SyntaxError: 'break' outside loop");
         unsigned finallyCount = countFinallyBlocksInLoop();
         unsigned offset = emit<InstrLoopControlJump>(finallyCount);
         breakInstrs.push_back(offset);
@@ -1010,7 +1012,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxContinue& s) {
         if (!inLoop())
-            throw ParseError(s.token(), "SyntaxError: 'continue' outside loop");
+            throw ParseError(s.token, "SyntaxError: 'continue' outside loop");
         unsigned finallyCount = countFinallyBlocksInLoop();
         emit<InstrLoopControlJump>(finallyCount, loopHeadOffset);
     }
