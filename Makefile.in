@@ -70,8 +70,8 @@ Makefile: Makefile.in config.status
 config.status: configure
 	./config.status --recheck
 
-tests: $(TESTOBJS) Makefile
-	$(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o tests
+unittests: $(TESTOBJS) Makefile
+	$(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o unittests
 
 dynamic: $(MAINOBJS) Makefile
 	$(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
@@ -79,9 +79,9 @@ dynamic: $(MAINOBJS) Makefile
 WRAPPER = python $(srcdir)/test/debug-wrapper
 TEST-RUNNER = python $(srcdir)/test/run-tests
 .PHONY: test
-test: tests dynamic
+test: unittests dynamic
 	@echo "Entering directory \`@srcdir@/src'"
-	$(WRAPPER) tests -l $(srcdir)/lib
+	$(WRAPPER) unittests -l $(srcdir)/lib
 	$(TEST-RUNNER) ./dynamic -l $(srcdir)/lib
 
 .PHONY: bench

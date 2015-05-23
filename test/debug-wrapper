@@ -27,7 +27,10 @@ if sys.platform == "darwin" and which('lldb'):
              '--one-line-on-crash', 'bt', '--one-line-on-crash', 'quit',
              '--', ] + args
     print(" ".join(args))
-    os.execvp('lldb', args)
+    output = check_output(args)
+    print output
+    rc = 0 if "All tests passed" in output else 1
+    sys.exit(rc)
 
 exit_pattern = re.compile(r" (?:exited with code|exited with status =) (\d+)")
 crash_pattern = re.compile(r"Program received signal")
