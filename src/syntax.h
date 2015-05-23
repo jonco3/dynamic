@@ -55,9 +55,9 @@ using namespace std;
     syntax(Continue)                                                          \
     syntax(Del)
 
-enum SyntaxType
+enum class SyntaxType
 {
-#define syntax_enum(name) Syntax_##name,
+#define syntax_enum(name) name,
     for_each_syntax(syntax_enum)
 #undef syntax_enum
     SyntaxTypeCount
@@ -97,11 +97,6 @@ struct Syntax
         return static_cast<T*>(this);
     }
 
-    template <typename T> const T* as() const {
-        assert(is<T>());
-        return static_cast<const T*>(this);
-    }
-
     virtual ~Syntax() {}
     virtual SyntaxType type() const = 0;
     virtual string name() const = 0;
@@ -119,7 +114,7 @@ static unique_ptr<T> unique_ptr_as(S&& p)
 ostream& operator<<(ostream& s, const Syntax& syntax);
 
 #define define_syntax_type(st)                                                \
-    static const SyntaxType Type = st;                                        \
+    static const SyntaxType Type = SyntaxType::st;                            \
     virtual SyntaxType type() const override { return Type; }
 
 #define define_syntax_name(nm)                                                \
@@ -128,12 +123,12 @@ ostream& operator<<(ostream& s, const Syntax& syntax);
 #define define_syntax_accept()                                                \
     virtual void accept(SyntaxVisitor& v) const override                      \
     {                                                                         \
-        v.setPos(token.pos);                                                 \
+        v.setPos(token.pos);                                                  \
         v.visit(*this);                                                       \
     }
 
 #define define_syntax_members(st, nm)                                         \
-    define_syntax_type(Syntax_##st)                                           \
+    define_syntax_type(st)                                                    \
     define_syntax_name(nm)                                                    \
     define_syntax_accept()
 
@@ -297,7 +292,7 @@ define_simple_binary_syntax(Is, "is");
 
 struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
-    define_syntax_type(Syntax_BinaryOp);
+    define_syntax_type(BinaryOp);
     define_syntax_accept();
 
     SyntaxBinaryOp(const Token& token,
@@ -316,7 +311,7 @@ struct SyntaxBinaryOp : public BinarySyntax<Syntax, Syntax, Syntax>
 
 struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
 {
-    define_syntax_type(Syntax_BinaryOp);
+    define_syntax_type(BinaryOp);
     define_syntax_accept();
 
     typedef BinarySyntax<Syntax, SyntaxSingleTarget, Syntax> Base;
@@ -336,7 +331,7 @@ struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
 
 struct SyntaxCompareOp : public BinarySyntax<Syntax, Syntax, Syntax>
 {
-    define_syntax_type(Syntax_CompareOp);
+    define_syntax_type(CompareOp);
     define_syntax_accept();
 
     SyntaxCompareOp(const Token& token,
