@@ -1,4 +1,4 @@
-#include "integer.h"
+#include "numeric.h"
 
 #include "bool.h"
 #include "callable.h"

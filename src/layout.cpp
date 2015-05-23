@@ -101,7 +101,7 @@ void Layout::print(ostream& s) const
 #ifdef BUILD_TESTS
 
 #include "test.h"
-#include "integer.h"
+#include "numeric.h"
 
 testcase(layout)
 {

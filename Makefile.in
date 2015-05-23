@@ -41,7 +41,7 @@ SRCS = \
 	src/interp.cpp \
 	src/common.cpp \
 	src/exception.cpp \
-	src/integer.cpp \
+	src/numeric.cpp \
 	src/string.cpp \
 	src/syntax.cpp \
 	src/list.cpp \

@@ -7,7 +7,7 @@
 #include "exception.h"
 #include "frame.h"
 #include "gcdefs.h"
-#include "integer.h"
+#include "numeric.h"
 #include "interp.h"
 #include "list.h"
 #include "name.h"

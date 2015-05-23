@@ -3,7 +3,7 @@
 #include "bool.h"
 #include "callable.h"
 #include "exception.h"
-#include "integer.h"
+#include "numeric.h"
 #include "singletons.h"
 
 #include "value-inl.h"
@@ -420,7 +420,7 @@ void initObject()
 #ifdef BUILD_TESTS
 
 #include "test.h"
-#include "integer.h"
+#include "numeric.h"
 
 testcase(object)
 {

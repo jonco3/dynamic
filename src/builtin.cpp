@@ -5,7 +5,7 @@
 #include "dict.h"
 #include "exception.h"
 #include "input.h"
-#include "integer.h"
+#include "numeric.h"
 #include "list.h"
 #include "parser.h"
 #include "reflect.h"

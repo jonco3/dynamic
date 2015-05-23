@@ -7,7 +7,7 @@
 #include "exception.h"
 #include "frame.h"
 #include "input.h"
-#include "integer.h"
+#include "numeric.h"
 #include "list.h"
 #include "object.h"
 #include "parser.h"

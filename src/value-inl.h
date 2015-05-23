@@ -3,7 +3,7 @@
 
 #include "value.h"
 
-#include "integer.h"
+#include "numeric.h"
 #include "object.h"
 
 inline Value GCTraits<Value>::nullValue() {
