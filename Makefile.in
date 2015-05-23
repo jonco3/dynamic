@@ -61,6 +61,9 @@ MAINOBJS = $(subst src,build/main,$(MAINSRCS:.cpp=.o))
 TESTDEPS = $(TESTOBJS:.o=.d)
 MAINDEPS = $(MAINOBJS:.o=.d)
 
+WRAPPER = python $(srcdir)/test/debug-wrapper
+TEST-RUNNER = python $(srcdir)/test/run-tests
+
 .PHONY: all
 all: dynamic tests
 
@@ -76,13 +79,17 @@ unittests: $(TESTOBJS) Makefile
 dynamic: $(MAINOBJS) Makefile
 	$(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
 
-WRAPPER = python $(srcdir)/test/debug-wrapper
-TEST-RUNNER = python $(srcdir)/test/run-tests
-.PHONY: test
-test: unittests dynamic
+.PHONY: unittest
+unittest: unittests
 	@echo "Entering directory \`@srcdir@/src'"
 	$(WRAPPER) unittests -l $(srcdir)/lib
+
+.PHONY: pythontest
+pythontest: dynamic
 	$(TEST-RUNNER) ./dynamic -l $(srcdir)/lib
+
+.PHONY: test
+test: unittest pythontest
 
 .PHONY: bench
 bench: dynamic
