@@ -151,7 +151,17 @@ void Integer::print(ostream& s) const {
 typedef double (FloatUnaryOp)(double);
 static double floatPos(double a) { return a; }
 static double floatNeg(double a) { return -a; }
-static double floatHash(double a) { return *(uint64_t*)&a; }
+
+static double floatHash(double a)
+{
+    union PunnedDouble {
+        double d;
+        uint64_t i;
+    };
+
+    PunnedDouble p = { a };
+    return p.i;
+}
 
 typedef double (FloatBinaryOp)(double, double);
 static double floatAdd(double a, double b) { return a + b; }
