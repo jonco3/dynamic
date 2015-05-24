@@ -76,6 +76,11 @@ void SyntaxPrinter::visit(const SyntaxInteger& s)
     os_ << dec << s.value;
 }
 
+void SyntaxPrinter::visit(const SyntaxFloat& s)
+{
+    os_ << s.value;
+}
+
 void SyntaxPrinter::visit(const SyntaxString& s)
 {
     os_ << "'" << s.value << "'";

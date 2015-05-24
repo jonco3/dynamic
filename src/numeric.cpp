@@ -9,6 +9,10 @@
 #include <cmath>
 #include <sstream>
 
+GlobalRoot<Class*> Integer::ObjectClass;
+GlobalRoot<Integer*> Integer::Zero;
+GlobalRoot<Class*> Float::ObjectClass;
+
 struct UnaryPlus        { static int op(int a) { return a; } };
 struct UnaryMinus       { static int op(int a) { return -a; } };
 struct UnaryInvert      { static int op(int a) { return ~a; } };
@@ -74,9 +78,6 @@ static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
     return true;
 }
 
-GlobalRoot<Class*> Integer::ObjectClass;
-GlobalRoot<Integer*> Integer::Zero;
-
 void Integer::init()
 {
     Root<Class*> cls(gc.create<Class>("int"));
@@ -132,11 +133,125 @@ void Integer::print(ostream& s) const {
     s << dec << value_;
 }
 
+typedef double (FloatUnaryOp)(double);
+static double floatPos(double a) { return a; }
+static double floatNeg(double a) { return -a; }
+static double floatHash(double a) { return *(uint64_t*)&a; }
+
+typedef double (FloatBinaryOp)(double, double);
+static double floatAdd(double a, double b) { return a + b; }
+static double floatSub(double a, double b) { return a - b; }
+static double floatMul(double a, double b) { return a * b; }
+static double floatDiv(double a, double b) { return a / b; }
+static double floatFloorDiv(double a, double b) { return a / b; } // todo
+static double floatMod(double a, double b) { return fmod(a, b); }
+static double floatPow(double a, double b) { return pow(a, b); }
+
+typedef bool (FloatCompareOp)(double, double);
+static bool floatLT(double a, double b) { return a < b; }
+static bool floatLE(double a, double b) { return a <= b; }
+static bool floatGT(double a, double b) { return a > b; }
+static bool floatGE(double a, double b) { return a >= b; }
+static bool floatEQ(double a, double b) { return a == b; }
+static bool floatNE(double a, double b) { return a != b; }
+
+static double floatValue(Traced<Value> value)
+{
+    return value.asObject()->as<Float>()->value;
+}
+
+template <FloatUnaryOp op>
+static bool floatUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!args[0].isInstanceOf(Float::ObjectClass)) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Float::get(op(floatValue(args[0])));
+    return true;
+}
+
+template <FloatBinaryOp op>
+static bool floatBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!args[0].isInstanceOf(Float::ObjectClass) ||
+        !args[1].isInstanceOf(Float::ObjectClass))
+    {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Float::get(op(floatValue(args[0]), floatValue(args[1])));
+    return true;
+}
+
+template <FloatCompareOp op>
+static bool floatCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!args[0].isInstanceOf(Float::ObjectClass) ||
+        !args[1].isInstanceOf(Float::ObjectClass))
+    {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Boolean::get(op(floatValue(args[0]), floatValue(args[1])));
+    return true;
+}
+
+static bool floatStr(TracedVector<Value> args, Root<Value>& resultOut) {
+    if (!checkInstanceOf(args[0], Float::ObjectClass, resultOut))
+        return false;
+
+    ostringstream s;
+    s << floatValue(args[0]);
+    resultOut = String::get(s.str());
+    return true;
+}
+
+void Float::init()
+{
+    Root<Class*> cls(gc.create<Class>("int"));
+    Root<Value> value;
+    initNativeMethod(cls, "__str__", floatStr, 1);
+    initNativeMethod(cls, "__pos__", floatUnaryOp<floatPos>, 1);
+    initNativeMethod(cls, "__neg__", floatUnaryOp<floatNeg>, 1);
+    initNativeMethod(cls, "__hash__", floatUnaryOp<floatHash>, 1);
+    initNativeMethod(cls, "__add__", floatBinaryOp<floatAdd>, 2);
+    initNativeMethod(cls, "__sub__", floatBinaryOp<floatSub>, 2);
+    initNativeMethod(cls, "__mul__", floatBinaryOp<floatMul>, 2);
+    initNativeMethod(cls, "__div__", floatBinaryOp<floatDiv>, 2);
+    initNativeMethod(cls, "__floordiv__", floatBinaryOp<floatFloorDiv>, 2);
+    initNativeMethod(cls, "__mod__", floatBinaryOp<floatMod>, 2);
+    initNativeMethod(cls, "__pow__", floatBinaryOp<floatPow>, 2);
+    initNativeMethod(cls, "__lt__", floatCompareOp<floatLT>, 2);
+    initNativeMethod(cls, "__le__", floatCompareOp<floatLE>, 2);
+    initNativeMethod(cls, "__gt__", floatCompareOp<floatGT>, 2);
+    initNativeMethod(cls, "__ge__", floatCompareOp<floatGE>, 2);
+    initNativeMethod(cls, "__eq__", floatCompareOp<floatEQ>, 2);
+    initNativeMethod(cls, "__ne__", floatCompareOp<floatNE>, 2);
+    ObjectClass.init(cls);
+}
+
+Float::Float(double v)
+  : Object(ObjectClass), value(v)
+{}
+
+void Float::print(ostream& s) const {
+    s << value;
+}
+
+Float* Float::get(double v)
+{
+    return gc.create<Float>(v);
+}
+
 #ifdef BUILD_TESTS
 
 #include "test.h"
 
-testcase(integer)
+testcase(numeric)
 {
     testFalse(Integer::get(1).isObject());
     testFalse(Integer::get(32767).isObject());
@@ -150,6 +265,9 @@ testcase(integer)
     testInterp("-4", "-4");
     testInterp("32767 + 1", "32768");
     testInterp("32768 - 1", "32767");
+
+    testInterp("2.5", "2.5");
+    testInterp("2.0 + 0.5", "2.5");
 }
 
 #endif

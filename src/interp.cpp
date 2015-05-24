@@ -777,7 +777,6 @@ testcase(interp)
     testException("assert 0, 'bad'", "AssertionError: bad");
 
     testException("1()", "object is not callable");
-    testException("1.foo", "object has no attribute 'foo'");
 
     testException("def foo():\n"
                   "  return 1\n"

@@ -63,7 +63,8 @@ SyntaxParser::SyntaxParser()
     createNodeForAtom<SyntaxName>(Token_Identifier);
     createNodeForAtom<SyntaxString>(Token_String);
     createNodeForAtom<SyntaxInteger>(Token_Integer);
-    // todo: longinteger floatnumber imagnumber
+    createNodeForAtom<SyntaxFloat>(Token_Float);
+    // todo: longinteger imagnumber
 
     // Unary operations
 

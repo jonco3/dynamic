@@ -329,6 +329,15 @@ Token Tokenizer::findNextToken()
         do {
             nextChar();
         } while (isDigit(peekChar()));
+        if (peekChar() == '.') {
+            nextChar();
+            if (!isDigit(peekChar()))
+                throw TokenError("Invalid syntax", pos); // todo: check this
+            while (isDigit(peekChar()))
+                nextChar();
+            size_t length = index - startIndex;
+            return {Token_Float, string(source, startIndex, length), startPos};
+        }
         size_t length = index - startIndex;
         return {Token_Integer, string(source, startIndex, length), startPos};
     }

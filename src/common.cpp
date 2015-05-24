@@ -29,6 +29,7 @@ void init1()
     Frame::init();
     Boolean::init();
     Integer::init();
+    Float::init();
     String::init();
     Exception::init();
     initList();

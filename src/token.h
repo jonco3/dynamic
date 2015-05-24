@@ -99,6 +99,7 @@ using namespace std;
     token(AssignPower)                                                        \
                                                                               \
     token(Integer)                                                            \
+    token(Float)                                                              \
     token(String)                                                             \
     token(Identifier)
 

@@ -477,6 +477,11 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrConst>(v);
     }
 
+    virtual void visit(const SyntaxFloat& s) {
+        Root<Value> v(Float::get(s.value));
+        emit<InstrConst>(v);
+    }
+
     virtual void visit(const SyntaxString& s) {
         Root<Value> v(String::get(s.value));
         emit<InstrConst>(v);

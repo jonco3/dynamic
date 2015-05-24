@@ -16,6 +16,7 @@ using namespace std;
     syntax(Pass)                                                              \
     syntax(Block)                                                             \
     syntax(Integer)                                                           \
+    syntax(Float)                                                             \
     syntax(String)                                                            \
     syntax(ExprList)                                                          \
     syntax(List)                                                              \
@@ -221,6 +222,18 @@ struct SyntaxInteger : public Syntax
     {}
 
     const int value;
+};
+
+struct SyntaxFloat : public Syntax
+{
+    define_syntax_members(Float, "float");
+
+    // todo: this probably doesn't correctly parse all python floats
+    SyntaxFloat(const Token& token)
+      : Syntax(token), value(atof(token.text.c_str()))
+    {}
+
+    const double value;
 };
 
 struct SyntaxString : public Syntax

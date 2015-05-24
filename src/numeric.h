@@ -22,4 +22,18 @@ struct Integer : public Object
     int value_;
 };
 
+struct Float : public Object
+{
+    static void init();
+
+    static GlobalRoot<Class*> ObjectClass;
+
+    static Float* get(double v);
+
+    Float(double v);
+    void print(ostream& s) const override;
+
+    const double value;
+};
+
 #endif
