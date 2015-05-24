@@ -525,16 +525,18 @@ T* GC::create(Args&&... args) {
  */
 struct AutoAssertNoGC
 {
-#ifdef DEBUG
     AutoAssertNoGC() {
+#ifdef DEBUG
         gc.unsafeCount++;
+#endif
     }
 
     ~AutoAssertNoGC() {
+#ifdef DEBUG
         assert(gc.unsafeCount > 0);
         gc.unsafeCount--;
-    }
 #endif
+    }
 };
 
 #undef define_immutable_accessors

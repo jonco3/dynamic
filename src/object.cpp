@@ -116,13 +116,12 @@ bool Object::hasAttr(Name name) const
     if (hasOwnAttr(name))
         return true;
 
-    AutoAssertNoGC nogc;
-
     // lookup attribute in class hierarchy
     Root<Value> base;
     if (!maybeGetOwnAttr(ClassAttr, base))
         return false;
 
+    AutoAssertNoGC nogc;
     while (Object* obj = base.toObject()) {
         if (obj->hasOwnAttr(name))
             return true;
@@ -141,12 +140,12 @@ int Object::findAttr(Name name, Root<Class*>& classOut) const
         return slot;
     }
 
-    AutoAssertNoGC nogc;
-
     // lookup attribute in class hierarchy
     Root<Value> base;
     if (!maybeGetOwnAttr(ClassAttr, base))
         return false;
+
+    AutoAssertNoGC nogc;
 
     while (Class* cls = base.toObject()->as<Class>()) {
         slot = cls->findOwnAttr(name);
@@ -304,9 +303,7 @@ bool Object::isTrue() const
 
 bool Object::isInstanceOf(Class* cls) const
 {
-#ifdef DEBUG
     AutoAssertNoGC nogc;
-#endif
     return type()->isDerivedFrom(cls);
 }
 
@@ -367,9 +364,7 @@ void Class::print(ostream& s) const
 
 bool Class::isDerivedFrom(Class* cls) const
 {
-#ifdef DEBUG
     AutoAssertNoGC nogc;
-#endif
     const Object* obj = this;
     while (obj != cls) {
         obj = obj->getOwnAttr("__base__").toObject();
