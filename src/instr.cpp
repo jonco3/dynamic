@@ -548,8 +548,8 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
     }
 
     interp.pushStack(gc.create<TypeError>(
-                         "unsupported operand type(s) for augmented assignment"));
-        return false;
+                         "unsupported operand type(s) for binary operation"));
+    return false;
 }
 
 bool InstrAugAssignUpdate::execute(Interpreter& interp)

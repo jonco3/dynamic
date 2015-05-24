@@ -175,10 +175,33 @@ static double floatValue(Traced<Value> value)
     return value.asObject()->as<Float>()->value;
 }
 
+static bool floatValue(Traced<Value> value, double& out)
+{
+    if (value.isInstanceOf(Float::ObjectClass))
+        out = value.asObject()->as<Float>()->value;
+    else
+        return false;
+
+    return true;
+}
+
+static bool floatOrIntValue(Traced<Value> value, double& out)
+{
+    if (value.isInstanceOf(Float::ObjectClass))
+        out = value.asObject()->as<Float>()->value;
+    else if (value.isInt32())
+        out = value.asInt32();
+    else
+        return false;
+
+    return true;
+}
+
 template <FloatUnaryOp op>
 static bool floatUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    if (!args[0].isInstanceOf(Float::ObjectClass)) {
+    double a;
+    if (!floatValue(args[0], a)) {
         resultOut = NotImplemented;
         return true;
     }
@@ -190,14 +213,38 @@ static bool floatUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 template <FloatBinaryOp op>
 static bool floatBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    if (!args[0].isInstanceOf(Float::ObjectClass) ||
-        !args[1].isInstanceOf(Float::ObjectClass))
-    {
+    double a;
+    if (!floatValue(args[0], a)) {
         resultOut = NotImplemented;
         return true;
     }
 
-    resultOut = Float::get(op(floatValue(args[0]), floatValue(args[1])));
+    double b;
+    if (!floatOrIntValue(args[1], b)) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Float::get(op(a, b));
+    return true;
+}
+
+template <FloatBinaryOp op>
+static bool floatRBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    double a;
+    if (!floatValue(args[0], a)) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    double b;
+    if (!floatOrIntValue(args[1], b)) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Float::get(op(b, a));
     return true;
 }
 
@@ -240,6 +287,13 @@ void Float::init()
     initNativeMethod(cls, "__floordiv__", floatBinaryOp<floatFloorDiv>, 2);
     initNativeMethod(cls, "__mod__", floatBinaryOp<floatMod>, 2);
     initNativeMethod(cls, "__pow__", floatBinaryOp<floatPow>, 2);
+    initNativeMethod(cls, "__radd__", floatRBinaryOp<floatAdd>, 2);
+    initNativeMethod(cls, "__rsub__", floatRBinaryOp<floatSub>, 2);
+    initNativeMethod(cls, "__rmul__", floatRBinaryOp<floatMul>, 2);
+    initNativeMethod(cls, "__rdiv__", floatRBinaryOp<floatDiv>, 2);
+    initNativeMethod(cls, "__rfloordiv__", floatRBinaryOp<floatFloorDiv>, 2);
+    initNativeMethod(cls, "__rmod__", floatRBinaryOp<floatMod>, 2);
+    initNativeMethod(cls, "__rpow__", floatRBinaryOp<floatPow>, 2);
     initNativeMethod(cls, "__lt__", floatCompareOp<floatLT>, 2);
     initNativeMethod(cls, "__le__", floatCompareOp<floatLE>, 2);
     initNativeMethod(cls, "__gt__", floatCompareOp<floatGT>, 2);
@@ -283,6 +337,8 @@ testcase(numeric)
 
     testInterp("2.5", "2.5");
     testInterp("2.0 + 0.5", "2.5");
+    testInterp("2 + 0.5", "2.5");
+    testInterp("0.5 + 2", "2.5");
 }
 
 #endif
