@@ -110,6 +110,8 @@ struct Class : public Object
     const string& name() const { return name_; }
     NativeConstructor nativeConstructor() const { return constructor_; }
 
+    bool isDerivedFrom(Class* base) const;
+
     void print(ostream& s) const override;
 
   private:

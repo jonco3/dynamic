@@ -42,7 +42,7 @@ inline bool Value::isTrue() const
 
 inline bool Value::isInstanceOf(Traced<Class*> cls) const
 {
-    return toObject()->isInstanceOf(cls);
+    return type()->isDerivedFrom(cls);
 }
 
 inline bool Value::isInt32() const

@@ -285,7 +285,8 @@ void Object::print(ostream& s) const
 
 Class* Object::type() const
 {
-    return getAttr(ClassAttr).asObject()->as<Class>();
+    // Cast because calling as() can end up recursively calling this.
+    return static_cast<Class*>(getAttr(ClassAttr).asObject());
 }
 
 bool Object::isTrue() const
@@ -306,13 +307,7 @@ bool Object::isInstanceOf(Class* cls) const
 #ifdef DEBUG
     AutoAssertNoGC nogc;
 #endif
-    Object* obj = getOwnAttr("__class__").toObject();
-    do {
-        if (obj == cls)
-            return true;
-        obj = obj->getOwnAttr("__base__").toObject();
-    } while (obj != None);
-    return false;
+    return type()->isDerivedFrom(cls);
 }
 
 void Object::traceChildren(Tracer& t)
@@ -368,6 +363,20 @@ void Class::init(Traced<Object*> base)
 void Class::print(ostream& s) const
 {
     s << "Class " << name_;
+}
+
+bool Class::isDerivedFrom(Class* cls) const
+{
+#ifdef DEBUG
+    AutoAssertNoGC nogc;
+#endif
+    const Object* obj = this;
+    while (obj != cls) {
+        obj = obj->getOwnAttr("__base__").toObject();
+        if (obj == None)
+            return false;
+    }
+    return true;
 }
 
 static bool object_str(TracedVector<Value> args, Root<Value>& resultOut)
