@@ -85,11 +85,11 @@ unittest: unittests
 	$(WRAPPER) unittests -l $(srcdir)/lib
 
 .PHONY: pythontest
-pythontest: dynamic
+pythontest: dynamic unittest
 	$(TEST-RUNNER) ./dynamic -l $(srcdir)/lib
 
 .PHONY: test
-test: unittest pythontest
+test: pythontest
 
 .PHONY: bench
 bench: dynamic
