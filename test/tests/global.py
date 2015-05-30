@@ -75,12 +75,17 @@ def m3():
     del baz
 m1(); m2(); m3()
 
+assert len != 1
 def n():
     global len
     len = 1
 n()
-#todo
-#assert len == 1
+assert len == 1
+
+len = 2
+
+del len
+assert len != 1
 
 print('ok')
 

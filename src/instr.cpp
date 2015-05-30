@@ -1,5 +1,6 @@
 #include "instr.h"
 
+#include "builtin.h"
 #include "generator.h"
 
 bool InstrConst::execute(Interpreter& interp)
@@ -64,11 +65,22 @@ bool InstrDelLexical::execute(Interpreter& interp)
 bool InstrGetGlobal::execute(Interpreter& interp)
 {
     Root<Value> value;
-    // Name was present when compiled, but may have been deleted.
-    if (!global->maybeGetAttr(ident, value))
-        return interp.raiseNameError(ident);
-    interp.pushStack(value);
-    return true;
+    if (global->maybeGetAttr(ident, value)) {
+        assert(value.toObject());
+        interp.pushStack(value);
+        return true;
+    }
+
+    Root<Value> builtins;
+    if (global->maybeGetAttr("__builtins__", builtins) &&
+        builtins.maybeGetAttr(ident, value))
+    {
+        assert(value.toObject());
+        interp.pushStack(value);
+        return true;
+    }
+
+    return interp.raiseNameError(ident);
 }
 
 bool InstrSetGlobal::execute(Interpreter& interp)

@@ -638,12 +638,7 @@ struct ByteCompiler : public SyntaxVisitor
                 emit<InstrGetLocal>(name);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrGetLexical>(frame, name);
-            else if (lookupGlobal(name))
-                emit<InstrGetGlobal>(topLevel, name);
-            else if (Builtin && Builtin->hasAttr(name))
-                emit<InstrGetGlobal>(Builtin, name);
             else
-                // todo: this is wrong, we need a scope chain that's checked at rutime with inner topLevel and then Builtins
                 emit<InstrGetGlobal>(topLevel, name);
             break;
         }
@@ -1050,8 +1045,10 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     Root<Object*> globals(globalsArg);
-    if (globals->isNone())
+    if (globals->isNone()) {
         globals = Object::create();
+        globals->setAttr("__builtins__", Builtin);
+    }
     blockOut = ByteCompiler().buildModule(globals, syntax.get());
 }
 
