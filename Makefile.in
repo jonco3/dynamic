@@ -65,7 +65,7 @@ WRAPPER = python $(srcdir)/test/debug-wrapper
 TEST-RUNNER = python $(srcdir)/test/run-tests
 
 .PHONY: all
-all: dynamic tests
+all: dynamic
 
 Makefile: Makefile.in config.status
 	./config.status $@
