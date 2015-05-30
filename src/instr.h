@@ -58,6 +58,7 @@ using namespace std;
     instr(Tuple)                                                             \
     instr(List)                                                              \
     instr(Dict)                                                              \
+    instr(Slice)                                                             \
     instr(AssertionFailed)                                                   \
     instr(MakeClassFromFrame)                                                \
     instr(Destructure)                                                       \
@@ -430,6 +431,8 @@ struct InstrDict : public Instr
   private:
     unsigned size;
 };
+
+define_simple_instr(Slice);
 
 define_simple_instr(AssertionFailed);
 

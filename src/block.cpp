@@ -710,6 +710,16 @@ struct ByteCompiler : public SyntaxVisitor
         }
     }
 
+    virtual void visit(const SyntaxSlice& s) {
+        compile(s.lower);
+        compile(s.upper);
+        if (s.stride)
+            compile(s.stride);
+        else
+            emit<InstrConst>(None);
+        emit<InstrSlice>();
+    }
+
     virtual void visit(const SyntaxCall& s) {
         // todo: check this actually how python works
         bool methodCall = s.left->is<SyntaxAttrRef>();

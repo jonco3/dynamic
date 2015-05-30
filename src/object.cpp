@@ -219,6 +219,19 @@ bool Object::getSlot(Name name, int slot, Root<Value>& valueOut) const
     return true;
 }
 
+Value Object::getSlot(int slot) const
+{
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    assert(slots_[slot] != Value(UninitializedSlot));
+    return slots_[slot];
+}
+
+void Object::setSlot(int slot, Traced<Value> value)
+{
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    slots_[slot] = value;
+}
+
 void Object::setAttr(Name name, Traced<Value> value)
 {
     if (value.isObject()) {

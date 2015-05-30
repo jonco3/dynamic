@@ -170,6 +170,13 @@ void SyntaxPrinter::visit(const SyntaxSubscript& s)
     os_ << *s.left << "[" << *s.right << "]";
 }
 
+void SyntaxPrinter::visit(const SyntaxSlice& s)
+{
+    os_ << *s.lower << ":" << *s.upper;
+    if (s.stride)
+        os_ << ":" << *s.stride;
+}
+
 void SyntaxPrinter::visit(const SyntaxCall& s)
 {
     os_ << *s.left << "(";

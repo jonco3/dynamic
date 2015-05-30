@@ -70,6 +70,11 @@ struct Object : public Cell
     bool isInstanceOf(Class* cls) const;
 
   protected:
+    enum {
+        ClassSlot,
+        SlotCount
+    };
+
     Object(Traced<Class*> cls, Traced<Class*> base,
            Traced<Layout*> layout = InitialLayout);
 
@@ -82,11 +87,12 @@ struct Object : public Cell
     bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
     bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
 
+    Value getSlot(int slot) const;
+    void setSlot(int slot, Traced<Value> value);
+
   private:
     Layout* layout_;
     vector<Value> slots_;
-
-    static const unsigned ClassSlot = 0;
 
     void initAttrs(Traced<Class*> cls);
 

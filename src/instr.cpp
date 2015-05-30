@@ -328,6 +328,14 @@ bool InstrDict::execute(Interpreter& interp)
     return true;
 }
 
+bool InstrSlice::execute(Interpreter& interp)
+{
+    Slice* slice = gc.create<Slice>(interp.stackSlice(3));
+    interp.popStack(3);
+    interp.pushStack(slice);
+    return true;
+}
+
 bool InstrAssertionFailed::execute(Interpreter& interp)
 {
     Object* obj = interp.popStack().toObject();

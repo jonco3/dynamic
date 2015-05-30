@@ -43,6 +43,7 @@ using namespace std;
     syntax(If)                                                                \
     syntax(While)                                                             \
     syntax(Subscript)                                                         \
+    syntax(Slice)                                                             \
     syntax(Assert)                                                            \
     syntax(Class)                                                             \
     syntax(Raise)                                                             \
@@ -398,6 +399,23 @@ struct SyntaxSubscript : public BinarySyntax<SyntaxSingleTarget, Syntax, Syntax>
                                                          move(l),
                                                          move(r))
     {}
+};
+
+struct SyntaxSlice : public Syntax
+{
+    define_syntax_members(Slice, "slice");
+
+    SyntaxSlice(const Token& token,
+                unique_ptr<Syntax> lower,
+                unique_ptr<Syntax> upper,
+                unique_ptr<Syntax> stride)
+      : Syntax(token),
+        lower(move(lower)), upper(move(upper)), stride(move(stride))
+    {}
+
+    const unique_ptr<Syntax> lower;
+    const unique_ptr<Syntax> upper;
+    const unique_ptr<Syntax> stride;
 };
 
 struct SyntaxCall : public Syntax

@@ -28,12 +28,15 @@ GlobalRoot<Class*> Tuple::ObjectClass;
 GlobalRoot<Tuple*> Tuple::Empty;
 GlobalRoot<Class*> List::ObjectClass;
 GlobalRoot<Class*> ListIter::ObjectClass;
+GlobalRoot<Class*> Slice::ObjectClass;
+GlobalRoot<Layout*> Slice::InitialLayout;
 
 void initList()
 {
     List::init();
     Tuple::init();
     ListIter::init();
+    Slice::init();
 }
 
 #ifdef DEBUG
@@ -143,25 +146,64 @@ bool ListBase::len(Root<Value>& resultOut)
     return true;
 }
 
+int32_t ListBase::wrapIndex(int32_t index)
+{
+    return min(index >= 0 ? index : len() + index, len());
+}
+
+bool ListBase::checkIndex(int32_t index, Root<Value>& resultOut)
+{
+    if (index < 0 || size_t(index) >= elements_.size()) {
+        resultOut = gc.create<IndexError>(listName() + " index out of range");
+        return false;
+    }
+    return true;
+}
+
+int32_t ListBase::clampIndex(int32_t index, bool inclusive)
+{
+    return max(min(index, len() - (inclusive ? 1 : 0)), 0);
+}
+
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
 {
-    if (!index.isInt32()) {
+    if (index.isInt32()) {
+        int32_t i = wrapIndex(index.asInt32());
+        if (!checkIndex(i, resultOut))
+            return false;
+        resultOut = elements_[i];
+        return true;
+    } else if (index.isInstanceOf(Slice::ObjectClass)) {
+        // todo: we're mean to call the slice object's indices method at this
+        // point, but I'm not going to bother with that yet
+        Root<Slice*> slice(index.toObject()->as<Slice>());
+        int32_t step = slice->step();
+        if (step == 0) {
+            resultOut = gc.create<ValueError>("slice step cannot be zero");
+            return false;
+        }
+
+        int32_t start = clampIndex(wrapIndex(slice->start()), true);
+        int32_t stop = clampIndex(wrapIndex(slice->stop()), false);
+
+        int32_t step_sgn = step > 0 ? 1 : -1;
+        size_t size = max((stop - start + step - step_sgn) / step, 0);
+
+        Root<ListBase*> result(createDerived(size));
+        int32_t src = start;
+        for (size_t i = 0; i < size; i++) {
+            assert(src < len());
+            result->elements_[i] = elements_[src];
+            src += step;
+        }
+
+        resultOut = result;
+        return true;
+    } else {
         resultOut = gc.create<TypeError>(
             listName() + " indices must be integers");
         return false;
     }
-
-    int32_t i = index.asInt32();
-    if (i < 0)
-        i = elements_.size() + i;
-    if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<IndexError>(
-            listName() + " index out of range");
-        return false;
-    }
-
-    resultOut = elements_[i];
-    return true;
 }
 
 bool ListBase::contains(Traced<Value> element, Root<Value>& resultOut)
@@ -246,6 +288,10 @@ void List::init()
 
 List::List(const TracedVector<Value>& values)
   : ListBase(ObjectClass, values)
+{}
+
+List::List(size_t size)
+  : ListBase(ObjectClass, size)
 {}
 
 const string& List::listName() const
@@ -365,6 +411,37 @@ bool ListIter::next(Root<Value>& resultOut)
     resultOut = list_->elements_[index_];
     index_++;
     return true;
+}
+
+void Slice::init()
+{
+    ObjectClass.init(gc.create<Class>("slice"));
+
+    static const Name StartAttr = "start";
+    static const Name StopAttr = "stop";
+    static const Name StepAttr = "step";
+
+    Root<Layout*> layout = Object::InitialLayout;
+    layout = layout->addName(StartAttr);
+    layout = layout->addName(StopAttr);
+    layout = layout->addName(StepAttr);
+    assert(layout->lookupName(StartAttr) == StartSlot);
+    assert(layout->lookupName(StopAttr) == StopSlot);
+    assert(layout->lookupName(StepAttr) == StepSlot);
+    InitialLayout.init(layout);
+}
+
+Slice::Slice(TracedVector<Value> args) :
+  Object(ObjectClass, InitialLayout)
+{
+    assert(args.size() == 3);
+    assert(args[0].isInt32());
+    assert(args[1].isInt32());
+    assert(args[2] == Value(None) || args[2].isInt32());
+    Root<Value> step(args[2] == Value(None) ? Integer::get(1) : args[2]);
+    setSlot(StartSlot, args[0]);
+    setSlot(StopSlot, args[1]);
+    setSlot(StepSlot, step);
 }
 
 #ifdef BUILD_TESTS

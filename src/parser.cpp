@@ -170,9 +170,19 @@ SyntaxParser::SyntaxParser()
     createNodeForBinary<SyntaxBinaryOp>(Token_Power, 180, Assoc_Left, BinaryPower);
 
     addInfixHandler(Token_SBra, 200, [] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
-        unique_ptr<Syntax> index(parser.expression());
+        unique_ptr<Syntax> expr(parser.expression());
+        if (parser.opt(Token_Colon)) {
+            // We have a slice.
+            // todo: slicing is more complicated than this.
+            unique_ptr<Syntax> upper(parser.expression());
+            unique_ptr<Syntax> stride;
+            if (parser.opt(Token_Colon))
+                stride = parser.expression();
+            expr = make_unique<SyntaxSlice>(token, move(expr), move(upper),
+                                            move(stride));
+        }
         parser.match(Token_SKet);
-        return make_unique<SyntaxSubscript>(token, move(l), move(index));
+        return make_unique<SyntaxSubscript>(token, move(l), move(expr));
     });
 
     addInfixHandler(Token_Bra, 200, [] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
