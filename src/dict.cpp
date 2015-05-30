@@ -162,19 +162,10 @@ struct PythonException : public runtime_error
 
 size_t Dict::ValueHash::operator()(Value v) const
 {
-    // Integers hash to themselves in python.
-    if (v.isInt32())
-        return v.asInt32();
-
-    Root<Object*> obj(v.asObject());
-    Root<Value> hashFunc;
-    if (!obj->maybeGetAttr("__hash__", hashFunc))
-        return size_t(obj.get());
-
     Root<Value> result;
-    if (hashFunc.isNone()) {
-        result =
-            gc.create<TypeError>("Object has no __hash__ method");
+    Root<Value> hashFunc;
+    if (!v.maybeGetAttr("__hash__", hashFunc)) {
+        result = gc.create<TypeError>("Object has no __hash__ method");
         throw PythonException(result);
     }
 
@@ -184,8 +175,7 @@ size_t Dict::ValueHash::operator()(Value v) const
         throw PythonException(result);
 
     if (!result.isInt32()) {
-        result =
-            gc.create<TypeError>("__hash__ method should return an integer");
+        result = gc.create<TypeError>("__hash__ method should return an int");
         throw PythonException(result);
     }
 
@@ -194,26 +184,22 @@ size_t Dict::ValueHash::operator()(Value v) const
 
 bool Dict::ValuesEqual::operator()(Value a, Value b) const
 {
-    if (a.isInt32() && b.isInt32())
-        return a.asInt32() == b.asInt32();
-
-    Root<Object*> obj(a.asObject());
-
-    Root<Value> eqFunc;
-    if (!obj->maybeGetAttr("__eq__", eqFunc))
-        return size_t(obj.get());
-
     Root<Value> result;
+    Root<Value> eqFunc;
+    if (!a.maybeGetAttr("__eq__", eqFunc)) {
+        result = gc.create<TypeError>("Object has no __eq__ method");
+        throw PythonException(result);
+    }
+
     RootVector<Value> args(2);
     args[0] = a;
     args[1] = b;
     if (!Interpreter::instance().call(eqFunc, args, result))
         throw PythonException(result);
 
-    obj = result.toObject();
+    Root<Object*> obj(result.toObject());
     if (!obj->is<Boolean>()) {
-        result =
-            gc.create<TypeError>("__eq__ method should return an bool");
+        result = gc.create<TypeError>("__eq__ method should return a bool");
         throw PythonException(result);
     }
 

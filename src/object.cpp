@@ -397,6 +397,18 @@ static bool object_str(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
+static bool object_eq(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    resultOut = Boolean::get(args[0].toObject() == args[1].toObject());
+    return true;
+}
+
+static bool object_hash(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    resultOut = Integer::get((int32_t)(uintptr_t)args[0].toObject());
+    return true;
+}
+
 static bool object_dump(TracedVector<Value> args, Root<Value>& resultOut)
 {
     Object* obj = args[0].toObject();
@@ -431,6 +443,8 @@ void initObject()
     Function::ObjectClass.init(gc.create<Class>("Function"));
 
     initNativeMethod(Object::ObjectClass, "__str__", object_str, 1);
+    initNativeMethod(Object::ObjectClass, "__eq__", object_eq, 2);
+    initNativeMethod(Object::ObjectClass, "__hash__", object_hash, 1);
     initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
 }
 
