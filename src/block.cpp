@@ -166,6 +166,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
                                   const vector<Name>& others)
     {
         for (auto name : names) {
+            // todo: this should only be a warning
             if (layout_->hasName(name))
                 throw ParseError(token, "name assigned to before declaration");
             if (contains(others, name))
