@@ -107,7 +107,7 @@ class TestCompileErrors(unittest.TestCase):
                 api(cell);
             }
             """,
-            "no known conversion from 'Cell *' to 'Traced<Cell *>'")
+            "could not convert 'cell' from 'Cell*' to 'Traced<Cell*>'")
 
         # Check we can pass a Root to an API expecting a traced pointer
         self.checkOK(
@@ -130,37 +130,37 @@ class TestCompileErrors(unittest.TestCase):
             """);
 
     def testAllocationAndDestruction(self):
-        # Check we hit an assert if we create a Cell without using gc::Create()
+        # Check we hit an assert if we create a Cell without using gc.create()
         self.checkDebugAssert(
             """
             void test() {
                new TestCell;
             }
             """,
-            "gc::isAllocating")
+            "gc.isAllocating")
         self.checkDebugAssert(
             """
             void test() {
                TestCell cell;
             }
             """,
-            "gc::isAllocating")
+            "gc.isAllocating")
 
         # Check we hit an assert if we delete a Cell outside of the GC
         self.checkDebugAssert(
             """
             void test() {
-                delete gc::create<TestCell>();
+                delete gc.create<TestCell>();
             }
             """,
-            "gc::isSweeping")
+            "gc.isSweeping")
 
         # Check normal allocation and collection is OK
         self.checkOK(
             """
             void test() {
-                gc::create<TestCell>();
-                gc::collect();
+                gc.create<TestCell>();
+                gc.collect();
             }
             """)
 

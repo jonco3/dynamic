@@ -79,8 +79,16 @@ unittests: $(TESTOBJS) Makefile
 dynamic: $(MAINOBJS) Makefile
 	$(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
 
+build/gcapitest: src/gc.h $(srcdir)/test/gc-api-tests.py
+	mkdir -p build
+	python $(srcdir)/test/gc-api-tests.py
+	touch build/gcapitest
+
+.PHONY: gcapitest
+gcapitest: build/gcapitest
+
 .PHONY: unittest
-unittest: unittests
+unittest: unittests gcapitest
 	@echo "Entering directory \`@srcdir@/src'"
 	$(WRAPPER) unittests -l $(srcdir)/lib
 
