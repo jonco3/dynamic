@@ -55,6 +55,7 @@ void Dict::init()
     initNativeMethod(ObjectClass, "__setitem__", dict_setitem, 3);
     initNativeMethod(ObjectClass, "__delitem__", dict_delitem, 2);
     initNativeMethod(ObjectClass, "keys", dict_keys, 1);
+    // __eq__ and __ne__ are supplied by lib/internal.py
 }
 
 Dict::Dict(const TracedVector<Value>& values)
