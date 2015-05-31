@@ -14,6 +14,7 @@ extern void init2(const string& libDir);
 extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
+extern Object* createTopLevel();
 extern bool runModule(string text, string filename, Traced<Object*> global,
                       Root<Value>* maybeResultOut = nullptr);
 #endif

@@ -73,6 +73,13 @@ void printException(Value value)
     cerr << ex->fullMessage() << endl;
 }
 
+Object* createTopLevel()
+{
+    Root<Object*> topLevel(Object::create());
+    topLevel->setAttr("__builtins__", Builtin);
+    return topLevel;
+}
+
 bool runModule(string text, string filename, Traced<Object*> globals,
                Root<Value>* maybeResultOut)
 {

@@ -1,5 +1,4 @@
 #include "block.h"
-#include "builtin.h"
 #include "common.h"
 #include "generator.h"
 #include "instr.h"
@@ -1045,10 +1044,8 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     Root<Object*> globals(globalsArg);
-    if (globals->isNone()) {
-        globals = Object::create();
-        globals->setAttr("__builtins__", Builtin);
-    }
+    if (globals->isNone())
+        globals = createTopLevel();
     blockOut = ByteCompiler().buildModule(globals, syntax.get());
 }
 
