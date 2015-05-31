@@ -280,7 +280,14 @@ bool Object::maybeDelOwnAttr(Name name)
 
 void Object::print(ostream& s) const
 {
-    s << type()->name() << "@" << hex << reinterpret_cast<uintptr_t>(this);
+    s << "<" << type()->name();
+    s << " object at 0x" << hex << reinterpret_cast<uintptr_t>(this) << ">";
+}
+
+void Object::dump(ostream& s) const
+{
+    s << type()->name();
+    s << " object at 0x" << hex << reinterpret_cast<uintptr_t>(this);
     s << " { ";
     unsigned slot = slots_.size() - 1;
     Layout* layout = layout_;
@@ -386,13 +393,20 @@ bool Class::isDerivedFrom(Class* cls) const
     return true;
 }
 
-static bool object_str(TracedVector<Value> args, Root<Value>& resultOut)
+static bool object_repr(TracedVector<Value> args, Root<Value>& resultOut)
 {
     Object* obj = args[0].toObject();
     ostringstream s;
-    s << "<" << obj->type()->name();
-    s << " at 0x" << hex << reinterpret_cast<uintptr_t>(obj) << ">";
+    obj->print(s);
     resultOut = String::get(s.str());
+    return true;
+}
+
+static bool object_dump(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Object* obj = args[0].toObject();
+    obj->dump(cout);
+    resultOut = None;
     return true;
 }
 
@@ -414,14 +428,6 @@ static bool object_hash(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool object_dump(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    Object* obj = args[0].toObject();
-    obj->print(cout);
-    resultOut = None;
-    return true;
-}
-
 void initObject()
 {
     Object::InitialLayout.init(gc.create<Layout>(Layout::None, ClassAttr));
@@ -431,10 +437,10 @@ void initObject()
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
     Root<Class*> objectBase(nullptr);
-    Object::ObjectClass.init(gc.create<Class>("Object", objectBase,
+    Object::ObjectClass.init(gc.create<Class>("object", objectBase,
                                               Object::createInstance));
     NoneObject::ObjectClass.init(gc.create<Class>("None"));
-    Class::ObjectClass.init(gc.create<Class>("Class"));
+    Class::ObjectClass.init(gc.create<Class>("class"));
 
     None.init(gc.create<NoneObject>());
 
@@ -447,11 +453,11 @@ void initObject()
     Native::ObjectClass.init(gc.create<Class>("Native"));
     Function::ObjectClass.init(gc.create<Class>("Function"));
 
-    initNativeMethod(Object::ObjectClass, "__str__", object_str, 1);
+    initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);
+    initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
     initNativeMethod(Object::ObjectClass, "__eq__", object_eq, 2);
     initNativeMethod(Object::ObjectClass, "__ne__", object_ne, 2);
     initNativeMethod(Object::ObjectClass, "__hash__", object_hash, 1);
-    initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
 }
 
 #ifdef BUILD_TESTS

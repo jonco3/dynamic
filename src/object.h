@@ -45,6 +45,7 @@ struct Object : public Cell
     }
 
     void print(ostream& s) const override;
+    virtual void dump(ostream& s) const;
 
     Layout* layout() const { return layout_; }
     Class* type() const;

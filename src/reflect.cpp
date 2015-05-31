@@ -11,9 +11,9 @@ ParseTree::ParseTree(unique_ptr<Syntax> syntax)
   : Object(ObjectClass), syntax_(move(syntax))
 {}
 
-void ParseTree::dump() const
+void ParseTree::dump(ostream& s) const
 {
-    cout << *syntax_.get() << endl;
+    s << *syntax_.get() << endl;
 }
 
 CodeObject::CodeObject(Traced<Block*> block)
@@ -25,36 +25,16 @@ void CodeObject::traceChildren(Tracer& t)
     gc.trace(t, &block_);
 }
 
-void CodeObject::dump() const
+void CodeObject::dump(ostream& s) const
 {
-    cout << *block_ << endl;
-}
-
-static bool parseTree_dump(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    if (!checkInstanceOf(args[0], ParseTree::ObjectClass, resultOut))
-        return false;
-    args[0].asObject()->as<ParseTree>()->dump();
-    resultOut = None;
-    return true;
-}
-
-static bool codeObject_dump(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    if (!checkInstanceOf(args[0], CodeObject::ObjectClass, resultOut))
-        return false;
-    args[0].asObject()->as<CodeObject>()->dump();
-    resultOut = None;
-    return true;
+    s << *block_ << endl;
 }
 
 void initReflect()
 {
     Root<Class*> cls(gc.create<Class>("code object"));
-    initNativeMethod(cls, "__dump__", codeObject_dump, 1);
     CodeObject::ObjectClass.init(cls);
 
     cls = gc.create<Class>("parse tree");
-    initNativeMethod(cls, "__dump__", parseTree_dump, 1);
     ParseTree::ObjectClass.init(cls);
 }

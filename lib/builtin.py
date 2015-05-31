@@ -4,19 +4,15 @@ def len(x):
     return x.__len__()
 
 def str(x):
-    return x.__str__()
+    if hasattr(x, "__str__"):
+        return x.__str__()
+    return x.__repr__()
 
 def repr(x):
-    if hasattr(x, "__repr__"):
-        return x.__repr__()
-    else:
-        return str(x)
+    return x.__repr__()
 
 def dump(x):
-    if hasattr(x, "__dump__"):
-        x.__dump__()
-    else:
-        print(repr(x))
+    x.__dump__()
 
 def print(x):
     str(x)._print()

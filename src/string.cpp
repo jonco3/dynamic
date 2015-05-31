@@ -33,6 +33,13 @@ static bool str_hash(TracedVector<Value> args, Root<Value>& resultOut) {
     return true;
 }
 
+static bool str_contains(TracedVector<Value> args, Root<Value>& resultOut) {
+    const string& a = args[0].toObject()->as<String>()->value();
+    const string& b = args[1].toObject()->as<String>()->value();
+    resultOut = Boolean::get(a.find(b) != string::npos);
+    return true;
+}
+
 static bool str_print(TracedVector<Value> args, Root<Value>& resultOut) {
     const string& a = args[0].toObject()->as<String>()->value();
     cout << a << endl;
@@ -50,6 +57,7 @@ void String::init()
     initNativeMethod(ObjectClass, "__str__", str_str, 1);
     initNativeMethod(ObjectClass, "__eq__", str_eq, 2);
     initNativeMethod(ObjectClass, "__hash__", str_hash, 1);
+    initNativeMethod(ObjectClass, "__contains__", str_contains, 2);
     initNativeMethod(ObjectClass, "_print", str_print, 1);
 
     EmptyString.init(gc.create<String>(""));
