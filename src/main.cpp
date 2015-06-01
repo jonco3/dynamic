@@ -1,8 +1,11 @@
 #include "common.h"
 
 #include "block.h"
+#include "dict.h"
 #include "interp.h"
 #include "input.h"
+#include "list.h"
+#include "string.h"
 
 #include "sysexits.h"
 
@@ -54,10 +57,10 @@ char *readOneLine()
 static int runRepl()
 {
     char* line;
-    Root<Object*> globals(createTopLevel());
+    Root<Object*> topLevel(createTopLevel());
     while (line = readOneLine(), line != NULL) {
         Root<Value> result;
-        bool ok = runModule(line, "<none>", globals, &result);
+        bool ok = runModule(line, "<none>", topLevel, &result);
         if (ok)
             cout << result << endl;
     }
@@ -67,11 +70,16 @@ static int runRepl()
 
 static int runProgram(const char* filename, int arg_count, const char* args[])
 {
-    //todo: args
-    //RootVector<String> argStrings(arg_count);
-    //for (unsigned i = 0 ; i < arg_count ; ++i)
-    //    argStrings[i] = gc.create<String>(args[i]);
-    if (!runModule(readFile(filename), filename, None))
+    Root<Object*> topLevel(createTopLevel());
+    RootVector<Value> argStrings(arg_count);
+    for (int i = 0 ; i < arg_count ; ++i)
+        argStrings[i] = gc.create<String>(args[i]);
+    // todo: this is a hack until we can |import sys|
+    Root<Value> argv(gc.create<List>(argStrings));
+    Root<Value> sys(Object::create());
+    sys.asObject()->setAttr("argv", argv);
+    topLevel->setAttr("sys", sys);
+    if (!runModule(readFile(filename), filename, topLevel))
         return EX_SOFTWARE;
 
     return EX_OK;

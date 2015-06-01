@@ -69,7 +69,7 @@ struct List : public ListBase
     static GlobalRoot<Class*> ObjectClass;
 
     List(const TracedVector<Value>& values);
-    List (size_t size);
+    List(size_t size);
 
     virtual const string& listName() const;
     virtual void print(ostream& os) const;

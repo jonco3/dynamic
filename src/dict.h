@@ -9,6 +9,7 @@ struct Dict : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
+    Dict();
     Dict(const TracedVector<Value>& values);
 
     void traceChildren(Tracer& t) override;

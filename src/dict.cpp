@@ -58,6 +58,10 @@ void Dict::init()
     // __eq__ and __ne__ are supplied by lib/internal.py
 }
 
+Dict::Dict()
+  : Object(ObjectClass)
+{}
+
 Dict::Dict(const TracedVector<Value>& values)
   : Object(ObjectClass), entries_(values.size() / 2)
 {
