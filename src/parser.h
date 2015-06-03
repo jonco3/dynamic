@@ -269,7 +269,7 @@ Token Parser<T>::match(TokenType type)
     Token t;
     if (!opt(type, t)) {
         throw ParseError(token,
-                         "Expected " + tokenizer.typeName(type) +
+                        "Expected " + tokenizer.typeName(type) +
                          " but found " + tokenizer.typeName(token.type));
     }
     return t;
@@ -356,6 +356,8 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
 
     unique_ptr<SyntaxTarget> parseTarget();
     unique_ptr<SyntaxTarget> parseTargetList();
+
+    unique_ptr<Syntax> parseSlice(Token token, unique_ptr<Syntax> upper);
 
     unique_ptr<Syntax> parseAugAssign(Token token, unique_ptr<Syntax> target,
                                       BinaryOp op);

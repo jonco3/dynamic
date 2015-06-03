@@ -169,17 +169,14 @@ SyntaxParser::SyntaxParser()
     createNodeForBinary<SyntaxBinaryOp>(Token_Modulo, 180, Assoc_Left, BinaryModulo);
     createNodeForBinary<SyntaxBinaryOp>(Token_Power, 180, Assoc_Left, BinaryPower);
 
-    addInfixHandler(Token_SBra, 200, [] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
-        unique_ptr<Syntax> expr(parser.expression());
+    addInfixHandler(Token_SBra, 200, [=] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
+        unique_ptr<Syntax> expr;
         if (parser.opt(Token_Colon)) {
-            // We have a slice.
-            // todo: slicing is more complicated than this.
-            unique_ptr<Syntax> upper(parser.expression());
-            unique_ptr<Syntax> stride;
+            expr = parseSlice(token, move(expr));
+        } else {
+            expr = parser.expression();
             if (parser.opt(Token_Colon))
-                stride = parser.expression();
-            expr = make_unique<SyntaxSlice>(token, move(expr), move(upper),
-                                            move(stride));
+                expr = parseSlice(token, move(expr));
         }
         parser.match(Token_SKet);
         return make_unique<SyntaxSubscript>(token, move(l), move(expr));
@@ -214,6 +211,28 @@ SyntaxParser::SyntaxParser()
         return make_unique<SyntaxReturn>(token, move(expr));
     });
 }
+
+unique_ptr<Syntax> SyntaxParser::parseSlice(Token token,
+                                            unique_ptr<Syntax> lower)
+{
+    // Called to parse a slice after parsing an optional expression followed by
+    // a colon
+    // todo: slicing is more complicated than this.
+    unique_ptr<Syntax> upper;
+    unique_ptr<Syntax> stride;
+    if (notFollowedBy(Token_SKet)) {
+        if (notFollowedBy(Token_Colon))
+            upper = expression();
+        if (opt(Token_Colon)) {
+            if (notFollowedBy(Token_SKet)) {
+                stride = expression();
+            }
+        }
+    }
+    return make_unique<SyntaxSlice>(token,
+                                    move(lower), move(upper), move(stride));
+}
+
 
 bool SyntaxParser::maybeExprToken()
 {

@@ -32,9 +32,7 @@ struct ListBase : public Object
 
     virtual ListBase* createDerived(size_t size) = 0;
 
-    int32_t wrapIndex(int32_t index);
     bool checkIndex(int32_t index, Root<Value>& resultOut);
-    int32_t clampIndex(int32_t index, bool inclusive);
 };
 
 struct Tuple : public ListBase
@@ -94,9 +92,8 @@ struct Slice : public Object
 
     Slice(TracedVector<Value> args);
 
-    int32_t start() { return getSlot(StartSlot).asInt32(); }
-    int32_t stop() { return getSlot(StopSlot).asInt32(); }
-    int32_t step() { return getSlot(StepSlot).asInt32(); }
+    void indices(int32_t length,
+                 int32_t& startOut, int32_t& stopOut, int32_t& stepOut);
 
   private:
     enum {
@@ -104,6 +101,8 @@ struct Slice : public Object
         StopSlot,
         StepSlot
     };
+
+    int32_t getSlotOrDefault(unsigned slot, int32_t def);
 };
 
 extern void initList();

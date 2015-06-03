@@ -25,4 +25,13 @@ assert data[4:0:-1] == [2, 1]
 assert data[3:0:-2] == [2]
 assert data[4:0:-2] == [2]
 
+assert data[:] == [0, 1, 2]
+assert data[1:] == [1, 2]
+assert data[:2] == [0, 1]
+
+assert data[::] == [0, 1, 2]
+assert data[1::] == [1, 2]
+assert data[:2:] == [0, 1]
+assert data[::2] == [0, 2]
+
 print('ok')

@@ -129,11 +129,6 @@ bool ListBase::len(Root<Value>& resultOut)
     return true;
 }
 
-int32_t ListBase::wrapIndex(int32_t index)
-{
-    return min(index >= 0 ? index : len() + index, len());
-}
-
 bool ListBase::checkIndex(int32_t index, Root<Value>& resultOut)
 {
     if (index < 0 || size_t(index) >= elements_.size()) {
@@ -143,31 +138,53 @@ bool ListBase::checkIndex(int32_t index, Root<Value>& resultOut)
     return true;
 }
 
-int32_t ListBase::clampIndex(int32_t index, bool inclusive)
+static int32_t WrapIndex(int32_t index, int32_t length)
 {
-    return max(min(index, len() - (inclusive ? 1 : 0)), 0);
+    return min(index >= 0 ? index : length + index, length);
+}
+
+static int32_t ClampIndex(int32_t index, int32_t length, bool inclusive)
+{
+    return max(min(index, length - (inclusive ? 1 : 0)), 0);
+}
+
+int32_t Slice::getSlotOrDefault(unsigned slot, int32_t def)
+{
+    Value value = getSlot(slot);
+    if (value == Value(None))
+        return def;
+    return value.asInt32();
+}
+
+void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step)
+{
+    // todo: should be a python method
+    start = getSlotOrDefault(StartSlot, 0);
+    stop = getSlotOrDefault(StopSlot, length);
+    step = getSlotOrDefault(StepSlot, 1);
+    if (step == 0)
+        return;
+
+    start = ClampIndex(WrapIndex(start, length), length, true);
+    stop = ClampIndex(WrapIndex(stop, length), length, false);
 }
 
 bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
 {
     if (index.isInt32()) {
-        int32_t i = wrapIndex(index.asInt32());
+        int32_t i = WrapIndex(index.asInt32(), len());
         if (!checkIndex(i, resultOut))
             return false;
         resultOut = elements_[i];
         return true;
     } else if (index.isInstanceOf(Slice::ObjectClass)) {
-        // todo: we're mean to call the slice object's indices method at this
-        // point, but I'm not going to bother with that yet
         Root<Slice*> slice(index.toObject()->as<Slice>());
-        int32_t step = slice->step();
+        int32_t start, stop, step;
+        slice->indices(len(), start, stop, step);
         if (step == 0) {
             resultOut = gc.create<ValueError>("slice step cannot be zero");
             return false;
         }
-
-        int32_t start = clampIndex(wrapIndex(slice->start()), true);
-        int32_t stop = clampIndex(wrapIndex(slice->stop()), false);
 
         int32_t step_sgn = step > 0 ? 1 : -1;
         size_t size = max((stop - start + step - step_sgn) / step, 0);
@@ -414,17 +431,21 @@ void Slice::init()
     InitialLayout.init(layout);
 }
 
+bool IsInt32OrNone(Value value)
+{
+    return value == Value(None) || value.isInt32();
+}
+
 Slice::Slice(TracedVector<Value> args) :
   Object(ObjectClass, InitialLayout)
 {
     assert(args.size() == 3);
-    assert(args[0].isInt32());
-    assert(args[1].isInt32());
-    assert(args[2] == Value(None) || args[2].isInt32());
-    Root<Value> step(args[2] == Value(None) ? Integer::get(1) : args[2]);
+    assert(IsInt32OrNone(args[0]));
+    assert(IsInt32OrNone(args[1]));
+    assert(IsInt32OrNone(args[2]));
     setSlot(StartSlot, args[0]);
     setSlot(StopSlot, args[1]);
-    setSlot(StepSlot, step);
+    setSlot(StepSlot, args[2]);
 }
 
 #ifdef BUILD_TESTS

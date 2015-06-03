@@ -706,12 +706,21 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxSlice& s) {
-        compile(s.lower);
-        compile(s.upper);
+        if (s.lower)
+            compile(s.lower);
+        else
+            emit<InstrConst>(None);
+
+        if (s.upper)
+            compile(s.upper);
+        else
+            emit<InstrConst>(None);
+
         if (s.stride)
             compile(s.stride);
         else
             emit<InstrConst>(None);
+
         emit<InstrSlice>();
     }
 
