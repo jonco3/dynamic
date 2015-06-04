@@ -755,6 +755,16 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Newline);
     testEqual(tz.nextToken().type, Token_Dedent);
     testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("(1, .3 + 1)");
+    testEqual(tz.nextToken().type, Token_Bra);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Comma);
+    testEqual(tz.nextToken().type, Token_Float);
+    testEqual(tz.nextToken().type, Token_Plus);
+    testEqual(tz.nextToken().type, Token_Integer);
+    testEqual(tz.nextToken().type, Token_Ket);
+    testEqual(tz.nextToken().type, Token_EOF);
 }
 
 #endif

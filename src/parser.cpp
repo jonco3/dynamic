@@ -239,7 +239,7 @@ bool SyntaxParser::maybeExprToken()
     // Return whether the next token can be the start of an expression.
     TokenType t = currentToken().type;
     return t == Token_Identifier ||
-        t == Token_Integer || t == Token_String ||
+        t == Token_Integer || t == Token_Float || t == Token_String ||
         t == Token_Bra || t == Token_SBra || t == Token_CBra ||
         t == Token_Minus || t == Token_Plus || t == Token_BitNot ||
         t == Token_Not || t == Token_Lambda || t == Token_Yield ||
@@ -724,6 +724,8 @@ testcase(parser)
     testParseException("def f(x = 0, y): pass");
     testParseException("def f(*x, y): pass");
     testParseException("def f(*x = ()): pass");
+
+    testParseModule("(1, .3 + 1)", "(1, 0.3 + 1)");
 }
 
 #endif
