@@ -156,6 +156,7 @@ private:
     TokenPos pos;
     vector<unsigned> indentStack;
     list<Token> tokenQueue;
+    vector<TokenType> bracketStack;
     unordered_map<string, TokenType> keywords;
     unordered_map<string, TokenType> operators;
 
@@ -175,6 +176,8 @@ private:
     bool isIdentifierStart(char c);
     bool isIdentifierRest(char c);
     bool isOperatorOrDelimiter(char c);
+    TokenType isOpeningBracket(char c);
+    TokenType isClosingBracket(char c);
 
     void queueDedentsToColumn(unsigned column);
 };

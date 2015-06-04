@@ -228,6 +228,26 @@ bool Tokenizer::isOperatorOrDelimiter(char c)
         c == '!';
 }
 
+TokenType Tokenizer::isOpeningBracket(char c)
+{
+    switch (c) {
+      case '(': return Token_Bra;
+      case '[': return Token_SBra;
+      case '{': return Token_CBra;
+      default:  return Token_EOF;
+    }
+}
+
+TokenType Tokenizer::isClosingBracket(char c)
+{
+    switch (c) {
+      case ')': return Token_Ket;
+      case ']': return Token_SKet;
+      case '}': return Token_CKet;
+      default:  return Token_EOF;
+    }
+}
+
 void Tokenizer::skipWhitespace()
 {
     while (isWhitespace(peekChar()))
@@ -300,6 +320,8 @@ Token Tokenizer::findNextToken()
         }
     } else {
         skipWhitespace();
+        if (!bracketStack.empty())
+            skipIndentation();
     }
 
     startPos = pos;
@@ -395,6 +417,24 @@ Token Tokenizer::findNextToken()
         }
 
         return {Token_Identifier, s, startPos};
+    }
+
+    // Brackets
+    assert(!Token_EOF);
+    if (TokenType type = isOpeningBracket(peekChar())) {
+        nextChar();
+        bracketStack.push_back(type);
+        return {type, string(source, startIndex, 1), startPos};
+    } else if (TokenType type = isClosingBracket(peekChar())) {
+        nextChar();
+        assert(Token_Ket == Token_Bra + 1);
+        assert(Token_SKet == Token_SBra + 1);
+        assert(Token_CKet == Token_CBra + 1);
+        TokenType opening = TokenType(type - 1);
+        if (bracketStack.empty() || bracketStack.back() != opening)
+            throw TokenError("Mismatched bracket", startPos);
+        bracketStack.pop_back();
+        return {type, string(source, startIndex, 1), startPos};
     }
 
     // Operators and delimiters
@@ -614,6 +654,21 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Identifier);
     testEqual(tz.nextToken().type, Token_Newline);
     testEqual(tz.nextToken().type, Token_Dedent);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("(   \n    )");
+    testEqual(tz.nextToken().type, Token_Bra);
+    testEqual(tz.nextToken().type, Token_Ket);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("[   # comment\n    ]");
+    testEqual(tz.nextToken().type, Token_SBra);
+    testEqual(tz.nextToken().type, Token_SKet);
+    testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start("{\n\n\n}");
+    testEqual(tz.nextToken().type, Token_CBra);
+    testEqual(tz.nextToken().type, Token_CKet);
     testEqual(tz.nextToken().type, Token_EOF);
 
     tz.start("# comment");
