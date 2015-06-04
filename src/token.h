@@ -170,6 +170,8 @@ private:
     void skipWhitespace();
     unsigned skipIndentation();
 
+    bool matchExponent();
+
     bool isWhitespace(char c);
     bool isNewline(char c);
     bool isDigit(char c);

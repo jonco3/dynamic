@@ -297,6 +297,21 @@ void Tokenizer::queueDedentsToColumn(unsigned column)
     }
 }
 
+bool Tokenizer::matchExponent()
+{
+    char c = peekChar();
+    if (c != 'e' && c != 'E')
+        return false;
+
+    nextChar();
+    c = peekChar();
+    if (c == '+' || c == '-')
+        nextChar();
+    while (isDigit(peekChar()))
+        nextChar();
+    return true;
+}
+
 Token Tokenizer::findNextToken()
 {
     // Return any queued tokens
@@ -346,22 +361,33 @@ Token Tokenizer::findNextToken()
     }
 
     // Numeric literals
+    bool hasIntPart = false;
     if (isDigit(peekChar())) {
         // todo: floating pointer, prefixes, etc.
         do {
             nextChar();
         } while (isDigit(peekChar()));
-        if (peekChar() == '.') {
-            nextChar();
-            if (!isDigit(peekChar()))
-                throw TokenError("Invalid syntax", pos); // todo: check this
+        if (peekChar() != '.') {
+            if (matchExponent()) {
+                string text(source, startIndex, index - startIndex);
+                return {Token_Float, text, startPos};
+            }
+            string text(source, startIndex, index - startIndex);
+            return {Token_Integer, text, startPos};
+        }
+        hasIntPart = true;
+    }
+    if (peekChar() == '.') {
+        nextChar();
+        if (!hasIntPart && !isDigit(peekChar())) {
+            ungetChar('.');
+        } else {
             while (isDigit(peekChar()))
                 nextChar();
-            size_t length = index - startIndex;
-            return {Token_Float, string(source, startIndex, length), startPos};
+            matchExponent();
+            string text(source, startIndex, index - startIndex);
+            return {Token_Float, text, startPos};
         }
-        size_t length = index - startIndex;
-        return {Token_Integer, string(source, startIndex, length), startPos};
     }
 
     // String literals
@@ -499,6 +525,41 @@ testcase(tokenizer)
     testEqual(t.type, Token_Integer);
     testEqual(t.text, "123");
     testEqual(tz.nextToken().type, Token_EOF);
+
+    tz.start(".5"); // fraction
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, ".5");
+
+    tz.start("1.5"); // intpart fraction
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, "1.5");
+
+    tz.start("1."); // intpart .
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, "1.");
+
+    tz.start("1e2"); // intpart exponent
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, "1e2");
+
+    tz.start(".5E2"); // fraction exponent
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, ".5E2");
+
+    tz.start("1.5e-1"); // intpart fraction exponent
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, "1.5e-1");
+
+    tz.start("1.e+3"); // intpart . exponent
+    t = tz.nextToken();
+    testEqual(t.type, Token_Float);
+    testEqual(t.text, "1.e+3");
 
     tz.start("name_123");
     t = tz.nextToken();
