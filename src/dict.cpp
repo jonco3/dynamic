@@ -46,6 +46,12 @@ static bool dict_keys(TracedVector<Value> args, Root<Value>& resultOut)
     return dict->keys(resultOut);
 }
 
+static bool dict_values(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    Dict* dict = args[0].toObject()->as<Dict>();
+    return dict->values(resultOut);
+}
+
 void Dict::init()
 {
     ObjectClass.init(gc.create<Class>("dict"));
@@ -55,6 +61,7 @@ void Dict::init()
     initNativeMethod(ObjectClass, "__setitem__", dict_setitem, 3);
     initNativeMethod(ObjectClass, "__delitem__", dict_delitem, 2);
     initNativeMethod(ObjectClass, "keys", dict_keys, 1);
+    initNativeMethod(ObjectClass, "values", dict_values, 1);
     // __eq__ and __ne__ are supplied by lib/internal.py
 }
 
@@ -151,6 +158,17 @@ bool Dict::keys(Root<Value>& resultOut)
     return true;
 }
 
+bool Dict::values(Root<Value>& resultOut)
+{
+    // todo: should be some kind of iterator?
+    Root<Tuple*> values(Tuple::createUninitialised(entries_.size()));
+    size_t index = 0;
+    for (const auto& i : entries_)
+        values->initElement(index++, i.second);
+    resultOut = values;
+    return true;
+}
+
 // Wrap a python error in a C++ exception to propagate it out of STL machinery.
 struct PythonException : public runtime_error
 {
@@ -232,6 +250,8 @@ testcase(dict)
     testInterp("{}[1] = 2", "2");
     testInterp("a = {}; a[1] = 2; a", "{1: 2}");
     testInterp("a = {1: 2}; a[1] = 3; a", "{1: 3}");
+    testInterp("{1: 2}.keys()", "(1,)");
+    testInterp("{1: 2}.values()", "(2,)");
 }
 
 #endif

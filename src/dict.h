@@ -21,6 +21,7 @@ struct Dict : public Object
     bool setitem(Traced<Value> key, Traced<Value> value, Root<Value>& resultOut);
     bool delitem(Traced<Value> key, Root<Value>& resultOut);
     bool keys(Root<Value>& resultOut);
+    bool values(Root<Value>& resultOut);
 
     // Methods __eq__ and __ne__ are supplied by lib/internals.py
 
