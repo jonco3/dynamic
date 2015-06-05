@@ -64,12 +64,13 @@ TEST_SRCS = \
 
 MAINSRCS = src/main.cpp $(SRCS)
 TESTSRCS = src/test.cpp $(TEST_SRCS) $(SRCS)
+ALLSRCS = src/main.cpp src/test.cpp $(TEST_SRCS) $(SRCS)
 
 TESTOBJS = $(subst src,build,$(TESTSRCS:.cpp=.o))
 MAINOBJS = $(subst src,build,$(MAINSRCS:.cpp=.o))
+ALLOBJS = $(subst src,build,$(ALLSRCS:.cpp=.o))
 
-TESTDEPS = $(TESTOBJS:.o=.d)
-MAINDEPS = $(MAINOBJS:.o=.d)
+DEPS = $(ALLOBJS:.o=.d)
 
 WRAPPER = python $(srcdir)/test/debug-wrapper
 TEST-RUNNER = python $(srcdir)/test/run-tests
@@ -117,8 +118,7 @@ bench: dynamic
 clean:
 	rm -rf build/* dynamic unittests
 
--include $(TESTDEPS)
--include $(MAINDEPS)
+-include $(DEPS)
 
 build/%.o: $(srcdir)/src/%.cpp Makefile
 	mkdir -p build/test
