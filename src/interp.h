@@ -177,9 +177,4 @@ struct Interpreter
     friend void testInterp(const string& input, const string& expected);
 };
 
-#ifdef BUILD_TESTS
-extern void testInterp(const string& input, const string& expected);
-extern void testException(const string& input, const string& expected);
-#endif
-
 #endif

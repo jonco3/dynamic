@@ -54,6 +54,9 @@ char *readOneLine()
 
 #endif
 
+void maybeAbortTests(string what)
+{}
+
 static int runRepl()
 {
     char* line;

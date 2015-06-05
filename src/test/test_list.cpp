@@ -3,6 +3,8 @@
 #include "src/interp.h"
 #include "src/test.h"
 
+#include "test_interp.h"
+
 testcase(tuple)
 {
     testInterp("()", "()");

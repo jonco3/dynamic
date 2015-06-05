@@ -95,6 +95,9 @@ int main(int argc, char *argv[])
             badUsage();
     }
 
+    gc.minCollectAt = 10;
+    gc.scheduleFactorPercent = 110;
+
     init1();
     init2(libDir);
     TestCase::runAllTests();

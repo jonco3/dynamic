@@ -3,10 +3,15 @@
 #include "src/repr.h"
 #include "src/singletons.h"
 #include "src/test.h"
+#include "src/utils.h"
 #include "src/value-inl.h"
 
 static void testBuildModule(const string& input, const string& expected)
 {
+#ifdef DEBUG
+    AutoSetAndRestore asar(assertStackDepth, false);
+#endif
+
     Root<Block*> block;
     Block::buildModule(input, None, block);
     testEqual(repr(*block), expected);

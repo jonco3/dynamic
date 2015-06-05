@@ -28,14 +28,12 @@ static inline void log(const char* s, void *p, void *p2) {}
 static inline void log(const char* s, size_t i, int j) {}
 #endif
 
-#ifdef BUILD_TESTS
-GC gc(10, 110);
-#else
-GC gc(100, 200);
-#endif
+GC gc;
 
-GC::GC(size_t minCollectAt, unsigned scheduleFactorPercent)
-  : currentEpoch(1),
+GC::GC()
+  : minCollectAt(100),
+    scheduleFactorPercent(200),
+    currentEpoch(1),
     prevEpoch(2),
     cellCount(0),
     cells(sizeClassCount),
@@ -44,8 +42,6 @@ GC::GC(size_t minCollectAt, unsigned scheduleFactorPercent)
     isAllocating(false),
     unsafeCount(0),
 #endif
-    minCollectAt(minCollectAt),
-    scheduleFactorPercent(scheduleFactorPercent),
     collectAt(minCollectAt)
 {}
 

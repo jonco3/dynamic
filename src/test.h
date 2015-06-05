@@ -122,11 +122,6 @@ extern bool testExpectingException;
     }                                                                             \
     testExpectingException = false
 
-#ifdef BUILD_TESTS
 void maybeAbortTests(string what);
-#else
-inline void maybeAbortTests(string what) {}
-#endif
-
 
 #endif

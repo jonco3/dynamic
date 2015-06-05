@@ -109,9 +109,7 @@ static string formatPos(const TokenPos& pos)
 TokenError::TokenError(string message, const TokenPos& pos) :
   runtime_error(message + formatPos(pos))
 {
-#ifdef BUILD_TESTS
     maybeAbortTests("TokenError " + message);
-#endif
 }
 
 Tokenizer::Tokenizer() :

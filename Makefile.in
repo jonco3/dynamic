@@ -18,13 +18,8 @@ CXX            = @CXX@
 LD             = @CXX@
 
 FLAGS          = -Wall -Werror --std=c++14
-CXXFLAGS       = @CXXFLAGS@ $(FLAGS) -I.. -include config.h
-LDFLAGS        = @LDFLAGS@ $(FLAGS) -lm
-
-TESTCXXFLAGS   = -DBUILD_TESTS
-TESTLDFLAGS    = 
-MAINCXXFLAGS   = -DUSE_READLINE
-MAINLDFLAGS    = -lreadline
+CXXFLAGS       = @CXXFLAGS@ $(FLAGS) -I.. -include config.h -DUSE_READLINE
+LDFLAGS        = @LDFLAGS@ $(FLAGS) -lm -lreadline
 
 SRCS = \
 	src/token.cpp \
@@ -70,8 +65,8 @@ TEST_SRCS = \
 MAINSRCS = src/main.cpp $(SRCS)
 TESTSRCS = src/test.cpp $(TEST_SRCS) $(SRCS)
 
-TESTOBJS = $(subst src,build/test,$(TESTSRCS:.cpp=.o))
-MAINOBJS = $(subst src,build/main,$(MAINSRCS:.cpp=.o))
+TESTOBJS = $(subst src,build,$(TESTSRCS:.cpp=.o))
+MAINOBJS = $(subst src,build,$(MAINSRCS:.cpp=.o))
 
 TESTDEPS = $(TESTOBJS:.o=.d)
 MAINDEPS = $(MAINOBJS:.o=.d)
@@ -125,10 +120,6 @@ clean:
 -include $(TESTDEPS)
 -include $(MAINDEPS)
 
-build/test/%.o: $(srcdir)/src/%.cpp Makefile
-	mkdir -p build/test build/test/test
-	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $(TESTCXXFLAGS) $< -o $@
-
-build/main/%.o: $(srcdir)/src/%.cpp Makefile
-	mkdir -p build/main
-	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $(MAINCXXFLAGS) $< -o $@
+build/%.o: $(srcdir)/src/%.cpp Makefile
+	mkdir -p build/test
+	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $< -o $@

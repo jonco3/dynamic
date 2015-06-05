@@ -16,6 +16,10 @@ struct Layout;
 struct Object;
 struct Syntax;
 
+#ifdef DEBUG
+extern bool assertStackDepth;
+#endif
+
 struct Block : public Cell
 {
     static void buildModule(const Input& input, Traced<Object*> globals,
@@ -52,9 +56,8 @@ struct Block : public Cell
     void setNextPos(const TokenPos& pos);
     TokenPos getPos(Instr** instrp) const;
 
-#ifdef BUILD_TESTS
+    // For unit tests
     Instr** findInstr(unsigned type);
-#endif
 
   private:
     Layout* layout_;

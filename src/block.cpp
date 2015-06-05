@@ -16,6 +16,10 @@
 
 static const Name ClassFunctionParam = "__bases__";
 
+#ifdef DEBUG
+bool assertStackDepth = true;
+#endif
+
 Block::Block(Traced<Layout*> layout)
   : layout_(layout)
 {}
@@ -92,7 +96,6 @@ void Block::setNextPos(const TokenPos& pos)
         offsetLines_.emplace_back(instrs_.size(), pos.line);
 }
 
-#ifdef BUILD_TESTS
 Instr** Block::findInstr(unsigned type)
 {
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
@@ -101,7 +104,6 @@ Instr** Block::findInstr(unsigned type)
     }
     return nullptr;
 }
-#endif
 
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
@@ -411,8 +413,9 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     void maybeAssertStackDepth(unsigned delta = 0) {
-#if defined(DEBUG) && !defined(BUILD_TESTS)
-        emit<InstrAssertStackDepth>(stackDepth + delta);
+#if defined(DEBUG)
+        if (assertStackDepth)
+            emit<InstrAssertStackDepth>(stackDepth + delta);
 #endif
     }
 

@@ -26,7 +26,10 @@ struct Tracer
 
 struct GC
 {
-    GC(size_t minCollectAt, unsigned scheduleFactorPercent);
+    size_t minCollectAt;
+    unsigned scheduleFactorPercent;
+
+    GC();
 
     void shutdown();
 
@@ -79,8 +82,6 @@ struct GC
     bool isAllocating;
     unsigned unsafeCount;
 #endif
-    size_t minCollectAt;
-    unsigned scheduleFactorPercent;
     size_t collectAt;
 
     friend struct Cell;
