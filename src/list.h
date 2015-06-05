@@ -13,7 +13,7 @@ struct ListBase : public Object
     bool iter(Root<Value>& resultOut);
 
     virtual const string& listName() const = 0;
-    virtual void traceChildren(Tracer& t) override;
+    void traceChildren(Tracer& t) override;
 
     int32_t len() { return (int32_t)elements_.size(); }
     Traced<Value> getitem(size_t index) {

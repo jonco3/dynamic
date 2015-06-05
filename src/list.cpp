@@ -14,7 +14,7 @@ struct ListIter : public Object
 
     ListIter(Traced<ListBase*> list);
 
-    virtual void traceChildren(Tracer& t) override;
+    void traceChildren(Tracer& t) override;
 
     bool iter(Root<Value>& resultOut);
     bool next(Root<Value>& resultOut);
@@ -408,6 +408,7 @@ bool ListIter::next(Root<Value>& resultOut)
         return false;
     }
 
+    assert(index_ >= 0 && (size_t)index_ < list_->elements_.size());
     resultOut = list_->elements_[index_];
     index_++;
     return true;
