@@ -78,18 +78,3 @@ Value String::get(const string& v)
 void String::print(ostream& s) const {
     s << "'" << value_ << "'";
 }
-
-#ifdef BUILD_TESTS
-
-#include "test.h"
-
-testcase(string)
-{
-    testInterp("\"foo\"", "'foo'");
-    testInterp("'foo'", "'foo'");
-    testInterp("\"\"", "''");
-    testInterp("''", "''");
-    testInterp("\"foo\" + 'bar'", "'foobar'");
-}
-
-#endif

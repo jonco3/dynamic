@@ -52,8 +52,23 @@ SRCS = \
 	src/generator.cpp \
 	src/reflect.cpp
 
-TESTSRCS = src/test.cpp $(SRCS)
+TEST_SRCS = \
+	src/test/test_token.cpp \
+	src/test/test_parser.cpp \
+	src/test/test_gc.cpp \
+	src/test/test_block.cpp \
+	src/test/test_layout.cpp \
+	src/test/test_object.cpp \
+	src/test/test_interp.cpp \
+	src/test/test_exception.cpp \
+	src/test/test_numeric.cpp \
+	src/test/test_string.cpp \
+	src/test/test_list.cpp \
+	src/test/test_dict.cpp \
+	src/test/test_builtin.cpp
+
 MAINSRCS = src/main.cpp $(SRCS)
+TESTSRCS = src/test.cpp $(TEST_SRCS) $(SRCS)
 
 TESTOBJS = $(subst src,build/test,$(TESTSRCS:.cpp=.o))
 MAINOBJS = $(subst src,build/main,$(MAINSRCS:.cpp=.o))
@@ -105,13 +120,13 @@ bench: dynamic
 
 .PHONY: clean
 clean:
-	rm -f build/*/* dynamic tests
+	rm -rf build/* dynamic unittests
 
 -include $(TESTDEPS)
 -include $(MAINDEPS)
 
 build/test/%.o: $(srcdir)/src/%.cpp Makefile
-	mkdir -p build/test
+	mkdir -p build/test build/test/test
 	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $(TESTCXXFLAGS) $< -o $@
 
 build/main/%.o: $(srcdir)/src/%.cpp Makefile

@@ -133,20 +133,3 @@ for_each_exception_class(set_exception_attr)
     text = readFile(filename);
     runModule(text, filename, None);
 }
-
-#ifdef BUILD_TESTS
-
-#include "test.h"
-
-testcase(builtin)
-{
-    testInterp("hasattr(1, 'foo')", "False");
-    testInterp("hasattr(1, '__str__')", "True");
-    testInterp("a = object()\n"
-               "a.foo = 1\n"
-               "a.foo",
-               "1");
-    testInterp("range(4, 7)", "[4, 5, 6]");
-}
-
-#endif

@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 
 bool testExpectingException = false;
 
