@@ -427,10 +427,8 @@ struct ByteCompiler : public SyntaxVisitor
             topLevel->extend(layout);
         block = gc.create<Block>(layout);
         assert(stackDepth == 0);
-        maybeAssertStackDepth();
         compile(s);
         assert(stackDepth == 0);
-        maybeAssertStackDepth(1);
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
