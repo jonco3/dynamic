@@ -107,11 +107,15 @@ const char* usageMessage =
     "  dynamic FILE ARG*  -- run script from file\n"
     "  dynamic -e EXPRS   -- execute expressions from commandline\n"
     "options:\n"
-    "  -l LIBDIR          -- set directory to load libraries from";
+    "  -l LIBDIR          -- set directory to load libraries from\n"
+#ifdef DEBUG
+    "  -lg                -- log GC activity\n"
+#endif
+    ;
 
 static void badUsage()
 {
-    cerr << usageMessage << endl;
+    cerr << usageMessage;
     exit(EX_USAGE);
 }
 
@@ -127,8 +131,12 @@ int main(int argc, const char* argv[])
         const char* opt = argv[pos++];
         if (strcmp("-e", opt) == 0)
             expr = true;
-        if (strcmp("-l", opt) == 0 && pos != argc)
+        else if (strcmp("-l", opt) == 0 && pos != argc)
             libDir = argv[pos++];
+#ifdef DEBUG
+        else if (strcmp("-lg", opt) == 0)
+            logGC = true;
+#endif
         else
             badUsage();
     }

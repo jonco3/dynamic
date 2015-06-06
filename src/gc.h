@@ -14,6 +14,10 @@ using namespace std;
 
 // Simple mark and sweep garbage collector.
 
+#ifdef DEBUG
+extern bool logGC;
+#endif
+
 struct Cell;
 struct Marker;
 struct RootBase;

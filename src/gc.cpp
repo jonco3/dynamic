@@ -6,26 +6,34 @@
 #include <vector>
 #include <iostream>
 
-//#define TRACE_GC
+#ifdef DEBUG
 
-#ifdef TRACE_GC
+bool logGC = false;
+
 static inline void log(const char* s) {
-    cerr << s << endl;
+    if (logGC)
+        cerr << "gc: " << s << endl;
 }
 static inline void log(const char* s, void *p) {
-    cerr << s << " " << p << endl;
+    if (logGC)
+        cerr << "gc: " << s << " " << p << endl;
 }
 static inline void log(const char* s, void *p, void *p2) {
-    cerr << s << " " << p << " " << p2 << endl;
+    if (logGC)
+        cerr << "gc: " << s << " " << p << " " << p2 << endl;
 }
 static inline void log(const char* s, size_t i, int j) {
-    cerr << s << " " << dec << i << " " << j << endl;
+    if (logGC)
+        cerr << "gc: " << s << " " << dec << i << " " << j << endl;
 }
+
 #else
+
 static inline void log(const char* s) {}
 static inline void log(const char* s, void *p) {}
 static inline void log(const char* s, void *p, void *p2) {}
 static inline void log(const char* s, size_t i, int j) {}
+
 #endif
 
 GC gc;
