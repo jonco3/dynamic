@@ -304,7 +304,7 @@ void Object::dump(ostream& s) const
 Class* Object::type() const
 {
     // Cast because calling as() can end up recursively calling this.
-    return static_cast<Class*>(getAttr(ClassAttr).asObject());
+    return static_cast<Class*>(getSlot(ClassSlot).asObject());
 }
 
 bool Object::isTrue() const
