@@ -10,9 +10,10 @@
 
 #include "value-inl.h"
 
-//#define TRACE_INTERP
-
+#ifdef DEBUG
 bool logFrames = false;
+bool logExecution = false;
+#endif
 
 ExceptionHandler::ExceptionHandler(Type type, Traced<Frame*> frame,
                                    unsigned offset)
@@ -56,6 +57,43 @@ bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
     return run(resultOut);
 }
 
+#ifdef DEBUG
+void Interpreter::logStart(int indentDelta)
+{
+    size_t indent = frames.size() + indentDelta;
+    cout << "in: ";
+    for (size_t i = 0; i < indent; i++)
+        cout << "  ";
+}
+
+void Interpreter::logStackPush(const Value& value)
+{
+    if (logExecution) {
+        logStart(1);
+        cout << "push " << value << endl;
+    }
+}
+
+void Interpreter::logStackPop(size_t count)
+{
+    if (logExecution && count > 0) {
+        for (size_t i = 0; i < count; i++) {
+            logStart(1);
+            cout << "pop " << stack[stack.size() - 1 - i] << endl;
+        }
+    }
+}
+
+void Interpreter::logStackSwap()
+{
+    if (logExecution) {
+        logStart(1);
+        cout << "swap" << endl;
+    }
+}
+
+#endif
+
 bool Interpreter::run(Root<Value>& resultOut)
 {
 #ifdef DEBUG
@@ -64,22 +102,19 @@ bool Interpreter::run(Root<Value>& resultOut)
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
         Instr *instr = *instrp++;
-#ifdef TRACE_INTERP
-        cerr << "stack:";
-        for (unsigned i = 0; i < stackPos(); ++i)
-            cerr << " " << stack[i];
-        cerr << endl;
-        cerr << "frames:";
-        for (unsigned i = 0; i < frames.size(); i++)
-            cerr << " " << frames[i];
-        cerr << endl << endl;
-        cerr << "execute: " << repr(*instr);
-        cerr << " line " << dec << currentPos().line << endl << endl;
+#ifdef DEBUG
+        if (logExecution) {
+            logStart();
+            cout << *instr << " at line " << dec << currentPos().line << endl;
+        }
 #endif
         if (!instr->execute(*this)) {
             Root<Value> value(popStack());
-#ifdef TRACE_INTERP
-            cerr << "Exception: " << value << endl;
+#ifdef DEBUG
+        if (logExecution) {
+            logStart(1);
+            cout << "exception " << value << endl;
+        }
 #endif
             assert(value.isInstanceOf(Exception::ObjectClass));
             Root<Exception*> exception(value.toObject()->as<Exception>());
@@ -105,15 +140,6 @@ Frame* Interpreter::newFrame(Traced<Function*> function)
     return gc.create<Frame>(block);
 }
 
-#ifdef DEBUG
-static void logStart(size_t indent)
-{
-    cout << "in: ";
-    for (size_t i = 0; i < indent; i++)
-        cout << "  ";
-}
-#endif
-
 void Interpreter::pushFrame(Traced<Frame*> frame)
 {
     frame->setStackPos(stackPos());
@@ -121,7 +147,7 @@ void Interpreter::pushFrame(Traced<Frame*> frame)
     frames.push_back(frame);
     if (logFrames) {
         TokenPos pos = frame->block()->getPos(instrp);
-        logStart(frames.size() - 1);
+        logStart(-1);
         cout << "> frame " << pos << endl;
     }
 }
@@ -132,7 +158,7 @@ void Interpreter::popFrame()
     Frame* frame = frames.back();
     if (logFrames) {
         TokenPos pos = frame->block()->getPos(instrp - 1);
-        logStart(frames.size() - 1);
+        logStart(-1);
         cout << "< frame " << pos << endl;
     }
     assert(exceptionHandlers.empty() ||
@@ -141,9 +167,6 @@ void Interpreter::popFrame()
 
     stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
-#ifdef TRACE_INTERP
-    cout << "  return to " << (void*)instrp << endl;
-#endif
     frames.pop_back();
 }
 

@@ -10,7 +10,10 @@
 
 using namespace std;
 
+#ifdef DEBUG
 extern bool logFrames;
+extern bool logExecution;
+#endif
 
 struct Block;
 struct Callable;
@@ -50,11 +53,13 @@ struct Interpreter
     void pushStack(const S& element) {
         Root<Value> value(element);
         stack.push_back(value.get());
+        logStackPush(value);
     }
 
     // Remove and return the value on the top of the stack.
     Value popStack() {
         assert(!stack.empty());
+        logStackPop(1);
         Value result = stack.back();
         stack.pop_back();
         return result;
@@ -63,6 +68,7 @@ struct Interpreter
     // Remove |count| values from the top of the stack.
     void popStack(unsigned count) {
         assert(count <= stack.size());
+        logStackPop(count);
         stack.resize(stack.size() - count);
     }
 
@@ -89,6 +95,7 @@ struct Interpreter
         assert(stack.size() >= 2);
         unsigned pos = stackPos();
         swap(stack[pos - 1], stack[pos - 2]);
+        logStackSwap();
     }
 
     void branch(int offset);
@@ -108,6 +115,14 @@ struct Interpreter
     void returnFromFrame(Value value);
 #ifdef DEBUG
     unsigned frameStackDepth();
+    void logStart(int indentDelta = 0);
+    void logStackPush(const Value& v);
+    void logStackPop(size_t count);
+    void logStackSwap();
+#else
+    void logStackPush(const Value& v) {}
+    void logStackSwap(const Value& v) {}
+    void logStackPop(size_t count) {}
 #endif
 
     void replaceInstr(Instr* current, Instr* newInstr);

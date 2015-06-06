@@ -10,9 +10,6 @@
 
 void testInterp(const string& input, const string& expected)
 {
-#ifdef TRACE_INTERP
-    cout << "testInterp: " << input << endl;
-#endif
     Interpreter& interp = Interpreter::instance();
     assert(interp.stack.empty());
     assert(interp.frames.empty());
@@ -31,9 +28,6 @@ void testInterp(const string& input, const string& expected)
 
 void testException(const string& input, const string& expected)
 {
-#ifdef TRACE_INTERP
-    cout << "testException: " << input << endl;
-#endif
     Root<Block*> block;
     Block::buildModule(input, None, block);
     Root<Value> result;

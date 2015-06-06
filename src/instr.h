@@ -381,7 +381,6 @@ struct InstrLambda : public Instr
         s << name();
         for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i)
             s << " " << *i;
-        s << ": { " << *info_->block_ << " }";
     }
 
   private:

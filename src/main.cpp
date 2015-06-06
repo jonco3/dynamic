@@ -109,7 +109,8 @@ const char* usageMessage =
     "options:\n"
     "  -l LIBDIR          -- set directory to load libraries from\n"
 #ifdef DEBUG
-    "  -lf                -- log interpreter frames\n"
+    "  -le                -- log interpreter execution\n"
+    "  -lf                -- log interpreter frames only\n"
     "  -lg                -- log GC activity\n"
 #endif
     ;
@@ -135,6 +136,8 @@ int main(int argc, const char* argv[])
         else if (strcmp("-l", opt) == 0 && pos != argc)
             libDir = argv[pos++];
 #ifdef DEBUG
+        else if (strcmp("-le", opt) == 0)
+            logFrames = logExecution = true;
         else if (strcmp("-lf", opt) == 0)
             logFrames = true;
         else if (strcmp("-lg", opt) == 0)
