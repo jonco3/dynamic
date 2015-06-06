@@ -110,6 +110,7 @@ void initBuiltins(const string& libDir)
     value = Dict::ObjectClass; Builtin->setAttr("dict", value);
     value = Boolean::ObjectClass; Builtin->setAttr("bool", value);
     value = Integer::ObjectClass; Builtin->setAttr("int", value);
+    value = Float::ObjectClass; Builtin->setAttr("float", value);
     value = String::ObjectClass; Builtin->setAttr("str", value);
 
     // Exceptions

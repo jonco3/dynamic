@@ -23,4 +23,16 @@ testcase(numeric)
     testInterp("2.0 + 0.5", "2.5");
     testInterp("2 + 0.5", "2.5");
     testInterp("0.5 + 2", "2.5");
+
+    testInterp("int()", "0");
+    testInterp("int(1)", "1");
+    testException("int('')", "could not convert string to int");
+    testException("int('1foo')", "could not convert string to int");
+
+    testInterp("float()", "0");
+    testInterp("float(1)", "1");
+    testInterp("float(1.5)", "1.5");
+    testInterp("float('1.5')", "1.5");
+    testException("float('')", "could not convert string to float");
+    testException("float('3.1foo')", "could not convert string to float");
 }

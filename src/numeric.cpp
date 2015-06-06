@@ -2,6 +2,7 @@
 
 #include "bool.h"
 #include "callable.h"
+#include "exception.h"
 #include "singletons.h"
 #include "string.h"
 #include "value-inl.h"
@@ -93,10 +94,50 @@ static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
     return true;
 }
 
+static bool intNew(TracedVector<Value> args, Root<Value>& resultOut) {
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+
+    if (args.size() == 1) {
+        resultOut = gc.create<Integer>();
+        return true;
+    }
+
+    Root<Value> arg(args[1]);
+    if (arg.isInstanceOf(Integer::ObjectClass)) {
+        resultOut = arg;
+    } else if (arg.isInstanceOf(String::ObjectClass)) {
+        string str = arg.asObject()->as<String>()->value();
+        int value = 0;
+        size_t pos = 0;
+        bool ok = true;
+        try {
+            value = stoi(str, &pos);
+        } catch (const logic_error& e) {
+            ok = false;
+        }
+        if (!ok || pos < str.size()) {
+            string message = "could not convert string to int: '" + str + "'";
+            resultOut = gc.create<ValueError>(message);
+            return false;
+        }
+        resultOut = Integer::get(value);
+    } else {
+        string message =
+            "int() argument must be a string or a number, not '" +
+            arg.type()->name() + "'";
+        resultOut = gc.create<TypeError>(message);
+        return false;
+    }
+
+    return true;
+}
+
 void Integer::init()
 {
     Root<Class*> cls(Class::createNative<Integer>("int"));
     Root<Value> value;
+    initNativeMethod(cls, "__new__", intNew, 1, 2);
     initNativeMethod(cls, "__str__", intStr, 1);
     initNativeMethod(cls, "__pos__", intUnaryOp<intPos>, 1);
     initNativeMethod(cls, "__neg__", intUnaryOp<intNeg>, 1);
@@ -286,10 +327,54 @@ static bool floatStr(TracedVector<Value> args, Root<Value>& resultOut) {
     return true;
 }
 
+static bool floatNew(TracedVector<Value> args, Root<Value>& resultOut) {
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+
+    if (args.size() == 1) {
+        resultOut = Float::get(0.0);
+        return true;
+    }
+
+    Root<Value> arg(args[1]);
+    if (arg.isInt32()) {
+        resultOut = Float::get(arg.asInt32());
+    } else if (arg.isInstanceOf(Integer::ObjectClass)) {
+        resultOut = Float::get(arg.asObject()->as<Integer>()->value());
+    } else if (arg.isInstanceOf(Float::ObjectClass)) {
+        resultOut = Float::get(arg.asObject()->as<Float>()->value());
+    } else if (arg.isInstanceOf(String::ObjectClass)) {
+        string str = arg.asObject()->as<String>()->value();
+        double value = 0;
+        size_t pos = 0;
+        bool ok = true;
+        try {
+            value = stod(str, &pos);
+        } catch (const logic_error& e) {
+            ok = false;
+        }
+        if (!ok || pos < str.size()) {
+            string message = "could not convert string to float: '" + str + "'";
+            resultOut = gc.create<ValueError>(message);
+            return false;
+        }
+        resultOut = Float::get(value);
+    } else {
+        string message =
+            "float() argument must be a string or a number, not '" +
+            arg.type()->name() + "'";
+        resultOut = gc.create<TypeError>(message);
+        return false;
+    }
+
+    return true;
+}
+
 void Float::init()
 {
     Root<Class*> cls(Class::createNative<Float>("float"));
     Root<Value> value;
+    initNativeMethod(cls, "__new__", floatNew, 1, 2);
     initNativeMethod(cls, "__str__", floatStr, 1);
     initNativeMethod(cls, "__pos__", floatUnaryOp<floatPos>, 1);
     initNativeMethod(cls, "__neg__", floatUnaryOp<floatNeg>, 1);

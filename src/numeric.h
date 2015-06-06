@@ -14,7 +14,7 @@ struct Integer : public Object
     static Value get(int v);
     static Object* getObject(int v);
 
-    Integer(int v);
+    Integer(int v = 0);
     Integer(Traced<Class*> cls);
 
     int value() { return value_; }
@@ -30,9 +30,9 @@ struct Float : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    static Float* get(double v);
+    static Float* get(double v = 0.0);
 
-    Float(double v);
+    Float(double v = 0.0);
     Float(Traced<Class*> cls);
 
     double value() const { return value_; }
