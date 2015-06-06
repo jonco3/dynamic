@@ -102,7 +102,7 @@ static const Keyword operatorList[] = {
 
 ostream& operator<<(ostream& s, const TokenPos& pos)
 {
-    s << pos.file << " line " << pos.line << " column " << pos.column;
+    s << pos.file << " line " << dec << pos.line << " column " << pos.column;
     return s;
 }
 
