@@ -343,7 +343,6 @@ struct RootVector : private vector<T>, private RootBase
 
     using VectorBase::back;
     using VectorBase::empty;
-    using VectorBase::operator[]; // todo: is this ok?
     using VectorBase::pop_back;
     using VectorBase::resize;
     using VectorBase::size;
@@ -378,10 +377,25 @@ struct RootVector : private vector<T>, private RootBase
     }
 
     void push_back(T element) {
+        GCTraits<T>::checkValid(element);
         VectorBase::push_back(element);
     }
 
-    virtual void trace(Tracer& t) {
+    T& operator[](size_t index) {
+        assert(index < size());
+        T& element = *(this->begin() + index);
+        GCTraits<T>::checkValid(element);
+        return element;
+    }
+
+    const T& operator[](size_t index) const {
+        assert(index < size());
+        const T& element = *(this->begin() + index);
+        GCTraits<T>::checkValid(element);
+        return element;
+    }
+
+    void trace(Tracer& t) override {
         for (auto i = this->begin(); i != this->end(); ++i)
             gc.trace(t, &*i);
     }
