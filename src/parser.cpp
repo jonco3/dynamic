@@ -2,13 +2,8 @@
 
 #include "generator.h"
 #include "syntax.h"
-#include "repr.h"
 #include "test.h"
 #include "utils.h"
-
-#include <cstdlib>
-#include <stdexcept>
-#include <ostream>
 
 ParseError::ParseError(const Token& token, string message) :
   runtime_error(message), pos(token.pos)
