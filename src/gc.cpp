@@ -12,19 +12,19 @@ bool logGC = false;
 
 static inline void log(const char* s) {
     if (logGC)
-        cerr << "gc: " << s << endl;
+        cout << "gc: " << s << endl;
 }
 static inline void log(const char* s, void *p) {
     if (logGC)
-        cerr << "gc: " << s << " " << p << endl;
+        cout << "gc: " << s << " " << p << endl;
 }
 static inline void log(const char* s, void *p, void *p2) {
     if (logGC)
-        cerr << "gc: " << s << " " << p << " " << p2 << endl;
+        cout << "gc: " << s << " " << p << " " << p2 << endl;
 }
 static inline void log(const char* s, size_t i, int j) {
     if (logGC)
-        cerr << "gc: " << s << " " << dec << i << " " << j << endl;
+        cout << "gc: " << s << " " << dec << i << " " << j << endl;
 }
 
 #else

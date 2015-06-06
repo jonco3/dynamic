@@ -12,6 +12,8 @@
 
 //#define TRACE_INTERP
 
+bool logFrames = false;
+
 ExceptionHandler::ExceptionHandler(Type type, Traced<Frame*> frame,
                                    unsigned offset)
   : type_(type), frame_(frame), offset_(offset)
@@ -103,17 +105,36 @@ Frame* Interpreter::newFrame(Traced<Function*> function)
     return gc.create<Frame>(block);
 }
 
+#ifdef DEBUG
+static void logStart(size_t indent)
+{
+    cout << "in: ";
+    for (size_t i = 0; i < indent; i++)
+        cout << "  ";
+}
+#endif
+
 void Interpreter::pushFrame(Traced<Frame*> frame)
 {
     frame->setStackPos(stackPos());
     instrp = frame->block()->startInstr();
     frames.push_back(frame);
+    if (logFrames) {
+        TokenPos pos = frame->block()->getPos(instrp);
+        logStart(frames.size() - 1);
+        cout << "> frame " << pos << endl;
+    }
 }
 
 void Interpreter::popFrame()
 {
     assert(!frames.empty());
     Frame* frame = frames.back();
+    if (logFrames) {
+        TokenPos pos = frame->block()->getPos(instrp - 1);
+        logStart(frames.size() - 1);
+        cout << "< frame " << pos << endl;
+    }
     assert(exceptionHandlers.empty() ||
            exceptionHandlers.back()->frame() != frame);
     assert(frame->stackPos() <= stackPos());

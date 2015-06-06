@@ -10,6 +10,8 @@
 
 using namespace std;
 
+extern bool logFrames;
+
 struct Block;
 struct Callable;
 struct Exception;

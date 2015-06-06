@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <ostream>
 #include <sstream>
 
 //#define TRACE_TOKEN
@@ -99,10 +100,16 @@ static const Keyword operatorList[] = {
     { nullptr, Token_EOF }
 };
 
+ostream& operator<<(ostream& s, const TokenPos& pos)
+{
+    s << pos.file << " line " << pos.line << " column " << pos.column;
+    return s;
+}
+
 static string formatPos(const TokenPos& pos)
 {
     ostringstream s;
-    s << " at " << pos.file << " line " << pos.line << " column " << pos.column;
+    s << " at " << pos;
     return s.str();
 }
 
