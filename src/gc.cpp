@@ -85,7 +85,11 @@ void Cell::print(ostream& s) const {
 
 void Cell::checkValid() const
 {
+#ifdef DEBUG
+    if (epoch_ != gc.currentEpoch && epoch_ != gc.prevEpoch)
+        cerr << "Bad cell at " << hex << this << endl;
     assert(epoch_ == gc.currentEpoch || epoch_ == gc.prevEpoch);
+#endif
 }
 
 bool Cell::shouldMark()

@@ -95,7 +95,7 @@ static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
 
 void Integer::init()
 {
-    Root<Class*> cls(gc.create<Class>("int"));
+    Root<Class*> cls(Class::createNative<Integer>("int"));
     Root<Value> value;
     initNativeMethod(cls, "__str__", intStr, 1);
     initNativeMethod(cls, "__pos__", intUnaryOp<intPos>, 1);
@@ -127,6 +127,10 @@ void Integer::init()
 
 Integer::Integer(int v)
   : Object(ObjectClass), value_(v)
+{}
+
+Integer::Integer(Traced<Class*> cls)
+  : Object(cls)
 {}
 
 Value Integer::get(int v)
@@ -182,13 +186,13 @@ static bool floatNE(double a, double b) { return a != b; }
 
 static double floatValue(Traced<Value> value)
 {
-    return value.asObject()->as<Float>()->value;
+    return value.asObject()->as<Float>()->value();
 }
 
 static bool floatValue(Traced<Value> value, double& out)
 {
     if (value.isInstanceOf(Float::ObjectClass))
-        out = value.asObject()->as<Float>()->value;
+        out = value.asObject()->as<Float>()->value();
     else
         return false;
 
@@ -198,7 +202,7 @@ static bool floatValue(Traced<Value> value, double& out)
 static bool floatOrIntValue(Traced<Value> value, double& out)
 {
     if (value.isInstanceOf(Float::ObjectClass))
-        out = value.asObject()->as<Float>()->value;
+        out = value.asObject()->as<Float>()->value();
     else if (value.isInt32())
         out = value.asInt32();
     else
@@ -284,7 +288,7 @@ static bool floatStr(TracedVector<Value> args, Root<Value>& resultOut) {
 
 void Float::init()
 {
-    Root<Class*> cls(gc.create<Class>("int"));
+    Root<Class*> cls(Class::createNative<Float>("float"));
     Root<Value> value;
     initNativeMethod(cls, "__str__", floatStr, 1);
     initNativeMethod(cls, "__pos__", floatUnaryOp<floatPos>, 1);
@@ -314,11 +318,15 @@ void Float::init()
 }
 
 Float::Float(double v)
-  : Object(ObjectClass), value(v)
+  : Object(ObjectClass), value_(v)
+{}
+
+Float::Float(Traced<Class*> cls)
+  : Object(cls), value_(0)
 {}
 
 void Float::print(ostream& s) const {
-    s << value;
+    s << value_;
 }
 
 Float* Float::get(double v)

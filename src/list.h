@@ -53,6 +53,7 @@ struct Tuple : public ListBase
 
     Tuple(const TracedVector<Value>& values);
     Tuple(size_t size);
+    Tuple(Traced<Class*> cls);
 
   private:
     ListBase* createDerived(size_t size) override {
@@ -68,6 +69,7 @@ struct List : public ListBase
 
     List(const TracedVector<Value>& values);
     List(size_t size);
+    List(Traced<Class*> cls);
 
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
@@ -91,6 +93,7 @@ struct Slice : public Object
     static GlobalRoot<Layout*> InitialLayout;
 
     Slice(TracedVector<Value> args);
+    Slice(Traced<Class*> cls);
 
     void indices(int32_t length,
                  int32_t& startOut, int32_t& stopOut, int32_t& stepOut);

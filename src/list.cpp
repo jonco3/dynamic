@@ -227,9 +227,8 @@ bool ListBase::operator==(const ListBase& other)
 
 void Tuple::init()
 {
-    Root<Class*> cls(gc.create<Class>("tuple"));
-    listBase_initNatives(cls);
-    ObjectClass.init(cls);
+    ObjectClass.init(Class::createNative<Tuple>("tuple"));
+    listBase_initNatives(ObjectClass);
     RootVector<Value> contents;
     Empty.init(gc.create<Tuple>(contents));
 }
@@ -251,6 +250,12 @@ Tuple::Tuple(const TracedVector<Value>& values)
 
 Tuple::Tuple(size_t size)
   : ListBase(ObjectClass, size) {}
+
+Tuple::Tuple(Traced<Class*> cls)
+  : ListBase(cls, 0)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+}
 
 void Tuple::initElement(size_t index, const Value& value)
 {
@@ -279,7 +284,7 @@ void Tuple::print(ostream& s) const
 
 void List::init()
 {
-    ObjectClass.init(gc.create<Class>("list"));
+    ObjectClass.init(Class::createNative<List>("list"));
     listBase_initNatives(ObjectClass);
     initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
     initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
@@ -293,6 +298,12 @@ List::List(const TracedVector<Value>& values)
 List::List(size_t size)
   : ListBase(ObjectClass, size)
 {}
+
+List::List(Traced<Class*> cls)
+  : ListBase(cls, 0)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+}
 
 const string& List::listName() const
 {
@@ -383,8 +394,7 @@ void ListIter::init()
 
 ListIter::ListIter(Traced<ListBase*> list)
   : Object(ObjectClass), list_(list), index_(0)
-{
-}
+{}
 
 void ListIter::traceChildren(Tracer& t)
 {

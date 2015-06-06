@@ -12,7 +12,6 @@ struct Exception : public Object
 
     Exception(Traced<Class*> cls, const string& message);
 
-    static Object* createInstance(Traced<Class*> cls);
     Exception(Traced<Class*> cls);
     bool init(TracedVector<Value> args, Root<Value>& resultOut);
 
@@ -50,10 +49,18 @@ struct Exception : public Object
     struct name : public Exception                                            \
     {                                                                         \
         static GlobalRoot<Class*> ObjectClass;                                \
-      name(const string& message = "")                                        \
+                                                                              \
+        name(const string& message = "")                                      \
           : Exception(ObjectClass, message)                                   \
         {}                                                                    \
+                                                                              \
+        name(Traced<Class*> cls)                                              \
+          : Exception(cls)                                                    \
+        {                                                                     \
+            assert(cls->isDerivedFrom(ObjectClass));                          \
+        }                                                                     \
     };
+
 for_each_exception_class(declare_exception_class)
 #undef define_exception_class
 

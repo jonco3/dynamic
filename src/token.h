@@ -121,12 +121,6 @@ struct TokenPos
     TokenPos() : file(""), line(0), column(0) {}
     TokenPos(const string& file, unsigned line, unsigned column)
      : file(file), line(line), column(column) {}
-    TokenPos& operator=(const TokenPos& other){
-        file = other.file;
-        line = other.line;
-        column = other.column;
-        return *this;
-    }
 };
 
 ostream& operator<<(ostream& s, const TokenPos& pos);

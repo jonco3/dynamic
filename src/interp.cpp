@@ -545,7 +545,13 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 return CallError;
         } else {
             // Call the class' native constructor to create an instance
-            resultOut = cls->nativeConstructor()(cls);
+            Class::NativeConstructor nc = cls->nativeConstructor();
+            if (!nc) {
+                string message =
+                    "cannot create '" + cls->name() + "' instances";
+                return raiseTypeError(message, resultOut);
+            }
+            resultOut = nc(cls);
         }
         if (resultOut.isInstanceOf(cls)) {
             Root<Value> initFunc;

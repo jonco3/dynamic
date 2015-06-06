@@ -44,11 +44,6 @@ Object* Object::create()
     return gc.create<Object>(ObjectClass);
 }
 
-Object* Object::createInstance(Traced<Class*> cls)
-{
-    return gc.create<Object>(cls);
-}
-
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
   : layout_(layout)
 {
@@ -334,19 +329,18 @@ void Object::traceChildren(Tracer& t)
 }
 
 Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name)
+  Object(ObjectClass, initialLayout), name_(name), constructor_(nullptr)
 {
     assert(base);
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass)
         setAttr(BaseAttr, base);
-    constructor_ = base->nativeConstructor();
 }
 
 Class::Class(string name, Traced<Class*> maybeBase,
              NativeConstructor constructor,
              Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name)
+  Object(ObjectClass, initialLayout), name_(name), constructor_(constructor)
 {
     assert(!Class::ObjectClass || maybeBase);
     assert(!maybeBase || maybeBase->is<Class>());
@@ -355,13 +349,6 @@ Class::Class(string name, Traced<Class*> maybeBase,
         Root<Value> baseAttr(maybeBase ? maybeBase : None);
         setAttr(BaseAttr, baseAttr);
     }
-    if (constructor) {
-        constructor_ = constructor;
-    } else {
-        assert(maybeBase);
-        constructor_ = maybeBase->nativeConstructor();
-    }
-    assert(constructor_);
 }
 
 Object* Class::base()
@@ -437,8 +424,7 @@ void initObject()
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
     Root<Class*> objectBase(nullptr);
-    Object::ObjectClass.init(gc.create<Class>("object", objectBase,
-                                              Object::createInstance));
+    Object::ObjectClass.init(Class::createNative<Object>("object", objectBase));
     NoneObject::ObjectClass.init(gc.create<Class>("None"));
     Class::ObjectClass.init(gc.create<Class>("class"));
 

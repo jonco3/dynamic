@@ -26,7 +26,6 @@ struct Object : public Cell
     static GlobalRoot<Layout*> InitialLayout;
 
     static Object* create();
-    static Object* createInstance(Traced<Class*> cls);
 
     Object(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout);
     virtual ~Object() {}
@@ -104,6 +103,15 @@ struct Class : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
+
+    template <typename T>
+    static Class* createNative(string name,
+                               Traced<Class*> base = Object::ObjectClass) {
+        return gc.create<Class>(name, base,
+                                [] (Traced<Class*> cls) -> Object* {
+                                    return gc.create<T>(cls);
+                                });
+    }
 
     Class(string name, Traced<Class*> base = Object::ObjectClass,
           Traced<Layout*> initialLayout = InitialLayout);

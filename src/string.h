@@ -19,6 +19,7 @@ struct String : public Object
     void print(ostream& s) const override;
 
     String(const string& v);
+    String(Traced<Class*> cls);
 
   private:
     string value_;

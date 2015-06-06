@@ -23,17 +23,14 @@ static bool exceptionInit(TracedVector<Value> args, Root<Value>& resultOut)
 
 void Exception::init()
 {
-    ObjectClass.init(gc.create<Class>("Exception",
-                                      Object::ObjectClass,
-                                      Exception::createInstance));
+    ObjectClass.init(Class::createNative<Exception>("Exception"));
     initNativeMethod(ObjectClass, "__init__", exceptionInit, 1, 2);
 
 #define init_exception_class(name)                                          \
     name::ObjectClass.init(                                                 \
-        gc.create<Class>(#name,                                             \
-                         Exception::ObjectClass,                            \
-                         Exception::createInstance));                       \
+        Class::createNative<name>(#name, Exception::ObjectClass));          \
     initNativeMethod(name::ObjectClass, "__init__", exceptionInit, 1, 2);
+
     for_each_exception_class(init_exception_class)
 #undef init_exception_class
 
@@ -43,22 +40,16 @@ void Exception::init()
 Exception::Exception(Traced<Class*> cls)
   : Object(cls)
 {
-    assert(cls->is<Class>()); // todo: check derives from Exception
+    assert(cls->isDerivedFrom(ObjectClass));
     setAttr("message", String::EmptyString);
 }
 
 Exception::Exception(Traced<Class*> cls, const string& message)
   : Object(cls)
 {
-    assert(cls->is<Class>());
+    assert(cls->isDerivedFrom(ObjectClass));
     Root<Value> messageValue(String::get(message));
     init(messageValue);
-}
-
-Object* Exception::createInstance(Traced<Class*> cls)
-{
-    // todo: check class has exception as a base
-    return gc.create<Exception>(cls);
 }
 
 bool Exception::init(TracedVector<Value> args, Root<Value>& resultOut)

@@ -17,7 +17,7 @@ testcase(exception)
     exc = gc.create<Exception>(TypeError::ObjectClass, "baz");
     testEqual(exc->fullMessage(), "TypeError: baz");
 
-    exc = Exception::createInstance(TypeError::ObjectClass)->as<Exception>();
+    exc = gc.create<Exception>(TypeError::ObjectClass);
     RootVector<Value> args(2);
     args[0] = TypeError::ObjectClass;
     args[1] = String::get("foo");
