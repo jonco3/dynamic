@@ -41,7 +41,7 @@ class Wrapped:
     def __imul__(self, other):
         self.value *= other
         return self
-    def __idiv__(self, other):
+    def __itruediv__(self, other):
         self.value /= other
         return self
     def __ifloordiv__(self, other):

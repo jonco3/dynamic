@@ -57,8 +57,8 @@ using namespace std;
     token(Minus)                                                              \
     token(Times)                                                              \
     token(Power)                                                              \
-    token(Divide)                                                             \
-    token(IntDivide)                                                          \
+    token(TrueDiv)                                                            \
+    token(FloorDiv)                                                           \
     token(Modulo)                                                             \
     token(BitLeftShift)                                                       \
     token(BitRightShift)                                                      \
@@ -88,8 +88,8 @@ using namespace std;
     token(AssignPlus)                                                         \
     token(AssignMinus)                                                        \
     token(AssignTimes)                                                        \
-    token(AssignDivide)                                                       \
-    token(AssignIntDivide)                                                    \
+    token(AssignTrueDiv)                                                      \
+    token(AssignFloorDiv)                                                     \
     token(AssignModulo)                                                       \
     token(AssignBitAnd)                                                       \
     token(AssignBitOr)                                                        \

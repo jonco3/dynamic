@@ -538,7 +538,6 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
-        // todo: what's __itruediv__?
         // todo: we'll need to change this if we want to specialise depending on
         // whether the target implements update-in-place methods
         compile(s.left);

@@ -24,7 +24,6 @@ typedef int32_t (IntBinaryOp)(int32_t, int32_t);
 static int32_t intAdd(int32_t a, int32_t b) { return a + b; }
 static int32_t intSub(int32_t a, int32_t b) { return a - b; }
 static int32_t intMul(int32_t a, int32_t b) { return a * b; }
-static int32_t intDiv(int32_t a, int32_t b) { return a / b; } // todo
 static int32_t intFloorDiv(int32_t a, int32_t b) { return a / b; }
 static int32_t intMod(int32_t a, int32_t b) { return a % b; }
 static int32_t intPow(int32_t a, int32_t b) { return (int)pow(a, b); }
@@ -94,6 +93,19 @@ static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
     return true;
 }
 
+static bool intTrueDiv(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!args[0].isInstanceOf(Integer::ObjectClass) ||
+        !args[1].isInstanceOf(Integer::ObjectClass))
+    {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Float::get(double(args[0].asInt32()) / args[1].asInt32());
+    return true;
+}
+
 static bool intNew(TracedVector<Value> args, Root<Value>& resultOut) {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
@@ -156,7 +168,7 @@ void Integer::init()
     initNativeMethod(cls, "__add__", intBinaryOp<intAdd>, 2);
     initNativeMethod(cls, "__sub__", intBinaryOp<intSub>, 2);
     initNativeMethod(cls, "__mul__", intBinaryOp<intMul>, 2);
-    initNativeMethod(cls, "__div__", intBinaryOp<intDiv>, 2);
+    initNativeMethod(cls, "__truediv__", intTrueDiv, 2);
     initNativeMethod(cls, "__floordiv__", intBinaryOp<intFloorDiv>, 2);
     initNativeMethod(cls, "__mod__", intBinaryOp<intMod>, 2);
     initNativeMethod(cls, "__pow__", intBinaryOp<intPow>, 2);
@@ -212,8 +224,8 @@ typedef double (FloatBinaryOp)(double, double);
 static double floatAdd(double a, double b) { return a + b; }
 static double floatSub(double a, double b) { return a - b; }
 static double floatMul(double a, double b) { return a * b; }
-static double floatDiv(double a, double b) { return a / b; }
-static double floatFloorDiv(double a, double b) { return a / b; } // todo
+static double floatTrueDiv(double a, double b) { return a / b; }
+static double floatFloorDiv(double a, double b) { return floor(a / b); }
 static double floatMod(double a, double b) { return fmod(a, b); }
 static double floatPow(double a, double b) { return pow(a, b); }
 
@@ -382,14 +394,14 @@ void Float::init()
     initNativeMethod(cls, "__add__", floatBinaryOp<floatAdd>, 2);
     initNativeMethod(cls, "__sub__", floatBinaryOp<floatSub>, 2);
     initNativeMethod(cls, "__mul__", floatBinaryOp<floatMul>, 2);
-    initNativeMethod(cls, "__div__", floatBinaryOp<floatDiv>, 2);
+    initNativeMethod(cls, "__truediv__", floatBinaryOp<floatTrueDiv>, 2);
     initNativeMethod(cls, "__floordiv__", floatBinaryOp<floatFloorDiv>, 2);
     initNativeMethod(cls, "__mod__", floatBinaryOp<floatMod>, 2);
     initNativeMethod(cls, "__pow__", floatBinaryOp<floatPow>, 2);
     initNativeMethod(cls, "__radd__", floatRBinaryOp<floatAdd>, 2);
     initNativeMethod(cls, "__rsub__", floatRBinaryOp<floatSub>, 2);
     initNativeMethod(cls, "__rmul__", floatRBinaryOp<floatMul>, 2);
-    initNativeMethod(cls, "__rdiv__", floatRBinaryOp<floatDiv>, 2);
+    initNativeMethod(cls, "__rtruediv__", floatRBinaryOp<floatTrueDiv>, 2);
     initNativeMethod(cls, "__rfloordiv__", floatRBinaryOp<floatFloorDiv>, 2);
     initNativeMethod(cls, "__rmod__", floatRBinaryOp<floatMod>, 2);
     initNativeMethod(cls, "__rpow__", floatRBinaryOp<floatPow>, 2);

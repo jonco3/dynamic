@@ -38,7 +38,7 @@ class Wrapped:
         return Wrapped(self.value - other)
     def __mul__(self, other):
         return Wrapped(self.value * other)
-    def __div__(self, other):
+    def __truediv__(self, other):
         return Wrapped(self.value / other)
     def __floordiv__(self, other):
         return Wrapped(self.value // other)
@@ -62,7 +62,7 @@ class Wrapped:
         return other - self.value
     def __rmul__(self, other):
         return other * self.value
-    def __rdiv__(self, other):
+    def __rtruediv__(self, other):
         return other / self.value
     def __rfloordiv__(self, other):
         return other // self.value

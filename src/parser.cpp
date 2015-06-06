@@ -156,9 +156,8 @@ SyntaxParser::SyntaxParser()
     createNodeForBinary<SyntaxBinaryOp>(Token_Plus, 170, Assoc_Left, BinaryPlus);
     createNodeForBinary<SyntaxBinaryOp>(Token_Minus, 170, Assoc_Left, BinaryMinus);
     createNodeForBinary<SyntaxBinaryOp>(Token_Times, 180, Assoc_Left, BinaryMultiply);
-    createNodeForBinary<SyntaxBinaryOp>(Token_Divide, 180, Assoc_Left, BinaryDivide);
-    createNodeForBinary<SyntaxBinaryOp>(Token_IntDivide, 180, Assoc_Left,
-                                        BinaryIntDivide);
+    createNodeForBinary<SyntaxBinaryOp>(Token_TrueDiv, 180, Assoc_Left, BinaryTrueDiv);
+    createNodeForBinary<SyntaxBinaryOp>(Token_FloorDiv, 180, Assoc_Left, BinaryFloorDiv);
     createNodeForBinary<SyntaxBinaryOp>(Token_Modulo, 180, Assoc_Left, BinaryModulo);
     createNodeForBinary<SyntaxBinaryOp>(Token_Power, 180, Assoc_Left, BinaryPower);
 
@@ -419,10 +418,10 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         return parseAugAssign(token, move(expr), BinaryMinus);
     } else if (opt(Token_AssignTimes)) {
         return parseAugAssign(token, move(expr), BinaryMultiply);
-    } else if (opt(Token_AssignDivide)) {
-        return parseAugAssign(token, move(expr), BinaryDivide);
-    } else if (opt(Token_AssignIntDivide)) {
-        return parseAugAssign(token, move(expr), BinaryIntDivide);
+    } else if (opt(Token_AssignTrueDiv)) {
+        return parseAugAssign(token, move(expr), BinaryTrueDiv);
+    } else if (opt(Token_AssignFloorDiv)) {
+        return parseAugAssign(token, move(expr), BinaryFloorDiv);
     } else if (opt(Token_AssignModulo)) {
         return parseAugAssign(token, move(expr), BinaryModulo);
     } else if (opt(Token_AssignPower)) {
