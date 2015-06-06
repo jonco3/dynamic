@@ -133,7 +133,6 @@ void Cell::destroyCell(Cell* cell, size_t size)
 void RootBase::insert()
 {
     log("insert root", this);
-    assert(this);
     assert(!next_ && !prev_);
 
     next_ = gc.rootList;
@@ -146,7 +145,6 @@ void RootBase::insert()
 void RootBase::remove()
 {
     log("remove root", this);
-    assert(this);
     assert(gc.rootList == this || prev_);
 
     if (next_)
