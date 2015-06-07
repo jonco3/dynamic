@@ -16,20 +16,35 @@ for_each_exception_class(define_exception_class)
 
 GlobalRoot<StopIteration*> StopIterationException;
 
-static bool exceptionInit(TracedVector<Value> args, Root<Value>& resultOut)
+template <typename T>
+static bool exception_new(TracedVector<Value> args, Root<Value>& resultOut)
 {
-    return args[0].toObject()->as<Exception>()->init(args, resultOut);
+    assert(args.size() >= 1 && args.size() <= 2);
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+    Root<Class*> cls(args[0].asObject()->as<Class>());
+
+    Root<String*> message(String::EmptyString);
+    if (args.size() == 2) {
+        if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
+            return false;
+        message = args[1].asObject()->as<String>();
+    }
+
+    resultOut = gc.create<T>(cls, message->value());
+    return true;
 }
 
 void Exception::init()
 {
-    ObjectClass.init(Class::createNative<Exception>("Exception"));
-    initNativeMethod(ObjectClass, "__init__", exceptionInit, 1, 2);
+    ObjectClass.init(Class::createNative("Exception",
+                                         exception_new<Exception>, 2));
 
 #define init_exception_class(name)                                          \
     name::ObjectClass.init(                                                 \
-        Class::createNative<name>(#name, Exception::ObjectClass));          \
-    initNativeMethod(name::ObjectClass, "__init__", exceptionInit, 1, 2);
+        Class::createNative(#name,                                          \
+                            exception_new<name>, 2,                         \
+                            Exception::ObjectClass));                       \
 
     for_each_exception_class(init_exception_class)
 #undef init_exception_class
@@ -37,42 +52,24 @@ void Exception::init()
     StopIterationException.init(gc.create<StopIteration>());
 }
 
-Exception::Exception(Traced<Class*> cls)
-  : Object(cls)
-{
-    assert(cls->isDerivedFrom(ObjectClass));
-    setAttr("message", String::EmptyString);
-}
-
 Exception::Exception(Traced<Class*> cls, const string& message)
   : Object(cls)
 {
     assert(cls->isDerivedFrom(ObjectClass));
-    Root<Value> messageValue(String::get(message));
-    init(messageValue);
+    Root<String*> str(String::get(message));
+    init(str);
 }
 
-bool Exception::init(TracedVector<Value> args, Root<Value>& resultOut)
+Exception::Exception(Traced<Class*> cls, Traced<String*> message)
+  : Object(cls)
 {
-    assert(args.size() >= 1 && args.size() <= 2);
-
-    Root<Value> message(String::EmptyString);
-    if (args.size() == 2) {
-        if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
-            return false;
-        message = args[1];
-    }
+    assert(cls->isDerivedFrom(ObjectClass));
     init(message);
-
-    resultOut = None;
-    return true;
 }
 
-void Exception::init(Traced<Value> message)
+void Exception::init(Traced<String*> message)
 {
-    assert(message.asObject()->is<String>()); // todo: check
-    maybeAbortTests(
-        className() + " " + message.asObject()->as<String>()->value());
+    maybeAbortTests(className() + " " + message->value());
     setAttr("message", message);
 }
 

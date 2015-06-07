@@ -16,6 +16,8 @@ struct Class;
 struct Native;
 struct Object;
 
+typedef bool (*NativeFunc)(TracedVector<Value>, Root<Value>&);
+
 extern GlobalRoot<Object*> None;
 
 extern void initObject();
@@ -53,6 +55,7 @@ struct Object : public Cell
     bool hasAttr(Name name) const;
     bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     Value getAttr(Name name) const;
+    void initAttr(Name name, Traced<Value> value);
     void setAttr(Name name, Traced<Value> value);
     bool maybeDelOwnAttr(Name name);
 
@@ -98,26 +101,26 @@ struct Class : public Object
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
 
+    // Create a python class corresponding to a native (C++) class.
+    // The class must provides a constructor that takes a single Traced<Class*>
+    // argument.
     template <typename T>
+    static inline Class* createNative(string name,
+                                      Traced<Class*> base = Object::ObjectClass);
+
+    // Create a python class corresponding to a native (C++) class specifying a
+    // function to create object instances.
     static Class* createNative(string name,
-                               Traced<Class*> base = Object::ObjectClass) {
-        return gc.create<Class>(name, base,
-                                [] (Traced<Class*> cls) -> Object* {
-                                    return gc.create<T>(cls);
-                                });
-    }
+                               NativeFunc newFunc, unsigned maxArgs,
+                               Traced<Class*> base = Object::ObjectClass);
 
+    // Be careful using this because instances created from python will be
+    // allocated as Object.
     Class(string name, Traced<Class*> base = Object::ObjectClass,
-          Traced<Layout*> initialLayout = InitialLayout);
-
-    typedef Object* (*NativeConstructor)(Traced<Class*> cls);
-    Class(string name, Traced<Class*> maybeBase,
-          NativeConstructor constructor,
           Traced<Layout*> initialLayout = InitialLayout);
 
     Object* base();
     const string& name() const { return name_; }
-    NativeConstructor nativeConstructor() const { return constructor_; }
 
     bool isDerivedFrom(Class* base) const;
 
@@ -125,12 +128,34 @@ struct Class : public Object
 
   private:
     string name_;
-    NativeConstructor constructor_;
 
     // Only for use during initialization
     void init(Traced<Object*> base);
 
     friend void initObject();
 };
+
+extern void initNativeMethod(Traced<Object*> cls, Name name, NativeFunc func,
+                             unsigned minArgs, unsigned maxArgs = 0);
+
+extern bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
+                            Root<Value>& resultOut);
+
+template <typename T>
+/* static */ inline Class* Class::createNative(string name, Traced<Class*> base)
+{
+    Root<Class*> cls(gc.create<Class>(name, base));
+    NativeFunc func =
+        [] (TracedVector<Value> args, Root<Value>& resultOut) -> bool
+        {
+            if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+                return false;
+            Root<Class*> cls(args[0].asObject()->as<Class>());
+            resultOut = gc.create<T>(cls);
+            return true;
+        };
+    initNativeMethod(cls, "__new__", func, 1, 1);
+    return cls;
+}
 
 #endif

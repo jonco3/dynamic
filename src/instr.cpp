@@ -395,8 +395,7 @@ bool InstrMakeClassFromFrame::execute(Interpreter& interp)
         }
         base = value.toObject()->as<Class>();
     }
-    Class* cls =
-        gc.create<Class>(ident, base, base->nativeConstructor(), layout);
+    Class* cls = gc.create<Class>(ident, base, layout);
     Root<Value> value;
     for (auto i = names.begin(); i != names.end(); i++) {
         value = frame->getAttr(*i);

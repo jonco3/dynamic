@@ -27,16 +27,14 @@ struct Native : public Callable
 {
     static GlobalRoot<Class*> ObjectClass;
 
-    typedef bool (*Func)(TracedVector<Value>, Root<Value>&);
-
-    Native(Name name, Func func, unsigned minArgs, unsigned maxArgs = 0);
+    Native(Name name, NativeFunc func, unsigned minArgs, unsigned maxArgs = 0);
 
     bool call(TracedVector<Value> args, Root<Value>& resultOut) const {
         return func_(args, resultOut);
     }
 
   private:
-    Func func_;
+    NativeFunc func_;
 };
 
 struct FunctionInfo : public Cell
@@ -103,10 +101,5 @@ struct Function : public Callable
     vector<Value> defaults_;
     Frame* scope_;
 };
-
-void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
-                      unsigned minArgs, unsigned maxArgs = 0);
-
-bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut);
 
 #endif

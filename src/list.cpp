@@ -244,9 +244,8 @@ bool ListBase::operator==(const ListBase& other)
 
 void Tuple::init()
 {
-    ObjectClass.init(gc.create<Class>("tuple"));
+    ObjectClass.init(Class::createNative("tuple", listBase_new<Tuple>, 2));
     listBase_initNatives(ObjectClass);
-    initNativeMethod(ObjectClass, "__new__", listBase_new<Tuple>, 1, 2);
     RootVector<Value> contents;
     Empty.init(gc.create<Tuple>(contents));
 }
@@ -319,9 +318,8 @@ static bool list_append(TracedVector<Value> args, Root<Value>& resultOut) {
 
 void List::init()
 {
-    ObjectClass.init(gc.create<Class>("list"));
+    ObjectClass.init(Class::createNative("list", listBase_new<List>, 2));
     listBase_initNatives(ObjectClass);
-    initNativeMethod(ObjectClass, "__new__", listBase_new<List>, 1, 2);
     initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
     initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
     initNativeMethod(ObjectClass, "append", list_append, 2);

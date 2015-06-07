@@ -13,7 +13,7 @@ struct String : public Object
 
     static GlobalRoot<String*> EmptyString;
 
-    static Value get(const string& v);
+    static String* get(const string& v);
 
     const string& value() { return value_; }
     void print(ostream& s) const override;

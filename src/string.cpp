@@ -74,10 +74,10 @@ String::String(Traced<Class*> cls)
     assert(cls->isDerivedFrom(ObjectClass));
 }
 
-Value String::get(const string& v)
+String* String::get(const string& v)
 {
     if (v == "")
-        return Value(EmptyString);
+        return EmptyString;
     // todo: can intern short strings here
     return gc.create<String>(v);
 }

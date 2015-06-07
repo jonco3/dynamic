@@ -11,9 +11,7 @@ struct Exception : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     Exception(Traced<Class*> cls, const string& message);
-
-    Exception(Traced<Class*> cls);
-    bool init(TracedVector<Value> args, Root<Value>& resultOut);
+    Exception(Traced<Class*> cls, Traced<String*> message);
 
     void setPos(const TokenPos& pos);
 
@@ -28,7 +26,7 @@ struct Exception : public Object
   private:
     TokenPos pos_;
 
-    void init(Traced<Value> message);
+    void init(Traced<String*> message);
 };
 
 #define for_each_exception_class(cls)                                         \
@@ -54,8 +52,8 @@ struct Exception : public Object
           : Exception(ObjectClass, message)                                   \
         {}                                                                    \
                                                                               \
-        name(Traced<Class*> cls)                                              \
-          : Exception(cls)                                                    \
+        name(Traced<Class*> cls, const string& message)                       \
+          : Exception(cls, message)                                           \
         {                                                                     \
             assert(cls->isDerivedFrom(ObjectClass));                          \
         }                                                                     \

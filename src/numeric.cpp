@@ -136,9 +136,8 @@ static bool intNew(TracedVector<Value> args, Root<Value>& resultOut)
 
 void Integer::init()
 {
-    Root<Class*> cls(Class::createNative<Integer>("int"));
+    Root<Class*> cls(Class::createNative("int", intNew, 2));
     Root<Value> value;
-    initNativeMethod(cls, "__new__", intNew, 1, 2);
     initNativeMethod(cls, "__pos__", intUnaryOp<intPos>, 1);
     initNativeMethod(cls, "__neg__", intUnaryOp<intNeg>, 1);
     initNativeMethod(cls, "__invert__", intUnaryOp<intInvert>, 1);
@@ -363,9 +362,8 @@ static bool floatNew(TracedVector<Value> args, Root<Value>& resultOut)
 
 void Float::init()
 {
-    Root<Class*> cls(Class::createNative<Float>("float"));
+    Root<Class*> cls(Class::createNative("float", floatNew, 2));
     Root<Value> value;
-    initNativeMethod(cls, "__new__", floatNew, 1, 2);
     initNativeMethod(cls, "__pos__", floatUnaryOp<floatPos>, 1);
     initNativeMethod(cls, "__neg__", floatUnaryOp<floatNeg>, 1);
     initNativeMethod(cls, "__hash__", floatUnaryOp<floatHash>, 1);

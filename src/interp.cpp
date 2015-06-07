@@ -544,20 +544,15 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         RootVector<Value> funcArgs(args.size() + 1);
         for (unsigned i = 0; i < args.size(); i++)
             funcArgs[i + 1] = args[i];
-        if (target->maybeGetAttr("__new__", func)) {
+        if (target->maybeGetAttr("__new__", func) && !func.isNone()) {
             // Create a new instance by calling static __new__ method
             funcArgs[0] = Value(cls);
             if (!call(func, funcArgs, resultOut))
                 return CallError;
         } else {
             // Call the class' native constructor to create an instance
-            Class::NativeConstructor nc = cls->nativeConstructor();
-            if (!nc) {
-                string message =
-                    "cannot create '" + cls->name() + "' instances";
-                return raiseTypeError(message, resultOut);
-            }
-            resultOut = nc(cls);
+            string message = "cannot create '" + cls->name() + "' instances";
+            return raiseTypeError(message, resultOut);
         }
         if (resultOut.isInstanceOf(cls)) {
             Root<Value> initFunc;

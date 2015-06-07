@@ -187,6 +187,12 @@ Value Object::getAttr(Name name) const
     return value;
 }
 
+void Object::initAttr(Name name, Traced<Value> value)
+{
+    assert(!hasOwnAttr(name));
+    setAttr(name, value);
+}
+
 void Object::setAttr(Name name, Traced<Value> value)
 {
     if (value.isObject()) {
@@ -291,27 +297,24 @@ void Object::traceChildren(Tracer& t)
         gc.trace(t, &*i);
 }
 
-Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name), constructor_(nullptr)
+/* static */ Class* Class::createNative(string name,
+                                        NativeFunc newFunc, unsigned maxArgs,
+                                        Traced<Class*> base)
 {
-    assert(base);
+    Root<Class*> cls(gc.create<Class>(name, base));
+    initNativeMethod(cls, "__new__", newFunc, 1, maxArgs);
+    return cls;
+}
+
+
+Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
+  Object(ObjectClass, initialLayout), name_(name)
+{
+    // base is null for Object when we are initializing.
+    assert(!Class::ObjectClass || base);
     assert(initialLayout->subsumes(InitialLayout));
     if (Class::ObjectClass)
         setAttr(BaseAttr, base);
-}
-
-Class::Class(string name, Traced<Class*> maybeBase,
-             NativeConstructor constructor,
-             Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name), constructor_(constructor)
-{
-    assert(!Class::ObjectClass || maybeBase);
-    assert(!maybeBase || maybeBase->is<Class>());
-    assert(initialLayout->subsumes(InitialLayout));
-    if (Class::ObjectClass) {
-        Root<Value> baseAttr(maybeBase ? maybeBase : None);
-        setAttr(BaseAttr, baseAttr);
-    }
 }
 
 Object* Class::base()
@@ -340,6 +343,23 @@ bool Class::isDerivedFrom(Class* cls) const
         if (obj == None)
             return false;
     }
+    return true;
+}
+
+void initNativeMethod(Traced<Object*> cls, Name name, NativeFunc func,
+                      unsigned minArgs, unsigned maxArgs)
+{
+    Root<Value> value(gc.create<Native>(name, func, minArgs, maxArgs));
+    cls->initAttr(name, value);
+}
+
+static bool object_new(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    // Special case because we can't call Class::createNative in initialization.
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+    Root<Class*> cls(args[0].asObject()->as<Class>());
+    resultOut = gc.create<Object>(cls);
     return true;
 }
 
@@ -387,7 +407,7 @@ void initObject()
     assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
 
     Root<Class*> objectBase(nullptr);
-    Object::ObjectClass.init(Class::createNative<Object>("object", objectBase));
+    Object::ObjectClass.init(gc.create<Class>("object", objectBase));
     NoneObject::ObjectClass.init(gc.create<Class>("None"));
     Class::ObjectClass.init(gc.create<Class>("class"));
 
@@ -402,6 +422,7 @@ void initObject()
     Native::ObjectClass.init(gc.create<Class>("Native"));
     Function::ObjectClass.init(gc.create<Class>("Function"));
 
+    initNativeMethod(Object::ObjectClass, "__new__", object_new, 1, -1);
     initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);
     initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
     initNativeMethod(Object::ObjectClass, "__eq__", object_eq, 2);

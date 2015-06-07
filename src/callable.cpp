@@ -16,7 +16,7 @@ Callable::Callable(Traced<Class*> cls, Name name,
     maxArgs_(maxArgs)
 {}
 
-Native::Native(Name name, Func func, unsigned minArgs, unsigned maxArgs)
+Native::Native(Name name, NativeFunc func, unsigned minArgs, unsigned maxArgs)
   : Callable(ObjectClass, name, minArgs, maxArgs ? maxArgs : minArgs),
     func_(func)
 {}
@@ -48,14 +48,8 @@ Function::Function(Name name,
         defaults_.push_back(defaults[i]);
 }
 
-void initNativeMethod(Traced<Object*> cls, Name name, Native::Func func,
-                      unsigned minArgs, unsigned maxArgs)
-{
-    Root<Value> value(gc.create<Native>(name, func, minArgs, maxArgs));
-    cls->setAttr(name, value);
-}
-
-bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls, Root<Value>& resultOut)
+bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
+                     Root<Value>& resultOut)
 {
     if (!v.isInstanceOf(cls)) {
         string message = "Expecting " + cls->name() +
