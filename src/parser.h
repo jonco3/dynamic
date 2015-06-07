@@ -361,6 +361,9 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
 
     unique_ptr<Syntax> parseAugAssign(Token token, unique_ptr<Syntax> target,
                                       BinaryOp op);
+
+    unique_ptr<ImportInfo> parseModuleImport();
+    unique_ptr<ImportInfo> parseIdImport();
 };
 
 #endif

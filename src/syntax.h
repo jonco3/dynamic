@@ -56,7 +56,8 @@ using namespace std;
     syntax(Break)                                                             \
     syntax(Continue)                                                          \
     syntax(Del)                                                               \
-    syntax(Import)
+    syntax(Import)                                                            \
+    syntax(From)
 
 enum class SyntaxType
 {
@@ -684,23 +685,35 @@ struct SyntaxDel : public Syntax
 
 struct ImportInfo
 {
-    ImportInfo(Name moduleName, Name localName)
-      : moduleName(moduleName), localName(localName)
+    ImportInfo(Name name, Name localName)
+      : name(name), localName(localName)
     {}
 
-    Name moduleName;
-    Name localName;
+    const Name name;
+    const Name localName;
 };
 
 struct SyntaxImport : public Syntax
 {
     define_syntax_members(Import, "import");
 
-    SyntaxImport(const Token& token, vector<unique_ptr<ImportInfo>> imports)
-      : Syntax(token), imports(move(imports))
+    SyntaxImport(const Token& token, vector<unique_ptr<ImportInfo>> modules)
+      : Syntax(token), modules(move(modules))
     {}
 
-    const vector<unique_ptr<ImportInfo>> imports;
+    const vector<unique_ptr<ImportInfo>> modules;
+};
+
+struct SyntaxFrom : public Syntax
+{
+    define_syntax_members(From, "from");
+
+  SyntaxFrom(const Token& token, Name module, vector<unique_ptr<ImportInfo>> ids)
+      : Syntax(token), module(module), ids(move(ids))
+    {}
+
+    const Name module;
+    const vector<unique_ptr<ImportInfo>> ids;
 };
 
 #undef define_syntax_type

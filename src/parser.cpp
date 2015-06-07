@@ -365,6 +365,31 @@ unique_ptr<Syntax> SyntaxParser::parseAssignSource()
     return make_unique<SyntaxAssign>(token, move(target), move(expr));
 }
 
+unique_ptr<ImportInfo> SyntaxParser::parseModuleImport()
+{
+    // todo: parse |(identifier ".")* identifier| here
+    Token t = match(Token_Identifier);
+    Name moduleName = t.text;
+    Name localName = moduleName;
+    if (opt(Token_As)) {
+        t = match(Token_Identifier);
+        localName = t.text;
+    }
+    return make_unique<ImportInfo>(moduleName, localName);
+}
+
+unique_ptr<ImportInfo> SyntaxParser::parseIdImport()
+{
+    Token t = match(Token_Identifier);
+    Name idName = t.text;
+    Name localName = idName;
+    if (opt(Token_As)) {
+        t = match(Token_Identifier);
+        localName = t.text;
+    }
+    return make_unique<ImportInfo>(idName, localName);
+}
+
 unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
@@ -409,16 +434,22 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_Import)) {
         vector<unique_ptr<ImportInfo>> imports;
         do {
-            Token t = match(Token_Identifier);  // todo: allow .s
-            Name moduleName = t.text;
-            Name localName = moduleName;
-            if (opt(Token_As)) {
-                t = match(Token_Identifier);
-                localName = t.text;
-            }
-            imports.emplace_back(make_unique<ImportInfo>(moduleName, localName));
+            imports.emplace_back(parseModuleImport());
         } while (opt(Token_Comma));
         return make_unique<SyntaxImport>(token, move(imports));
+    } else if (opt(Token_From)) {
+        // todo: parse |"."* module | "."+| here
+        Token t = match(Token_Identifier);
+        Name moduleName = t.text;
+        match(Token_Import);
+        bool brackets = opt(Token_Bra);
+        vector<unique_ptr<ImportInfo>> imports;
+        do {
+            imports.emplace_back(parseIdImport());
+        } while (opt(Token_Comma));
+        if (brackets)
+            match(Token_Ket);
+        return make_unique<SyntaxFrom>(token, moduleName, move(imports));
     }
 
     unique_ptr<Syntax> expr = parseExprOrExprList();

@@ -1037,8 +1037,12 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxImport& s) {
-        // todo: implement import
-        // todo: throw syntax error if not at top level
+        // todo: implement import ...
+        emit<InstrConst>(None);
+    }
+
+    virtual void visit(const SyntaxFrom& s) {
+        // todo: implement from ... import ...
         emit<InstrConst>(None);
     }
 

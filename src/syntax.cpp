@@ -297,11 +297,26 @@ void SyntaxPrinter::visit(const SyntaxImport& s)
 {
     bool first = true;
     os_ << s.name() << " ";
-    for (const auto& i : s.imports) {
+    for (const auto& i : s.modules) {
         if (!first)
             os_ << ", ";
-        os_ << i->moduleName;
-        if (i->moduleName != i->localName)
+        os_ << i->name;
+        if (i->name != i->localName)
+            os_ << " as " << i->localName;
+        first = false;
+    }
+    os_ << endl;
+}
+
+void SyntaxPrinter::visit(const SyntaxFrom& s)
+{
+    bool first = true;
+    os_ << s.name() << " " << s.module << " import ";
+    for (const auto& i : s.ids) {
+        if (!first)
+            os_ << ", ";
+        os_ << i->name;
+        if (i->name != i->localName)
             os_ << " as " << i->localName;
         first = false;
     }
