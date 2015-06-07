@@ -76,13 +76,13 @@ struct Object : public Cell
 
     virtual void traceChildren(Tracer& t) override;
 
-    int findOwnAttr(Name name) const;
-    bool hasOwnAttr(Name name) const;
-    bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
-
     bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
     Value getSlot(int slot) const;
     void setSlot(int slot, Traced<Value> value);
+
+    int findOwnAttr(Name name) const;
+    bool hasOwnAttr(Name name) const;
+    bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
 
   private:
     Layout* layout_;

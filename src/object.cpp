@@ -138,43 +138,44 @@ bool Object::maybeGetOwnAttr(Name name, Root<Value>& valueOut) const
 
 bool Object::hasAttr(Name name) const
 {
+    AutoAssertNoGC nogc;
+
     if (hasOwnAttr(name))
         return true;
 
-    // lookup attribute in class hierarchy
-    Root<Value> base;
-    if (!maybeGetOwnAttr(ClassAttr, base))
-        return false;
-
-    AutoAssertNoGC nogc;
-    while (Object* obj = base.toObject()) {
-        if (obj->hasOwnAttr(name))
-            return true;
-        if (!obj->maybeGetOwnAttr(BaseAttr, base))
-            break;
+    if (!isInstanceOf(Class::ObjectClass)) {
+        Root<Value> cls;
+        if (!maybeGetOwnAttr(ClassAttr, cls))
+            return false;
+        return cls.toObject()->hasAttr(name);
     }
 
-    return false;
+    Root<Value> base;
+    if (!maybeGetOwnAttr(BaseAttr, base) || base.isNone())
+        return false;
+    assert(base.isInstanceOf(Class::ObjectClass));
+    return base.toObject()->hasAttr(name);
 }
 
 bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
 {
+    AutoAssertNoGC nogc;
+
     if (maybeGetOwnAttr(name, valueOut))
         return true;
 
-    // lookup attribute in class hierarchy
-    Root<Value> base;
-    if (!maybeGetOwnAttr(ClassAttr, base))
-        return false;
-
-    while (Object* obj = base.toObject()) {
-        if (obj->maybeGetOwnAttr(name, valueOut))
-            return true;
-        if (!obj->maybeGetOwnAttr(BaseAttr, base))
-            break;
+    if (!isInstanceOf(Class::ObjectClass)) {
+        Root<Value> cls;
+        if (!maybeGetOwnAttr(ClassAttr, cls))
+            return false;
+        return cls.toObject()->maybeGetAttr(name, valueOut);
     }
 
-    return false;
+    Root<Value> base;
+    if (!maybeGetOwnAttr(BaseAttr, base) || base.isNone())
+        return false;
+    assert(base.isInstanceOf(Class::ObjectClass));
+    return base.toObject()->maybeGetAttr(name, valueOut);
 }
 
 Value Object::getAttr(Name name) const
@@ -394,7 +395,7 @@ void initObject()
 
     Class::ObjectClass->init(Object::ObjectClass);
     Object::ObjectClass->init(None);
-    NoneObject::ObjectClass->init(Class::ObjectClass);
+    NoneObject::ObjectClass->init(Object::ObjectClass);
 
     // Create classes for callables here as this is necessary before we can add
     // methods to objects.

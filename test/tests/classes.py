@@ -45,4 +45,13 @@ assert not isinstance(c3, C4)
 assert isinstance(c4, C3)
 assert isinstance(c4, C4)
 
+class A:
+  attr = 1
+
+class B(A):
+  pass
+
+assert(B().attr == 1)
+assert(B.attr == 1)
+
 print("ok")
