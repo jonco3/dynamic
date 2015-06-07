@@ -41,9 +41,9 @@ AC_DEFUN([CHECK_ENABLE_DEBUG],[
       ],
       [profile],[
     AC_MSG_RESULT(profile)
-	CFLAGS="${CFLAGS} -g -pg"
-	CXXFLAGS="${CXXFLAGS} -g -pg"
-	LDFLAGS="${LDFLAGS} -pg"
+	CFLAGS="${CFLAGS} -g -pg -O3"
+	CXXFLAGS="${CXXFLAGS} -g -pg -O3"
+	LDFLAGS="${LDFLAGS} -pg -O3"
       ],
       [
 	AC_MSG_RESULT(no)
