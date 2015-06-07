@@ -42,7 +42,8 @@ void initList()
 #ifdef DEBUG
 static bool isListBase(Object *o)
 {
-    return o->is<Tuple>() || o->is<List>();
+    return o->isInstanceOf(Tuple::ObjectClass) ||
+        o->isInstanceOf(List::ObjectClass);
 }
 #endif
 
@@ -50,6 +51,37 @@ static ListBase* asListBase(Object *o)
 {
     assert(isListBase(o));
     return static_cast<ListBase*>(o);
+}
+
+template <class T>
+static bool listBase_new(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+
+    Root<ListBase*> init;
+    Root<Class*> cls(args[0].asObject()->as<Class>());
+    if (args.size() == 1) {
+        resultOut = gc.create<T>(cls, init);
+        return true;
+    }
+
+    Root<Object*> arg(args[1].toObject());
+    if (arg->isInstanceOf(List::ObjectClass)) {
+        init = arg->as<List>();
+        resultOut = gc.create<T>(cls, init);
+    } else if (arg->isInstanceOf(Tuple::ObjectClass)) {
+        init = arg->as<Tuple>();
+        resultOut = gc.create<T>(cls, init);
+    } else if (true) /* todo: check if arg is iterable */ {
+        resultOut = gc.create<T>(cls, init);
+        // todo: call extend
+    } else {
+        resultOut = gc.create<TypeError>("list creation from unsupported type");
+        return false;
+    }
+
+    return true;
 }
 
 static bool listBase_len(TracedVector<Value> args, Root<Value>& resultOut)
@@ -84,21 +116,6 @@ static void listBase_initNatives(Traced<Class*> cls)
     initNativeMethod(cls, "__contains__", listBase_contains, 2);
     initNativeMethod(cls, "__iter__", listBase_iter, 1);
     // __eq__ and __ne__ are supplied by lib/internal.py
-}
-
-static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
-    List* list = args[0].toObject()->as<List>();
-    return list->setitem(args[1], args[2], resultOut);
-}
-
-static bool list_delitem(TracedVector<Value> args, Root<Value>& resultOut) {
-    List* list = args[0].toObject()->as<List>();
-    return list->delitem(args[1], resultOut);
-}
-
-static bool list_append(TracedVector<Value> args, Root<Value>& resultOut) {
-    List* list = args[0].toObject()->as<List>();
-    return list->append(args[1], resultOut);
 }
 
 ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
@@ -227,8 +244,9 @@ bool ListBase::operator==(const ListBase& other)
 
 void Tuple::init()
 {
-    ObjectClass.init(Class::createNative<Tuple>("tuple"));
+    ObjectClass.init(gc.create<Class>("tuple"));
     listBase_initNatives(ObjectClass);
+    initNativeMethod(ObjectClass, "__new__", listBase_new<Tuple>, 1, 2);
     RootVector<Value> contents;
     Empty.init(gc.create<Tuple>(contents));
 }
@@ -251,10 +269,12 @@ Tuple::Tuple(const TracedVector<Value>& values)
 Tuple::Tuple(size_t size)
   : ListBase(ObjectClass, size) {}
 
-Tuple::Tuple(Traced<Class*> cls)
+Tuple::Tuple(Traced<Class*> cls, Traced<ListBase*> init)
   : ListBase(cls, 0)
 {
     assert(cls->isDerivedFrom(ObjectClass));
+    if (init)
+        elements_ = init->elements();
 }
 
 void Tuple::initElement(size_t index, const Value& value)
@@ -282,10 +302,26 @@ void Tuple::print(ostream& s) const
     s << ")";
 }
 
+static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
+    List* list = args[0].toObject()->as<List>();
+    return list->setitem(args[1], args[2], resultOut);
+}
+
+static bool list_delitem(TracedVector<Value> args, Root<Value>& resultOut) {
+    List* list = args[0].toObject()->as<List>();
+    return list->delitem(args[1], resultOut);
+}
+
+static bool list_append(TracedVector<Value> args, Root<Value>& resultOut) {
+    List* list = args[0].toObject()->as<List>();
+    return list->append(args[1], resultOut);
+}
+
 void List::init()
 {
-    ObjectClass.init(Class::createNative<List>("list"));
+    ObjectClass.init(gc.create<Class>("list"));
     listBase_initNatives(ObjectClass);
+    initNativeMethod(ObjectClass, "__new__", listBase_new<List>, 1, 2);
     initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
     initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
     initNativeMethod(ObjectClass, "append", list_append, 2);
@@ -299,10 +335,12 @@ List::List(size_t size)
   : ListBase(ObjectClass, size)
 {}
 
-List::List(Traced<Class*> cls)
+List::List(Traced<Class*> cls, Traced<ListBase*> init)
   : ListBase(cls, 0)
 {
     assert(cls->isDerivedFrom(ObjectClass));
+    if (init)
+        elements_ = init->elements();
 }
 
 const string& List::listName() const

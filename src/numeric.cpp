@@ -106,7 +106,8 @@ static bool intTrueDiv(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool intNew(TracedVector<Value> args, Root<Value>& resultOut) {
+static bool intNew(TracedVector<Value> args, Root<Value>& resultOut)
+{
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
 
@@ -339,7 +340,8 @@ static bool floatStr(TracedVector<Value> args, Root<Value>& resultOut) {
     return true;
 }
 
-static bool floatNew(TracedVector<Value> args, Root<Value>& resultOut) {
+static bool floatNew(TracedVector<Value> args, Root<Value>& resultOut)
+{
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
 

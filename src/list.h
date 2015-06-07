@@ -23,6 +23,8 @@ struct ListBase : public Object
     bool operator==(const ListBase& other);
     bool operator!=(const ListBase& other) { return !(*this == other); }
 
+    const vector<Value>& elements() const { return elements_; }
+
   protected:
     vector<Value> elements_;
     friend struct ListIter;
@@ -53,7 +55,7 @@ struct Tuple : public ListBase
 
     Tuple(const TracedVector<Value>& values);
     Tuple(size_t size);
-    Tuple(Traced<Class*> cls);
+    Tuple(Traced<Class*> cls, Traced<ListBase*> init);
 
   private:
     ListBase* createDerived(size_t size) override {
@@ -69,7 +71,7 @@ struct List : public ListBase
 
     List(const TracedVector<Value>& values);
     List(size_t size);
-    List(Traced<Class*> cls);
+    List(Traced<Class*> cls, Traced<ListBase*> init);
 
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
