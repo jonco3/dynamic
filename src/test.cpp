@@ -1,6 +1,7 @@
 #include "test.h"
 
 #include "common.h"
+#include "interp.h"
 
 #include "sysexits.h"
 
@@ -73,7 +74,13 @@ const char* usageMessage =
     "usage:\n"
     "  tests              -- enter the unit tests\n"
     "options:\n"
-    "  -l LIBDIR          -- set directory to load libraries from";
+    "  -l LIBDIR          -- set directory to load libraries from\n"
+#ifdef DEBUG
+    "  -le                -- log interpreter execution\n"
+    "  -lf                -- log interpreter frames only\n"
+    "  -lg                -- log GC activity\n"
+#endif
+    ;
 
 static void badUsage()
 {
@@ -91,6 +98,14 @@ int main(int argc, char *argv[])
         const char* opt = argv[pos++];
         if (strcmp("-l", opt) == 0 && pos != argc)
             libDir = argv[pos++];
+#ifdef DEBUG
+        else if (strcmp("-le", opt) == 0)
+            logFrames = logExecution = true;
+        else if (strcmp("-lf", opt) == 0)
+            logFrames = true;
+        else if (strcmp("-lg", opt) == 0)
+            logGC = true;
+#endif
         else
             badUsage();
     }
