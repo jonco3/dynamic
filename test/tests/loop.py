@@ -114,5 +114,37 @@ for i in (1, 2, 3):
         f += 1
 assert f == 3
 
+# else clause
+
+didElse = False
+for i in []:
+    pass
+else:
+    didElse = True
+assert(didElse)
+
+didElse = False
+for i in (1, 2, 3):
+    pass
+else:
+    didElse = True
+assert(didElse)
+
+didElse = False
+for i in (1, 2, 3):
+    if i == 3:
+        continue
+else:
+    didElse = True
+assert(didElse)
+
+didElse = False
+for i in (1, 2, 3):
+    if i == 3:
+        break
+else:
+    didElse = True
+assert(not didElse)
+
 print('ok')
 

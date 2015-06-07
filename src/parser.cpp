@@ -550,8 +550,8 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
         unique_ptr<SyntaxBlock> elseSuite;
         if (opt(Token_Else))
             elseSuite = parseSuite();
-        return make_unique<SyntaxFor>(token, move(targets), move(exprs), move(suite),
-                             move(elseSuite));
+        return make_unique<SyntaxFor>(token, move(targets), move(exprs),
+                                      move(suite), move(elseSuite));
     } else if (opt(Token_Try)) {
         Token token = currentToken();
         unique_ptr<SyntaxBlock> suite(parseSuite());

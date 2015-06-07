@@ -847,14 +847,19 @@ struct ByteCompiler : public SyntaxVisitor
 
         // 5. Exit
         block->branchHere(exitBranch);
+
+        // 6. Else clause
+        if (s.elseSuite) {
+            compile(s.elseSuite);
+            emit<InstrPop>();
+        }
+
         setBreakTargets();
         breakInstrs = move(oldBreakInstrs);
         emit<InstrPop>();
         emit<InstrPop>();
         stackDepth -= 2;
         emit<InstrConst>(None);
-
-        // todo: else clause
     }
 
     void emitLambda(Name defName, const vector<Parameter>& params,
