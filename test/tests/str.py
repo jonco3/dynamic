@@ -2,6 +2,7 @@
 
 assert str(None) == 'None'
 assert str(1) == '1'
+assert str(1.2) == '1.2'
 assert str('a') == 'a'
 assert str(()) == '()'
 assert str((1,)) == '(1,)'
@@ -16,6 +17,7 @@ assert "<object object at" in str(object())
 
 assert repr(None) == 'None'
 assert repr(1) == '1'
+assert repr(1.2) == '1.2'
 assert repr('a') == "'a'"
 assert repr(()) == '()'
 assert repr(('a',)) == "('a',)"

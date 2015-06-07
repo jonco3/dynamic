@@ -81,18 +81,6 @@ static bool intCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool intStr(TracedVector<Value> args, Root<Value>& resultOut) {
-    if (!args[0].isInt32()) {
-        resultOut = NotImplemented;
-        return true;
-    }
-
-    ostringstream s;
-    s << dec << args[0].asInt32();
-    resultOut = String::get(s.str());
-    return true;
-}
-
 static bool intTrueDiv(TracedVector<Value> args, Root<Value>& resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
@@ -151,7 +139,6 @@ void Integer::init()
     Root<Class*> cls(Class::createNative<Integer>("int"));
     Root<Value> value;
     initNativeMethod(cls, "__new__", intNew, 1, 2);
-    initNativeMethod(cls, "__str__", intStr, 1);
     initNativeMethod(cls, "__pos__", intUnaryOp<intPos>, 1);
     initNativeMethod(cls, "__neg__", intUnaryOp<intNeg>, 1);
     initNativeMethod(cls, "__invert__", intUnaryOp<intInvert>, 1);
@@ -330,16 +317,6 @@ static bool floatCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool floatStr(TracedVector<Value> args, Root<Value>& resultOut) {
-    if (!checkInstanceOf(args[0], Float::ObjectClass, resultOut))
-        return false;
-
-    ostringstream s;
-    s << floatValue(args[0]);
-    resultOut = String::get(s.str());
-    return true;
-}
-
 static bool floatNew(TracedVector<Value> args, Root<Value>& resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
@@ -389,7 +366,6 @@ void Float::init()
     Root<Class*> cls(Class::createNative<Float>("float"));
     Root<Value> value;
     initNativeMethod(cls, "__new__", floatNew, 1, 2);
-    initNativeMethod(cls, "__str__", floatStr, 1);
     initNativeMethod(cls, "__pos__", floatUnaryOp<floatPos>, 1);
     initNativeMethod(cls, "__neg__", floatUnaryOp<floatNeg>, 1);
     initNativeMethod(cls, "__hash__", floatUnaryOp<floatHash>, 1);

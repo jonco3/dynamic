@@ -7,7 +7,7 @@
 testcase(builtin)
 {
     testInterp("hasattr(1, 'foo')", "False");
-    testInterp("hasattr(1, '__str__')", "True");
+    testInterp("hasattr(1, '__repr__')", "True");
     testInterp("a = object()\n"
                "a.foo = 1\n"
                "a.foo",
