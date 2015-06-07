@@ -121,8 +121,8 @@ struct Interpreter
     void logStackSwap();
 #else
     void logStackPush(const Value& v) {}
-    void logStackSwap(const Value& v) {}
     void logStackPop(size_t count) {}
+    void logStackSwap() {}
 #endif
 
     void replaceInstr(Instr* current, Instr* newInstr);

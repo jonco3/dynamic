@@ -145,25 +145,31 @@ void Interpreter::pushFrame(Traced<Frame*> frame)
     frame->setStackPos(stackPos());
     instrp = frame->block()->startInstr();
     frames.push_back(frame);
+
+#ifdef DEBUG
     if (logFrames) {
         TokenPos pos = frame->block()->getPos(instrp);
         logStart(-1);
         cout << "> frame " << pos << endl;
     }
+#endif
 }
 
 void Interpreter::popFrame()
 {
     assert(!frames.empty());
     Frame* frame = frames.back();
+    assert(exceptionHandlers.empty() ||
+           exceptionHandlers.back()->frame() != frame);
+    assert(frame->stackPos() <= stackPos());
+
+#ifdef DEBUG
     if (logFrames) {
         TokenPos pos = frame->block()->getPos(instrp - 1);
         logStart(-1);
         cout << "< frame " << pos << endl;
     }
-    assert(exceptionHandlers.empty() ||
-           exceptionHandlers.back()->frame() != frame);
-    assert(frame->stackPos() <= stackPos());
+#endif
 
     stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
