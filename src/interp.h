@@ -190,8 +190,6 @@ struct Interpreter
     CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
                          Root<Value>& resultOut);
     CallStatus raiseTypeError(string message, Root<Value>& resultOut);
-
-    friend void testInterp(const string& input, const string& expected);
 };
 
 #endif

@@ -10,12 +10,6 @@
 
 void testInterp(const string& input, const string& expected)
 {
-    Interpreter& interp = Interpreter::instance();
-    assert(interp.stack.empty());
-    assert(interp.frames.empty());
-    assert(interp.exceptionHandlers.empty());
-    assert(!interp.isHandlingException());
-    assert(!interp.isHandlingDeferredReturn());
     Root<Block*> block;
     Block::buildModule(input, None, block);
     Root<Value> result;
