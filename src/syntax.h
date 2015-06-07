@@ -55,11 +55,13 @@ using namespace std;
     syntax(Try)                                                               \
     syntax(Break)                                                             \
     syntax(Continue)                                                          \
-    syntax(Del)
+    syntax(Del)                                                               \
+    syntax(Import)
 
 enum class SyntaxType
 {
 #define syntax_enum(name) name,
+
     for_each_syntax(syntax_enum)
 #undef syntax_enum
     SyntaxTypeCount
@@ -678,6 +680,27 @@ struct SyntaxDel : public Syntax
     {}
 
     const unique_ptr<SyntaxTarget> targets;
+};
+
+struct ImportInfo
+{
+    ImportInfo(Name moduleName, Name localName)
+      : moduleName(moduleName), localName(localName)
+    {}
+
+    Name moduleName;
+    Name localName;
+};
+
+struct SyntaxImport : public Syntax
+{
+    define_syntax_members(Import, "import");
+
+    SyntaxImport(const Token& token, vector<unique_ptr<ImportInfo>> imports)
+      : Syntax(token), imports(move(imports))
+    {}
+
+    const vector<unique_ptr<ImportInfo>> imports;
 };
 
 #undef define_syntax_type

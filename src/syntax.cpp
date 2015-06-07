@@ -293,6 +293,21 @@ void SyntaxPrinter::visit(const SyntaxDel& s)
     os_ << s.name() << " " << *s.targets;
 }
 
+void SyntaxPrinter::visit(const SyntaxImport& s)
+{
+    bool first = true;
+    os_ << s.name() << " ";
+    for (const auto& i : s.imports) {
+        if (!first)
+            os_ << ", ";
+        os_ << i->moduleName;
+        if (i->moduleName != i->localName)
+            os_ << " as " << i->localName;
+        first = false;
+    }
+    os_ << endl;
+}
+
 ostream& operator<<(ostream& s, const Syntax& syntax) {
     SyntaxPrinter printer(s);
     syntax.accept(printer);

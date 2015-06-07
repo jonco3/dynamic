@@ -1036,6 +1036,12 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrLoopControlJump>(finallyCount, loopHeadOffset);
     }
 
+    virtual void visit(const SyntaxImport& s) {
+        // todo: implement import
+        // todo: throw syntax error if not at top level
+        emit<InstrConst>(None);
+    }
+
     virtual void setPos(const TokenPos& pos) {
         block->setNextPos(pos);
     }

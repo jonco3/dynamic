@@ -406,6 +406,19 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_Del)) {
         unique_ptr<SyntaxTarget> targets(parseTargetList());
         return make_unique<SyntaxDel>(token, move(targets));
+    } else if (opt(Token_Import)) {
+        vector<unique_ptr<ImportInfo>> imports;
+        do {
+            Token t = match(Token_Identifier);  // todo: allow .s
+            Name moduleName = t.text;
+            Name localName = moduleName;
+            if (opt(Token_As)) {
+                t = match(Token_Identifier);
+                localName = t.text;
+            }
+            imports.emplace_back(make_unique<ImportInfo>(moduleName, localName));
+        } while (opt(Token_Comma));
+        return make_unique<SyntaxImport>(token, move(imports));
     }
 
     unique_ptr<Syntax> expr = parseExprOrExprList();
