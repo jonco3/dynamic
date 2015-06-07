@@ -401,7 +401,9 @@ Float::Float(Traced<Class*> cls)
 {}
 
 void Float::print(ostream& s) const {
-    s << value_;
+    char buffer[32];
+    sprintf(buffer, "%.17g", value_);
+    s << buffer;
 }
 
 Float* Float::get(double v)
