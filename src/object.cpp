@@ -96,6 +96,28 @@ void Object::extend(Traced<Layout*> layout)
     layout_ = layout;
 }
 
+bool Object::getSlot(Name name, int slot, Root<Value>& valueOut) const
+{
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    if (slots_[slot] == Value(UninitializedSlot))
+        return false;
+    valueOut = slots_[slot];
+    return true;
+}
+
+Value Object::getSlot(int slot) const
+{
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    assert(slots_[slot] != Value(UninitializedSlot));
+    return slots_[slot];
+}
+
+void Object::setSlot(int slot, Traced<Value> value)
+{
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    slots_[slot] = value;
+}
+
 int Object::findOwnAttr(Name name) const
 {
     return layout_->lookupName(name);
@@ -104,6 +126,14 @@ int Object::findOwnAttr(Name name) const
 bool Object::hasOwnAttr(Name name) const
 {
     return findOwnAttr(name) != Layout::NotFound;
+}
+
+bool Object::maybeGetOwnAttr(Name name, Root<Value>& valueOut) const
+{
+    int slot = layout_->lookupName(name);
+    if (slot == Layout::NotFound)
+        return false;
+    return getSlot(name, slot, valueOut);
 }
 
 bool Object::hasAttr(Name name) const
@@ -125,43 +155,6 @@ bool Object::hasAttr(Name name) const
     }
 
     return false;
-}
-
-int Object::findAttr(Name name, Root<Class*>& classOut) const
-{
-    int slot = findOwnAttr(name);
-    if (slot != Layout::NotFound) {
-        classOut = nullptr;
-        return slot;
-    }
-
-    // lookup attribute in class hierarchy
-    Root<Value> base;
-    if (!maybeGetOwnAttr(ClassAttr, base))
-        return false;
-
-    AutoAssertNoGC nogc;
-
-    while (Class* cls = base.toObject()->as<Class>()) {
-        slot = cls->findOwnAttr(name);
-        if (slot != Layout::NotFound) {
-            classOut = cls;
-            return slot;
-        }
-        if (!cls->maybeGetOwnAttr(BaseAttr, base))
-            break;
-    }
-
-    classOut = nullptr;
-    return -1;
-}
-
-bool Object::maybeGetOwnAttr(Name name, Root<Value>& valueOut) const
-{
-    int slot = layout_->lookupName(name);
-    if (slot == Layout::NotFound)
-        return false;
-    return getSlot(name, slot, valueOut);
 }
 
 bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
@@ -191,37 +184,6 @@ Value Object::getAttr(Name name) const
     assert(ok);
     (void)ok;
     return value;
-}
-
-Value Object::getOwnAttr(Name name) const
-{
-    Root<Value> value;
-    bool ok = maybeGetOwnAttr(name, value);
-    assert(ok);
-    (void)ok;
-    return value;
-}
-
-bool Object::getSlot(Name name, int slot, Root<Value>& valueOut) const
-{
-    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
-    if (slots_[slot] == Value(UninitializedSlot))
-        return false;
-    valueOut = slots_[slot];
-    return true;
-}
-
-Value Object::getSlot(int slot) const
-{
-    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
-    assert(slots_[slot] != Value(UninitializedSlot));
-    return slots_[slot];
-}
-
-void Object::setSlot(int slot, Traced<Value> value)
-{
-    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
-    slots_[slot] = value;
 }
 
 void Object::setAttr(Name name, Traced<Value> value)
@@ -373,7 +335,7 @@ bool Class::isDerivedFrom(Class* cls) const
     AutoAssertNoGC nogc;
     const Object* obj = this;
     while (obj != cls) {
-        obj = obj->getOwnAttr("__base__").toObject();
+        obj = obj->getAttr("__base__").toObject();
         if (obj == None)
             return false;
     }

@@ -49,18 +49,11 @@ struct Object : public Cell
     Layout* layout() const { return layout_; }
     Class* type() const;
 
+    // Attribute accessors
     bool hasAttr(Name name) const;
-    int findOwnAttr(Name name) const;
-
     bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
-    Value getOwnAttr(Name name) const;
     Value getAttr(Name name) const;
-
-    // Get the slot of and optionally the class containing the named attribute
-    int findAttr(Name name, Root<Class*>& classOut) const;
-
     void setAttr(Name name, Traced<Value> value);
-
     bool maybeDelOwnAttr(Name name);
 
     // Add uninitialised attributes for all names in layout.
@@ -83,10 +76,11 @@ struct Object : public Cell
 
     virtual void traceChildren(Tracer& t) override;
 
+    int findOwnAttr(Name name) const;
     bool hasOwnAttr(Name name) const;
     bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
-    bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
 
+    bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
     Value getSlot(int slot) const;
     void setSlot(int slot, Traced<Value> value);
 
