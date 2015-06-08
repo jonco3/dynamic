@@ -23,7 +23,7 @@ static bool generatorIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
 
 void GeneratorIter::init()
 {
-    ObjectClass.init(gc.create<Class>("GeneratorIterator"));
+    ObjectClass.init(Class::createNative("GeneratorIterator", nullptr));
     initNativeMethod(ObjectClass, "__iter__", generatorIter_iter, 1);
 
     Root<Layout*> layout(Frame::InitialLayout);

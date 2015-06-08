@@ -423,7 +423,7 @@ static bool listIter_next(TracedVector<Value> args, Root<Value>& resultOut)
 
 void ListIter::init()
 {
-    ObjectClass.init(gc.create<Class>("listiterator"));
+    ObjectClass.init(Class::createNative("listiterator", nullptr));
     initNativeMethod(ObjectClass, "__iter__", listIter_iter, 1);
     initNativeMethod(ObjectClass, "next", listIter_next, 1);
 }
@@ -462,7 +462,7 @@ bool ListIter::next(Root<Value>& resultOut)
 
 void Slice::init()
 {
-    ObjectClass.init(gc.create<Class>("slice"));
+    ObjectClass.init(Class::createNative<Slice>("slice"));
 
     static const Name StartAttr = "start";
     static const Name StopAttr = "stop";
@@ -493,4 +493,10 @@ Slice::Slice(TracedVector<Value> args) :
     setSlot(StartSlot, args[0]);
     setSlot(StopSlot, args[1]);
     setSlot(StepSlot, args[2]);
+}
+
+Slice::Slice(Traced<Class*> cls)
+  : Object(cls)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
 }

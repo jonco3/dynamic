@@ -54,7 +54,7 @@ static bool dict_values(TracedVector<Value> args, Root<Value>& resultOut)
 
 void Dict::init()
 {
-    ObjectClass.init(gc.create<Class>("dict"));
+    ObjectClass.init(Class::createNative<Dict>("dict"));
     initNativeMethod(ObjectClass, "__len__", dict_len, 1);
     initNativeMethod(ObjectClass, "__contains__", dict_contains, 2);
     initNativeMethod(ObjectClass, "__getitem__", dict_getitem, 2);
@@ -75,6 +75,12 @@ Dict::Dict(const TracedVector<Value>& values)
     unsigned entryCount = values.size() / 2;
     for (unsigned i = 0; i < entryCount; ++i)
         entries_[values[i * 2]] = values[i * 2 + 1];
+}
+
+Dict::Dict(Traced<Class*> cls)
+  : Object(cls)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
 }
 
 void Dict::traceChildren(Tracer& t)

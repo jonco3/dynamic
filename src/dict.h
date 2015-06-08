@@ -11,6 +11,7 @@ struct Dict : public Object
 
     Dict();
     Dict(const TracedVector<Value>& values);
+    Dict(const Traced<Class*> cls);
 
     void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;

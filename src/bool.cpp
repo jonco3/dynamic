@@ -8,7 +8,7 @@ GlobalRoot<Boolean*> Boolean::False;
 
 void Boolean::init()
 {
-    ObjectClass.init(gc.create<Class>("bool"));
+    ObjectClass.init(Class::createNative("bool", nullptr));
     True.init(gc.create<Boolean>(true));
     False.init(gc.create<Boolean>(false));
 }

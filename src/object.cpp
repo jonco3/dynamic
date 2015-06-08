@@ -349,11 +349,13 @@ bool Class::isDerivedFrom(Class* cls) const
 void initNativeMethod(Traced<Object*> cls, Name name, NativeFunc func,
                       unsigned minArgs, unsigned maxArgs)
 {
-    Root<Value> value(gc.create<Native>(name, func, minArgs, maxArgs));
+    Root<Value> value(None);
+    if (func)
+        value = gc.create<Native>(name, func, minArgs, maxArgs);
     cls->initAttr(name, value);
 }
 
-static bool object_new(TracedVector<Value> args, Root<Value>& resultOut)
+bool object_new(TracedVector<Value> args, Root<Value>& resultOut)
 {
     // Special case because we can't call Class::createNative in initialization.
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
@@ -428,4 +430,6 @@ void initObject()
     initNativeMethod(Object::ObjectClass, "__eq__", object_eq, 2);
     initNativeMethod(Object::ObjectClass, "__ne__", object_ne, 2);
     initNativeMethod(Object::ObjectClass, "__hash__", object_hash, 1);
+    initNativeMethod(NoneObject::ObjectClass, "__new__", nullptr, 1, -1);
+    initNativeMethod(Class::ObjectClass, "__new__", nullptr, 1, -1);
 }

@@ -31,13 +31,13 @@ GlobalRoot<Class*> UninitializedSlotObject::ObjectClass;
 
 void NotImplementedObject::init()
 {
-    ObjectClass.init(gc.create<Class>("NotImplemented"));
+    ObjectClass.init(Class::createNative("NotImplemented", nullptr));
     NotImplemented.init(gc.create<NotImplementedObject>());
 }
 
 void UninitializedSlotObject::init()
 {
-    ObjectClass.init(gc.create<Class>("UninitializedSlot"));
+    ObjectClass.init(Class::createNative("UninitializedSlot", nullptr));
     UninitializedSlot.init(gc.create<UninitializedSlotObject>());
 }
 

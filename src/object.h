@@ -111,7 +111,7 @@ struct Class : public Object
     // Create a python class corresponding to a native (C++) class specifying a
     // function to create object instances.
     static Class* createNative(string name,
-                               NativeFunc newFunc, unsigned maxArgs,
+                               NativeFunc newFunc, unsigned maxArgs = 1,
                                Traced<Class*> base = Object::ObjectClass);
 
     // Be careful using this because instances created from python will be
@@ -134,6 +134,8 @@ struct Class : public Object
 
     friend void initObject();
 };
+
+extern bool object_new(TracedVector<Value> args, Root<Value>& resultOut);
 
 extern void initNativeMethod(Traced<Object*> cls, Name name, NativeFunc func,
                              unsigned minArgs, unsigned maxArgs = 0);
