@@ -18,6 +18,8 @@ Layout::Layout(Traced<Layout*> parent, Name name)
 {
     assert(parent);
     assert(name != "");
+    assert(parent->children_.find(name) == children_.end());
+    parent->children_.emplace(name, this);
     slot_ = parent_->slotIndex() + 1;
 }
 
@@ -91,11 +93,7 @@ Layout* Layout::addName(Name name)
         return i->second;
 
     Root<Layout*> self(this);
-    Layout* child = gc.create<Layout>(self, name);
-    AutoAssertNoGC nogc;
-    children_.emplace(name, child);
-    assert(hasChild(child));
-    return child;
+    return gc.create<Layout>(self, name);
 }
 
 Layout* Layout::maybeAddName(Name name)
