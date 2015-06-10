@@ -4,9 +4,9 @@
 
 testcase(layout)
 {
-    Root<Layout*> l1(gc.create<Layout>(Layout::None, "root"));
+    Root<Layout*> l1(Layout::Empty->addName("root"));
 
-    testEqual(l1->parent(), Layout::None.get());
+    testEqual(l1->parent(), Layout::Empty.get());
     testEqual(l1->slotCount(), 1u);
     testEqual(l1->slotIndex(), 0u);
     testEqual(l1->name(), "root");

@@ -33,7 +33,7 @@ struct Object : public Cell
     virtual ~Object() {}
 
     template <typename T> bool is() {
-        return slots_[ClassSlot].asObject() == T::ObjectClass;
+        return class_ == T::ObjectClass;
     }
 
     template <typename T> T* as() {
@@ -48,8 +48,8 @@ struct Object : public Cell
     void print(ostream& s) const override;
     virtual void dump(ostream& s) const;
 
+    Class* type() const { return class_; }
     Layout* layout() const { return layout_; }
-    Class* type() const;
 
     // Attribute accessors
     bool hasAttr(Name name) const;
@@ -66,11 +66,6 @@ struct Object : public Cell
     bool isInstanceOf(Class* cls) const;
 
   protected:
-    enum {
-        ClassSlot,
-        SlotCount
-    };
-
     Object(Traced<Class*> cls, Traced<Class*> base,
            Traced<Layout*> layout = InitialLayout);
 
@@ -88,6 +83,7 @@ struct Object : public Cell
     bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
 
   private:
+    Class* class_;
     Layout* layout_;
     vector<Value> slots_;
 

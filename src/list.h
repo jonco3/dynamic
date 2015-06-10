@@ -102,7 +102,7 @@ struct Slice : public Object
 
   private:
     enum {
-        StartSlot = Object::SlotCount,
+        StartSlot,
         StopSlot,
         StepSlot
     };

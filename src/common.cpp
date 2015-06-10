@@ -24,6 +24,7 @@ bool debugMode = true;
 
 void init1()
 {
+    Layout::init();
     initObject();
     Frame::init();
     Boolean::init();

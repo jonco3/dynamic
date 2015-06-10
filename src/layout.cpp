@@ -3,21 +3,38 @@
 #include <cassert>
 #include <iostream>
 
-GlobalRoot<Layout*> Layout::None;
+GlobalRoot<Layout*> Layout::Empty;
+
+static bool layoutInitialized = false;
+
+Layout::Layout()
+  : parent_(nullptr), slot_(-1), name_("")
+{
+    assert(!layoutInitialized);
+}
 
 Layout::Layout(Traced<Layout*> parent, Name name)
   : parent_(parent), name_(name)
 {
-    assert(parent_ != this);
-    slot_ = parent_ ? parent_->slotIndex() + 1 : 0;
+    assert(parent);
+    assert(name != "");
+    slot_ = parent_->slotIndex() + 1;
 }
 
 void Layout::sweep()
 {
     assert(isDying());
     assert(parent_ != this);
-    if (parent_ && !parent_->isDying())
-        parent_->removeChild(this);
+    if (parent_) {
+        assert(parent_->hasChild(this));
+        if (!parent_->isDying())
+            parent_->removeChild(this);
+    }
+}
+
+bool Layout::hasChild(Layout* child)
+{
+    return children_.find(child->name()) != children_.end();
 }
 
 void Layout::removeChild(Layout* child)
@@ -27,12 +44,15 @@ void Layout::removeChild(Layout* child)
     children_.erase(i);
 }
 
-bool Layout::subsumes(Layout* other)
+bool Layout::subsumes(Traced<Layout*> other)
 {
-    if (!other || this == other)
+    if (other == Empty)
         return true;
+
+    AutoAssertNoGC nogc;
     Layout* layout = this;
-    while (layout) {
+    while (layout != Empty) {
+        assert(layout);
         if (layout == other)
             return true;
         assert(layout->parent_ != layout);
@@ -43,24 +63,28 @@ bool Layout::subsumes(Layout* other)
 
 Layout* Layout::findAncestor(Name name)
 {
+    assert(name != "");
     Layout* layout = this;
-    while (layout) {
+    while (layout != Empty) {
+        assert(layout);
         if (layout->name_ == name)
-            break;
+            return layout;
         assert(layout->parent_ != layout);
         layout = layout->parent_;
     }
-    return layout;
+    return nullptr;
 }
 
 int Layout::lookupName(Name name)
 {
+    assert(name != "");
     Layout* layout = findAncestor(name);
     return layout ? layout->slotIndex() : NotFound;
 }
 
 Layout* Layout::addName(Name name)
 {
+    assert(name != "");
     assert(!hasName(name));
     auto i = children_.find(name);
     if (i != children_.end())
@@ -68,12 +92,16 @@ Layout* Layout::addName(Name name)
 
     Root<Layout*> self(this);
     Layout* child = gc.create<Layout>(self, name);
+    AutoAssertNoGC nogc;
     children_.emplace(name, child);
+    assert(hasChild(child));
     return child;
 }
 
 Layout* Layout::maybeAddName(Name name)
 {
+    assert(name != "");
+
     if (hasName(name))
         return this;
 
@@ -88,12 +116,19 @@ void Layout::traceChildren(Tracer& t)
 void Layout::print(ostream& s) const
 {
     s << "Layout {";
-    const Layout* l = this;
-    while (l) {
-        s << l->name();
-        l = l->parent();
-        if (l)
+    const Layout* layout = this;
+    while (layout != Empty) {
+        assert(layout);
+        s << layout->name();
+        layout = layout->parent();
+        if (layout)
             s << ", ";
     }
     s << "}";
+}
+
+/* static */ void Layout::init()
+{
+    Empty.init(gc.create<Layout>());
+    layoutInitialized = true;
 }

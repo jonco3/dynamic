@@ -17,16 +17,19 @@ struct Layout : public Cell
 {
     static const int NotFound = -1;
 
-    static GlobalRoot<Layout*> None;
+    static GlobalRoot<Layout*> Empty;
+
+    static void init();
 
     Layout(Traced<Layout*> parent, Name name);
+    Layout(); // Only used during initialization.
 
     Layout* parent() const { return parent_; }
     unsigned slotIndex() { return slot_; }
     unsigned slotCount() { return slot_ + 1; }
     const string& name() const { return name_; }
 
-    bool subsumes(Layout* other);
+    bool subsumes(Traced<Layout*> other);
     Layout* findAncestor(Name name);
     int lookupName(Name name);
     int hasName(Name name) { return lookupName(name) != NotFound; }
@@ -40,10 +43,11 @@ struct Layout : public Cell
 
   private:
     Layout* parent_;
-    unsigned slot_;
+    int slot_;
     Name name_;
     unordered_map<Name, Layout*> children_;
 
+    bool hasChild(Layout* child);
     void removeChild(Layout* child);
 };
 

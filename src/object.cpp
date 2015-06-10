@@ -26,7 +26,6 @@ struct NoneObject : public Object
     friend void initObject();
 };
 
-static const Name ClassAttr = "__class__";
 static const Name BaseAttr = "__base__";
 static const Name NewAttr = "__new__";
 
@@ -73,16 +72,22 @@ void Object::init(Traced<Class*> cls)
 void Object::initAttrs(Traced<Class*> cls)
 {
     assert(layout_);
+    class_ = cls;
+    if (layout_ == Layout::Empty)
+        return;
+
     slots_.resize(layout_->slotCount());
     for (unsigned i = 0; i < layout_->slotCount(); ++i)
         slots_[i] = UninitializedSlot;
-    setAttr(ClassAttr, cls);
 }
 
 void Object::extend(Traced<Layout*> layout)
 {
     assert(layout);
-    assert(layout->subsumes(layout_));
+#ifdef DEBUG
+    Root<Layout*> current(layout_);
+    assert(layout->subsumes(current));
+#endif
 
     unsigned count = 0;
     for (Layout* l = layout; l != layout_; l = l->parent()) {
@@ -143,12 +148,8 @@ bool Object::hasAttr(Name name) const
     if (hasOwnAttr(name))
         return true;
 
-    if (!isInstanceOf(Class::ObjectClass)) {
-        Root<Value> cls;
-        if (!maybeGetOwnAttr(ClassAttr, cls))
-            return false;
-        return cls.toObject()->hasAttr(name);
-    }
+    if (!isInstanceOf(Class::ObjectClass))
+        return type()->hasAttr(name);
 
     Root<Value> base;
     if (!maybeGetOwnAttr(BaseAttr, base) || base.isNone())
@@ -164,12 +165,8 @@ bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
     if (maybeGetOwnAttr(name, valueOut))
         return true;
 
-    if (!isInstanceOf(Class::ObjectClass)) {
-        Root<Value> cls;
-        if (!maybeGetOwnAttr(ClassAttr, cls))
-            return false;
-        return cls.toObject()->maybeGetAttr(name, valueOut);
-    }
+    if (!isInstanceOf(Class::ObjectClass))
+        return type()->maybeGetAttr(name, valueOut);
 
     Root<Value> base;
     if (!maybeGetOwnAttr(BaseAttr, base) || base.isNone())
@@ -265,12 +262,6 @@ void Object::dump(ostream& s) const
     s << " } ";
 }
 
-Class* Object::type() const
-{
-    // Cast because calling as() can end up recursively calling this.
-    return static_cast<Class*>(getSlot(ClassSlot).asObject());
-}
-
 bool Object::isTrue() const
 {
     // the following values are interpreted as false: False, None, numeric zero
@@ -292,6 +283,7 @@ bool Object::isInstanceOf(Class* cls) const
 
 void Object::traceChildren(Tracer& t)
 {
+    gc.trace(t, &class_);
     gc.trace(t, &layout_);
     for (auto i = slots_.begin(); i != slots_.end(); ++i)
         gc.trace(t, &*i);
@@ -402,11 +394,8 @@ static bool object_hash(TracedVector<Value> args, Root<Value>& resultOut)
 
 void initObject()
 {
-    Object::InitialLayout.init(gc.create<Layout>(Layout::None, ClassAttr));
-    Class::InitialLayout.init(
-        gc.create<Layout>(Object::InitialLayout, BaseAttr));
-
-    assert(Object::InitialLayout->lookupName(ClassAttr) == Object::ClassSlot);
+    Object::InitialLayout.init(Layout::Empty);
+    Class::InitialLayout.init(Object::InitialLayout->addName(BaseAttr));
 
     Root<Class*> objectBase(nullptr);
     Object::ObjectClass.init(gc.create<Class>("object", objectBase));
