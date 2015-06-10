@@ -32,8 +32,13 @@ struct Object : public Cell
     Object(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout);
     virtual ~Object() {}
 
-    template <typename T> bool is() {
+    template <typename T> bool is() const {
         return class_ == T::ObjectClass;
+    }
+
+    template <typename T> const T* as() const {
+        assert(isInstanceOf(T::ObjectClass));
+        return static_cast<const T*>(this);
     }
 
     template <typename T> T* as() {
@@ -72,7 +77,7 @@ struct Object : public Cell
     // Only for use during initialization
     void init(Traced<Class*> cls);
 
-    virtual void traceChildren(Tracer& t) override;
+    void traceChildren(Tracer& t) override;
 
     bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
     Value getSlot(int slot) const;
@@ -115,15 +120,18 @@ struct Class : public Object
     Class(string name, Traced<Class*> base = Object::ObjectClass,
           Traced<Layout*> initialLayout = InitialLayout);
 
-    Object* base();
+    Object* base() const { return base_; }
     const string& name() const { return name_; }
 
     bool isDerivedFrom(Class* base) const;
+
+    void traceChildren(Tracer& t) override;
 
     void print(ostream& s) const override;
 
   private:
     string name_;
+    Object* base_;
 
     // Only for use during initialization
     void init(Traced<Object*> base);

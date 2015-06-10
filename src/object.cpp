@@ -26,7 +26,6 @@ struct NoneObject : public Object
     friend void initObject();
 };
 
-static const Name BaseAttr = "__base__";
 static const Name NewAttr = "__new__";
 
 GlobalRoot<Class*> Object::ObjectClass;
@@ -148,14 +147,15 @@ bool Object::hasAttr(Name name) const
     if (hasOwnAttr(name))
         return true;
 
-    if (!isInstanceOf(Class::ObjectClass))
+    if (!is<Class>())
         return type()->hasAttr(name);
 
-    Root<Value> base;
-    if (!maybeGetOwnAttr(BaseAttr, base) || base.isNone())
+    Root<Object*> base(as<Class>()->base());
+    if (base == None)
         return false;
-    assert(base.isInstanceOf(Class::ObjectClass));
-    return base.toObject()->hasAttr(name);
+
+    assert(base->is<Class>());
+    return base->hasAttr(name);
 }
 
 bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
@@ -165,14 +165,15 @@ bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
     if (maybeGetOwnAttr(name, valueOut))
         return true;
 
-    if (!isInstanceOf(Class::ObjectClass))
+    if (!is<Class>())
         return type()->maybeGetAttr(name, valueOut);
 
-    Root<Value> base;
-    if (!maybeGetOwnAttr(BaseAttr, base) || base.isNone())
+    Root<Object*> base(as<Class>()->base());
+    if (base == None)
         return false;
-    assert(base.isInstanceOf(Class::ObjectClass));
-    return base.toObject()->maybeGetAttr(name, valueOut);
+
+    assert(base->is<Class>());
+    return base->maybeGetAttr(name, valueOut);
 }
 
 Value Object::getAttr(Name name) const
@@ -300,25 +301,23 @@ void Object::traceChildren(Tracer& t)
 
 
 Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name)
+  Object(ObjectClass, initialLayout), name_(name), base_(base)
 {
     // base is null for Object when we are initializing.
     assert(!Class::ObjectClass || base);
     assert(initialLayout->subsumes(InitialLayout));
-    if (Class::ObjectClass)
-        setAttr(BaseAttr, base);
-}
-
-Object* Class::base()
-{
-    Root<Value> value(getAttr(BaseAttr));
-    return value.asObject();
 }
 
 void Class::init(Traced<Object*> base)
 {
     Object::init(ObjectClass);
-    setAttr(BaseAttr, base);
+    base_ = base;
+}
+
+void Class::traceChildren(Tracer& t)
+{
+    Object::traceChildren(t);
+    gc.trace(t, &base_);
 }
 
 void Class::print(ostream& s) const
@@ -331,7 +330,7 @@ bool Class::isDerivedFrom(Class* cls) const
     AutoAssertNoGC nogc;
     const Object* obj = this;
     while (obj != cls) {
-        obj = obj->getAttr("__base__").toObject();
+        obj = obj->as<Class>()->base();
         if (obj == None)
             return false;
     }
@@ -395,7 +394,7 @@ static bool object_hash(TracedVector<Value> args, Root<Value>& resultOut)
 void initObject()
 {
     Object::InitialLayout.init(Layout::Empty);
-    Class::InitialLayout.init(Object::InitialLayout->addName(BaseAttr));
+    Class::InitialLayout.init(Object::InitialLayout);
 
     Root<Class*> objectBase(nullptr);
     Object::ObjectClass.init(gc.create<Class>("object", objectBase));
