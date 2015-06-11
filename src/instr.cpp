@@ -553,6 +553,35 @@ bool InstrBinaryOpInt::execute(Interpreter& interp)
     return r;
 }
 
+static bool maybeCallBinaryOp(Interpreter& interp,
+                              Traced<Value> obj,
+                              Name name,
+                              Traced<Value> left,
+                              Traced<Value> right,
+                              bool& successOut)
+{
+    Root<Value> method;
+    if (!obj.maybeGetAttr(name, method))
+        return false;
+
+    Root<Value> result;
+    RootVector<Value> args;
+    args.push_back(left);
+    args.push_back(right);
+    if (!interp.call(method, args, result)) {
+        interp.pushStack(result);
+        successOut = false;
+        return true;
+    }
+
+    if (result == Value(NotImplemented))
+        return false;
+
+    interp.pushStack(result);
+    successOut = true;
+    return true;
+}
+
 bool InstrBinaryOpFallback::execute(Interpreter& interp)
 {
     Root<Value> right(interp.popStack());
@@ -565,35 +594,15 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
     // operations."
 
     Root<Value> method;
-    Root<Value> result;
-    if (left.maybeGetAttr(BinaryOpMethodNames[op()], method)) {
-        RootVector<Value> args;
-        args.push_back(left);
-        args.push_back(right);
-        if (!interp.call(method, args, result)) {
-            interp.pushStack(result);
-            return false;
-        }
-        if (result != Value(NotImplemented)) {
-            interp.pushStack(result);
-            return true;
-        }
+    bool success;
+    if (maybeCallBinaryOp(interp, left, BinaryOpMethodNames[op()],
+                          left, right, success)) {
+        return success;
     }
 
-    if (left.type() != right.type() &&
-        right.maybeGetAttr(BinaryOpReflectedMethodNames[op()], method))
-    {
-        RootVector<Value> args;
-        args.push_back(right);
-        args.push_back(left);
-        if (!interp.call(method, args, result)) {
-            interp.pushStack(result);
-            return false;
-        }
-        if (result != Value(NotImplemented)) {
-            interp.pushStack(result);
-            return true;
-        }
+    if (maybeCallBinaryOp(interp, right, BinaryOpReflectedMethodNames[op()],
+                          right, left, success)) {
+        return success;
     }
 
     interp.pushStack(gc.create<TypeError>(
