@@ -7,6 +7,7 @@
 #include "instr.h"
 #include "interp.h"
 #include "repr.h"
+#include "utils.h"
 
 #include "value-inl.h"
 
@@ -202,12 +203,6 @@ void Interpreter::returnFromFrame(Value value)
     popFrame();
     pushStack(value);
 }
-
-#ifdef DEBUG
-#define alwaysTrue(x) assert(x)
-#else
-#define alwaysTrue(x) x
-#endif
 
 void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
 {

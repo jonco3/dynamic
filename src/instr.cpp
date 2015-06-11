@@ -36,6 +36,20 @@ bool InstrGetLocalFallback::execute(Interpreter& interp)
 
 bool InstrSetLocal::execute(Interpreter& interp)
 {
+    Frame* frame = interp.getFrame();
+    if (frame->layout() != layout_) {
+        Root<InstrSetLocal*> self(this);
+        return interp.replaceInstrAndRestart(
+            this, gc.create<InstrSetLocalFallback>(self));
+    }
+
+    Root<Value> value(interp.peekStack(0));
+    interp.getFrame()->setSlot(slot_, value);
+    return true;
+}
+
+bool InstrSetLocalFallback::execute(Interpreter& interp)
+{
     Root<Value> value(interp.peekStack(0));
     interp.getFrame()->setAttr(ident, value);
     return true;

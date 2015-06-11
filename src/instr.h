@@ -29,6 +29,7 @@ using namespace std;
     instr(GetLocal)                                                          \
     instr(GetLocalFallback)                                                  \
     instr(SetLocal)                                                          \
+    instr(SetLocalFallback)                                                  \
     instr(DelLocal)                                                          \
     instr(GetLexical)                                                        \
     instr(SetLexical)                                                        \
@@ -207,7 +208,39 @@ struct InstrGetLocalFallback : public IdentInstrBase
     }
 };
 
-define_ident_instr(SetLocal);
+struct InstrSetLocal : public IdentInstrBase
+{
+    define_instr_members(Instr_SetLocal, "SetLocal");
+    InstrSetLocal(Name ident, unsigned slot, Traced<Layout*> layout)
+      : IdentInstrBase(ident), slot_(slot), layout_(layout)
+    {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << ident << " " << slot_ << " " << layout_;
+    }
+
+    void traceChildren(Tracer& t) override {
+        Instr::traceChildren(t);
+        gc.trace(t, &layout_);
+    }
+
+  private:
+    unsigned slot_;
+    Layout* layout_;
+};
+
+struct InstrSetLocalFallback : public IdentInstrBase
+{
+    define_instr_members(Instr_SetLocalFallback, "SetLocalFallback");
+    InstrSetLocalFallback(Traced<InstrSetLocal*> prev)
+        : IdentInstrBase(prev->ident)
+    {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << ident;
+    }
+};
+
 define_ident_instr(DelLocal);
 
 struct InstrGetLexical : public IdentInstrBase

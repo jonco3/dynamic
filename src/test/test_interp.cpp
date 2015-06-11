@@ -274,6 +274,20 @@ testcase(interp)
                      Instr_GetLocalFallback);
     testExpectingException = false;
 
+    testExpectingException = true;
+    testReplacements("def foo(x):\n"
+                     "  if x == 0:\n"
+                     "    del x\n"
+                     "  x = 1\n"
+                     "  return x\n",
+                     "foo(1)", "1",
+                     "foo(0)", "1",
+                     Instr_SetLocal,
+                     Instr_SetLocal,
+                     Instr_SetLocalFallback,
+                     Instr_SetLocalFallback);
+    testExpectingException = false;
+
     testInterp("a, b = 1, 2\na", "1");
     testInterp("a, b = 1, 2\nb", "2");
 

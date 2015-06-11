@@ -616,7 +616,7 @@ struct ByteCompiler : public SyntaxVisitor
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name, slot))
-                emit<InstrSetLocal>(name);
+                emit<InstrSetLocal>(name, slot, layout);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrSetLexical>(frame, name);
             else if (lookupGlobal(name))
@@ -904,10 +904,14 @@ struct ByteCompiler : public SyntaxVisitor
                 ByteCompiler().buildFunctionBody(this, s.params, *s.expr);
         }
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
-        if (parent)
-            emit<InstrSetLocal>(s.id);
-        else
+        if (parent) {
+            int slot;
+            Root<Layout*> layout(block->layout());
+            alwaysTrue(lookupLocal(s.id, slot));
+            emit<InstrSetLocal>(s.id, slot, layout);
+        } else {
             emit<InstrSetGlobal>(topLevel, s.id);
+        }
     }
 
     virtual void visit(const SyntaxClass& s) {
@@ -916,10 +920,14 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrLambda>(s.id, params, suite);
         compile(s.bases);
         emit<InstrCall>(1);
-        if (parent)
-            emit<InstrSetLocal>(s.id);
-        else
+        if (parent) {
+            int slot;
+            Root<Layout*> layout(block->layout());
+            alwaysTrue(lookupLocal(s.id, slot));
+            emit<InstrSetLocal>(s.id, slot, layout);
+        } else {
             emit<InstrSetGlobal>(topLevel, s.id);
+        }
     }
 
     virtual void visit(const SyntaxAssert& s) {

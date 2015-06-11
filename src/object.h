@@ -66,6 +66,7 @@ struct Object : public Cell
 
     // Slot accessors
     Value getSlot(int slot) const;
+    void setSlot(int slot, Traced<Value> value);
 
     // Add uninitialised attributes for all names in layout.
     void extend(Traced<Layout*> layout);
@@ -83,7 +84,6 @@ struct Object : public Cell
     void traceChildren(Tracer& t) override;
 
     bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
-    void setSlot(int slot, Traced<Value> value);
 
     int findOwnAttr(Name name) const;
     bool hasOwnAttr(Name name) const;
