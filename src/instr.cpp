@@ -520,7 +520,8 @@ bool InstrBinaryOp::execute(Interpreter& interp)
     Root<Value> left(interp.peekStack(1));
 
     if (left.isInt32() && right.isInt32()) {
-        Root<Value> method(left.getAttr(BinaryOpMethodNames[op()]));
+        Root<Value> method(
+            Integer::ObjectClass->getAttr(BinaryOpMethodNames[op()]));
         Instr* instr = gc.create<InstrBinaryOpInt>(op(), method);
         return interp.replaceInstrAndRestart(this, instr);
     } else {
