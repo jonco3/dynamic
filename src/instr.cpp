@@ -587,24 +587,29 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
     Root<Value> right(interp.popStack());
     Root<Value> left(interp.popStack());
 
-    // todo: "If the right operand's type is a subclass of the left operand's
-    // type and that subclass provides the reflected method for the operation,
-    // this method will be called before the left operand's non-reflected
+    // "If the right operand's type is a subclass of the left operand's type and
+    // that subclass provides the reflected method for the operation, this
+    // method will be called before the left operand's non-reflected
     // method. This behavior allows subclasses to override their ancestors'
     // operations."
+    // todo: needs test
 
-    Root<Value> method;
     bool success;
-    if (maybeCallBinaryOp(interp, left, BinaryOpMethodNames[op()],
-                          left, right, success))
+    Root<Class*> ltype(left.type());
+    Root<Class*> rtype(right.type());
+    const char** names = BinaryOpMethodNames;
+    const char** rnames = BinaryOpReflectedMethodNames;
+    if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        return success;
-    }
-
-    if (maybeCallBinaryOp(interp, right, BinaryOpReflectedMethodNames[op()],
-                          right, left, success))
-    {
-        return success;
+        if (maybeCallBinaryOp(interp, right, rnames[op()], right, left, success))
+            return success;
+        if (maybeCallBinaryOp(interp, left, names[op()], left, right, success))
+            return success;
+    } else {
+        if (maybeCallBinaryOp(interp, left, names[op()], left, right, success))
+            return success;
+        if (maybeCallBinaryOp(interp, right, rnames[op()], right, left, success))
+            return success;
     }
 
     interp.pushStack(gc.create<TypeError>(
