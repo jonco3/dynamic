@@ -256,6 +256,24 @@ testcase(interp)
                      Instr_BinaryOpFallback,
                      Instr_BinaryOpFallback);
 
+    testExpectingException = true;
+    testReplacements("x = None\n"
+                     "def foo():\n"
+                     "  y = 1\n"
+                     "  if x == 0:\n"
+                     "    del y\n"
+                     "  try:\n"
+                     "    return y\n"
+                     "  except:\n"
+                     "    return 0",
+                     "x = 1; foo()", "1",
+                     "x = 0; foo()", "0",
+                     Instr_GetLocal,
+                     Instr_GetLocal,
+                     Instr_GetLocalFallback,
+                     Instr_GetLocalFallback);
+    testExpectingException = false;
+
     testInterp("a, b = 1, 2\na", "1");
     testInterp("a, b = 1, 2\nb", "2");
 

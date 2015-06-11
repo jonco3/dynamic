@@ -144,8 +144,9 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     virtual void visit(const SyntaxTargetList& s) {
         assert(inAssignTarget_);
-        for (const auto& i : s.targets)
-            i->accept(*this);
+        // todo: target list is backwards
+        for (auto i = s.targets.rbegin(); i != s.targets.rend(); i++)
+            (*i)->accept(*this);
     }
 
     virtual void visit(const SyntaxName& s) {
@@ -337,6 +338,7 @@ struct ByteCompiler : public SyntaxVisitor
         this->parent = parent;
         topLevel = parent->topLevel;
         isGenerator = true;
+        layout = layout->addName("%gen");
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s);
@@ -581,8 +583,11 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s.targets);
     }
 
-    bool lookupLocal(Name name) {
-        return parent && block->layout()->hasName(name);
+    bool lookupLocal(Name name, int& slotOut) {
+        if (!parent)
+            return false;
+        slotOut = block->layout()->lookupName(name);
+        return slotOut != Layout::NotFound;
     }
 
     unsigned lookupLexical(Name name) {
@@ -606,9 +611,11 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxName& s) {
         Name name = s.id;
+        int slot;
+        Root<Layout*> layout(block->layout());
         switch(contextStack.back()) {
           case Context::Assign:
-            if (lookupLocal(name))
+            if (lookupLocal(name, slot))
                 emit<InstrSetLocal>(name);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrSetLexical>(frame, name);
@@ -620,7 +627,7 @@ struct ByteCompiler : public SyntaxVisitor
             break;
 
           case Context::Delete:
-            if (lookupLocal(name))
+            if (lookupLocal(name, slot))
                 emit<InstrDelLocal>(name);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrDelLexical>(frame, name);
@@ -633,8 +640,8 @@ struct ByteCompiler : public SyntaxVisitor
             break;
 
           default:
-            if (lookupLocal(name))
-                emit<InstrGetLocal>(name);
+            if (lookupLocal(name, slot))
+                emit<InstrGetLocal>(name, slot, layout);
             else if (unsigned frame = lookupLexical(name))
                 emit<InstrGetLexical>(frame, name);
             else

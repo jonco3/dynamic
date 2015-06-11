@@ -9,11 +9,25 @@ bool InstrConst::execute(Interpreter& interp)
     return true;
 }
 
+// GetLocal: name was present when compiled, but may have been deleted.
+
 bool InstrGetLocal::execute(Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
+    if (frame->layout() != layout_) {
+        Root<InstrGetLocal*> self(this);
+        return interp.replaceInstrAndRestart(
+            this, gc.create<InstrGetLocalFallback>(self));
+    }
+
+    interp.pushStack(frame->getSlot(slot_));
+    return true;
+}
+
+bool InstrGetLocalFallback::execute(Interpreter& interp)
+{
+    Frame* frame = interp.getFrame();
     Root<Value> value;
-    // Name was present when compiled, but may have been deleted.
     if (!frame->maybeGetAttr(ident, value))
         return interp.raiseNameError(ident);
     interp.pushStack(value);
