@@ -596,12 +596,14 @@ bool InstrBinaryOpFallback::execute(Interpreter& interp)
     Root<Value> method;
     bool success;
     if (maybeCallBinaryOp(interp, left, BinaryOpMethodNames[op()],
-                          left, right, success)) {
+                          left, right, success))
+    {
         return success;
     }
 
     if (maybeCallBinaryOp(interp, right, BinaryOpReflectedMethodNames[op()],
-                          right, left, success)) {
+                          right, left, success))
+    {
         return success;
     }
 
