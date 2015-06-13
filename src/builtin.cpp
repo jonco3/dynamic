@@ -31,13 +31,6 @@ static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool builtin_object(TracedVector<Value> args, Root<Value>& resultOut)
-{
-    // todo: the returned object should not allow attributes to be set on it
-    resultOut = Object::create();
-    return true;
-}
-
 static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
 {
     // todo: support tuples etc for classInfo
@@ -92,7 +85,6 @@ void initBuiltins(const string& libDir)
 
     // Functions
     initNativeMethod(Builtin, "hasattr", builtin_hasattr, 2);
-    initNativeMethod(Builtin, "object", builtin_object, 0);
     initNativeMethod(Builtin, "isinstance", builtin_isinstance, 2);
     initNativeMethod(Builtin, "compile", builtin_compile, 1);
     initNativeMethod(Builtin, "parse", builtin_parse, 1);
@@ -105,6 +97,7 @@ void initBuiltins(const string& libDir)
     value = NotImplemented; Builtin->setAttr("NotImplemented", value);
 
     // Classes
+    value = Object::ObjectClass; Builtin->setAttr("object", value);
     value = List::ObjectClass; Builtin->setAttr("list", value);
     value = Tuple::ObjectClass; Builtin->setAttr("tuple", value);
     value = Dict::ObjectClass; Builtin->setAttr("dict", value);

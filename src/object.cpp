@@ -3,6 +3,7 @@
 #include "bool.h"
 #include "callable.h"
 #include "exception.h"
+#include "list.h"
 #include "numeric.h"
 #include "singletons.h"
 
@@ -517,10 +518,19 @@ static bool raiseAttrError(Traced<Object*> obj, Name name,
 
 bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
 {
-    // todo: check for other special attributes like __class__ and __bases__
-    if (obj->is<Class>() && name == "__name__") {
-        resultOut = gc.create<String>(obj->as<Class>()->name());
+    if (name == "__class__") {
+        resultOut = obj->type();
         return true;
+    } else if (obj->is<Class>()) {
+        if (name == "__name__") {
+            resultOut = gc.create<String>(obj->as<Class>()->name());
+            return true;
+        } else if (name == "__bases__") {
+            RootVector<Value> bases(1);
+            bases[0] = obj->as<Class>()->base();
+            resultOut = gc.create<Tuple>(bases);
+            return true;
+        }
     }
 
     Root<Value> value;

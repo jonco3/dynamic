@@ -55,8 +55,13 @@ assert(B().attr == 1)
 assert(B.attr == 1)
 
 class C4:
-  pass
+  def f():
+    pass
 
 assert C4.__name__ == "C4"
+assert C4.__bases__ == (object,)
+
+c = C4()
+assert type(c).__name__ == "C4"
 
 print("ok")

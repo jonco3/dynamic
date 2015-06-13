@@ -17,6 +17,9 @@ def dump(x):
 def print(x):
     str(x)._print()
 
+def type(x):
+    return x.__class__
+
 def range(*args):
     if len(args) == 1:
         start, end, step = 0, args[0], 1
