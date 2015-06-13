@@ -56,13 +56,18 @@ struct Object : public Cell
     Class* type() const { return class_; }
     Layout* layout() const { return layout_; }
 
-    // Attribute accessors
+
+    // Own attribute accessors
+    bool hasOwnAttr(Name name) const;
+    bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
+    bool maybeDelOwnAttr(Name name);
+
+    // Inherited attribute accessors, without descriptors
     bool hasAttr(Name name) const;
     bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     Value getAttr(Name name) const;
     void initAttr(Name name, Traced<Value> value);
     void setAttr(Name name, Traced<Value> value);
-    bool maybeDelOwnAttr(Name name);
 
     // Slot accessors
     Value getSlot(int slot) const;
@@ -86,8 +91,6 @@ struct Object : public Cell
     bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
 
     int findOwnAttr(Name name) const;
-    bool hasOwnAttr(Name name) const;
-    bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
 
   private:
     Class* class_;
@@ -165,5 +168,11 @@ template <typename T>
     initNativeMethod(cls, "__new__", func, 1, 1);
     return cls;
 }
+
+// Full attribute accessors including descriptors
+extern bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut);
+extern bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
+                    Root<Value>& resultOut);
+extern bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut);
 
 #endif

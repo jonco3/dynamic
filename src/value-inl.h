@@ -19,7 +19,7 @@ inline void GCTraits<Value>::trace(Tracer& t, Value* v)
     if (v->isObject()) {
         Object* o = v->asObject();
         gc.trace(t, &o);
-        *const_cast<Value*>(v) = Value(o);
+        *v = o;
     }
 }
 

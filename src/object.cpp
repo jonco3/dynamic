@@ -421,3 +421,191 @@ void initObject()
     initNativeMethod(NoneObject::ObjectClass, "__new__", nullptr, 1, -1);
     initNativeMethod(Class::ObjectClass, "__new__", nullptr, 1, -1);
 }
+
+/*
+ * Attribute lookup
+ *
+ * From: http://www.cafepy.com/article/python_attributes_and_methods/python_attributes_and_methods.html
+ *
+ * When retrieving an attribute from an object (print objectname.attrname)
+ * Python follows these steps:
+ *
+ *     If attrname is a special (i.e. Python-provided) attribute for objectname,
+ *     return it.
+ *
+ *     Check objectname.__class__.__dict__ for attrname. If it exists and is a
+ *     data-descriptor, return the descriptor result. Search all bases of
+ *     objectname.__class__ for the same case.
+ *
+ *     Check objectname.__dict__ for attrname, and return if found. If
+ *     objectname is a class, search its bases too. If it is a class and a
+ *     descriptor exists in it or its bases, return the descriptor result.
+ *
+ *     Check objectname.__class__.__dict__ for attrname. If it exists and is a
+ *     non-data descriptor, return the descriptor result. If it exists, and is
+ *     not a descriptor, just return it. If it exists and is a data descriptor,
+ *     we shouldn't be here because we would have returned at point 2. Search
+ *     all bases of objectname.__class__ for same case.
+ *
+ *     Raise AttributeError
+ */
+
+static bool isNonDataDescriptor(Traced<Value> value)
+{
+    if (!value.isObject())
+        return false;
+
+    // Don't check for descriptors here as that could go recursive.
+    Root<Object*> obj(value.asObject());
+    return obj->hasAttr("__get__");
+}
+
+static bool isDataDescriptor(Traced<Value> value)
+{
+    return isNonDataDescriptor(value) && value.asObject()->hasAttr("__set__");
+}
+
+enum class FindResult
+{
+    NotFound,
+    FoundValue,
+    FoundDescriptor
+};
+
+static FindResult findAttrForGet(Name name, Traced<Object*> obj,
+                                 Root<Value>& resultOut)
+{
+    // todo: check for specials like __class__ and __bases__
+
+    Root<Class*> cls(obj->type());
+
+    Root<Value> classAttr;
+    bool foundOnClass = cls->maybeGetAttr(name, classAttr);
+
+    if (foundOnClass && isDataDescriptor(classAttr)) {
+        resultOut = classAttr;
+        return FindResult::FoundDescriptor;
+    }
+
+    if (obj->is<Class>()) {
+        if (obj->maybeGetAttr(name, resultOut)) {
+            return isNonDataDescriptor(resultOut) ?
+                FindResult::FoundDescriptor : FindResult::FoundValue;
+        }
+    } else {
+        if (obj->maybeGetOwnAttr(name, resultOut)) {
+            return FindResult::FoundValue;
+        }
+    }
+
+    if (foundOnClass) {
+        resultOut = classAttr;
+        return isNonDataDescriptor(resultOut) ?
+            FindResult::FoundDescriptor : FindResult::FoundValue;
+    }
+
+    return FindResult::NotFound;
+}
+
+static bool raiseAttrError(Traced<Object*> obj, Name name,
+                           Root<Value>& resultOut)
+{
+    Root<Class*> cls(obj->type());
+    string message =
+        "'" + cls->name() + "' object has no attribute '" + name + "'";
+    resultOut = gc.create<AttributeError>(message);
+    return false;
+}
+
+bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
+{
+    Root<Value> value;
+    FindResult r = findAttrForGet(name, obj, value);
+    if (r == FindResult::NotFound)
+        return raiseAttrError(obj, name, resultOut);
+
+    if (r == FindResult::FoundDescriptor) {
+        Root<Object*> desc(value.asObject());
+        Root<Value> func(desc->getAttr("__get__"));
+        RootVector<Value> args(3);
+        args[0] = desc;
+        args[1] = obj->is<Class>() ? None : obj;
+        args[2] = obj->is<Class>() ? obj : obj->type();
+        return Interpreter::instance().call(func, args, resultOut);
+    }
+
+    assert(r == FindResult::FoundValue);
+    resultOut = value;
+    return true;
+}
+
+/*
+ *  Now, the steps Python follows when setting a user-defined attribute
+ *  (objectname.attrname = something):
+ *
+ *     Check objectname.__class__.__dict__ for attrname. If it exists and is a
+ *     data-descriptor, use the descriptor to set the value. Search all bases of
+ *     objectname.__class__ for the same case.
+ *
+ *     Insert something into objectname.__dict__ for key "attrname".
+ */
+
+static FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
+                                         Root<Value>& resultOut)
+{
+    // todo: check for specials?
+
+    Root<Class*> cls(obj->type());
+
+    Root<Value> classAttr;
+    bool foundOnClass = cls->maybeGetAttr(name, classAttr);
+
+    if (foundOnClass && isDataDescriptor(classAttr)) {
+        resultOut = classAttr;
+        return FindResult::FoundDescriptor;
+    }
+
+    return FindResult::NotFound;
+}
+
+bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
+             Root<Value>& resultOut)
+{
+    Root<Value> descValue;
+    FindResult r = findAttrForSetOrDelete(name, obj, descValue);
+    if (r == FindResult::FoundDescriptor) {
+        Root<Object*> desc(descValue.asObject());
+        Root<Value> func(desc->getAttr("__set__"));
+        RootVector<Value> args(3);
+        args[0] = desc;
+        args[1] = obj;
+        args[2] = value.get();
+        return Interpreter::instance().call(func, args, resultOut);
+    }
+
+    assert(r == FindResult::NotFound);
+    obj->setAttr(name, value);
+    resultOut = None;
+    return true;
+}
+
+bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
+{
+    Root<Value> descValue;
+    FindResult r = findAttrForSetOrDelete(name, obj, descValue);
+    if (r == FindResult::FoundDescriptor) {
+        Root<Object*> desc(descValue.asObject());
+        Root<Value> func(desc->getAttr("__delete__"));
+        RootVector<Value> args(2);
+        args[0] = desc;
+        args[1] = obj;
+        return Interpreter::instance().call(func, args, resultOut);
+    }
+
+    assert(r == FindResult::NotFound);
+    if (!obj->maybeDelOwnAttr(name))
+        return raiseAttrError(obj, name, resultOut);
+
+    return true;
+}
+

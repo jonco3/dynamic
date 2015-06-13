@@ -128,26 +128,35 @@ bool InstrDelGlobal::execute(Interpreter& interp)
 bool InstrGetAttr::execute(Interpreter& interp)
 {
     Root<Value> value(interp.popStack());
+    Root<Object*> obj(value.toObject());
     Root<Value> result;
-    if (!value.maybeGetAttr(ident, result))
-        return interp.raiseAttrError(value, ident);
-    assert(result != Value(UninitializedSlot));
+    bool ok = getAttr(obj, ident, result);
     interp.pushStack(result);
-    return true;
+    return ok;
 }
 
 bool InstrSetAttr::execute(Interpreter& interp)
 {
     Root<Value> value(interp.peekStack(1));
-    interp.popStack().toObject()->setAttr(ident, value);
+    Root<Object*> obj(interp.popStack().toObject());
+    Root<Value> result;
+    if (!setAttr(obj, ident, value, result)) {
+        interp.pushStack(result);
+        return false;
+    }
+
     return true;
 }
 
 bool InstrDelAttr::execute(Interpreter& interp)
 {
-    Root<Value> value(interp.popStack());
-    if (!value.toObject()->maybeDelOwnAttr(ident))
-        return interp.raiseAttrError(value, ident);
+    Root<Object*> obj(interp.popStack().toObject());
+    Root<Value> result;
+    if (!delAttr(obj, ident, result)) {
+        interp.pushStack(result);
+        return false;
+    }
+
     return true;
 }
 
