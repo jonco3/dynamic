@@ -7,6 +7,7 @@
 
 GlobalRoot<Class*> Native::ObjectClass;
 GlobalRoot<Class*> Function::ObjectClass;
+GlobalRoot<Class*> Method::ObjectClass;
 
 Callable::Callable(Traced<Class*> cls, Name name,
                    unsigned minArgs, unsigned maxArgs)
@@ -15,6 +16,20 @@ Callable::Callable(Traced<Class*> cls, Name name,
     minArgs_(minArgs),
     maxArgs_(maxArgs)
 {}
+
+static bool callable_get(TracedVector<Value> args, Root<Value>& resultOut)
+{
+    if (!checkInstanceOf(args[0], Callable::ObjectClass, resultOut))
+        return false;
+
+    Root<Callable*> callable(args[0].asObject()->as<Callable>());
+    Root<Object*> instance(args[1].toObject());
+    if (instance == None)
+        resultOut = callable;
+    else
+        resultOut = gc.create<Method>(callable, instance);
+    return true;
+}
 
 Native::Native(Name name, NativeFunc func, unsigned minArgs, unsigned maxArgs)
   : Callable(ObjectClass, name, minArgs, maxArgs ? maxArgs : minArgs),
@@ -46,6 +61,34 @@ Function::Function(Name name,
     assert(info->paramCount() >= defaults.size());
     for (size_t i = 0; i < defaults.size(); i++)
         defaults_.push_back(defaults[i]);
+}
+
+void Function::traceChildren(Tracer& t)
+{
+    Callable::traceChildren(t);
+    gc.trace(t, &info_);
+    for (auto i: defaults_)
+        gc.trace(t, &i);
+    gc.trace(t, &scope_);
+}
+
+Method::Method(Traced<Callable*> callable, Traced<Object*> object)
+  : Object(ObjectClass), callable_(callable), object_(object)
+{}
+
+void Method::traceChildren(Tracer& t)
+{
+    Object::traceChildren(t);
+    gc.trace(t, &callable_);
+    gc.trace(t, &object_);
+}
+
+void initCallable()
+{
+    // Classes for Native and Function are initialized in initObject().
+    Method::ObjectClass.init(Class::createNative("method", nullptr));
+
+    initNativeMethod(Callable::ObjectClass, "__get__", callable_get, 3, 3);
 }
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,

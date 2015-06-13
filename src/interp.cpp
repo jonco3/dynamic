@@ -566,9 +566,23 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             }
         }
         return CallFinished;
+    } else if (target->is<Method>()) {
+        Root<Method*> method(target->as<Method>());
+        RootVector<Value> callArgs(args.size() + 1);
+        callArgs[0] = method->object();
+        for (size_t i = 0; i < args.size(); i++)
+            callArgs[i] = args[i];
+        Root<Value> callable(method->callable());
+        return setupCall(callable, callArgs, resultOut);
     } else {
-        return raiseTypeError(
-            "object is not callable:" + repr(target), resultOut);
+        // todo: this is untested
+        Root<Value> callHook;
+        if (!getAttr(target, "__call__", callHook)) {
+            return raiseTypeError(
+                "object is not callable:" + repr(target), resultOut);
+        }
+
+        return setupCall(callHook, args, resultOut);
     }
 }
 

@@ -337,6 +337,9 @@ struct Traced : public WrapperMixins<Traced<T>, T>
 };
 
 template <typename T>
+struct TracedVector;
+
+template <typename T>
 struct RootVector : private vector<T>, private RootBase
 {
     typedef vector<T> VectorBase;
@@ -361,6 +364,8 @@ struct RootVector : private vector<T>, private RootBase
 #endif
         RootBase::insert();
     }
+
+    RootVector(const TracedVector<T>& v);
 
     ~RootVector() {
         assert(useCount == 0);
@@ -466,6 +471,19 @@ struct TracedVector
 
     TracedVector& operator=(const TracedVector& other) = delete;
 };
+
+template <typename T>
+RootVector<T>::RootVector(const TracedVector<T>& v)
+  : vector<T>(v.size())
+{
+#ifdef DEBUG
+    useCount = 0;
+#endif
+    RootBase::insert();
+    for (size_t i = 0; i < v.size(); i++)
+        (*this)[i] = v[i];
+}
+
 
 // Root used in allocation that doesn't check its (uninitialised) pointer.
 template <typename T>

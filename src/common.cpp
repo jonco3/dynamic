@@ -26,6 +26,7 @@ void init1()
 {
     Layout::init();
     initObject();
+    initCallable();
     Frame::init();
     Boolean::init();
     Integer::init();

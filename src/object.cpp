@@ -411,7 +411,7 @@ void initObject()
     // Create classes for callables here as this is necessary before we can add
     // methods to objects.
     Native::ObjectClass.init(gc.create<Class>("Native"));
-    Function::ObjectClass.init(gc.create<Class>("Function"));
+    Function::ObjectClass.init(gc.create<Class>("function"));
 
     initNativeMethod(Object::ObjectClass, "__new__", object_new, 1, -1);
     initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);

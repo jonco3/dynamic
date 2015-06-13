@@ -64,4 +64,22 @@ assert C4.__bases__ == (object,)
 c = C4()
 assert type(c).__name__ == "C4"
 
+def g():
+  pass
+
+assert type(g).__name__ == "function"
+assert type(C4.f).__name__ == "function"
+assert type(c.f).__name__ == "method"
+
+class C5:
+  def __init__(self, value):
+    self.value = value
+
+  def foo(self):
+    return self.value
+
+c = C5(42)
+f = c.foo
+assert f() == 42
+
 print("ok")

@@ -30,7 +30,7 @@ del obj.attr
 
 C.attr = desc
 assert C.attr == 0
-#assert getArgs == (desc, None, C)
+assert getArgs == (desc, None, C)
 assert obj.attr == 0
 assert getArgs == (desc, obj, C)
 obj.attr = 1

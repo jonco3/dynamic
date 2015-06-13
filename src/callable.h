@@ -88,18 +88,30 @@ struct Function : public Callable
         return info_->paramCount() - 1;
     }
 
-    virtual void traceChildren(Tracer& t) override {
-        Callable::traceChildren(t);
-        gc.trace(t, &info_);
-        for (auto i: defaults_)
-            gc.trace(t, &i);
-        gc.trace(t, &scope_);
-    }
+    void traceChildren(Tracer& t) override;
 
   private:
     FunctionInfo* info_;
     vector<Value> defaults_;
     Frame* scope_;
 };
+
+struct Method : public Object
+{
+    static GlobalRoot<Class*> ObjectClass;
+
+    Method(Traced<Callable*> callable, Traced<Object*> object);
+
+    void traceChildren(Tracer& t) override;
+
+    Callable* callable() { return callable_; }
+    Object* object() { return object_; }
+
+  private:
+    Callable* callable_;
+    Object* object_;
+};
+
+extern void initCallable();
 
 #endif
