@@ -475,8 +475,6 @@ enum class FindResult
 static FindResult findAttrForGet(Name name, Traced<Object*> obj,
                                  Root<Value>& resultOut)
 {
-    // todo: check for specials like __class__ and __bases__
-
     Root<Class*> cls(obj->type());
 
     Root<Value> classAttr;
@@ -519,6 +517,12 @@ static bool raiseAttrError(Traced<Object*> obj, Name name,
 
 bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
 {
+    // todo: check for other special attributes like __class__ and __bases__
+    if (obj->is<Class>() && name == "__name__") {
+        resultOut = gc.create<String>(obj->as<Class>()->name());
+        return true;
+    }
+
     Root<Value> value;
     FindResult r = findAttrForGet(name, obj, value);
     if (r == FindResult::NotFound)

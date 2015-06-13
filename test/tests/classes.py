@@ -54,4 +54,9 @@ class B(A):
 assert(B().attr == 1)
 assert(B.attr == 1)
 
+class C4:
+  pass
+
+assert C4.__name__ == "C4"
+
 print("ok")
