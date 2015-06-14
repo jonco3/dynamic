@@ -106,7 +106,6 @@ struct Instr : public Cell
     virtual ~Instr() {}
     virtual InstrType type() const = 0;
     virtual string name() const = 0;
-    virtual bool execute(Interpreter& interp) = 0;
 
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
@@ -118,28 +117,28 @@ struct Instr : public Cell
 
 #define instr_type(it)                                                        \
     virtual InstrType type() const { return Type; }                           \
-    static const InstrType Type = it
+    static const InstrType Type = Instr_##it
 
 #define instr_name(nameStr)                                                   \
     virtual string name() const { return nameStr; }
 
-#define instr_execute                                                         \
-    virtual bool execute(Interpreter& interp) override
+#define instr_execute(it)                                                     \
+    static bool execute(Traced<Instr##it*> self, Interpreter& interp)
 
 #define define_instr_members(it, name)                                        \
     instr_type(it);                                                           \
     instr_name(name);                                                         \
-    instr_execute
+    instr_execute(it)
 
 #define define_simple_instr(name)                                             \
     struct Instr##name : public Instr                                         \
     {                                                                         \
-        define_instr_members(Instr_##name, #name);                            \
+        define_instr_members(name, #name);                                    \
     }
 
 struct InstrConst : public Instr
 {
-    define_instr_members(Instr_Const, "Const");
+    define_instr_members(Const, "Const");
     explicit InstrConst(Traced<Value> v) : value(v) {}
 
     virtual void print(ostream& s) const {
@@ -173,12 +172,12 @@ struct IdentInstrBase : public Instr
     struct Instr##name : public IdentInstrBase                                \
     {                                                                         \
         Instr##name(Name ident) : IdentInstrBase(ident) {}                    \
-        define_instr_members(Instr_##name, #name);                            \
+        define_instr_members(name, #name);                                    \
     }
 
 struct InstrGetLocal : public IdentInstrBase
 {
-    define_instr_members(Instr_GetLocal, "GetLocal");
+    define_instr_members(GetLocal, "GetLocal");
     InstrGetLocal(Name ident, unsigned slot, Traced<Layout*> layout)
       : IdentInstrBase(ident), slot_(slot), layout_(layout)
     {}
@@ -199,7 +198,7 @@ struct InstrGetLocal : public IdentInstrBase
 
 struct InstrGetLocalFallback : public IdentInstrBase
 {
-    define_instr_members(Instr_GetLocalFallback, "GetLocalFallback");
+    define_instr_members(GetLocalFallback, "GetLocalFallback");
     InstrGetLocalFallback(Traced<InstrGetLocal*> prev)
         : IdentInstrBase(prev->ident)
     {}
@@ -211,7 +210,7 @@ struct InstrGetLocalFallback : public IdentInstrBase
 
 struct InstrSetLocal : public IdentInstrBase
 {
-    define_instr_members(Instr_SetLocal, "SetLocal");
+    define_instr_members(SetLocal, "SetLocal");
     InstrSetLocal(Name ident, unsigned slot, Traced<Layout*> layout)
       : IdentInstrBase(ident), slot_(slot), layout_(layout)
     {}
@@ -232,7 +231,7 @@ struct InstrSetLocal : public IdentInstrBase
 
 struct InstrSetLocalFallback : public IdentInstrBase
 {
-    define_instr_members(Instr_SetLocalFallback, "SetLocalFallback");
+    define_instr_members(SetLocalFallback, "SetLocalFallback");
     InstrSetLocalFallback(Traced<InstrSetLocal*> prev)
         : IdentInstrBase(prev->ident)
     {}
@@ -246,7 +245,7 @@ define_ident_instr(DelLocal);
 
 struct InstrGetLexical : public IdentInstrBase
 {
-    define_instr_members(Instr_GetLexical, "GetLexical");
+    define_instr_members(GetLexical, "GetLexical");
     InstrGetLexical(unsigned frame, Name ident)
       : IdentInstrBase(ident), frameIndex(frame) {}
 
@@ -260,7 +259,7 @@ struct InstrGetLexical : public IdentInstrBase
 
 struct InstrSetLexical : public IdentInstrBase
 {
-    define_instr_members(Instr_SetLexical, "SetLexical");
+    define_instr_members(SetLexical, "SetLexical");
     InstrSetLexical(unsigned frame, Name ident)
       : IdentInstrBase(ident), frameIndex(frame) {}
 
@@ -274,7 +273,7 @@ struct InstrSetLexical : public IdentInstrBase
 
 struct InstrDelLexical : public IdentInstrBase
 {
-    define_instr_members(Instr_DelLexical, "DelLexical");
+    define_instr_members(DelLexical, "DelLexical");
     InstrDelLexical(unsigned frame, Name ident)
       : IdentInstrBase(ident), frameIndex(frame) {}
 
@@ -288,7 +287,7 @@ struct InstrDelLexical : public IdentInstrBase
 
 struct InstrGetGlobal : public IdentInstrBase
 {
-    define_instr_members(Instr_GetGlobal, "GetGlobal");
+    define_instr_members(GetGlobal, "GetGlobal");
 
     InstrGetGlobal(Object* global, Name ident)
       : IdentInstrBase(ident), global(global)
@@ -306,7 +305,7 @@ struct InstrGetGlobal : public IdentInstrBase
 
 struct InstrSetGlobal : public IdentInstrBase
 {
-    define_instr_members(Instr_SetGlobal, "SetGlobal");
+    define_instr_members(SetGlobal, "SetGlobal");
 
     InstrSetGlobal(Object* global, Name ident)
       : IdentInstrBase(ident), global(global)
@@ -324,7 +323,7 @@ struct InstrSetGlobal : public IdentInstrBase
 
 struct InstrDelGlobal : public IdentInstrBase
 {
-    define_instr_members(Instr_DelGlobal, "DelGlobal");
+    define_instr_members(DelGlobal, "DelGlobal");
 
     InstrDelGlobal(Object* global, Name ident)
       : IdentInstrBase(ident), global(global)
@@ -347,7 +346,7 @@ define_ident_instr(GetMethod);
 
 struct InstrGetMethodInt : public IdentInstrBase
 {
-    define_instr_members(Instr_GetMethodInt, "GetMethodInt");
+    define_instr_members(GetMethodInt, "GetMethodInt");
     InstrGetMethodInt(Name name, Traced<Value> result)
       : IdentInstrBase(name), result_(result) {}
 
@@ -361,13 +360,13 @@ struct InstrGetMethodInt : public IdentInstrBase
 
 struct InstrGetMethodFallback : public IdentInstrBase
 {
-    define_instr_members(Instr_GetMethodFallback, "GetMethodFallback");
+    define_instr_members(GetMethodFallback, "GetMethodFallback");
     InstrGetMethodFallback(Name name) : IdentInstrBase(name) {}
 };
 
 struct InstrCall : public Instr
 {
-    define_instr_members(Instr_Call, "Call");
+    define_instr_members(Call, "Call");
     InstrCall(unsigned count) : count_(count) {}
 
     virtual void print(ostream& s) const {
@@ -380,7 +379,7 @@ struct InstrCall : public Instr
 
 struct InstrCallMethod : public InstrCall
 {
-    define_instr_members(Instr_CallMethod, "CallMethod");
+    define_instr_members(CallMethod, "CallMethod");
     InstrCallMethod(unsigned count) : InstrCall(count) {}
 };
 
@@ -415,14 +414,14 @@ inline Branch* Instr::asBranch()
 
 struct InstrBranchAlways : public Branch
 {
-    define_instr_members(Instr_BranchAlways, "BranchAlways");
+    define_instr_members(BranchAlways, "BranchAlways");
     InstrBranchAlways(int offset = 0) : Branch(offset) {}
 };
 
 #define define_branch_instr(name)                                             \
     struct Instr##name : public Branch                                        \
     {                                                                         \
-        define_instr_members(Instr_##name, #name);                            \
+        define_instr_members(name, #name);                                    \
     }
 
 define_branch_instr(BranchIfTrue);
@@ -432,7 +431,7 @@ define_branch_instr(And);
 
 struct InstrLambda : public Instr
 {
-    define_instr_members(Instr_Lambda, "Lambda");
+    define_instr_members(Lambda, "Lambda");
 
     InstrLambda(Name name, const vector<Name>& paramNames, Traced<Block*> block,
                 unsigned defaultCount = 0, bool takesRest = false,
@@ -462,7 +461,7 @@ struct InstrLambda : public Instr
 
 struct InstrDup : public Instr
 {
-    define_instr_members(Instr_Dup, "Dup");
+    define_instr_members(Dup, "Dup");
     InstrDup(unsigned index) : index_(index) {}
 
     virtual void print(ostream& s) const {
@@ -478,7 +477,7 @@ define_simple_instr(Swap);
 
 struct InstrTuple : public Instr
 {
-    define_instr_members(Instr_Tuple, "Tuple");
+    define_instr_members(Tuple, "Tuple");
     InstrTuple(unsigned size) : size(size) {}
 
   private:
@@ -487,7 +486,7 @@ struct InstrTuple : public Instr
 
 struct InstrList : public Instr
 {
-    define_instr_members(Instr_List, "List");
+    define_instr_members(List, "List");
     InstrList(unsigned size) : size(size) {}
 
   private:
@@ -496,7 +495,7 @@ struct InstrList : public Instr
 
 struct InstrDict : public Instr
 {
-    define_instr_members(Instr_Dict, "Dict");
+    define_instr_members(Dict, "Dict");
     InstrDict(unsigned size) : size(size) {}
 
   private:
@@ -511,7 +510,7 @@ define_ident_instr(MakeClassFromFrame);
 
 struct InstrDestructure : public Instr
 {
-    define_instr_members(Instr_Destructure, "Destructure");
+    define_instr_members(Destructure, "Destructure");
     InstrDestructure(unsigned count) : count_(count) {}
 
   private:
@@ -535,13 +534,13 @@ struct BinaryOpInstr : public Instr
 
 struct InstrBinaryOp : public BinaryOpInstr
 {
-    define_instr_members(Instr_BinaryOp, "BinaryOp");
+    define_instr_members(BinaryOp, "BinaryOp");
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
 struct InstrBinaryOpInt : public BinaryOpInstr
 {
-    define_instr_members(Instr_BinaryOpInt, "BinaryOpInt");
+    define_instr_members(BinaryOpInt, "BinaryOpInt");
     InstrBinaryOpInt(BinaryOp op, Traced<Value> method)
       : BinaryOpInstr(op), method_(method) {}
 
@@ -555,13 +554,13 @@ struct InstrBinaryOpInt : public BinaryOpInstr
 
 struct InstrBinaryOpFallback : public BinaryOpInstr
 {
-    define_instr_members(Instr_BinaryOpFallback, "BinaryOpFallback");
+    define_instr_members(BinaryOpFallback, "BinaryOpFallback");
     InstrBinaryOpFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
 struct InstrAugAssignUpdate : public BinaryOpInstr
 {
-    define_instr_members(Instr_AugAssignUpdate, "AugAssignUpdate");
+    define_instr_members(AugAssignUpdate, "AugAssignUpdate");
     InstrAugAssignUpdate(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
@@ -579,7 +578,7 @@ define_simple_instr(FinishExceptionHandler);
 
 struct InstrLoopControlJump : public Instr
 {
-    define_instr_members(Instr_LoopControlJump, "LoopControlJump");
+    define_instr_members(LoopControlJump, "LoopControlJump");
 
     InstrLoopControlJump(unsigned finallyCount, unsigned target = 0)
       : finallyCount_(finallyCount), target_(target)
@@ -602,7 +601,7 @@ struct InstrLoopControlJump : public Instr
 
 struct InstrAssertStackDepth : public Instr
 {
-    define_instr_members(Instr_AssertStackDepth, "AssertStackDepth");
+    define_instr_members(AssertStackDepth, "AssertStackDepth");
     InstrAssertStackDepth(unsigned expected) : expected_(expected) {}
 
     virtual void print(ostream& s) const {

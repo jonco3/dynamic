@@ -12,6 +12,7 @@ using namespace std;
 
 struct Input;
 struct Instr;
+struct Interpreter;
 struct Layout;
 struct Object;
 struct Syntax;
@@ -20,29 +21,41 @@ struct Syntax;
 extern bool assertStackDepth;
 #endif
 
+typedef bool (*InstrFunc)(Traced<Instr*> self, Interpreter& interp);
+
+struct InstrThunk
+{
+    InstrFunc func;
+    Instr* data;
+};
+
 struct Block : public Cell
 {
     static void buildModule(const Input& input, Traced<Object*> globals,
                             Root<Block*>& blockOut);
 
     Block(Traced<Layout*> layout);
-    Instr** startInstr() { return &instrs_[0]; }
+    InstrThunk* startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
-    Instr* instr(unsigned i) { return instrs_.at(i); }
+    InstrThunk instr(unsigned i) { return instrs_.at(i); }
     Layout* layout() const { return layout_; }
 
     unsigned nextIndex() { return instrs_.size(); }
-    unsigned append(Instr* instr);
     void branchHere(unsigned source);
     int offsetFrom(unsigned source);
     int offsetTo(unsigned dest);
 
-    const Instr* lastInstr() {
+    template <typename T, typename... Args>
+    inline unsigned append(Args&& ...args);
+
+    unsigned append(InstrFunc func, Traced<Instr*> data);
+
+    const InstrThunk& lastInstr() {
         assert(!instrs_.empty());
         return instrs_.back();
     }
 
-    bool contains(Instr** i) const {
+    bool contains(InstrThunk* i) const {
         return i >= &instrs_.front() && i <= &instrs_.back();
     }
 
@@ -54,16 +67,24 @@ struct Block : public Cell
     }
 
     void setNextPos(const TokenPos& pos);
-    TokenPos getPos(Instr** instrp) const;
+    TokenPos getPos(InstrThunk* instrp) const;
 
     // For unit tests
-    Instr** findInstr(unsigned type);
+    InstrThunk* findInstr(unsigned type);
 
   private:
     Layout* layout_;
-    vector<Instr*> instrs_;
+    vector<InstrThunk> instrs_;
     string file_;
     vector<pair<size_t, unsigned>> offsetLines_;
 };
+
+template <typename T, typename... Args>
+unsigned Block::append(Args&& ...args)
+{
+    Root<Instr*> instr(gc.create<T>(forward<Args>(args)...));
+    bool (*func)(Traced<T*>, Interpreter &) = T::execute;
+    return append(reinterpret_cast<InstrFunc>(func), instr);
+}
 
 #endif

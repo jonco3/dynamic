@@ -29,8 +29,8 @@ void GeneratorIter::init()
     Root<Layout*> layout(Frame::InitialLayout);
     layout = layout->addName("self");
     Root<Block*> block(gc.create<Block>(layout));
-    block->append(gc.create<InstrResumeGenerator>());
-    block->append(gc.create<InstrReturn>());
+    block->append<InstrResumeGenerator>();
+    block->append<InstrReturn>();
     static vector<Name> params = { "self" };
     Root<Frame*> scope; // todo: allow construction of traced for nullptr
     RootVector<Value> defaults; // todo: find a way of passing an empty vector

@@ -50,9 +50,9 @@ void testReplacement(const string& input,
     Root<Block*> block;
     Block::buildModule(input, None, block);
 
-    Instr** instrp = block->findInstr(Instr_Lambda);
+    InstrThunk* instrp = block->findInstr(Instr_Lambda);
     assert(instrp);
-    InstrLambda* lambda = (*instrp)->as<InstrLambda>();
+    InstrLambda* lambda = instrp->data->as<InstrLambda>();
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
 
@@ -63,7 +63,7 @@ void testReplacement(const string& input,
     testTrue(ok);
     testEqual(repr(result.get()), expected);
 
-    testEqual((*instrp)->type(), replacement);
+    testEqual(instrp->data->type(), replacement);
 }
 
 void testReplacements(const string& defs,

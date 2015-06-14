@@ -100,22 +100,26 @@ bool Interpreter::run(Root<Value>& resultOut)
 #ifdef DEBUG
     unsigned initialPos = stackPos();
 #endif
+    Root<Instr*> instr;
+    InstrFunc func;
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
-        Instr *instr = *instrp++;
+        func = instrp->func;
+        instr = instrp->data;
+        instrp++;
 #ifdef DEBUG
         if (logExecution) {
             logStart();
-            cout << *instr << " at line " << dec << currentPos().line << endl;
+            cout << instr << " at line " << dec << currentPos().line << endl;
         }
 #endif
-        if (!instr->execute(*this)) {
+        if (!func(instr, *this)) {
             Root<Value> value(popStack());
 #ifdef DEBUG
-        if (logExecution) {
-            logStart(1);
-            cout << "exception " << value << endl;
-        }
+            if (logExecution) {
+                logStart(1);
+                cout << "exception " << value << endl;
+            }
 #endif
             assert(value.isInstanceOf(Exception::ObjectClass));
             Root<Exception*> exception(value.toObject()->as<Exception>());
@@ -246,7 +250,7 @@ unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
 
 unsigned Interpreter::currentOffset()
 {
-    Instr** start = getFrame()->block()->startInstr();
+    InstrThunk* start = getFrame()->block()->startInstr();
     assert(instrp >= start + 1);
     return instrp - start - 1;
 }
@@ -397,7 +401,7 @@ Frame* Interpreter::getFrame(unsigned reverseIndex)
 
 void Interpreter::branch(int offset)
 {
-    Instr** target = instrp + offset - 1;
+    InstrThunk* target = instrp + offset - 1;
     assert(frames.back()->block()->contains(target));
     instrp = target;
 }
@@ -429,7 +433,7 @@ bool Interpreter::call(Traced<Value> targetValue,
                        const TracedVector<Value>& args,
                        Root<Value>& resultOut)
 {
-    Instr** oldInstrp = instrp;
+    InstrThunk* oldInstrp = instrp;
     CallStatus status = setupCall(targetValue, args, resultOut);
     if (status == CallError)
         return false;
@@ -444,7 +448,7 @@ bool Interpreter::call(Traced<Value> targetValue,
 
 bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>& args)
 {
-    Instr** returnPoint = instrp;
+    InstrThunk* returnPoint = instrp;
     Root<Value> result;
     CallStatus status = setupCall(targetValue, args, result);
     if (status == CallError) {
@@ -593,14 +597,29 @@ Interpreter::CallStatus Interpreter::raiseTypeError(string message,
     return CallError;
 }
 
-void Interpreter::replaceInstr(Instr* current, Instr* newInstr)
+void Interpreter::replaceInstr(Instr* current,
+                               InstrFunc newFunc,
+                               Instr* newData)
 {
-    assert(instrp[-1] == current);
-    instrp[-1] = newInstr;
+    InstrThunk& it = instrp[-1];
+    assert(it.data == current);
+    it.func = newFunc;
+    it.data = newData;
 }
 
-bool Interpreter::replaceInstrAndRestart(Instr* current, Instr* newInstr)
+void Interpreter::replaceInstrFunc(Instr* current,
+                                   InstrFunc newFunc)
 {
-    replaceInstr(current, newInstr);
-    return newInstr->execute(*this);
+    InstrThunk& it = instrp[-1];
+    assert(it.data == current);
+    it.func = newFunc;
+}
+
+bool Interpreter::replaceInstrAndRestart(Instr* current,
+                                         InstrFunc newFunc,
+                                         Instr* newData)
+{
+    replaceInstr(current, newFunc, newData);
+    Root<Instr*> instr(newData);
+    return newFunc(instr, *this);
 }

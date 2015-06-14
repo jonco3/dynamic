@@ -24,11 +24,12 @@ Block::Block(Traced<Layout*> layout)
   : layout_(layout)
 {}
 
-unsigned Block::append(Instr* instr)
+unsigned Block::append(InstrFunc func, Traced<Instr*> data)
 {
-    assert(instr);
+    assert(func);
+    assert(data);
     unsigned index = nextIndex();
-    instrs_.push_back(instr);
+    instrs_.push_back(InstrThunk {func, data.get()});
     return index;
 }
 
@@ -47,7 +48,7 @@ int Block::offsetTo(unsigned dest)
 void Block::branchHere(unsigned source)
 {
     assert(source < instrs_.size() - 1);
-    Branch* b = instrs_[source]->asBranch();
+    Branch* b = instrs_[source].data->asBranch();
     b->setOffset(offsetFrom(source));
 }
 
@@ -55,7 +56,7 @@ void Block::print(ostream& s) const {
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
         if (i != instrs_.begin())
             s << ", ";
-        (*i)->print(s);
+        i->data->print(s);
     }
 }
 
@@ -63,10 +64,10 @@ void Block::traceChildren(Tracer& t)
 {
     gc.trace(t, &layout_);
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i)
-        gc.trace(t, &*i);
+        gc.trace(t, &i->data);
 }
 
-TokenPos Block::getPos(Instr** instrp) const
+TokenPos Block::getPos(InstrThunk* instrp) const
 {
     assert(contains(instrp));
 
@@ -96,10 +97,10 @@ void Block::setNextPos(const TokenPos& pos)
         offsetLines_.emplace_back(instrs_.size(), pos.line);
 }
 
-Instr** Block::findInstr(unsigned type)
+InstrThunk* Block::findInstr(unsigned type)
 {
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
-        if ((*i)->type() == type)
+        if (i->data->type() == type)
             return &(*i);
     }
     return nullptr;
@@ -270,7 +271,7 @@ struct ByteCompiler : public SyntaxVisitor
         topLevel = globals;
         layout = topLevel->layout();
         build(*s);
-        if (!block->lastInstr()->is<InstrReturn>())
+        if (!block->lastInstr().data->is<InstrReturn>())
             emit<InstrReturn>();
 #ifdef TRACE_BUILD
         cerr << repr(*block) << endl;
@@ -288,7 +289,7 @@ struct ByteCompiler : public SyntaxVisitor
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s);
-        if (!block->lastInstr()->is<InstrReturn>()) {
+        if (!block->lastInstr().data->is<InstrReturn>()) {
             emit<InstrPop>();
             emit<InstrConst>(None);
             emit<InstrReturn>();
@@ -342,7 +343,7 @@ struct ByteCompiler : public SyntaxVisitor
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s);
-        if (!block->lastInstr()->is<InstrLeaveGenerator>()) {
+        if (!block->lastInstr().data->is<InstrLeaveGenerator>()) {
             emit<InstrPop>();
             emit<InstrLeaveGenerator>();
         }
@@ -388,7 +389,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     template <typename T, typename... Args>
     unsigned emit(Args&& ...args) {
-        return block->append(gc.create<T>(forward<Args>(args)...));
+        return block->append<T>(forward<Args>(args)...);
     }
 
     void compile(const Syntax* s) {
@@ -408,7 +409,7 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned pos = block->instrCount();
         for (unsigned source : breakInstrs) {
             InstrLoopControlJump *instr =
-                block->instr(source)->as<InstrLoopControlJump>();
+                block->instr(source).data->as<InstrLoopControlJump>();
             instr->setTarget(pos);
         }
         breakInstrs.clear();

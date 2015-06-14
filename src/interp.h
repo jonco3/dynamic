@@ -1,6 +1,7 @@
 #ifndef __INTERP_H__
 #define __INTERP_H__
 
+#include "block.h"
 #include "frame.h"
 #include "token.h"
 #include "value-inl.h"
@@ -15,12 +16,10 @@ extern bool logFrames;
 extern bool logExecution;
 #endif
 
-struct Block;
 struct Callable;
 struct Exception;
 struct ExceptionHandler;
 struct Function;
-struct Instr;
 
 struct ExceptionHandler : public Cell
 {
@@ -100,7 +99,7 @@ struct Interpreter
 
     void branch(int offset);
 
-    Instr** nextInstr() { return instrp; }
+    InstrThunk* nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 
     bool raiseAttrError(Traced<Value> value, Name ident);
@@ -125,8 +124,30 @@ struct Interpreter
     void logStackSwap() {}
 #endif
 
-    void replaceInstr(Instr* current, Instr* newInstr);
-    bool replaceInstrAndRestart(Instr* current, Instr* newInstr);
+    template <typename T>
+    void replaceInstr(Instr* current,
+                      bool (*newFunc)(Traced<T*>, Interpreter&),
+                      T* newData)
+    {
+        replaceInstr(current, reinterpret_cast<InstrFunc>(newFunc), newData);
+    }
+
+    template <typename T>
+    void replaceInstrFunc(Instr* current,
+                          bool (*newFunc)(Traced<T*>, Interpreter&))
+    {
+        replaceInstrFunc(current, reinterpret_cast<InstrFunc>(newFunc));
+    }
+
+    template <typename T>
+    bool replaceInstrAndRestart(Instr* current,
+                                bool (*newFunc)(Traced<T*>, Interpreter&),
+                                T* newData)
+    {
+        return replaceInstrAndRestart(current,
+                                      reinterpret_cast<InstrFunc>(newFunc),
+                                      newData);
+    }
 
     void resumeGenerator(Traced<Frame*> frame,
                          unsigned ipOffset,
@@ -156,7 +177,7 @@ struct Interpreter
   private:
     static Interpreter* instance_;
 
-    Instr **instrp;
+    InstrThunk *instrp;
     RootVector<Frame*> frames;
     RootVector<Value> stack;
 
@@ -190,6 +211,11 @@ struct Interpreter
     CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
                          Root<Value>& resultOut);
     CallStatus raiseTypeError(string message, Root<Value>& resultOut);
+
+    void replaceInstr(Instr* current, InstrFunc newFunc, Instr* newData);
+    void replaceInstrFunc(Instr* current, InstrFunc newFunc);
+    bool replaceInstrAndRestart(Instr* current,
+                                InstrFunc newFunc, Instr* newData);
 };
 
 #endif

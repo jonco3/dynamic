@@ -4,7 +4,7 @@
 #include "object.h"
 
 struct Block;
-struct Instr;
+struct InstrThunk;
 struct Interpreter;
 
 struct Frame : public Object
@@ -15,9 +15,9 @@ struct Frame : public Object
 
     Frame(Traced<Block*> block);
     void setStackPos(unsigned pos) { stackPos_ = pos; }
-    void setReturnPoint(Instr** instrp) { returnPoint_ = instrp; }
+    void setReturnPoint(InstrThunk* instrp) { returnPoint_ = instrp; }
 
-    Instr** returnPoint() { return returnPoint_; }
+    InstrThunk* returnPoint() { return returnPoint_; }
     unsigned stackPos() { return stackPos_; }
     Block* block() { return block_; }
 
@@ -25,7 +25,7 @@ struct Frame : public Object
 
   private:
     Block* block_;
-    Instr** returnPoint_;
+    InstrThunk* returnPoint_;
     unsigned stackPos_;
 };
 
