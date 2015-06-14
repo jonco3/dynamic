@@ -28,7 +28,6 @@ using namespace std;
     instr(Const)                                                             \
     instr(GetLocal)                                                          \
     instr(SetLocal)                                                          \
-    instr(SetLocalFallback)                                                  \
     instr(DelLocal)                                                          \
     instr(GetLexical)                                                        \
     instr(SetLexical)                                                        \
@@ -185,12 +184,12 @@ struct InstrGetLocal : public IdentInstrBase
         s << name() << " " << ident << " " << slot_ << " " << layout_;
     }
 
-    static bool fallback(Traced<InstrGetLocal*> self, Interpreter& interp);
-
     void traceChildren(Tracer& t) override {
         Instr::traceChildren(t);
         gc.trace(t, &layout_);
     }
+
+    static bool fallback(Traced<InstrGetLocal*> self, Interpreter& interp);
 
   private:
     unsigned slot_;
@@ -213,21 +212,11 @@ struct InstrSetLocal : public IdentInstrBase
         gc.trace(t, &layout_);
     }
 
+    static bool fallback(Traced<InstrSetLocal*> self, Interpreter& interp);
+
   private:
     unsigned slot_;
     Layout* layout_;
-};
-
-struct InstrSetLocalFallback : public IdentInstrBase
-{
-    define_instr_members(SetLocalFallback);
-    InstrSetLocalFallback(Traced<InstrSetLocal*> prev)
-        : IdentInstrBase(prev->ident)
-    {}
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << ident;
-    }
 };
 
 define_ident_instr(DelLocal);

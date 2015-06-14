@@ -37,21 +37,16 @@
                                          Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
-    if (frame->layout() != self->layout_) {
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrSetLocalFallback::execute,
-            gc.create<InstrSetLocalFallback>(self));
-    }
+    if (frame->layout() != self->layout_)
+        return interp.replaceInstrFuncAndRestart(self, fallback);
 
     Root<Value> value(interp.peekStack(0));
     interp.getFrame()->setSlot(self->slot_, value);
     return true;
 }
 
-/* static */ bool
-InstrSetLocalFallback::execute(Traced<InstrSetLocalFallback*> self,
-                               Interpreter& interp)
+/* static */ bool InstrSetLocal::fallback(Traced<InstrSetLocal*> self,
+                                          Interpreter& interp)
 {
     Root<Value> value(interp.peekStack(0));
     interp.getFrame()->setAttr(self->ident, value);

@@ -331,9 +331,10 @@ testcase(interp)
                      "foo(1)", "1",
                      "foo(0)", "1",
                      Instr_SetLocal,
-                     Instr_SetLocal,
-                     Instr_SetLocalFallback,
-                     Instr_SetLocalFallback);
+                     InstrSetLocal::execute,
+                     InstrSetLocal::execute,
+                     InstrSetLocal::fallback,
+                     InstrSetLocal::fallback);
     testExpectingException = false;
 
     testInterp("a, b = 1, 2\na", "1");
