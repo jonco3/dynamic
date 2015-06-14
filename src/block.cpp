@@ -24,7 +24,7 @@ Block::Block(Traced<Layout*> layout)
   : layout_(layout)
 {}
 
-unsigned Block::append(InstrFunc func, Traced<Instr*> data)
+unsigned Block::append(InstrFuncBase func, Traced<Instr*> data)
 {
     assert(func);
     assert(data);

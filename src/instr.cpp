@@ -15,20 +15,15 @@
                                          Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
-    if (frame->layout() != self->layout_) {
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrGetLocalFallback::execute,
-            gc.create<InstrGetLocalFallback>(self));
-    }
+    if (frame->layout() != self->layout_)
+        return interp.replaceInstrFuncAndRestart(self, fallback);
 
     interp.pushStack(frame->getSlot(self->slot_));
     return true;
 }
 
-/* static */ bool
-InstrGetLocalFallback::execute(Traced<InstrGetLocalFallback*> self,
-                               Interpreter& interp)
+/* static */ bool InstrGetLocal::fallback(Traced<InstrGetLocal*> self,
+                                          Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
     Root<Value> value;

@@ -125,28 +125,27 @@ struct Interpreter
 #endif
 
     template <typename T>
-    void replaceInstr(Instr* current,
-                      bool (*newFunc)(Traced<T*>, Interpreter&),
-                      T* newData)
-    {
-        replaceInstr(current, reinterpret_cast<InstrFunc>(newFunc), newData);
+    void replaceInstr(Instr* current, InstrFunc<T> newFunc, T* newData) {
+        replaceInstr(current, reinterpret_cast<InstrFuncBase>(newFunc), newData);
     }
 
     template <typename T>
-    void replaceInstrFunc(Instr* current,
-                          bool (*newFunc)(Traced<T*>, Interpreter&))
-    {
-        replaceInstrFunc(current, reinterpret_cast<InstrFunc>(newFunc));
+    void replaceInstrFunc(Instr* current, InstrFunc<T> newFunc) {
+        replaceInstrFunc(current, reinterpret_cast<InstrFuncBase>(newFunc));
     }
 
     template <typename T>
-    bool replaceInstrAndRestart(Instr* current,
-                                bool (*newFunc)(Traced<T*>, Interpreter&),
-                                T* newData)
+    bool replaceInstrAndRestart(Instr* current, InstrFunc<T> newFunc, T* newData)
     {
         return replaceInstrAndRestart(current,
-                                      reinterpret_cast<InstrFunc>(newFunc),
+                                      reinterpret_cast<InstrFuncBase>(newFunc),
                                       newData);
+    }
+
+    template <typename T>
+    bool replaceInstrFuncAndRestart(Instr* current, InstrFunc<T> newFunc) {
+        return replaceInstrFuncAndRestart(current,
+                                          reinterpret_cast<InstrFuncBase>(newFunc));
     }
 
     void resumeGenerator(Traced<Frame*> frame,
@@ -212,10 +211,11 @@ struct Interpreter
                          Root<Value>& resultOut);
     CallStatus raiseTypeError(string message, Root<Value>& resultOut);
 
-    void replaceInstr(Instr* current, InstrFunc newFunc, Instr* newData);
-    void replaceInstrFunc(Instr* current, InstrFunc newFunc);
+    void replaceInstr(Instr* current, InstrFuncBase newFunc, Instr* newData);
+    void replaceInstrFunc(Instr* current, InstrFuncBase newFunc);
     bool replaceInstrAndRestart(Instr* current,
-                                InstrFunc newFunc, Instr* newData);
+                                InstrFuncBase newFunc, Instr* newData);
+    bool replaceInstrFuncAndRestart(Instr* current, InstrFuncBase newFunc);
 };
 
 #endif

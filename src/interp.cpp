@@ -101,7 +101,7 @@ bool Interpreter::run(Root<Value>& resultOut)
     unsigned initialPos = stackPos();
 #endif
     Root<Instr*> instr;
-    InstrFunc func;
+    InstrFuncBase func;
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
         func = instrp->func;
@@ -598,7 +598,7 @@ Interpreter::CallStatus Interpreter::raiseTypeError(string message,
 }
 
 void Interpreter::replaceInstr(Instr* current,
-                               InstrFunc newFunc,
+                               InstrFuncBase newFunc,
                                Instr* newData)
 {
     InstrThunk& it = instrp[-1];
@@ -608,7 +608,7 @@ void Interpreter::replaceInstr(Instr* current,
 }
 
 void Interpreter::replaceInstrFunc(Instr* current,
-                                   InstrFunc newFunc)
+                                   InstrFuncBase newFunc)
 {
     InstrThunk& it = instrp[-1];
     assert(it.data == current);
@@ -616,10 +616,18 @@ void Interpreter::replaceInstrFunc(Instr* current,
 }
 
 bool Interpreter::replaceInstrAndRestart(Instr* current,
-                                         InstrFunc newFunc,
+                                         InstrFuncBase newFunc,
                                          Instr* newData)
 {
     replaceInstr(current, newFunc, newData);
     Root<Instr*> instr(newData);
+    return newFunc(instr, *this);
+}
+
+bool Interpreter::replaceInstrFuncAndRestart(Instr* current,
+                                             InstrFuncBase newFunc)
+{
+    replaceInstrFunc(current, newFunc);
+    Root<Instr*> instr(current);
     return newFunc(instr, *this);
 }
