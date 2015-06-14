@@ -7,6 +7,7 @@
 #include "exception.h"
 #include "frame.h"
 #include "input.h"
+#include "name.h"
 #include "numeric.h"
 #include "list.h"
 #include "object.h"
@@ -24,6 +25,7 @@ bool debugMode = true;
 
 void init1()
 {
+    initNames();
     Layout::init();
     initObject();
     initCallable();
@@ -50,6 +52,7 @@ void final()
 {
     // todo
     gc.shutdown();
+    shutdownNames();
 }
 
 string readFile(string filename)

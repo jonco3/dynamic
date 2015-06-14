@@ -1,4 +1,5 @@
 #include "layout.h"
+#include "name.h"
 
 #include <cassert>
 #include <iostream>

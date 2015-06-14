@@ -27,8 +27,6 @@ struct NoneObject : public Object
     friend void initObject();
 };
 
-static const Name NewAttr = "__new__";
-
 GlobalRoot<Class*> Object::ObjectClass;
 GlobalRoot<Layout*> Object::InitialLayout;
 
@@ -338,7 +336,8 @@ bool Class::isDerivedFrom(Class* cls) const
     return true;
 }
 
-void initNativeMethod(Traced<Object*> cls, Name name, NativeFunc func,
+void initNativeMethod(Traced<Object*> cls, const string& name,
+                      NativeFunc func,
                       unsigned minArgs, unsigned maxArgs)
 {
     Root<Value> value(None);

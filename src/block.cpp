@@ -14,7 +14,7 @@
 
 //#define TRACE_BUILD
 
-static const Name ClassFunctionParam = "__bases__";
+static const char* ClassFunctionParam = "__bases__";
 
 #ifdef DEBUG
 bool assertStackDepth = true;

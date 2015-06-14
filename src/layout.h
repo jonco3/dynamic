@@ -27,7 +27,7 @@ struct Layout : public Cell
     Layout* parent() const { return parent_; }
     unsigned slotIndex() { return slot_; }
     unsigned slotCount() { return slot_ + 1; }
-    const string& name() const { return name_; }
+    Name name() const { return name_; }
 
     bool subsumes(Traced<Layout*> other);
     Layout* findAncestor(Name name);

@@ -146,7 +146,8 @@ struct Class : public Object
 
 extern bool object_new(TracedVector<Value> args, Root<Value>& resultOut);
 
-extern void initNativeMethod(Traced<Object*> cls, Name name, NativeFunc func,
+extern void initNativeMethod(Traced<Object*> cls, const string& name,
+                             NativeFunc func,
                              unsigned minArgs, unsigned maxArgs = 0);
 
 extern bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
