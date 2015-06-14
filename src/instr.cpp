@@ -589,7 +589,7 @@ void BinaryOpInstr::print(ostream& s) const
 
     if (left.isInt32() && right.isInt32()) {
         Root<Value> method(
-            Integer::ObjectClass->getAttr(BinaryOpMethodNames[self->op()]));
+            Integer::ObjectClass->getAttr(Name::binMethod[self->op()]));
         return interp.replaceInstrAndRestart(
             self,
             InstrBinaryOpInt::execute,
@@ -644,18 +644,19 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     bool success;
     Root<Class*> ltype(left.type());
     Root<Class*> rtype(right.type());
-    const char** names = BinaryOpMethodNames;
-    const char** rnames = BinaryOpReflectedMethodNames;
+    BinaryOp op = self->op();
+    const Name* names = Name::binMethod;
+    const Name* rnames = Name::binMethodReflected;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        if (maybeCallBinaryOp(interp, right, rnames[self->op()], right, left, success))
+        if (maybeCallBinaryOp(interp, right, rnames[op], right, left, success))
             return success;
-        if (maybeCallBinaryOp(interp, left, names[self->op()], left, right, success))
+        if (maybeCallBinaryOp(interp, left, names[op], left, right, success))
             return success;
     } else {
-        if (maybeCallBinaryOp(interp, left, names[self->op()], left, right, success))
+        if (maybeCallBinaryOp(interp, left, names[op], left, right, success))
             return success;
-        if (maybeCallBinaryOp(interp, right, rnames[self->op()], right, left, success))
+        if (maybeCallBinaryOp(interp, right, rnames[op], right, left, success))
             return success;
     }
 
@@ -699,7 +700,7 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
 
     Root<Value> method;
     Root<Value> result;
-    if (value.maybeGetAttr(AugAssignMethodNames[self->op()], method)) {
+    if (value.maybeGetAttr(Name::augAssignMethod[self->op()], method)) {
         RootVector<Value> args;
         args.push_back(value);
         args.push_back(update);
@@ -709,7 +710,7 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
         }
         interp.pushStack(result);
         return true;
-    } else if (value.maybeGetAttr(BinaryOpMethodNames[self->op()], method)) {
+    } else if (value.maybeGetAttr(Name::binMethod[self->op()], method)) {
         RootVector<Value> args;
         args.push_back(value);
         args.push_back(update);

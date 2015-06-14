@@ -12,6 +12,11 @@ static unordered_map<string, string*> internedNames;
 for_each_predeclared_name(define_name)
 #undef define_name
 
+Name Name::binMethod[CountBinaryOp];
+Name Name::binMethodReflected[CountBinaryOp];
+Name Name::augAssignMethod[CountBinaryOp];
+Name Name::compareMethod[CountCompareOp];
+
 void initNames()
 {
     assert(!namesInitialised); // Stop Name being used before map initialised.
@@ -19,7 +24,25 @@ void initNames()
 
 #define init_name(name)                                                       \
     Name::name = Name(#name);
+
     for_each_predeclared_name(init_name)
+
+#undef init_name
+
+#define init_name(name, token, method, rmethod, imethod)                      \
+    Name::binMethod[Binary##name] = Name(method);                             \
+    Name::binMethodReflected[Binary##name] = Name(rmethod);                   \
+    Name::augAssignMethod[Binary##name] = Name(imethod);
+
+    for_each_binary_op(init_name)
+
+#undef init_name
+
+#define init_name(name, token, method)                                        \
+    Name::compareMethod[Compare##name] = Name(method);
+
+    for_each_compare_op(init_name)
+
 #undef init_name
 }
 

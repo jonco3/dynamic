@@ -1,6 +1,8 @@
 #ifndef __NAME_H__
 #define __NAME_H__
 
+#include "specials.h"
+
 #include "assert.h"
 
 /*
@@ -42,6 +44,11 @@ struct Name
     static Name name;
     for_each_predeclared_name(declare_name)
 #undef declare_name
+
+    static Name binMethod[CountBinaryOp];
+    static Name binMethodReflected[CountBinaryOp];
+    static Name augAssignMethod[CountBinaryOp];
+    static Name compareMethod[CountCompareOp];
 
     Name()
       : string_(nullptr) {}

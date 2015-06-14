@@ -340,7 +340,7 @@ struct SyntaxAugAssign : public BinarySyntax<Syntax, SyntaxSingleTarget, Syntax>
     {}
 
     virtual string name() const override {
-        return AugAssignNames[op];
+        return string(BinaryOpNames[op]) + "=";
     }
 
     const BinaryOp op;
