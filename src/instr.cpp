@@ -103,7 +103,7 @@
     }
 
     Root<Value> builtins;
-    if (self->global->maybeGetAttr("__builtins__", builtins) &&
+    if (self->global->maybeGetAttr(Name::__builtins__, builtins) &&
         builtins.maybeGetAttr(self->ident, value))
     {
         assert(value.toObject());
@@ -271,7 +271,7 @@
     Root<Object*> container(interp.popStack().toObject());
     Root<Value> value(interp.popStack());
     Root<Value> contains;
-    if (!container->maybeGetAttr("__contains__", contains)) {
+    if (!container->maybeGetAttr(Name::__contains__, contains)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }
@@ -458,14 +458,14 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
          l = l->parent())
     {
         Name name = l->name();
-        if (name != "__bases__")
+        if (name != Name::__bases__)
             names.push_back(l->name());
     }
     Root<Layout*> layout(Class::InitialLayout);
     for (auto i = names.begin(); i != names.end(); i++)
         layout = layout->addName(*i);
     Root<Value> bases;
-    if (!frame->maybeGetAttr("__bases__", bases)) {
+    if (!frame->maybeGetAttr(Name::__bases__, bases)) {
         interp.pushStack(gc.create<AttributeError>("Missing __bases__"));
         return false;
     }
@@ -502,13 +502,13 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
 {
     Root<Value> seq(interp.popStack());
     Root<Value> lenFunc;
-    if (!seq.maybeGetAttr("__len__", lenFunc)) {
+    if (!seq.maybeGetAttr(Name::__len__, lenFunc)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }
 
     Root<Value> getitemFunc;
-    if (!seq.maybeGetAttr("__getitem__", getitemFunc)) {
+    if (!seq.maybeGetAttr(Name::__getitem__, getitemFunc)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }

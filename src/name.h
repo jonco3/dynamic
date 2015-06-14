@@ -1,6 +1,8 @@
 #ifndef __NAME_H__
 #define __NAME_H__
 
+#include "assert.h"
+
 /*
  * Currently just use std::sring for names, but this could be changed to
  * something more lightweight.
@@ -10,13 +12,52 @@
 
 using namespace std;
 
+#define for_each_predeclared_name(name)                                       \
+    name(__get__)                                                             \
+    name(__set__)                                                             \
+    name(__delete__)                                                          \
+    name(__class__)                                                           \
+    name(__name__)                                                            \
+    name(__bases__)                                                           \
+    name(__builtins__)                                                        \
+    name(__contains__)                                                        \
+    name(__len__)                                                             \
+    name(__new__)                                                             \
+    name(__init__)                                                            \
+    name(__call__)                                                            \
+    name(__hash__)                                                            \
+    name(__eq__)                                                              \
+    name(__pos__)                                                             \
+    name(__neg__)                                                             \
+    name(__invert__)                                                          \
+    name(__setitem__)                                                         \
+    name(__delitem__)                                                         \
+    name(__getitem__)                                                         \
+    name(__iter__)                                                            \
+    name(__str__)
+
 struct Name
 {
+#define declare_name(name)                                                    \
+    static Name name;
+    for_each_predeclared_name(declare_name)
+#undef declare_name
+
+    Name()
+      : string_(nullptr) {}
+
     Name(const string& str)
       : string_(intern(str)) {}
 
     Name(const char* str)
       : string_(intern(str)) {}
+
+    const string& get() const {
+        assert(string_);
+        return *string_;
+    }
+
+    operator const string&() const { return get(); }
 
     bool operator==(const Name& other) const {
         return string_ == other.string_;
@@ -38,9 +79,6 @@ struct Name
     bool operator!=(const char* other) const {
         return get() != other;
     }
-
-    const string& get() const { return *string_; }
-    operator const string&() const { return get(); }
 
     size_t asBits() { return size_t(string_); }
 

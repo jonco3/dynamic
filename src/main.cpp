@@ -83,7 +83,7 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     sys.asObject()->setAttr("argv", argv);
     topLevel->setAttr("sys", sys);
     Root<Value> main(gc.create<String>("__main__"));
-    topLevel->setAttr("__name__", main);
+    topLevel->setAttr(Name::__name__, main);
     if (!runModule(readFile(filename), filename, topLevel))
         return EX_SOFTWARE;
 

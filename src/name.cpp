@@ -1,7 +1,5 @@
 #include "name.h"
 
-#include "assert.h"
-
 #include <unordered_map>
 #include <iostream>
 #include <string>
@@ -9,10 +7,20 @@
 static bool namesInitialised = false;
 static unordered_map<string, string*> internedNames;
 
+#define define_name(name)                                                     \
+    Name Name::name;
+for_each_predeclared_name(define_name)
+#undef define_name
+
 void initNames()
 {
-    assert(!namesInitialised);
+    assert(!namesInitialised); // Stop Name being used before map initialised.
     namesInitialised = true;
+
+#define init_name(name)                                                       \
+    Name::name = Name(#name);
+    for_each_predeclared_name(init_name)
+#undef init_name
 }
 
 void shutdownNames()

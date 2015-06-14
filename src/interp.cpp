@@ -6,6 +6,7 @@
 #include "input.h"
 #include "instr.h"
 #include "interp.h"
+#include "name.h"
 #include "repr.h"
 #include "utils.h"
 
@@ -543,7 +544,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         RootVector<Value> funcArgs(args.size() + 1);
         for (unsigned i = 0; i < args.size(); i++)
             funcArgs[i + 1] = args[i];
-        if (target->maybeGetAttr("__new__", func) && !func.isNone()) {
+        if (target->maybeGetAttr(Name::__new__, func) && !func.isNone()) {
             // Create a new instance by calling static __new__ method
             funcArgs[0] = Value(cls);
             if (!call(func, funcArgs, resultOut))
@@ -555,7 +556,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         }
         if (resultOut.isInstanceOf(cls)) {
             Root<Value> initFunc;
-            if (target->maybeGetAttr("__init__", initFunc)) {
+            if (target->maybeGetAttr(Name::__init__, initFunc)) {
                 Root<Value> initResult;
                 RootVector<Value> initArgs;
                 initArgs.push_back(resultOut);
@@ -581,7 +582,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     } else {
         // todo: this is untested
         Root<Value> callHook;
-        if (!getAttr(targetValue, "__call__", callHook)) {
+        if (!getAttr(targetValue, Name::__call__, callHook)) {
             return raiseTypeError(
                 "object is not callable:" + repr(target), resultOut);
         }

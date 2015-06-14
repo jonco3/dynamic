@@ -14,8 +14,6 @@
 
 //#define TRACE_BUILD
 
-static const char* ClassFunctionParam = "__bases__";
-
 #ifdef DEBUG
 bool assertStackDepth = true;
 #endif
@@ -319,7 +317,7 @@ struct ByteCompiler : public SyntaxVisitor
         assert(parent);
         this->parent = parent;
         topLevel = parent->topLevel;
-        layout = layout->addName(ClassFunctionParam);
+        layout = layout->addName(Name::__bases__);
         isClassBlock = true;
         build(s);
         emit<InstrPop>();
@@ -530,9 +528,17 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrNot>();
     }
 
-    virtual void visit(const SyntaxPos& s) { callUnaryMethod(s, "__pos__"); }
-    virtual void visit(const SyntaxNeg& s) { callUnaryMethod(s, "__neg__"); }
-    virtual void visit(const SyntaxInvert& s) { callUnaryMethod(s, "__invert__"); }
+    virtual void visit(const SyntaxPos& s) {
+        callUnaryMethod(s, Name::__pos__);
+    }
+
+    virtual void visit(const SyntaxNeg& s) {
+        callUnaryMethod(s, Name::__neg__);
+    }
+
+    virtual void visit(const SyntaxInvert& s) {
+        callUnaryMethod(s, Name::__invert__);
+    }
 
     virtual void visit(const SyntaxBinaryOp& s) {
         compile(s.left);
@@ -679,7 +685,7 @@ struct ByteCompiler : public SyntaxVisitor
           case Context::Assign: {
             AutoPushContext clearContext(contextStack, Context::None);
             compile(s.left);
-            emit<InstrGetMethod>("__setitem__");
+            emit<InstrGetMethod>(Name::__setitem__);
             compile(s.right);
             // todo: there may be a better way than this stack manipulation
             emit<InstrDup>(4);
@@ -691,12 +697,12 @@ struct ByteCompiler : public SyntaxVisitor
 
           case Context::Delete: {
             AutoPushContext clearContext(contextStack, Context::None);
-            callBinaryMethod(s, "__delitem__");
+            callBinaryMethod(s, Name::__delitem__);
             break;
           }
 
           default:
-            callBinaryMethod(s, "__getitem__");
+              callBinaryMethod(s, Name::__getitem__);
             break;
         }
     }
@@ -829,7 +835,7 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxFor& s) {
         // 1. Get iterator
         compile(s.exprs);
-        emit<InstrGetMethod>("__iter__");
+        emit<InstrGetMethod>(Name::__iter__);
         emit<InstrCallMethod>(0);
         emit<InstrGetMethod>("next");
         stackDepth += 3; // Leave the iterator and next method on the stack
@@ -921,7 +927,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxClass& s) {
         Root<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
-        vector<Name> params = { ClassFunctionParam };
+        vector<Name> params = { Name::__bases__ };
         emit<InstrLambda>(s.id, params, suite);
         compile(s.bases);
         emit<InstrCall>(1);
@@ -941,7 +947,7 @@ struct ByteCompiler : public SyntaxVisitor
             unsigned endBranch = emit<InstrBranchIfTrue>();
             if (s.message) {
                 compile(s.message);
-                emit<InstrGetMethod>("__str__");
+                emit<InstrGetMethod>(Name::__str__);
                 emit<InstrCallMethod>(0);
             } else {
                 emit<InstrConst>(None);

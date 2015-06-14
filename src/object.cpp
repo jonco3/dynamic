@@ -393,6 +393,7 @@ static bool object_hash(TracedVector<Value> args, Root<Value>& resultOut)
 
 void initObject()
 {
+
     Object::InitialLayout.init(Layout::Empty);
     Class::InitialLayout.init(Object::InitialLayout);
 
@@ -450,6 +451,8 @@ void initObject()
  *     Raise AttributeError
  */
 
+static Name foo;
+
 static bool isNonDataDescriptor(Traced<Value> value)
 {
     if (!value.isObject())
@@ -457,12 +460,13 @@ static bool isNonDataDescriptor(Traced<Value> value)
 
     // Don't check for descriptors here as that could go recursive.
     Root<Object*> obj(value.asObject());
-    return obj->hasAttr("__get__");
+    return obj->hasAttr(Name::__get__);
 }
 
 static bool isDataDescriptor(Traced<Value> value)
 {
-    return isNonDataDescriptor(value) && value.asObject()->hasAttr("__set__");
+    return isNonDataDescriptor(value) &&
+        value.asObject()->hasAttr(Name::__set__);
 }
 
 enum class FindResult
@@ -520,15 +524,15 @@ static bool raiseAttrError(Traced<Value> value, Name name,
 static bool getSpecialAttr(Traced<Value> value, Name name,
                            Root<Value>& resultOut)
 {
-    if (name == "__class__") {
+    if (name == Name::__class__) {
         resultOut = value.type();
         return true;
     } else if (value.is<Class>()) {
         Root<Object*> obj(value.asObject());
-        if (name == "__name__") {
+        if (name == Name::__name__) {
             resultOut = gc.create<String>(obj->as<Class>()->name());
             return true;
-        } else if (name == "__bases__") {
+        } else if (name == Name::__bases__) {
             RootVector<Value> bases(1);
             bases[0] = obj->as<Class>()->base();
             resultOut = gc.create<Tuple>(bases);
@@ -556,7 +560,7 @@ static bool getAttrOrDescriptor(Traced<Value> value, Name name,
 static bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut)
 {
     Root<Object*> desc(valueInOut.asObject());
-    Root<Value> func(desc->getAttr("__get__"));
+    Root<Value> func(desc->getAttr(Name::__get__));
     bool isClass = value.is<Class>();
     RootVector<Value> args(3);
     args[0] = desc;
@@ -638,7 +642,7 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
     FindResult r = findAttrForSetOrDelete(name, obj, descValue);
     if (r == FindResult::FoundDescriptor) {
         Root<Object*> desc(descValue.asObject());
-        Root<Value> func(desc->getAttr("__set__"));
+        Root<Value> func(desc->getAttr(Name::__set__));
         RootVector<Value> args(3);
         args[0] = desc;
         args[1] = obj;
@@ -658,7 +662,7 @@ bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
     FindResult r = findAttrForSetOrDelete(name, obj, descValue);
     if (r == FindResult::FoundDescriptor) {
         Root<Object*> desc(descValue.asObject());
-        Root<Value> func(desc->getAttr("__delete__"));
+        Root<Value> func(desc->getAttr(Name::__delete__));
         RootVector<Value> args(2);
         args[0] = desc;
         args[1] = obj;

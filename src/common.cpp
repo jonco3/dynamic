@@ -80,7 +80,7 @@ void printException(Value value)
 Object* createTopLevel()
 {
     Root<Object*> topLevel(Object::create());
-    topLevel->setAttr("__builtins__", Builtin);
+    topLevel->setAttr(Name::__builtins__, Builtin);
     return topLevel;
 }
 
