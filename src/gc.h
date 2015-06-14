@@ -102,7 +102,9 @@ struct Cell
     Cell();
     virtual ~Cell();
 
+#ifdef DEBUG
     void checkValid() const;
+#endif
 
     virtual void traceChildren(Tracer& t) {}
     virtual void print(ostream& s) const;
@@ -147,8 +149,10 @@ struct GCTraits<T*>
 
     static void checkValid(const T* cell) {
         static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+#ifdef DEBUG
         if (cell)
             cell->checkValid();
+#endif
     }
 
     static void trace(Tracer& t, T** cellp) {

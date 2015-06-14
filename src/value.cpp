@@ -17,9 +17,11 @@ ostream& operator<<(ostream& s, const Value& v) {
 
 void GCTraits<Value>::checkValid(Value value)
 {
+#ifdef DEBUG
     if (value.isObject()) {
         Object* o = value.asObject();
         if (o)
             o->checkValid();
     }
+#endif
 }

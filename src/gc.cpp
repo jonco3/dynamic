@@ -83,24 +83,28 @@ void Cell::print(ostream& s) const {
     s << "Cell@" << hex << this;
 }
 
+#ifdef DEBUG
 void Cell::checkValid() const
 {
-#ifdef DEBUG
     if (epoch_ != gc.currentEpoch && epoch_ != gc.prevEpoch)
         cerr << "Bad cell at " << hex << this << endl;
     assert(epoch_ == gc.currentEpoch || epoch_ == gc.prevEpoch);
-#endif
 }
+#endif
 
 bool Cell::shouldMark()
 {
+#ifdef DEBUG
     checkValid();
+#endif
     return epoch_ == gc.prevEpoch;
 }
 
 bool Cell::shouldSweep()
 {
+#ifdef DEBUG
     checkValid();
+#endif
     return epoch_ == gc.prevEpoch;
 }
 
