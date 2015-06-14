@@ -43,7 +43,7 @@ testcase(block)
                     "foo.bar(baz)",
                     "Const 1, SetGlobal foo, Pop, "
                     "Const 1, SetGlobal baz, Pop, "
-                    "GetGlobal foo, GetMethod bar, GetGlobal baz, Call 2, Return");
+                    "GetGlobal foo, GetMethod bar, GetGlobal baz, CallMethod 1, Return");
 
     testBuildModule("foo = 1\n"
                     "baz = 1\n"
@@ -78,5 +78,5 @@ testcase(block)
                     "GetGlobal foo, GetGlobal bar, Is, Not, Return");
 
     testBuildModule("return 2 - - 1",
-                    "Const 2, Const 1, GetMethod __neg__, Call 1, BinaryOp -, Return");
+                    "Const 2, Const 1, GetMethod __neg__, CallMethod 0, BinaryOp -, Return");
 }

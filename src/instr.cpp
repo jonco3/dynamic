@@ -159,14 +159,38 @@ bool InstrDelAttr::execute(Interpreter& interp)
     return true;
 }
 
+bool InstrCall::execute(Interpreter& interp)
+{
+    Root<Value> target(interp.peekStack(count_));
+    RootVector<Value> args(count_);
+    for (unsigned i = 0; i < count_; i++)
+        args[i] = interp.peekStack(count_ - i - 1);
+    interp.popStack(count_ + 1);
+    return interp.startCall(target, args);
+}
+
+/*
+ * GetMethod/CallMethod instrunctions are an optimisation of GetAttr/Call for
+ * method invocation which avoids creating a method wrapper object for every
+ * call.
+ *
+ * GetMethod looks up an attribute on a value like GetAttr, but if the attriubte
+ * turns out to be a function or native descriptor it doesn't call its __get__
+ * method.  We push a boolean flag value to indicate that this case, and also we
+ * always push the input value.  CallMethod checks the flag and uses the input
+ * value as the self parameter if necessary by simply incrementing the argument
+ * count.
+ */
 bool InstrGetMethod::execute(Interpreter& interp)
 {
     Root<Value> value(interp.popStack());
     Root<Value> result;
-    if (!value.maybeGetAttr(ident, result))
+    bool isCallableDescriptor;
+    if (!getMethodAttr(value, ident, result, isCallableDescriptor))
         return interp.raiseAttrError(value, ident);
-    assert(result != Value(UninitializedSlot));
+
     interp.pushStack(result);
+    interp.pushStack(Boolean::get(isCallableDescriptor));
     interp.pushStack(value);
 
     if (value.isInt32())
@@ -187,6 +211,7 @@ bool InstrGetMethodInt::execute(Interpreter& interp)
 
     interp.popStack();
     interp.pushStack(result_);
+    interp.pushStack(Boolean::True);
     interp.pushStack(value);
     return true;
 }
@@ -195,21 +220,25 @@ bool InstrGetMethodFallback::execute(Interpreter& interp)
 {
     Root<Value> value(interp.popStack());
     Root<Value> result;
-    if (!value.maybeGetAttr(ident, result))
+    bool isCallableDescriptor;
+    if (!getMethodAttr(value, ident, result, isCallableDescriptor))
         return interp.raiseAttrError(value, ident);
-    assert(result != Value(UninitializedSlot));
+
     interp.pushStack(result);
+    interp.pushStack(Boolean::get(isCallableDescriptor));
     interp.pushStack(value);
     return true;
 }
 
-bool InstrCall::execute(Interpreter& interp)
+bool InstrCallMethod::execute(Interpreter& interp)
 {
-    Root<Value> target(interp.peekStack(count));
-    RootVector<Value> args(count);
-    for (unsigned i = 0; i < count; i++)
-        args[i] = interp.peekStack(count - i - 1);
-    interp.popStack(count + 1);
+    bool addSelf = interp.peekStack(count_ + 1).as<Boolean>()->value();
+    Root<Value> target(interp.peekStack(count_ + 2));
+    unsigned argCount = count_ + (addSelf ? 1 : 0);
+    RootVector<Value> args(argCount);
+    for (unsigned i = 0; i < argCount; i++)
+        args[i] = interp.peekStack(argCount - i - 1);
+    interp.popStack(count_ + 3);
     return interp.startCall(target, args);
 }
 
@@ -500,7 +529,7 @@ bool InstrRaise::execute(Interpreter& interp)
 bool InstrIteratorNext::execute(Interpreter& interp)
 {
     // The stack is already set up with next method and target on top
-    Root<Value> target(interp.peekStack(1));
+    Root<Value> target(interp.peekStack(2));
     TracedVector<Value> args = interp.stackSlice(1);
     Root<Value> result;
     bool ok = interp.call(target, args, result);

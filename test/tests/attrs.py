@@ -16,13 +16,16 @@ assert a.bar == 2
 getArgs = None
 
 class NonDataDescriptor:
+  def __init__(self, value):
+    self.value = value
+
   def __get__(self, instance, owner):
     global getArgs
     getArgs = (self, instance, owner)
-    return 0
+    return self.value
 
 obj = C()
-desc = NonDataDescriptor()
+desc = NonDataDescriptor(0)
 obj.attr = desc
 assert obj.attr == desc
 assert getArgs == None
@@ -33,8 +36,28 @@ assert C.attr == 0
 assert getArgs == (desc, None, C)
 assert obj.attr == 0
 assert getArgs == (desc, obj, C)
+getArgs = None
 obj.attr = 1
 assert obj.attr == 1
+assert getArgs == None
+del C.attr
+
+def f():
+  return 42
+
+def g():
+  return 41
+
+desc = NonDataDescriptor(f)
+C.attr = desc
+obj = C()
+getArgs = None
+assert obj.attr() == 42
+assert getArgs == (desc, obj, C)
+getArgs = None
+obj.attr = g
+assert obj.attr() == 41
+assert getArgs == None
 del C.attr
 
 getArgs = None
@@ -77,6 +100,10 @@ assert setArgs == (desc, obj, 1)
 del obj.attr
 assert obj.attr == 0
 assert delArgs == (desc, obj)
+obj.attr = f
+assert obj.attr() == 42
+obj.attr = g
+assert obj.attr() == 41
 del C.attr
 
 print('ok')

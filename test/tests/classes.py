@@ -82,4 +82,20 @@ c = C5(42)
 f = c.foo
 assert f() == 42
 
+class D:
+  def __init__(self, value):
+    self.value = value
+
+  def __call__(self):
+    return self.value
+
+d = D(7)
+assert d() == 7
+
+class C6:
+  f = d
+
+c = C6()
+assert c.f() == 7
+
 print("ok")

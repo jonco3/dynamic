@@ -44,6 +44,7 @@ using namespace std;
     instr(GetMethodInt)                                                      \
     instr(GetMethodFallback)                                                 \
     instr(Call)                                                              \
+    instr(CallMethod)                                                        \
     instr(Return)                                                            \
     instr(In)                                                                \
     instr(Is)                                                                \
@@ -367,14 +368,20 @@ struct InstrGetMethodFallback : public IdentInstrBase
 struct InstrCall : public Instr
 {
     define_instr_members(Instr_Call, "Call");
-    InstrCall(unsigned count) : count(count) {}
+    InstrCall(unsigned count) : count_(count) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << count;
+        s << name() << " " << count_;
     }
 
-  private:
-    unsigned count;
+  protected:
+    unsigned count_;
+};
+
+struct InstrCallMethod : public InstrCall
+{
+    define_instr_members(Instr_CallMethod, "CallMethod");
+    InstrCallMethod(unsigned count) : InstrCall(count) {}
 };
 
 define_simple_instr(Return);

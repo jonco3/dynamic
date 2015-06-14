@@ -88,7 +88,8 @@ void initCallable()
     // Classes for Native and Function are initialized in initObject().
     Method::ObjectClass.init(Class::createNative("method", nullptr));
 
-    initNativeMethod(Callable::ObjectClass, "__get__", callable_get, 3, 3);
+    initNativeMethod(Native::ObjectClass, "__get__", callable_get, 3, 3);
+    initNativeMethod(Function::ObjectClass, "__get__", callable_get, 3, 3);
 }
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,

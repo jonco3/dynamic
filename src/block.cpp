@@ -436,7 +436,7 @@ struct ByteCompiler : public SyntaxVisitor
     void callUnaryMethod(const UnarySyntax& s, string name) {
         compile(s.right);
         emit<InstrGetMethod>(name);
-        emit<InstrCall>(1);
+        emit<InstrCallMethod>(0);
     }
 
     template <typename BaseType>
@@ -446,7 +446,7 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s.left);
         emit<InstrGetMethod>(name);
         compile(s.right);
-        emit<InstrCall>(2);
+        emit<InstrCallMethod>(1);
     }
 
     virtual void visit(const SyntaxPass& s) {
@@ -681,8 +681,8 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrGetMethod>("__setitem__");
             compile(s.right);
             // todo: there may be a better way than this stack manipulation
-            emit<InstrDup>(3);
-            emit<InstrCall>(3);
+            emit<InstrDup>(4);
+            emit<InstrCallMethod>(2);
             emit<InstrSwap>();
             emit<InstrPop>();
             break;
@@ -745,8 +745,11 @@ struct ByteCompiler : public SyntaxVisitor
 
         for (const auto& i : s.right)
             compile(*i);
-        unsigned count = s.right.size() + (methodCall ? 1 : 0);
-        emit<InstrCall>(count);
+        unsigned count = s.right.size();
+        if (methodCall)
+            emit<InstrCallMethod>(count);
+        else
+            emit<InstrCall>(count);
     }
 
     virtual void visit(const SyntaxReturn& s) {
@@ -826,9 +829,9 @@ struct ByteCompiler : public SyntaxVisitor
         // 1. Get iterator
         compile(s.exprs);
         emit<InstrGetMethod>("__iter__");
-        emit<InstrCall>(1);
+        emit<InstrCallMethod>(0);
         emit<InstrGetMethod>("next");
-        stackDepth += 2; // Leave the iterator and next method on the stack
+        stackDepth += 3; // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop heap)
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
@@ -865,7 +868,8 @@ struct ByteCompiler : public SyntaxVisitor
         breakInstrs = move(oldBreakInstrs);
         emit<InstrPop>();
         emit<InstrPop>();
-        stackDepth -= 2;
+        emit<InstrPop>();
+        stackDepth -= 3;
         emit<InstrConst>(None);
     }
 
@@ -937,7 +941,7 @@ struct ByteCompiler : public SyntaxVisitor
             if (s.message) {
                 compile(s.message);
                 emit<InstrGetMethod>("__str__");
-                emit<InstrCall>(1);
+                emit<InstrCallMethod>(0);
             } else {
                 emit<InstrConst>(None);
             }

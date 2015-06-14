@@ -540,8 +540,8 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
     return false;
 }
 
-bool getAttrOrDescriptor(Traced<Value> value, Name name, Root<Value>& resultOut,
-                         bool& isDescriptor)
+static bool getAttrOrDescriptor(Traced<Value> value, Name name,
+                                Root<Value>& resultOut, bool& isDescriptor)
 {
     if (getSpecialAttr(value, name, resultOut))
         return true;
@@ -554,7 +554,7 @@ bool getAttrOrDescriptor(Traced<Value> value, Name name, Root<Value>& resultOut,
     return true;
 }
 
-bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut)
+static bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut)
 {
     Root<Object*> desc(valueInOut.asObject());
     Root<Value> func(desc->getAttr("__get__"));
@@ -579,6 +579,31 @@ bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut)
 }
 
 /*
+ * Get the value of an attribute that might be a descript.  If it is a
+ * descriptor that is also callable, don't call its __get__ method but indicate
+ * this by setting isCallableDescriptor.
+ */
+bool getMethodAttr(Traced<Value> value, Name name, Root<Value>& resultOut,
+                   bool& isCallableDescriptor)
+{
+    bool isDescriptor;
+    if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
+        return false;
+
+    isCallableDescriptor = false;
+    if (isDescriptor) {
+        if (resultOut.is<Function>() || resultOut.is<Native>()) {
+            isCallableDescriptor = true;
+        } else {
+            if (!getDescriptorValue(value, resultOut))
+                return false;
+        }
+    }
+
+    return true;
+}
+
+/*
  *  Now, the steps Python follows when setting a user-defined attribute
  *  (objectname.attrname = something):
  *
@@ -589,8 +614,8 @@ bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut)
  *     Insert something into objectname.__dict__ for key "attrname".
  */
 
-static FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
-                                         Root<Value>& resultOut)
+FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
+                                  Root<Value>& resultOut)
 {
     // todo: check for specials?
 

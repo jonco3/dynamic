@@ -80,8 +80,9 @@ inline bool Value::is() const
 template <typename T>
 inline T* Value::as()
 {
-    assert(is<T>());
-    return toObject()->as<T>();
+    Object* obj = toObject();
+    assert(obj->isInstanceOf(T::ObjectClass));
+    return obj->as<T>();
 }
 
 
