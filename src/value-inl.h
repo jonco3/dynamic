@@ -71,6 +71,20 @@ inline Class* Value::type() const
         return asObject()->type();
 }
 
+template <typename T>
+inline bool Value::is() const
+{
+    return type() == T::ObjectClass;
+}
+
+template <typename T>
+inline T* Value::as()
+{
+    assert(is<T>());
+    return toObject()->as<T>();
+}
+
+
 inline Value Value::getAttr(Name name) const
 {
     Object* obj = kind() == IntKind ? Integer::ObjectClass : asObject();
@@ -108,6 +122,12 @@ inline Object* WrapperMixins<W, Value>::asObject() const
 }
 
 template <typename W>
+inline Object* WrapperMixins<W, Value>::maybeObject() const
+{
+    return get()->maybeObject();
+}
+
+template <typename W>
 inline Object* WrapperMixins<W, Value>::toObject() const
 {
     return get()->toObject();
@@ -123,6 +143,20 @@ template <typename W>
 inline Class* WrapperMixins<W, Value>::type() const
 {
     return get()->type();
+}
+
+template <typename W>
+template <typename T>
+inline bool WrapperMixins<W, Value>::is() const
+{
+    return get()->template is<T>();
+}
+
+template <typename W>
+template <typename T>
+inline T* WrapperMixins<W, Value>::as()
+{
+    return get()->template as<T>();
 }
 
 template <typename W>

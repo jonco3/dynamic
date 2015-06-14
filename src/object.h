@@ -170,7 +170,10 @@ template <typename T>
 }
 
 // Full attribute accessors including descriptors
-extern bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut);
+extern bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut);
+extern bool getAttrOrDescriptor(Traced<Value> value, Name name,
+                               Root<Value>& resultOut, bool& isDescriptor);
+extern bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut);
 extern bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
                     Root<Value>& resultOut);
 extern bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut);

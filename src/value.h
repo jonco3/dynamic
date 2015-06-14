@@ -37,9 +37,13 @@ struct Value
         return kind() == ObjectKind;
     }
 
-    Object *asObject() const {
+    Object* asObject() const {
         assert(isObject());
         return objectp;
+    }
+
+    Object* maybeObject() const {
+        return isObject() ? asObject() : nullptr;
     }
 
     inline Object *toObject() const;
@@ -47,6 +51,10 @@ struct Value
     inline bool isNone() const;
 
     inline Class* type() const;
+
+    template <typename T> inline bool is() const;
+    template <typename T> inline T* as();
+
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
 

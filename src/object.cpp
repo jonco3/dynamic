@@ -473,11 +473,10 @@ enum class FindResult
     FoundDescriptor
 };
 
-static FindResult findAttrForGet(Name name, Traced<Object*> obj,
+static FindResult findAttrForGet(Traced<Value> value, Name name,
                                  Root<Value>& resultOut)
 {
-    Root<Class*> cls(obj->type());
-
+    Root<Class*> cls(value.type());
     Root<Value> classAttr;
     bool foundOnClass = cls->maybeGetAttr(name, classAttr);
 
@@ -486,14 +485,17 @@ static FindResult findAttrForGet(Name name, Traced<Object*> obj,
         return FindResult::FoundDescriptor;
     }
 
-    if (obj->is<Class>()) {
-        if (obj->maybeGetAttr(name, resultOut)) {
-            return isNonDataDescriptor(resultOut) ?
-                FindResult::FoundDescriptor : FindResult::FoundValue;
-        }
-    } else {
-        if (obj->maybeGetOwnAttr(name, resultOut)) {
-            return FindResult::FoundValue;
+    Root<Object*> obj(value.maybeObject());
+    if (obj) {
+        if (obj->is<Class>()) {
+            if (obj->maybeGetAttr(name, resultOut)) {
+                return isNonDataDescriptor(resultOut) ?
+                    FindResult::FoundDescriptor : FindResult::FoundValue;
+            }
+        } else {
+            if (obj->maybeGetOwnAttr(name, resultOut)) {
+                return FindResult::FoundValue;
+            }
         }
     }
 
@@ -506,22 +508,24 @@ static FindResult findAttrForGet(Name name, Traced<Object*> obj,
     return FindResult::NotFound;
 }
 
-static bool raiseAttrError(Traced<Object*> obj, Name name,
+static bool raiseAttrError(Traced<Value> value, Name name,
                            Root<Value>& resultOut)
 {
-    Root<Class*> cls(obj->type());
+    Root<Class*> cls(value.type());
     string message =
         "'" + cls->name() + "' object has no attribute '" + name + "'";
     resultOut = gc.create<AttributeError>(message);
     return false;
 }
 
-bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
+static bool getSpecialAttr(Traced<Value> value, Name name,
+                           Root<Value>& resultOut)
 {
     if (name == "__class__") {
-        resultOut = obj->type();
+        resultOut = value.type();
         return true;
-    } else if (obj->is<Class>()) {
+    } else if (value.is<Class>()) {
+        Root<Object*> obj(value.asObject());
         if (name == "__name__") {
             resultOut = gc.create<String>(obj->as<Class>()->name());
             return true;
@@ -533,23 +537,44 @@ bool getAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
         }
     }
 
-    Root<Value> value;
-    FindResult r = findAttrForGet(name, obj, value);
+    return false;
+}
+
+bool getAttrOrDescriptor(Traced<Value> value, Name name, Root<Value>& resultOut,
+                         bool& isDescriptor)
+{
+    if (getSpecialAttr(value, name, resultOut))
+        return true;
+
+    FindResult r = findAttrForGet(value, name, resultOut);
     if (r == FindResult::NotFound)
-        return raiseAttrError(obj, name, resultOut);
+        return raiseAttrError(value, name, resultOut);
 
-    if (r == FindResult::FoundDescriptor) {
-        Root<Object*> desc(value.asObject());
-        Root<Value> func(desc->getAttr("__get__"));
-        RootVector<Value> args(3);
-        args[0] = desc;
-        args[1] = obj->is<Class>() ? None : obj;
-        args[2] = obj->is<Class>() ? obj : obj->type();
-        return Interpreter::instance().call(func, args, resultOut);
-    }
+    isDescriptor = r == FindResult::FoundDescriptor;
+    return true;
+}
 
-    assert(r == FindResult::FoundValue);
-    resultOut = value;
+bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut)
+{
+    Root<Object*> desc(valueInOut.asObject());
+    Root<Value> func(desc->getAttr("__get__"));
+    bool isClass = value.is<Class>();
+    RootVector<Value> args(3);
+    args[0] = desc;
+    args[1] = isClass ? None : value;
+    args[2] = isClass ? value.get() : value.type();
+    return Interpreter::instance().call(func, args, valueInOut);
+}
+
+bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut)
+{
+    bool isDescriptor;
+    if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
+        return false;
+
+    if (isDescriptor && !getDescriptorValue(value, resultOut))
+        return false;
+
     return true;
 }
 

@@ -24,11 +24,14 @@ struct WrapperMixins<W, Value>
     inline int32_t asInt32() const;
     inline bool isObject() const;
     inline Object *asObject() const;
+    inline Object *maybeObject() const;
     inline Object *toObject() const;
     inline bool isNone() const;
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
     inline Class* type() const;
+    template <typename T> inline bool is() const;
+    template <typename T> inline T* as();
     inline bool isTrue() const;
     inline bool isInstanceOf(Traced<Class*> cls) const;
 

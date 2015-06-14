@@ -577,7 +577,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     } else {
         // todo: this is untested
         Root<Value> callHook;
-        if (!getAttr(target, "__call__", callHook)) {
+        if (!getAttr(targetValue, "__call__", callHook)) {
             return raiseTypeError(
                 "object is not callable:" + repr(target), resultOut);
         }

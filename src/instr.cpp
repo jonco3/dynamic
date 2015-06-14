@@ -128,9 +128,8 @@ bool InstrDelGlobal::execute(Interpreter& interp)
 bool InstrGetAttr::execute(Interpreter& interp)
 {
     Root<Value> value(interp.popStack());
-    Root<Object*> obj(value.toObject());
     Root<Value> result;
-    bool ok = getAttr(obj, ident, result);
+    bool ok = getAttr(value, ident, result);
     interp.pushStack(result);
     return ok;
 }
