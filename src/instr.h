@@ -40,7 +40,6 @@ using namespace std;
     instr(DelAttr)                                                           \
     instr(GetMethod)                                                         \
     instr(GetMethodInt)                                                      \
-    instr(GetMethodFallback)                                                 \
     instr(Call)                                                              \
     instr(CallMethod)                                                        \
     instr(Return)                                                            \
@@ -320,7 +319,14 @@ struct InstrDelGlobal : public IdentInstrBase
 define_ident_instr(GetAttr);
 define_ident_instr(SetAttr);
 define_ident_instr(DelAttr);
-define_ident_instr(GetMethod);
+
+struct InstrGetMethod : public IdentInstrBase
+{
+    define_instr_members(GetMethod);
+    InstrGetMethod(Name name) : IdentInstrBase(name) {}
+
+    static bool fallback(Traced<InstrGetMethod*> self, Interpreter& interp);
+};
 
 struct InstrGetMethodInt : public IdentInstrBase
 {
@@ -328,18 +334,12 @@ struct InstrGetMethodInt : public IdentInstrBase
     InstrGetMethodInt(Name name, Traced<Value> result)
       : IdentInstrBase(name), result_(result) {}
 
-    virtual void traceChildren(Tracer& t) override {
+     virtual void traceChildren(Tracer& t) override {
         gc.trace(t, &result_);
     }
 
   private:
     Value result_;
-};
-
-struct InstrGetMethodFallback : public IdentInstrBase
-{
-    define_instr_members(GetMethodFallback);
-    InstrGetMethodFallback(Name name) : IdentInstrBase(name) {}
 };
 
 struct InstrCall : public Instr

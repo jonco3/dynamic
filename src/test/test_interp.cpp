@@ -66,12 +66,12 @@ void testReplacement(const string& input,
     testEqual(instrp->data->type(), replacement);
 }
 
-template <typename T>
+template <typename T1, typename T2>
 void testReplacement(const string& input,
                      const string& expected,
                      InstrType type,
-                     InstrFunc<T> initial,
-                     InstrFunc<T> replacement)
+                     InstrFunc<T1> initial,
+                     InstrFunc<T2> replacement)
 {
     Root<Block*> block;
     Block::buildModule(input, None, block);
@@ -111,15 +111,15 @@ void testReplacements(const string& defs,
                     result1, initial, afterBoth);
 }
 
-template <typename T>
+template <typename T1, typename T2, typename T3, typename T4>
 void testReplacements(const string& defs,
                       const string& call1, const string& result1,
                       const string& call2, const string& result2,
                       InstrType type,
-                      InstrFunc<T> initial,
-                      InstrFunc<T> afterCall1,
-                      InstrFunc<T> afterCall2,
-                      InstrFunc<T> afterBoth)
+                      InstrFunc<T1> initial,
+                      InstrFunc<T2> afterCall1,
+                      InstrFunc<T3> afterCall2,
+                      InstrFunc<T4> afterBoth)
 {
     testReplacement(defs + "\n" + call1,
                     result1, type, initial, afterCall1);
@@ -290,9 +290,10 @@ testcase(interp)
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_GetMethod,
-                     Instr_GetMethodInt,
-                     Instr_GetMethodFallback,
-                     Instr_GetMethodFallback);
+                     InstrGetMethod::execute,
+                     InstrGetMethodInt::execute,
+                     InstrGetMethod::fallback,
+                     InstrGetMethod::fallback);
 
     testReplacements("def foo(x, y):\n"
                      "  return x + y",

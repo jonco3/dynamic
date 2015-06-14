@@ -110,7 +110,7 @@ bool Interpreter::run(Root<Value>& resultOut)
 #ifdef DEBUG
         if (logExecution) {
             logStart();
-            cout << instr << " at line " << dec << currentPos().line << endl;
+            cout << *instr << " at line " << dec << currentPos().line << endl;
         }
 #endif
         if (!func(instr, *this)) {

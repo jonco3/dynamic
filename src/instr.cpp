@@ -193,6 +193,25 @@
 /* static */ bool InstrGetMethod::execute(Traced<InstrGetMethod*> self,
                                           Interpreter& interp)
 {
+    Root<Value> value(interp.peekStack(0));
+    if (!fallback(self, interp))
+        return false;
+
+    if (value.isInt32()) {
+        Root<Value> result(interp.peekStack(2));
+        interp.replaceInstr(self,
+                            InstrGetMethodInt::execute,
+                            gc.create<InstrGetMethodInt>(self->ident, result));
+    } else {
+        interp.replaceInstrFunc(self, fallback);
+    }
+
+    return true;
+}
+
+/* static */ bool InstrGetMethod::fallback(Traced<InstrGetMethod*> self,
+                                           Interpreter& interp)
+{
     Root<Value> value(interp.popStack());
     Root<Value> result;
     bool isCallableDescriptor;
@@ -202,17 +221,6 @@
     interp.pushStack(result);
     interp.pushStack(Boolean::get(isCallableDescriptor));
     interp.pushStack(value);
-
-    if (value.isInt32()) {
-        interp.replaceInstr(self,
-                            InstrGetMethodInt::execute,
-                            gc.create<InstrGetMethodInt>(self->ident, result));
-    } else {
-        interp.replaceInstr(self,
-                            InstrGetMethodFallback::execute,
-                            gc.create<InstrGetMethodFallback>(self->ident));
-    }
-
     return true;
 }
 
@@ -223,29 +231,13 @@
     if (!value.isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
-            InstrGetMethodFallback::execute,
-            gc.create<InstrGetMethodFallback>(self->ident));
+            InstrGetMethod::fallback,
+            gc.create<InstrGetMethod>(self->ident));
     }
 
     interp.popStack();
     interp.pushStack(self->result_);
     interp.pushStack(Boolean::True);
-    interp.pushStack(value);
-    return true;
-}
-
-/* static */ bool
-InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
-                                Interpreter& interp)
-{
-    Root<Value> value(interp.popStack());
-    Root<Value> result;
-    bool isCallableDescriptor;
-    if (!getMethodAttr(value, self->ident, result, isCallableDescriptor))
-        return interp.raiseAttrError(value, self->ident);
-
-    interp.pushStack(result);
-    interp.pushStack(Boolean::get(isCallableDescriptor));
     interp.pushStack(value);
     return true;
 }
