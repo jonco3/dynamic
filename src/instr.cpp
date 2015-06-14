@@ -595,37 +595,8 @@ void BinaryOpInstr::print(ostream& s) const
             InstrBinaryOpInt::execute,
             gc.create<InstrBinaryOpInt>(self->op(), method));
     } else {
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrBinaryOpFallback::execute,
-            gc.create<InstrBinaryOpFallback>(self->op()));
+        return interp.replaceInstrFuncAndRestart(self, fallback);
     }
-}
-
-/* static */ bool InstrBinaryOpInt::execute(Traced<InstrBinaryOpInt*> self,
-                                            Interpreter& interp)
-{
-    Root<Value> right(interp.peekStack(0));
-    Root<Value> left(interp.peekStack(1));
-
-    if (!left.isInt32() || !right.isInt32()) {
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrBinaryOpFallback::execute,
-            gc.create<InstrBinaryOpFallback>(self->op()));
-    }
-
-    interp.popStack(2);
-    RootVector<Value> args;
-    args.push_back(left);
-    args.push_back(right);
-    Root<Value> result;
-    Root<Value> method(self->method_);
-    bool r = interp.call(method, args, result);
-    assert(r);
-    assert(result != Value(NotImplemented));
-    interp.pushStack(result);
-    return r;
 }
 
 static bool maybeCallBinaryOp(Interpreter& interp,
@@ -657,9 +628,8 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     return true;
 }
 
-/* static */ bool
-InstrBinaryOpFallback::execute(Traced<InstrBinaryOpFallback*> self,
-                               Interpreter& interp)
+/* static */ bool InstrBinaryOp::fallback(Traced<InstrBinaryOp*> self,
+                                          Interpreter& interp)
 {
     Root<Value> right(interp.popStack());
     Root<Value> left(interp.popStack());
@@ -692,6 +662,32 @@ InstrBinaryOpFallback::execute(Traced<InstrBinaryOpFallback*> self,
     interp.pushStack(gc.create<TypeError>(
                          "unsupported operand type(s) for binary operation"));
     return false;
+}
+
+/* static */ bool InstrBinaryOpInt::execute(Traced<InstrBinaryOpInt*> self,
+                                            Interpreter& interp)
+{
+    Root<Value> right(interp.peekStack(0));
+    Root<Value> left(interp.peekStack(1));
+
+    if (!left.isInt32() || !right.isInt32()) {
+        return interp.replaceInstrAndRestart(
+            self,
+            InstrBinaryOp::fallback,
+            gc.create<InstrBinaryOp>(self->op()));
+    }
+
+    interp.popStack(2);
+    RootVector<Value> args;
+    args.push_back(left);
+    args.push_back(right);
+    Root<Value> result;
+    Root<Value> method(self->method_);
+    bool r = interp.call(method, args, result);
+    assert(r);
+    assert(result != Value(NotImplemented));
+    interp.pushStack(result);
+    return r;
 }
 
 /* static */ bool

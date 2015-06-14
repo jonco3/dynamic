@@ -66,7 +66,6 @@ using namespace std;
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
     instr(BinaryOpInt)                                                       \
-    instr(BinaryOpFallback)                                                  \
     instr(AugAssignUpdate)                                                   \
     instr(ResumeGenerator)                                                   \
     instr(LeaveGenerator)                                                    \
@@ -514,6 +513,7 @@ struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(BinaryOp);
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
+    static bool fallback(Traced<InstrBinaryOp*> self, Interpreter& interp);
 };
 
 struct InstrBinaryOpInt : public BinaryOpInstr
@@ -528,12 +528,6 @@ struct InstrBinaryOpInt : public BinaryOpInstr
 
   private:
     Value method_;
-};
-
-struct InstrBinaryOpFallback : public BinaryOpInstr
-{
-    define_instr_members(BinaryOpFallback);
-    InstrBinaryOpFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
 struct InstrAugAssignUpdate : public BinaryOpInstr

@@ -300,9 +300,10 @@ testcase(interp)
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_BinaryOp,
-                     Instr_BinaryOpInt,
-                     Instr_BinaryOpFallback,
-                     Instr_BinaryOpFallback);
+                     InstrBinaryOp::execute,
+                     InstrBinaryOpInt::execute,
+                     InstrBinaryOp::fallback,
+                     InstrBinaryOp::fallback);
 
     testExpectingException = true;
     testReplacements("x = None\n"
