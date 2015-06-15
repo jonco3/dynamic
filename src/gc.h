@@ -168,14 +168,35 @@ void GC::trace(Tracer& t, T* ptr) {
 
 struct RootBase
 {
-  RootBase() : next_(nullptr), prev_(nullptr) {}
-    virtual ~RootBase() {}
+    RootBase() : next_(nullptr), prev_(nullptr) {}
+
     virtual void trace(Tracer& t) = 0;
     virtual void clear() = 0;
 
-    void insert();
-    void remove();
-    RootBase* next() { return next_; }
+    void insert() {
+        assert(!next_ && !prev_);
+        next_ = gc.rootList;
+        prev_ = nullptr;
+        if (next_)
+            next_->prev_ = this;
+        gc.rootList = this;
+    }
+
+    void remove() {
+        assert(gc.rootList == this || prev_);
+        if (next_)
+            next_->prev_ = prev_;
+        if (prev_)
+            prev_->next_ = next_;
+        else
+            gc.rootList = next_;
+        next_ = nullptr;
+        prev_ = nullptr;
+    }
+
+    RootBase* next() {
+        return next_;
+    }
 
   private:
     RootBase* next_;

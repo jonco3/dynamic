@@ -146,33 +146,6 @@ void Cell::destroyCell(Cell* cell, size_t size)
     free(cell);
 }
 
-void RootBase::insert()
-{
-    log("insert root", this);
-    assert(!next_ && !prev_);
-
-    next_ = gc.rootList;
-    prev_ = nullptr;
-    if (next_)
-        next_->prev_ = this;
-    gc.rootList = this;
-}
-
-void RootBase::remove()
-{
-    log("remove root", this);
-    assert(gc.rootList == this || prev_);
-
-    if (next_)
-        next_->prev_ = prev_;
-    if (prev_)
-        prev_->next_ = next_;
-    else
-        gc.rootList = next_;
-    next_ = nullptr;
-    prev_ = nullptr;
-}
-
 struct Marker : public Tracer
 {
     virtual void visit(Cell** cellp) {
