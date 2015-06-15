@@ -59,12 +59,12 @@ struct Object : public Cell
 
     // Own attribute accessors
     bool hasOwnAttr(Name name) const;
-    bool maybeGetOwnAttr(Name name, Root<Value>& valueOut) const;
+    bool maybeGetOwnAttr(Name name, MutableTraced<Value> valueOut) const;
     bool maybeDelOwnAttr(Name name);
 
     // Inherited attribute accessors, without descriptors
     bool hasAttr(Name name) const;
-    bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
+    bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;
     Value getAttr(Name name) const;
     void initAttr(Name name, Traced<Value> value);
     void setAttr(Name name, Traced<Value> value);
@@ -88,7 +88,7 @@ struct Object : public Cell
 
     void traceChildren(Tracer& t) override;
 
-    bool getSlot(Name name, int slot, Root<Value>& valueOut) const;
+    bool getSlot(Name name, int slot, MutableTraced<Value> valueOut) const;
 
     int findOwnAttr(Name name) const;
 
@@ -144,7 +144,7 @@ struct Class : public Object
     friend void initObject();
 };
 
-extern bool object_new(TracedVector<Value> args, Root<Value>& resultOut);
+extern bool object_new(TracedVector<Value> args, MutableTraced<Value> resultOut);
 
 extern void initNativeMethod(Traced<Object*> cls, const string& name,
                              NativeFunc func,
@@ -171,11 +171,11 @@ template <typename T>
 }
 
 // Full attribute accessors including descriptors
-extern bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut);
-extern bool getMethodAttr(Traced<Value> value, Name name, Root<Value>& resultOut,
+extern bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut);
+extern bool getMethodAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut,
                           bool& isCallableDescriptor);
 extern bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
-                    Root<Value>& resultOut);
-extern bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut);
+                    MutableTraced<Value> resultOut);
+extern bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut);
 
 #endif

@@ -99,7 +99,7 @@ void Object::extend(Traced<Layout*> layout)
     layout_ = layout;
 }
 
-bool Object::getSlot(Name name, int slot, Root<Value>& valueOut) const
+bool Object::getSlot(Name name, int slot, MutableTraced<Value> valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     if (slots_[slot] == Value(UninitializedSlot))
@@ -131,7 +131,7 @@ bool Object::hasOwnAttr(Name name) const
     return findOwnAttr(name) != Layout::NotFound;
 }
 
-bool Object::maybeGetOwnAttr(Name name, Root<Value>& valueOut) const
+bool Object::maybeGetOwnAttr(Name name, MutableTraced<Value> valueOut) const
 {
     int slot = layout_->lookupName(name);
     if (slot == Layout::NotFound)
@@ -157,7 +157,7 @@ bool Object::hasAttr(Name name) const
     return base->hasAttr(name);
 }
 
-bool Object::maybeGetAttr(Name name, Root<Value>& valueOut) const
+bool Object::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
     AutoAssertNoGC nogc;
 
@@ -477,7 +477,7 @@ enum class FindResult
 };
 
 static FindResult findAttrForGet(Traced<Value> value, Name name,
-                                 Root<Value>& resultOut)
+                                 MutableTraced<Value> resultOut)
 {
     Root<Class*> cls(value.type());
     Root<Value> classAttr;
@@ -512,7 +512,7 @@ static FindResult findAttrForGet(Traced<Value> value, Name name,
 }
 
 static bool raiseAttrError(Traced<Value> value, Name name,
-                           Root<Value>& resultOut)
+                           MutableTraced<Value> resultOut)
 {
     Root<Class*> cls(value.type());
     string message =
@@ -522,7 +522,7 @@ static bool raiseAttrError(Traced<Value> value, Name name,
 }
 
 static bool getSpecialAttr(Traced<Value> value, Name name,
-                           Root<Value>& resultOut)
+                           MutableTraced<Value> resultOut)
 {
     if (name == Name::__class__) {
         resultOut = value.type();
@@ -544,7 +544,7 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
 }
 
 static bool getAttrOrDescriptor(Traced<Value> value, Name name,
-                                Root<Value>& resultOut, bool& isDescriptor)
+                                MutableTraced<Value> resultOut, bool& isDescriptor)
 {
     if (getSpecialAttr(value, name, resultOut))
         return true;
@@ -557,7 +557,7 @@ static bool getAttrOrDescriptor(Traced<Value> value, Name name,
     return true;
 }
 
-static bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut)
+static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueInOut)
 {
     Root<Object*> desc(valueInOut.asObject());
     Root<Value> func(desc->getAttr(Name::__get__));
@@ -566,10 +566,13 @@ static bool getDescriptorValue(Traced<Value> value, Root<Value>& valueInOut)
     args[0] = desc;
     args[1] = isClass ? None : value;
     args[2] = isClass ? value.get() : value.type();
-    return Interpreter::instance().call(func, args, valueInOut);
+    Root<Value> result;
+    bool ok = Interpreter::instance().call(func, args, result);
+    valueInOut = result;
+    return ok; // todo: drive MutableTraced through interpreter interface
 }
 
-bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut)
+bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
 {
     bool isDescriptor;
     if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
@@ -586,7 +589,7 @@ bool getAttr(Traced<Value> value, Name name, Root<Value>& resultOut)
  * descriptor that is also callable, don't call its __get__ method but indicate
  * this by setting isCallableDescriptor.
  */
-bool getMethodAttr(Traced<Value> value, Name name, Root<Value>& resultOut,
+bool getMethodAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut,
                    bool& isCallableDescriptor)
 {
     bool isDescriptor;
@@ -618,7 +621,7 @@ bool getMethodAttr(Traced<Value> value, Name name, Root<Value>& resultOut,
  */
 
 FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
-                                  Root<Value>& resultOut)
+                                  MutableTraced<Value> resultOut)
 {
     // todo: check for specials?
 
@@ -636,7 +639,7 @@ FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
 }
 
 bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
-             Root<Value>& resultOut)
+             MutableTraced<Value> resultOut)
 {
     Root<Value> descValue;
     FindResult r = findAttrForSetOrDelete(name, obj, descValue);
@@ -647,7 +650,10 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
         args[0] = desc;
         args[1] = obj;
         args[2] = value.get();
-        return Interpreter::instance().call(func, args, resultOut);
+        Root<Value> result;
+        bool ok = Interpreter::instance().call(func, args, result);
+        resultOut = result;
+        return ok; // todo: drive MutableTraced through interpreter interface
     }
 
     assert(r == FindResult::NotFound);
@@ -656,7 +662,7 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
     return true;
 }
 
-bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
+bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
 {
     Root<Value> descValue;
     FindResult r = findAttrForSetOrDelete(name, obj, descValue);
@@ -666,7 +672,10 @@ bool delAttr(Traced<Object*> obj, Name name, Root<Value>& resultOut)
         RootVector<Value> args(2);
         args[0] = desc;
         args[1] = obj;
-        return Interpreter::instance().call(func, args, resultOut);
+        Root<Value> result;
+        bool ok = Interpreter::instance().call(func, args, result);
+        resultOut = result;
+        return ok; // todo: drive MutableTraced through interpreter interface
     }
 
     assert(r == FindResult::NotFound);

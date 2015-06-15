@@ -429,6 +429,9 @@ struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
     T ptr_;
 };
 
+template <typename T>
+struct MutableTraced;
+
 // A handle to a traced location
 template <typename T>
 struct Traced : public WrapperMixins<Traced<T>, T>
@@ -456,6 +459,15 @@ struct Traced : public WrapperMixins<Traced<T>, T>
                       "Invalid conversion");
     }
 
+    template <typename S>
+    Traced(MutableTraced<S>& other)
+        : ptr_(reinterpret_cast<const T&>(other.get()))
+    {
+        static_assert(is_base_of<typename remove_pointer<T>::type,
+                                 typename remove_pointer<S>::type>::value,
+                      "Invalid conversion");
+    }
+
     define_comparisions;
     define_immutable_accessors;
 
@@ -469,6 +481,79 @@ struct Traced : public WrapperMixins<Traced<T>, T>
     Traced(const T* traced) : ptr_(*traced) {}
 
     const T& ptr_;
+};
+
+// A mutable handle to a traced location
+template <typename T>
+struct MutableTraced : public WrapperMixins<Traced<T>, T>
+{
+    MutableTraced(const MutableTraced<T>& other) : ptr_(other.ptr_) {}
+    MutableTraced(Root<T>& root) : ptr_(root.get()) {}
+    MutableTraced(Stack<T>& root) : ptr_(root.get()) {}
+    MutableTraced(GlobalRoot<T>& root) : ptr_(root.get()) {}
+
+    template <typename S>
+    MutableTraced(Root<S>& other)
+        : ptr_(reinterpret_cast<const T&>(other.get()))
+    {
+        static_assert(is_base_of<typename remove_pointer<T>::type,
+                                 typename remove_pointer<S>::type>::value,
+                      "Invalid conversion");
+    }
+
+    template <typename S>
+    MutableTraced(Stack<S>& other)
+        : ptr_(reinterpret_cast<const T&>(other.get()))
+    {
+        static_assert(is_base_of<typename remove_pointer<T>::type,
+                                 typename remove_pointer<S>::type>::value,
+                      "Invalid conversion");
+    }
+
+    define_comparisions;
+    define_immutable_accessors;
+    define_mutable_accessors;
+
+    MutableTraced& operator=(const T& ptr) {
+        ptr_ = ptr;
+        return *this;
+    }
+
+    MutableTraced& operator=(const MutableTraced& other) {
+        ptr_ = other.get();
+        return *this;
+    }
+
+    MutableTraced& operator=(const Traced<T>& other) {
+        ptr_ = other.get();
+        return *this;
+    }
+
+    MutableTraced& operator=(const GlobalRoot<T> other) {
+        ptr_ = other.get();
+        return *this;
+    }
+
+    MutableTraced& operator=(const Root<T> other) {
+        ptr_ = other.get();
+        return *this;
+    }
+
+    MutableTraced& operator=(const Stack<T> other) {
+        ptr_ = other.get();
+        return *this;
+    }
+
+    const T* location() const { return &ptr_; }
+
+    static MutableTraced<T> fromTracedLocation(T* traced) {
+        return MutableTraced(traced);
+    }
+
+  private:
+    MutableTraced(const T* traced) : ptr_(*traced) {}
+
+    T& ptr_;
 };
 
 template <typename T>
