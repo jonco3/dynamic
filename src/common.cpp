@@ -79,18 +79,18 @@ void printException(Value value)
 
 Object* createTopLevel()
 {
-    Root<Object*> topLevel(Object::create());
+    Stack<Object*> topLevel(Object::create());
     topLevel->setAttr(Name::__builtins__, Builtin);
     return topLevel;
 }
 
 bool runModule(string text, string filename, Traced<Object*> globals,
-               Root<Value>* maybeResultOut)
+               Stack<Value>* maybeResultOut)
 {
-    Root<Value> result;
+    Stack<Value> result;
     bool ok;
     try {
-        Root<Block*> block;
+        Stack<Block*> block;
         Block::buildModule(Input(text, filename), globals, block);
         ok = Interpreter::exec(block, result);
     } catch (const ParseError& e) {

@@ -475,17 +475,17 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxInteger& s) {
-        Root<Value> v(Integer::get(s.value));
+        Stack<Value> v(Integer::get(s.value));
         emit<InstrConst>(v);
     }
 
     virtual void visit(const SyntaxFloat& s) {
-        Root<Value> v(Float::get(s.value));
+        Stack<Value> v(Float::get(s.value));
         emit<InstrConst>(v);
     }
 
     virtual void visit(const SyntaxString& s) {
-        Root<Value> v(String::get(s.value));
+        Stack<Value> v(String::get(s.value));
         emit<InstrConst>(v);
     }
 
@@ -619,7 +619,7 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxName& s) {
         Name name = s.id;
         int slot;
-        Root<Layout*> layout(block->layout());
+        Stack<Layout*> layout(block->layout());
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name, slot))
@@ -900,13 +900,13 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxLambda& s) {
-        Root<Block*> exprBlock(
+        Stack<Block*> exprBlock(
             ByteCompiler().buildLambda(this, s.params, *s.expr));
         emitLambda("(lambda)", s.params, exprBlock, false);
     }
 
     virtual void visit(const SyntaxDef& s) {
-        Root<Block*> exprBlock;
+        Stack<Block*> exprBlock;
         if (s.isGenerator) {
             exprBlock =
                 ByteCompiler().buildGenerator(this, s.params, *s.expr);
@@ -917,7 +917,7 @@ struct ByteCompiler : public SyntaxVisitor
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
         if (parent) {
             int slot;
-            Root<Layout*> layout(block->layout());
+            Stack<Layout*> layout(block->layout());
             alwaysTrue(lookupLocal(s.id, slot));
             emit<InstrSetLocal>(s.id, slot, layout);
         } else {
@@ -926,14 +926,14 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxClass& s) {
-        Root<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
+        Stack<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
         vector<Name> params = { Name::__bases__ };
         emit<InstrLambda>(s.id, params, suite);
         compile(s.bases);
         emit<InstrCall>(1);
         if (parent) {
             int slot;
-            Root<Layout*> layout(block->layout());
+            Stack<Layout*> layout(block->layout());
             alwaysTrue(lookupLocal(s.id, slot));
             emit<InstrSetLocal>(s.id, slot, layout);
         } else {
@@ -1093,7 +1093,7 @@ void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
                         MutableTraced<Block*> blockOut)
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
-    Root<Object*> globals(globalsArg);
+    Stack<Object*> globals(globalsArg);
     if (globals->isNone())
         globals = createTopLevel();
     blockOut = ByteCompiler().buildModule(globals, syntax.get());

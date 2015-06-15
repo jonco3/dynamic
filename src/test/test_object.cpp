@@ -6,17 +6,17 @@
 
 testcase(object)
 {
-    Root<Object*> o(Object::create());
+    Stack<Object*> o(Object::create());
 
-    Root<Value> v;
+    Stack<Value> v;
     testFalse(o->hasAttr("foo"));
     testFalse(o->maybeGetAttr("foo", v));
 
-    Root<Value> value(Integer::get(1));
+    Stack<Value> value(Integer::get(1));
     o->setAttr("foo", value);
     testTrue(o->hasAttr("foo"));
     testTrue(o->maybeGetAttr("foo", v));
-    Root<Object*> obj(v.toObject());
+    Stack<Object*> obj(v.toObject());
     testEqual(v.toObject()->as<Integer>()->value(), 1);
 
     value = Integer::get(2);

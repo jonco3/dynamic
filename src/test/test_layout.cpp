@@ -4,7 +4,7 @@
 
 testcase(layout)
 {
-    Root<Layout*> l1(Layout::Empty->addName("root"));
+    Stack<Layout*> l1(Layout::Empty->addName("root"));
 
     testEqual(l1->parent(), Layout::Empty.get());
     testEqual(l1->slotCount(), 1u);
@@ -14,7 +14,7 @@ testcase(layout)
     testEqual(l1->findAncestor("root"), l1);
     testEqual(l1->lookupName("root"), 0);
 
-    Root<Layout*> l2(l1->addName("a"));
+    Stack<Layout*> l2(l1->addName("a"));
     testEqual(l2->parent(), l1);
     testEqual(l2->slotCount(), 2u);
     testEqual(l2->slotIndex(), 1u);
@@ -26,7 +26,7 @@ testcase(layout)
     testEqual(l2->lookupName("a"), 1);
     testEqual(l2->lookupName("root"), 0);
 
-    Root<Layout*> l3(l2->addName("b"));
+    Stack<Layout*> l3(l2->addName("b"));
     testEqual(l3->slotCount(), 3u);
     testTrue(l3->hasName("a"));
     testTrue(l3->hasName("b"));

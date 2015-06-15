@@ -54,7 +54,7 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
-    Root<Frame*> frame(gc.create<Frame>(block));
+    Stack<Frame*> frame(gc.create<Frame>(block));
     pushFrame(frame);
     return run(resultOut);
 }
@@ -101,7 +101,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 #ifdef DEBUG
     unsigned initialPos = stackPos();
 #endif
-    Root<Instr*> instr;
+    Stack<Instr*> instr;
     InstrFuncBase func;
     while (instrp) {
         assert(getFrame()->block()->contains(instrp));
@@ -115,7 +115,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
         }
 #endif
         if (!func(instr, *this)) {
-            Root<Value> value(popStack());
+            Stack<Value> value(popStack());
 #ifdef DEBUG
             if (logExecution) {
                 logStart(1);
@@ -123,7 +123,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
             }
 #endif
             assert(value.isInstanceOf(Exception::ObjectClass));
-            Root<Exception*> exception(value.toObject()->as<Exception>());
+            Stack<Exception*> exception(value.toObject()->as<Exception>());
             exception->setPos(currentPos());
             if (!startExceptionHandler(exception)) {
                 while (instrp)
@@ -142,7 +142,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
 Frame* Interpreter::newFrame(Traced<Function*> function)
 {
-    Root<Block*> block(function->block());
+    Stack<Block*> block(function->block());
     return gc.create<Frame>(block);
 }
 
@@ -260,9 +260,9 @@ void Interpreter::pushExceptionHandler(ExceptionHandler::Type type,
                                        unsigned offset)
 {
     assert(offset);
-    Root<Frame*> frame(getFrame());
+    Stack<Frame*> frame(getFrame());
     // todo: Why do we store instruct offsets rather than indices?
-    Root<ExceptionHandler*> handler(
+    Stack<ExceptionHandler*> handler(
         gc.create<ExceptionHandler>(type, frame, offset + currentOffset()));
     exceptionHandlers.push_back(handler);
 }
@@ -340,7 +340,7 @@ bool Interpreter::maybeContinueHandlingException()
       case JumpKind::Exception: {
         // Re-raise current exception.
         assert(currentException_);
-        Root<Exception*> exception(currentException_);
+        Stack<Exception*> exception(currentException_);
         finishHandlingException();
         if (!startExceptionHandler(exception)) {
             pushStack(exception);
@@ -350,7 +350,7 @@ bool Interpreter::maybeContinueHandlingException()
       }
 
       case JumpKind::Return: {
-        Root<Value> value(deferredReturnValue_);
+        Stack<Value> value(deferredReturnValue_);
         finishHandlingException();
         returnFromFrame(value);
         break;
@@ -450,7 +450,7 @@ bool Interpreter::call(Traced<Value> targetValue,
 bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>& args)
 {
     InstrThunk* returnPoint = instrp;
-    Root<Value> result;
+    Stack<Value> result;
     CallStatus status = setupCall(targetValue, args, result);
     if (status == CallError) {
         pushStack(result);
@@ -492,20 +492,20 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                const TracedVector<Value>& args,
                                                MutableTraced<Value> resultOut)
 {
-    Root<Object*> target(targetValue.toObject());
+    Stack<Object*> target(targetValue.toObject());
     if (target->is<Native>()) {
-        Root<Native*> native(target->as<Native>());
+        Stack<Native*> native(target->as<Native>());
         if (!checkArguments(native, args, resultOut))
             return CallError;
         bool ok = native->call(args, resultOut);
         return ok ? CallFinished : CallError;
     } else if (target->is<Function>()) {
-        Root<Function*> function(target->as<Function>());
+        Stack<Function*> function(target->as<Function>());
         if (!checkArguments(function, args, resultOut))
             return CallError;
-        Root<Frame*> callFrame(newFrame(function));
+        Stack<Frame*> callFrame(newFrame(function));
         if (function->isGenerator()) {
-            Root<Value> none(None);
+            Stack<Value> none(None);
             callFrame->setAttr("%gen", none);
         }
         unsigned normalArgs = min(args.size(), function->maxNormalArgs());
@@ -518,7 +518,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                function->paramDefault(i));
         }
         if (function->takesRest()) {
-            Root<Value> rest(Tuple::Empty);
+            Stack<Value> rest(Tuple::Empty);
             if (args.size() > function->maxNormalArgs()) {
                 size_t count = args.size() - function->maxNormalArgs();
                 size_t start = function->maxNormalArgs();
@@ -529,7 +529,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                rest);
         }
         if (function->isGenerator()) {
-            Root<Value> iter(
+            Stack<Value> iter(
                 gc.create<GeneratorIter>(function, callFrame));
             callFrame->setAttr("%gen", iter);
             resultOut = iter;
@@ -539,8 +539,8 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return CallStarted;
     } else if (target->is<Class>()) {
         // todo: this is messy and needs refactoring
-        Root<Class*> cls(target->as<Class>());
-        Root<Value> func;
+        Stack<Class*> cls(target->as<Class>());
+        Stack<Value> func;
         RootVector<Value> funcArgs(args.size() + 1);
         for (unsigned i = 0; i < args.size(); i++)
             funcArgs[i + 1] = args[i];
@@ -555,9 +555,9 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             return raiseTypeError(message, resultOut);
         }
         if (resultOut.isInstanceOf(cls)) {
-            Root<Value> initFunc;
+            Stack<Value> initFunc;
             if (target->maybeGetAttr(Name::__init__, initFunc)) {
-                Root<Value> initResult;
+                Stack<Value> initResult;
                 RootVector<Value> initArgs;
                 initArgs.push_back(resultOut);
                 for (unsigned i = 0; i < args.size(); i++)
@@ -572,16 +572,16 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         }
         return CallFinished;
     } else if (target->is<Method>()) {
-        Root<Method*> method(target->as<Method>());
+        Stack<Method*> method(target->as<Method>());
         RootVector<Value> callArgs(args.size() + 1);
         callArgs[0] = method->object();
         for (size_t i = 0; i < args.size(); i++)
             callArgs[i] = args[i];
-        Root<Value> callable(method->callable());
+        Stack<Value> callable(method->callable());
         return setupCall(callable, callArgs, resultOut);
     } else {
         // todo: this is untested
-        Root<Value> callHook;
+        Stack<Value> callHook;
         if (!getAttr(targetValue, Name::__call__, callHook)) {
             return raiseTypeError(
                 "object is not callable:" + repr(target), resultOut);
@@ -621,7 +621,7 @@ bool Interpreter::replaceInstrAndRestart(Instr* current,
                                          Instr* newData)
 {
     replaceInstr(current, newFunc, newData);
-    Root<Instr*> instr(newData);
+    Stack<Instr*> instr(newData);
     return newFunc(instr, *this);
 }
 
@@ -629,6 +629,6 @@ bool Interpreter::replaceInstrFuncAndRestart(Instr* current,
                                              InstrFuncBase newFunc)
 {
     replaceInstrFunc(current, newFunc);
-    Root<Instr*> instr(current);
+    Stack<Instr*> instr(current);
     return newFunc(instr, *this);
 }

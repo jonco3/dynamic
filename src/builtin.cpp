@@ -34,7 +34,7 @@ static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resul
 static bool builtin_isinstance(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     // todo: support tuples etc for classInfo
-    Root<Class*> cls(args[1].toObject()->as<Class>());
+    Stack<Class*> cls(args[1].toObject()->as<Class>());
     resultOut = Boolean::get(args[0].toObject()->isInstanceOf(cls));
     return true;
 }
@@ -65,7 +65,7 @@ static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resul
         return false;
 
     string source = args[0].asObject()->as<String>()->value();
-    Root<Block*> block;
+    Stack<Block*> block;
     try {
         Block::buildModule(source, None, block);
     } catch (const ParseError& e) {
@@ -90,7 +90,7 @@ void initBuiltins(const string& libDir)
     initNativeMethod(Builtin, "parse", builtin_parse, 1);
 
     // Constants
-    Root<Value> value;
+    Stack<Value> value;
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);
     value = None; Builtin->setAttr("None", value);
@@ -115,9 +115,9 @@ for_each_exception_class(set_exception_attr)
 
     string filename = libDir + "/builtin.py";
     string text = readFile(filename);
-    Root<Block*> block;
+    Stack<Block*> block;
     Block::buildModule(Input(text, filename), Builtin, block);
-    Root<Value> result;
+    Stack<Value> result;
     if (!Interpreter::exec(block, result)) {
         printException(result);
         exit(1);

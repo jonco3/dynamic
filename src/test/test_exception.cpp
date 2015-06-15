@@ -5,7 +5,7 @@
 
 testcase(exception)
 {
-    Root<Exception*> exc;
+    Stack<Exception*> exc;
     testExpectingException = true;
     exc = gc.create<Exception>(Exception::ObjectClass, "bar");
     testEqual(exc->className(), "Exception");
@@ -17,7 +17,7 @@ testcase(exception)
     exc = gc.create<Exception>(TypeError::ObjectClass, "baz");
     testEqual(exc->fullMessage(), "TypeError: baz");
 
-    Root<String*> str(gc.create<String>("foo"));
+    Stack<String*> str(gc.create<String>("foo"));
     exc = gc.create<Exception>(TypeError::ObjectClass, str);
     testEqual(exc->fullMessage(), "TypeError: foo");
 

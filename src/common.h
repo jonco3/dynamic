@@ -16,5 +16,5 @@ extern string readFile(string filename);
 extern void printException(Value value);
 extern Object* createTopLevel();
 extern bool runModule(string text, string filename, Traced<Object*> global,
-                      Root<Value>* maybeResultOut = nullptr);
+                      Stack<Value>* maybeResultOut = nullptr);
 #endif

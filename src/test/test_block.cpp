@@ -12,7 +12,7 @@ static void testBuildModule(const string& input, const string& expected)
     AutoSetAndRestore asar(assertStackDepth, false);
 #endif
 
-    Root<Block*> block;
+    Stack<Block*> block;
     Block::buildModule(input, None, block);
     testEqual(repr(*block), expected);
 }

@@ -85,7 +85,7 @@ struct Block : public Cell
 template <typename T, typename... Args>
 unsigned Block::append(Args&& ...args)
 {
-    Root<Instr*> instr(gc.create<T>(forward<Args>(args)...));
+    Stack<Instr*> instr(gc.create<T>(forward<Args>(args)...));
     InstrFunc<T> func = T::execute;
     return append(reinterpret_cast<InstrFuncBase>(func), instr);
 }

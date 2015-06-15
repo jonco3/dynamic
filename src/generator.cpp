@@ -26,16 +26,16 @@ void GeneratorIter::init()
     ObjectClass.init(Class::createNative("GeneratorIterator", nullptr));
     initNativeMethod(ObjectClass, "__iter__", generatorIter_iter, 1);
 
-    Root<Layout*> layout(Frame::InitialLayout);
+    Stack<Layout*> layout(Frame::InitialLayout);
     layout = layout->addName("self");
-    Root<Block*> block(gc.create<Block>(layout));
+    Stack<Block*> block(gc.create<Block>(layout));
     block->append<InstrResumeGenerator>();
     block->append<InstrReturn>();
     static vector<Name> params = { "self" };
-    Root<Frame*> scope; // todo: allow construction of traced for nullptr
+    Stack<Frame*> scope; // todo: allow construction of traced for nullptr
     RootVector<Value> defaults; // todo: find a way of passing an empty vector
-    Root<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
-    Root<Value> value(gc.create<Function>("next", info, defaults, scope));
+    Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
+    Stack<Value> value(gc.create<Function>("next", info, defaults, scope));
     ObjectClass->setAttr("next", value);
 }
 
@@ -60,7 +60,7 @@ void GeneratorIter::traceChildren(Tracer& t)
 
 bool GeneratorIter::iter(MutableTraced<Value> resultOut)
 {
-    Root<GeneratorIter*> self(this);
+    Stack<GeneratorIter*> self(this);
     resultOut = Value(self);
     return true;
 }
@@ -71,7 +71,7 @@ bool GeneratorIter::resume(Interpreter& interp)
     switch (state_) {
       case Initial: {
       case Suspended:
-        Root<Frame*> frame(frame_); // todo: Heap<T>
+        Stack<Frame*> frame(frame_); // todo: Heap<T>
         interp.resumeGenerator(frame, ipOffset_, savedStack_);
         if (state_ == Suspended)
             interp.pushStack(None);

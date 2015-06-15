@@ -93,7 +93,7 @@ Layout* Layout::addName(Name name)
     if (i != children_.end())
         return i->second;
 
-    Root<Layout*> self(this);
+    Stack<Layout*> self(this);
     return gc.create<Layout>(self, name);
 }
 

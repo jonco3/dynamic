@@ -156,7 +156,7 @@ bool Dict::delitem(Traced<Value> key, MutableTraced<Value> resultOut)
 bool Dict::keys(MutableTraced<Value> resultOut)
 {
     // todo: should be some kind of iterator?
-    Root<Tuple*> keys(Tuple::createUninitialised(entries_.size()));
+    Stack<Tuple*> keys(Tuple::createUninitialised(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         keys->initElement(index++, i.first);
@@ -167,7 +167,7 @@ bool Dict::keys(MutableTraced<Value> resultOut)
 bool Dict::values(MutableTraced<Value> resultOut)
 {
     // todo: should be some kind of iterator?
-    Root<Tuple*> values(Tuple::createUninitialised(entries_.size()));
+    Stack<Tuple*> values(Tuple::createUninitialised(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         values->initElement(index++, i.second);
@@ -191,8 +191,8 @@ struct PythonException : public runtime_error
 
 size_t Dict::ValueHash::operator()(Value v) const
 {
-    Root<Value> result;
-    Root<Value> hashFunc;
+    Stack<Value> result;
+    Stack<Value> hashFunc;
     if (!v.maybeGetAttr(Name::__hash__, hashFunc)) {
         result = gc.create<TypeError>("Object has no __hash__ method");
         throw PythonException(result);
@@ -213,8 +213,8 @@ size_t Dict::ValueHash::operator()(Value v) const
 
 bool Dict::ValuesEqual::operator()(Value a, Value b) const
 {
-    Root<Value> result;
-    Root<Value> eqFunc;
+    Stack<Value> result;
+    Stack<Value> eqFunc;
     if (!a.maybeGetAttr(Name::__eq__, eqFunc)) {
         result = gc.create<TypeError>("Object has no __eq__ method");
         throw PythonException(result);
@@ -226,7 +226,7 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
     if (!Interpreter::instance().call(eqFunc, args, result))
         throw PythonException(result);
 
-    Root<Object*> obj(result.toObject());
+    Stack<Object*> obj(result.toObject());
     if (!obj->is<Boolean>()) {
         result = gc.create<TypeError>("__eq__ method should return a bool");
         throw PythonException(result);

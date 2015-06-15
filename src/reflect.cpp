@@ -32,7 +32,7 @@ void CodeObject::dump(ostream& s) const
 
 void initReflect()
 {
-    Root<Class*> cls(Class::createNative("code object", nullptr));
+    Stack<Class*> cls(Class::createNative("code object", nullptr));
     CodeObject::ObjectClass.init(cls);
 
     cls = Class::createNative("parse tree", nullptr);

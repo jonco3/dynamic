@@ -48,7 +48,7 @@ struct WrapperMixins<W, T*>
         static_assert(is_base_of<Object, T>::value,
                       "T must derive from object for this conversion");
         // Since Traced<T> is immutable and all Objects are Values, we can
-        // safely cast a Root<Object*> to a Traced<Value>.
+        // safely cast a Stack<Object*> to a Traced<Value>.
         const Value* ptr = reinterpret_cast<Value const*>(get());
         return Traced<Value>::fromTracedLocation(ptr);
     }

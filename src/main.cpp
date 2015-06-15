@@ -60,9 +60,9 @@ void maybeAbortTests(string what)
 static int runRepl()
 {
     char* line;
-    Root<Object*> topLevel(createTopLevel());
+    Stack<Object*> topLevel(createTopLevel());
     while (line = readOneLine(), line != NULL) {
-        Root<Value> result;
+        Stack<Value> result;
         bool ok = runModule(line, "<none>", topLevel, &result);
         if (ok)
             cout << result << endl;
@@ -73,16 +73,16 @@ static int runRepl()
 
 static int runProgram(const char* filename, int arg_count, const char* args[])
 {
-    Root<Object*> topLevel(createTopLevel());
+    Stack<Object*> topLevel(createTopLevel());
     RootVector<Value> argStrings(arg_count);
     for (int i = 0 ; i < arg_count ; ++i)
         argStrings[i] = gc.create<String>(args[i]);
     // todo: this is a hack until we can |import sys|
-    Root<Value> argv(gc.create<List>(argStrings));
-    Root<Value> sys(Object::create());
+    Stack<Value> argv(gc.create<List>(argStrings));
+    Stack<Value> sys(Object::create());
     sys.asObject()->setAttr("argv", argv);
     topLevel->setAttr("sys", sys);
-    Root<Value> main(gc.create<String>("__main__"));
+    Stack<Value> main(gc.create<String>("__main__"));
     topLevel->setAttr(Name::__name__, main);
     if (!runModule(readFile(filename), filename, topLevel))
         return EX_SOFTWARE;

@@ -22,9 +22,9 @@ static bool exception_new(TracedVector<Value> args, MutableTraced<Value> resultO
     assert(args.size() >= 1 && args.size() <= 2);
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
-    Root<Class*> cls(args[0].asObject()->as<Class>());
+    Stack<Class*> cls(args[0].asObject()->as<Class>());
 
-    Root<String*> message(String::EmptyString);
+    Stack<String*> message(String::EmptyString);
     if (args.size() == 2) {
         if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
             return false;
@@ -56,7 +56,7 @@ Exception::Exception(Traced<Class*> cls, const string& message)
   : Object(cls)
 {
     assert(cls->isDerivedFrom(ObjectClass));
-    Root<String*> str(String::get(message));
+    Stack<String*> str(String::get(message));
     init(str);
 }
 
@@ -80,7 +80,7 @@ string Exception::className() const
 
 string Exception::message() const
 {
-    Root<Value> value(getAttr("message"));
+    Stack<Value> value(getAttr("message"));
     return value.get().toObject()->as<String>()->value();
 }
 

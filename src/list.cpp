@@ -59,14 +59,14 @@ static bool listBase_new(TracedVector<Value> args, MutableTraced<Value> resultOu
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
 
-    Root<ListBase*> init;
-    Root<Class*> cls(args[0].asObject()->as<Class>());
+    Stack<ListBase*> init;
+    Stack<Class*> cls(args[0].asObject()->as<Class>());
     if (args.size() == 1) {
         resultOut = gc.create<T>(cls, init);
         return true;
     }
 
-    Root<Object*> arg(args[1].toObject());
+    Stack<Object*> arg(args[1].toObject());
     if (arg->isInstanceOf(List::ObjectClass)) {
         init = arg->as<List>();
         resultOut = gc.create<T>(cls, init);
@@ -110,7 +110,7 @@ static bool listBase_iter(TracedVector<Value> args, MutableTraced<Value> resultO
 
 static void listBase_initNatives(Traced<Class*> cls)
 {
-    Root<Value> value;
+    Stack<Value> value;
     initNativeMethod(cls, "__len__", listBase_len, 1);
     initNativeMethod(cls, "__getitem__", listBase_getitem, 2);
     initNativeMethod(cls, "__contains__", listBase_contains, 2);
@@ -195,7 +195,7 @@ bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
         resultOut = elements_[i];
         return true;
     } else if (index.isInstanceOf(Slice::ObjectClass)) {
-        Root<Slice*> slice(index.toObject()->as<Slice>());
+        Stack<Slice*> slice(index.toObject()->as<Slice>());
         int32_t start, stop, step;
         slice->indices(len(), start, stop, step);
         if (step == 0) {
@@ -206,7 +206,7 @@ bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
         int32_t step_sgn = step > 0 ? 1 : -1;
         size_t size = max((stop - start + step - step_sgn) / step, 0);
 
-        Root<ListBase*> result(createDerived(size));
+        Stack<ListBase*> result(createDerived(size));
         int32_t src = start;
         for (size_t i = 0; i < size; i++) {
             assert(src < len());
@@ -232,7 +232,7 @@ bool ListBase::contains(Traced<Value> element, MutableTraced<Value> resultOut)
 
 bool ListBase::iter(MutableTraced<Value> resultOut)
 {
-    Root<ListBase*> self(this);
+    Stack<ListBase*> self(this);
     resultOut = gc.create<ListIter>(self);
     return true;
 }
@@ -440,7 +440,7 @@ void ListIter::traceChildren(Tracer& t)
 
 bool ListIter::iter(MutableTraced<Value> resultOut)
 {
-    Root<ListIter*> self(this);
+    Stack<ListIter*> self(this);
     resultOut = Value(self);
     return true;
 }
@@ -468,7 +468,7 @@ void Slice::init()
     static const Name StopAttr = "stop";
     static const Name StepAttr = "step";
 
-    Root<Layout*> layout = Object::InitialLayout;
+    Stack<Layout*> layout = Object::InitialLayout;
     layout = layout->addName(StartAttr);
     layout = layout->addName(StopAttr);
     layout = layout->addName(StepAttr);

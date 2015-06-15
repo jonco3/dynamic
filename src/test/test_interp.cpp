@@ -10,9 +10,9 @@
 
 void testInterp(const string& input, const string& expected)
 {
-    Root<Block*> block;
+    Stack<Block*> block;
     Block::buildModule(input, None, block);
-    Root<Value> result;
+    Stack<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
@@ -22,9 +22,9 @@ void testInterp(const string& input, const string& expected)
 
 void testException(const string& input, const string& expected)
 {
-    Root<Block*> block;
+    Stack<Block*> block;
     Block::buildModule(input, None, block);
-    Root<Value> result;
+    Stack<Value> result;
     testExpectingException = true;
     bool ok = Interpreter::exec(block, result);
     testExpectingException = false;
@@ -47,7 +47,7 @@ void testReplacement(const string& input,
                      InstrType initial,
                      InstrType replacement)
 {
-    Root<Block*> block;
+    Stack<Block*> block;
     Block::buildModule(input, None, block);
 
     InstrThunk* instrp = block->findInstr(Instr_Lambda);
@@ -56,7 +56,7 @@ void testReplacement(const string& input,
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
 
-    Root<Value> result;
+    Stack<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
@@ -73,7 +73,7 @@ void testReplacement(const string& input,
                      InstrFunc<T1> initial,
                      InstrFunc<T2> replacement)
 {
-    Root<Block*> block;
+    Stack<Block*> block;
     Block::buildModule(input, None, block);
 
     InstrThunk* instrp = block->findInstr(Instr_Lambda);
@@ -83,7 +83,7 @@ void testReplacement(const string& input,
     assert(instrp);
     testEqual(instrp->func, reinterpret_cast<InstrFuncBase>(initial));
 
-    Root<Value> result;
+    Stack<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;

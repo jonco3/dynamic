@@ -22,8 +22,8 @@ static bool callable_get(TracedVector<Value> args, MutableTraced<Value> resultOu
     if (!checkInstanceOf(args[0], Callable::ObjectClass, resultOut))
         return false;
 
-    Root<Callable*> callable(args[0].asObject()->as<Callable>());
-    Root<Object*> instance(args[1].toObject());
+    Stack<Callable*> callable(args[0].asObject()->as<Callable>());
+    Stack<Object*> instance(args[1].toObject());
     if (instance == None)
         resultOut = Value(callable);
     else

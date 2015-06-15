@@ -156,13 +156,13 @@ extern bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
 template <typename T>
 /* static */ inline Class* Class::createNative(string name, Traced<Class*> base)
 {
-    Root<Class*> cls(gc.create<Class>(name, base));
+    Stack<Class*> cls(gc.create<Class>(name, base));
     NativeFunc func =
         [] (TracedVector<Value> args, MutableTraced<Value> resultOut) -> bool
         {
             if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
                 return false;
-            Root<Class*> cls(args[0].asObject()->as<Class>());
+            Stack<Class*> cls(args[0].asObject()->as<Class>());
             resultOut = gc.create<T>(cls);
             return true;
         };

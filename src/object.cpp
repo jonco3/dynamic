@@ -83,7 +83,7 @@ void Object::extend(Traced<Layout*> layout)
 {
     assert(layout);
 #ifdef DEBUG
-    Root<Layout*> current(layout_);
+    Stack<Layout*> current(layout_);
     assert(layout->subsumes(current));
 #endif
 
@@ -149,7 +149,7 @@ bool Object::hasAttr(Name name) const
     if (!is<Class>())
         return type()->hasAttr(name);
 
-    Root<Object*> base(as<Class>()->base());
+    Stack<Object*> base(as<Class>()->base());
     if (base == None)
         return false;
 
@@ -167,7 +167,7 @@ bool Object::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
     if (!is<Class>())
         return type()->maybeGetAttr(name, valueOut);
 
-    Root<Object*> base(as<Class>()->base());
+    Stack<Object*> base(as<Class>()->base());
     if (base == None)
         return false;
 
@@ -177,7 +177,7 @@ bool Object::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 
 Value Object::getAttr(Name name) const
 {
-    Root<Value> value;
+    Stack<Value> value;
     bool ok = maybeGetAttr(name, value);
     assert(ok);
     (void)ok;
@@ -293,7 +293,7 @@ void Object::traceChildren(Tracer& t)
                                         NativeFunc newFunc, unsigned maxArgs,
                                         Traced<Class*> base)
 {
-    Root<Class*> cls(gc.create<Class>(name, base));
+    Stack<Class*> cls(gc.create<Class>(name, base));
     initNativeMethod(cls, "__new__", newFunc, 1, maxArgs);
     return cls;
 }
@@ -340,7 +340,7 @@ void initNativeMethod(Traced<Object*> cls, const string& name,
                       NativeFunc func,
                       unsigned minArgs, unsigned maxArgs)
 {
-    Root<Value> value(None);
+    Stack<Value> value(None);
     if (func)
         value = gc.create<Native>(name, func, minArgs, maxArgs);
     cls->initAttr(name, value);
@@ -351,7 +351,7 @@ bool object_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
     // Special case because we can't call Class::createNative in initialization.
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
-    Root<Class*> cls(args[0].asObject()->as<Class>());
+    Stack<Class*> cls(args[0].asObject()->as<Class>());
     resultOut = gc.create<Object>(cls);
     return true;
 }
@@ -397,7 +397,7 @@ void initObject()
     Object::InitialLayout.init(Layout::Empty);
     Class::InitialLayout.init(Object::InitialLayout);
 
-    Root<Class*> objectBase(nullptr);
+    Stack<Class*> objectBase(nullptr);
     Object::ObjectClass.init(gc.create<Class>("object", objectBase));
     NoneObject::ObjectClass.init(gc.create<Class>("None"));
     Class::ObjectClass.init(gc.create<Class>("class"));
@@ -459,7 +459,7 @@ static bool isNonDataDescriptor(Traced<Value> value)
         return false;
 
     // Don't check for descriptors here as that could go recursive.
-    Root<Object*> obj(value.asObject());
+    Stack<Object*> obj(value.asObject());
     return obj->hasAttr(Name::__get__);
 }
 
@@ -479,8 +479,8 @@ enum class FindResult
 static FindResult findAttrForGet(Traced<Value> value, Name name,
                                  MutableTraced<Value> resultOut)
 {
-    Root<Class*> cls(value.type());
-    Root<Value> classAttr;
+    Stack<Class*> cls(value.type());
+    Stack<Value> classAttr;
     bool foundOnClass = cls->maybeGetAttr(name, classAttr);
 
     if (foundOnClass && isDataDescriptor(classAttr)) {
@@ -488,7 +488,7 @@ static FindResult findAttrForGet(Traced<Value> value, Name name,
         return FindResult::FoundDescriptor;
     }
 
-    Root<Object*> obj(value.maybeObject());
+    Stack<Object*> obj(value.maybeObject());
     if (obj) {
         if (obj->is<Class>()) {
             if (obj->maybeGetAttr(name, resultOut)) {
@@ -514,7 +514,7 @@ static FindResult findAttrForGet(Traced<Value> value, Name name,
 static bool raiseAttrError(Traced<Value> value, Name name,
                            MutableTraced<Value> resultOut)
 {
-    Root<Class*> cls(value.type());
+    Stack<Class*> cls(value.type());
     string message =
         "'" + cls->name() + "' object has no attribute '" + name + "'";
     resultOut = gc.create<AttributeError>(message);
@@ -528,7 +528,7 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
         resultOut = value.type();
         return true;
     } else if (value.is<Class>()) {
-        Root<Object*> obj(value.asObject());
+        Stack<Object*> obj(value.asObject());
         if (name == Name::__name__) {
             resultOut = gc.create<String>(obj->as<Class>()->name());
             return true;
@@ -559,14 +559,14 @@ static bool getAttrOrDescriptor(Traced<Value> value, Name name,
 
 static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueInOut)
 {
-    Root<Object*> desc(valueInOut.asObject());
-    Root<Value> func(desc->getAttr(Name::__get__));
+    Stack<Object*> desc(valueInOut.asObject());
+    Stack<Value> func(desc->getAttr(Name::__get__));
     bool isClass = value.is<Class>();
     RootVector<Value> args(3);
     args[0] = desc;
     args[1] = isClass ? None : value;
     args[2] = isClass ? value.get() : value.type();
-    Root<Value> result;
+    Stack<Value> result;
     bool ok = Interpreter::instance().call(func, args, result);
     valueInOut = result;
     return ok; // todo: drive MutableTraced through interpreter interface
@@ -625,9 +625,9 @@ FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
 {
     // todo: check for specials?
 
-    Root<Class*> cls(obj->type());
+    Stack<Class*> cls(obj->type());
 
-    Root<Value> classAttr;
+    Stack<Value> classAttr;
     bool foundOnClass = cls->maybeGetAttr(name, classAttr);
 
     if (foundOnClass && isDataDescriptor(classAttr)) {
@@ -641,16 +641,16 @@ FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
 bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
              MutableTraced<Value> resultOut)
 {
-    Root<Value> descValue;
+    Stack<Value> descValue;
     FindResult r = findAttrForSetOrDelete(name, obj, descValue);
     if (r == FindResult::FoundDescriptor) {
-        Root<Object*> desc(descValue.asObject());
-        Root<Value> func(desc->getAttr(Name::__set__));
+        Stack<Object*> desc(descValue.asObject());
+        Stack<Value> func(desc->getAttr(Name::__set__));
         RootVector<Value> args(3);
         args[0] = desc;
         args[1] = obj;
         args[2] = value.get();
-        Root<Value> result;
+        Stack<Value> result;
         bool ok = Interpreter::instance().call(func, args, result);
         resultOut = result;
         return ok; // todo: drive MutableTraced through interpreter interface
@@ -664,15 +664,15 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
 
 bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
 {
-    Root<Value> descValue;
+    Stack<Value> descValue;
     FindResult r = findAttrForSetOrDelete(name, obj, descValue);
     if (r == FindResult::FoundDescriptor) {
-        Root<Object*> desc(descValue.asObject());
-        Root<Value> func(desc->getAttr(Name::__delete__));
+        Stack<Object*> desc(descValue.asObject());
+        Stack<Value> func(desc->getAttr(Name::__delete__));
         RootVector<Value> args(2);
         args[0] = desc;
         args[1] = obj;
-        Root<Value> result;
+        Stack<Value> result;
         bool ok = Interpreter::instance().call(func, args, result);
         resultOut = result;
         return ok; // todo: drive MutableTraced through interpreter interface

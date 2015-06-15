@@ -247,6 +247,8 @@ void GC::shutdown()
 {
     for (RootBase* r = rootList; r; r = r->next())
         r->clear();
+    for (StackBase* r = stackList; r; r = r->next())
+        r->clear();
     collect();
     assert(cellCount == 0);
 }

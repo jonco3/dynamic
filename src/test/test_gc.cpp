@@ -48,7 +48,7 @@ testcase(gc)
     gc.collect();
     testEqual(gc.cellCount, initCount);
 
-    Root<TestCell*> r;
+    Stack<TestCell*> r;
     gc.collect();
     testEqual(gc.cellCount, initCount);
     r = gc.create<TestCell>();

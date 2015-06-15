@@ -50,7 +50,7 @@ struct Interpreter
 
     template <typename S>
     void pushStack(const S& element) {
-        Root<Value> value(element);
+        Stack<Value> value(element);
         stack.push_back(value.get());
         logStackPush(value);
     }
@@ -183,8 +183,8 @@ struct Interpreter
     RootVector<ExceptionHandler*> exceptionHandlers;
     bool inExceptionHandler_;
     JumpKind jumpKind_;
-    Root<Exception*> currentException_;
-    Root<Value> deferredReturnValue_;
+    Stack<Exception*> currentException_;
+    Stack<Value> deferredReturnValue_;
     unsigned remainingFinallyCount_;
     unsigned loopControlTarget_;
 
