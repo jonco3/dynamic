@@ -26,7 +26,7 @@
                                           Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
-    Root<Value> value;
+    Stack<Value> value;
     if (!frame->maybeGetAttr(self->ident, value))
         return interp.raiseNameError(self->ident);
     interp.pushStack(value);
@@ -40,7 +40,7 @@
     if (frame->layout() != self->layout_)
         return interp.replaceInstrFuncAndRestart(self, fallback);
 
-    Root<Value> value(interp.peekStack(0));
+    Stack<Value> value(interp.peekStack(0));
     interp.getFrame()->setSlot(self->slot_, value);
     return true;
 }
@@ -48,7 +48,7 @@
 /* static */ bool InstrSetLocal::fallback(Traced<InstrSetLocal*> self,
                                           Interpreter& interp)
 {
-    Root<Value> value(interp.peekStack(0));
+    Stack<Value> value(interp.peekStack(0));
     interp.getFrame()->setAttr(self->ident, value);
     return true;
 }
@@ -67,7 +67,7 @@
                                            Interpreter& interp)
 {
     Frame* frame = interp.getFrame(self->frameIndex);
-    Root<Value> value;
+    Stack<Value> value;
     // Name was present when compiled, but may have been deleted.
     if (!frame->maybeGetAttr(self->ident, value))
         return interp.raiseNameError(self->ident);
@@ -78,7 +78,7 @@
 /* static */ bool InstrSetLexical::execute(Traced<InstrSetLexical*> self,
                                            Interpreter& interp)
 {
-    Root<Value> value(interp.peekStack(0));
+    Stack<Value> value(interp.peekStack(0));
     interp.getFrame(self->frameIndex)->setAttr(self->ident, value);
     return true;
 }
@@ -95,14 +95,14 @@
 /* static */ bool InstrGetGlobal::execute(Traced<InstrGetGlobal*> self,
                                           Interpreter& interp)
 {
-    Root<Value> value;
+    Stack<Value> value;
     if (self->global->maybeGetAttr(self->ident, value)) {
         assert(value.toObject());
         interp.pushStack(value);
         return true;
     }
 
-    Root<Value> builtins;
+    Stack<Value> builtins;
     if (self->global->maybeGetAttr(Name::__builtins__, builtins) &&
         builtins.maybeGetAttr(self->ident, value))
     {
@@ -117,7 +117,7 @@
 /* static */ bool InstrSetGlobal::execute(Traced<InstrSetGlobal*> self,
                                           Interpreter& interp)
 {
-    Root<Value> value(interp.peekStack(0));
+    Stack<Value> value(interp.peekStack(0));
     self->global->setAttr(self->ident, value);
     return true;
 }
@@ -133,8 +133,8 @@
 /* static */ bool InstrGetAttr::execute(Traced<InstrGetAttr*> self,
                                         Interpreter& interp)
 {
-    Root<Value> value(interp.popStack());
-    Root<Value> result;
+    Stack<Value> value(interp.popStack());
+    Stack<Value> result;
     bool ok = getAttr(value, self->ident, result);
     interp.pushStack(result);
     return ok;
@@ -143,9 +143,9 @@
 /* static */ bool InstrSetAttr::execute(Traced<InstrSetAttr*> self,
                                         Interpreter& interp)
 {
-    Root<Value> value(interp.peekStack(1));
-    Root<Object*> obj(interp.popStack().toObject());
-    Root<Value> result;
+    Stack<Value> value(interp.peekStack(1));
+    Stack<Object*> obj(interp.popStack().toObject());
+    Stack<Value> result;
     if (!setAttr(obj, self->ident, value, result)) {
         interp.pushStack(result);
         return false;
@@ -157,8 +157,8 @@
 /* static */ bool InstrDelAttr::execute(Traced<InstrDelAttr*> self,
                                         Interpreter& interp)
 {
-    Root<Object*> obj(interp.popStack().toObject());
-    Root<Value> result;
+    Stack<Object*> obj(interp.popStack().toObject());
+    Stack<Value> result;
     if (!delAttr(obj, self->ident, result)) {
         interp.pushStack(result);
         return false;
@@ -170,7 +170,7 @@
 /* static */ bool InstrCall::execute(Traced<InstrCall*> self,
                                      Interpreter& interp)
 {
-    Root<Value> target(interp.peekStack(self->count_));
+    Stack<Value> target(interp.peekStack(self->count_));
     RootVector<Value> args(self->count_);
     for (unsigned i = 0; i < self->count_; i++)
         args[i] = interp.peekStack(self->count_ - i - 1);
@@ -193,12 +193,12 @@
 /* static */ bool InstrGetMethod::execute(Traced<InstrGetMethod*> self,
                                           Interpreter& interp)
 {
-    Root<Value> value(interp.peekStack(0));
+    Stack<Value> value(interp.peekStack(0));
     if (!fallback(self, interp))
         return false;
 
     if (value.isInt32()) {
-        Root<Value> result(interp.peekStack(2));
+        Stack<Value> result(interp.peekStack(2));
         interp.replaceInstr(self,
                             InstrGetMethodInt::execute,
                             gc.create<InstrGetMethodInt>(self->ident, result));
@@ -212,8 +212,8 @@
 /* static */ bool InstrGetMethod::fallback(Traced<InstrGetMethod*> self,
                                            Interpreter& interp)
 {
-    Root<Value> value(interp.popStack());
-    Root<Value> result;
+    Stack<Value> value(interp.popStack());
+    Stack<Value> result;
     bool isCallableDescriptor;
     if (!getMethodAttr(value, self->ident, result, isCallableDescriptor))
         return interp.raiseAttrError(value, self->ident);
@@ -227,7 +227,7 @@
 /* static */ bool InstrGetMethodInt::execute(Traced<InstrGetMethodInt*> self,
                                              Interpreter& interp)
 {
-    Root<Value> value(interp.peekStack(0));
+    Stack<Value> value(interp.peekStack(0));
     if (!value.isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
@@ -246,7 +246,7 @@
                                            Interpreter& interp)
 {
     bool addSelf = interp.peekStack(self->count_ + 1).as<Boolean>()->value();
-    Root<Value> target(interp.peekStack(self->count_ + 2));
+    Stack<Value> target(interp.peekStack(self->count_ + 2));
     unsigned argCount = self->count_ + (addSelf ? 1 : 0);
     RootVector<Value> args(argCount);
     for (unsigned i = 0; i < argCount; i++)
@@ -268,9 +268,9 @@
     // todo: implement this
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
 
-    Root<Object*> container(interp.popStack().toObject());
-    Root<Value> value(interp.popStack());
-    Root<Value> contains;
+    Stack<Object*> container(interp.popStack().toObject());
+    Stack<Value> value(interp.popStack());
+    Stack<Value> contains;
     if (!container->maybeGetAttr(Name::__contains__, contains)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
@@ -370,9 +370,9 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
 /* static */ bool InstrLambda::execute(Traced<InstrLambda*> self,
                                        Interpreter& interp)
 {
-    Root<FunctionInfo*> info(self->info_);
-    Root<Block*> block(self->block());
-    Root<Frame*> frame(interp.getFrame(0));
+    Stack<FunctionInfo*> info(self->info_);
+    Stack<Block*> block(self->block());
+    Stack<Frame*> frame(interp.getFrame(0));
     TracedVector<Value> defaults(
         interp.stackSlice(self->defaultCount()));
     Object* obj = gc.create<Function>(self->funcName_, info, defaults, frame);
@@ -451,7 +451,7 @@ InstrAssertionFailed::execute(Traced<InstrAssertionFailed*> self,
 InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
                                  Interpreter& interp)
 {
-    Root<Frame*> frame(interp.getFrame());
+    Stack<Frame*> frame(interp.getFrame());
     vector<Name> names;
     for (Layout* l = frame->layout();
          l != Frame::InitialLayout;
@@ -461,10 +461,10 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         if (name != Name::__bases__)
             names.push_back(l->name());
     }
-    Root<Layout*> layout(Class::InitialLayout);
+    Stack<Layout*> layout(Class::InitialLayout);
     for (auto i = names.begin(); i != names.end(); i++)
         layout = layout->addName(*i);
-    Root<Value> bases;
+    Stack<Value> bases;
     if (!frame->maybeGetAttr(Name::__bases__, bases)) {
         interp.pushStack(gc.create<AttributeError>("Missing __bases__"));
         return false;
@@ -473,14 +473,14 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         interp.pushStack(gc.create<TypeError>("__bases__ is not a tuple"));
         return false;
     }
-    Root<Tuple*> tuple(bases.toObject()->as<Tuple>());
-    Root<Class*> base(Object::ObjectClass);
+    Stack<Tuple*> tuple(bases.toObject()->as<Tuple>());
+    Stack<Class*> base(Object::ObjectClass);
     if (tuple->len() > 1) {
         interp.pushStack(gc.create<NotImplementedError>(
                              "Multiple inheritance not NYI"));
         return false;
     } else if (tuple->len() == 1) {
-        Root<Value> value(tuple->getitem(0));
+        Stack<Value> value(tuple->getitem(0));
         if (!value.toObject()->is<Class>()) {
             interp.pushStack(gc.create<TypeError>("__bases__[0] is not a class"));
             return false;
@@ -488,7 +488,7 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         base = value.toObject()->as<Class>();
     }
     Class* cls = gc.create<Class>(self->ident, base, layout);
-    Root<Value> value;
+    Stack<Value> value;
     for (auto i = names.begin(); i != names.end(); i++) {
         value = frame->getAttr(*i);
         cls->setAttr(*i, value);
@@ -500,14 +500,14 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
 /* static */ bool InstrDestructure::execute(Traced<InstrDestructure*> self,
                                             Interpreter& interp)
 {
-    Root<Value> seq(interp.popStack());
-    Root<Value> lenFunc;
+    Stack<Value> seq(interp.popStack());
+    Stack<Value> lenFunc;
     if (!seq.maybeGetAttr(Name::__len__, lenFunc)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
     }
 
-    Root<Value> getitemFunc;
+    Stack<Value> getitemFunc;
     if (!seq.maybeGetAttr(Name::__getitem__, getitemFunc)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
         return false;
@@ -515,7 +515,7 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
 
     RootVector<Value> args;
     args.push_back(seq);
-    Root<Value> result;
+    Stack<Value> result;
     if (!interp.call(lenFunc, args, result)) {
         interp.pushStack(result);
         return false;
@@ -559,12 +559,12 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
                                              Interpreter& interp)
 {
     // The stack is already set up with next method and target on top
-    Root<Value> target(interp.peekStack(2));
+    Stack<Value> target(interp.peekStack(2));
     TracedVector<Value> args = interp.stackSlice(1);
-    Root<Value> result;
+    Stack<Value> result;
     bool ok = interp.call(target, args, result);
     if (!ok) {
-        Root<Object*> exc(result.toObject());
+        Stack<Object*> exc(result.toObject());
         if (exc->is<StopIteration>()) {
             interp.pushStack(Boolean::False);
             return true;
@@ -584,11 +584,11 @@ void BinaryOpInstr::print(ostream& s) const
 /* static */ bool InstrBinaryOp::execute(Traced<InstrBinaryOp*> self,
                                          Interpreter& interp)
 {
-    Root<Value> right(interp.peekStack(0));
-    Root<Value> left(interp.peekStack(1));
+    Stack<Value> right(interp.peekStack(0));
+    Stack<Value> left(interp.peekStack(1));
 
     if (left.isInt32() && right.isInt32()) {
-        Root<Value> method(
+        Stack<Value> method(
             Integer::ObjectClass->getAttr(Name::binMethod[self->op()]));
         return interp.replaceInstrAndRestart(
             self,
@@ -606,11 +606,11 @@ static bool maybeCallBinaryOp(Interpreter& interp,
                               Traced<Value> right,
                               bool& successOut)
 {
-    Root<Value> method;
+    Stack<Value> method;
     if (!obj.maybeGetAttr(name, method))
         return false;
 
-    Root<Value> result;
+    Stack<Value> result;
     RootVector<Value> args;
     args.push_back(left);
     args.push_back(right);
@@ -631,8 +631,8 @@ static bool maybeCallBinaryOp(Interpreter& interp,
 /* static */ bool InstrBinaryOp::fallback(Traced<InstrBinaryOp*> self,
                                           Interpreter& interp)
 {
-    Root<Value> right(interp.popStack());
-    Root<Value> left(interp.popStack());
+    Stack<Value> right(interp.popStack());
+    Stack<Value> left(interp.popStack());
 
     // "If the right operand's type is a subclass of the left operand's type and
     // that subclass provides the reflected method for the operation, this
@@ -642,8 +642,8 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     // todo: needs test
 
     bool success;
-    Root<Class*> ltype(left.type());
-    Root<Class*> rtype(right.type());
+    Stack<Class*> ltype(left.type());
+    Stack<Class*> rtype(right.type());
     BinaryOp op = self->op();
     const Name* names = Name::binMethod;
     const Name* rnames = Name::binMethodReflected;
@@ -668,8 +668,8 @@ static bool maybeCallBinaryOp(Interpreter& interp,
 /* static */ bool InstrBinaryOpInt::execute(Traced<InstrBinaryOpInt*> self,
                                             Interpreter& interp)
 {
-    Root<Value> right(interp.peekStack(0));
-    Root<Value> left(interp.peekStack(1));
+    Stack<Value> right(interp.peekStack(0));
+    Stack<Value> left(interp.peekStack(1));
 
     if (!left.isInt32() || !right.isInt32()) {
         return interp.replaceInstrAndRestart(
@@ -682,8 +682,8 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     RootVector<Value> args;
     args.push_back(left);
     args.push_back(right);
-    Root<Value> result;
-    Root<Value> method(self->method_);
+    Stack<Value> result;
+    Stack<Value> method(self->method_);
     bool r = interp.call(method, args, result);
     assert(r);
     assert(result != Value(NotImplemented));
@@ -695,11 +695,11 @@ static bool maybeCallBinaryOp(Interpreter& interp,
 InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
                               Interpreter& interp)
 {
-    Root<Value> update(interp.popStack());
-    Root<Value> value(interp.popStack());
+    Stack<Value> update(interp.popStack());
+    Stack<Value> value(interp.popStack());
 
-    Root<Value> method;
-    Root<Value> result;
+    Stack<Value> method;
+    Stack<Value> result;
     if (value.maybeGetAttr(Name::augAssignMethod[self->op()], method)) {
         RootVector<Value> args;
         args.push_back(value);
@@ -748,7 +748,7 @@ InstrResumeGenerator::execute(Traced<InstrResumeGenerator*> self,
 InstrSuspendGenerator::execute(Traced<InstrSuspendGenerator*> self,
                                Interpreter& interp)
 {
-    Root<Value> value(interp.popStack());
+    Stack<Value> value(interp.popStack());
     Frame* frame = interp.getFrame();
     GeneratorIter *gen = frame->getAttr("%gen").asObject()->as<GeneratorIter>();
     gen->suspend(interp, value);
@@ -775,8 +775,8 @@ InstrLeaveCatchRegion::execute(Traced<InstrLeaveCatchRegion*> self,
 InstrMatchCurrentException::execute(Traced<InstrMatchCurrentException*> self,
                                     Interpreter& interp)
 {
-    Root<Object*> obj(interp.popStack().toObject());
-    Root<Exception*> exception(interp.currentException());
+    Stack<Object*> obj(interp.popStack().toObject());
+    Stack<Exception*> exception(interp.currentException());
     bool match = obj->is<Class>() && exception->isInstanceOf(obj->as<Class>());
     if (match) {
         interp.finishHandlingException();
