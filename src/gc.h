@@ -21,6 +21,7 @@ extern bool logGC;
 struct Cell;
 struct Marker;
 struct RootBase;
+struct StackBase;
 
 // A visitor that visits edges in the object graph.
 struct Tracer
@@ -81,6 +82,7 @@ struct GC
     size_t cellCount;
     vector<vector<Cell*>> cells;
     RootBase* rootList;
+    StackBase* stackList;
     bool isSweeping;
 #ifdef DEBUG
     bool isAllocating;
@@ -90,6 +92,7 @@ struct GC
 
     friend struct Cell;
     friend struct RootBase;
+    friend struct StackBase;
     friend struct AutoAssertNoGC;
     friend void testcase_body_gc();
 };
@@ -190,8 +193,10 @@ struct RootBase
             prev_->next_ = next_;
         else
             gc.rootList = next_;
+#ifdef DEBUG
         next_ = nullptr;
         prev_ = nullptr;
+#endif
     }
 
     RootBase* next() {
@@ -201,6 +206,35 @@ struct RootBase
   private:
     RootBase* next_;
     RootBase* prev_;
+};
+
+struct StackBase
+{
+    StackBase() : next_(nullptr) {}
+
+    virtual void trace(Tracer& t) = 0;
+    virtual void clear() = 0;
+
+    void insert() {
+        assert(!next_);
+        next_ = gc.stackList;
+        gc.stackList = this;
+    }
+
+    void remove() {
+        assert(gc.stackList == this);
+        gc.stackList = next_;
+#ifdef DEBUG
+        next_ = nullptr;
+#endif
+    }
+
+    StackBase* next() {
+        return next_;
+    }
+
+  private:
+    StackBase* next_;
 };
 
 #define define_comparisions                                                    \
@@ -329,16 +363,92 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     T ptr_;
 };
 
+// Roots a cell as long as it is alive, for stack use.
+template <typename T>
+struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
+{
+    Stack() {
+        ptr_ = GCTraits<T>::nullValue();
+        insert();
+    }
+
+    explicit Stack(T ptr) {
+        *this = ptr;
+        insert();
+    }
+
+    Stack(const Stack& other) {
+        *this = other.ptr_;
+        insert();
+    }
+
+    Stack(const GlobalRoot<T>& other) {
+        *this = other.get();
+        insert();
+    }
+
+    template <typename S>
+    explicit Stack(const S& other) : ptr_(other) {
+        insert();
+    }
+
+    ~Stack() { remove(); }
+
+    define_comparisions;
+    define_immutable_accessors;
+    define_mutable_accessors;
+
+    const T* location() const { return &ptr_; }
+
+    template <typename S>
+    Stack& operator=(const S& ptr) {
+        ptr_ = ptr;
+        GCTraits<T>::checkValid(ptr_);
+        return *this;
+    }
+
+    Stack& operator=(const Stack& other) {
+        *this = other.ptr_;
+        return *this;
+    }
+
+    Stack& operator=(const GlobalRoot<T>& other) {
+        *this = other.get();
+        return *this;
+    }
+
+    virtual void clear() override {
+        ptr_ = GCTraits<T>::nullValue();
+    }
+
+    virtual void trace(Tracer& t) {
+        gc.trace(t, &ptr_);
+    }
+
+  private:
+    T ptr_;
+};
+
 // A handle to a traced location
 template <typename T>
 struct Traced : public WrapperMixins<Traced<T>, T>
 {
     Traced(const Traced<T>& other) : ptr_(other.ptr_) {}
     Traced(Root<T>& root) : ptr_(root.get()) {}
+    Traced(Stack<T>& root) : ptr_(root.get()) {}
     Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
 
     template <typename S>
     Traced(Root<S>& other)
+        : ptr_(reinterpret_cast<const T&>(other.get()))
+    {
+        static_assert(is_base_of<typename remove_pointer<T>::type,
+                                 typename remove_pointer<S>::type>::value,
+                      "Invalid conversion");
+    }
+
+    template <typename S>
+    Traced(Stack<S>& other)
         : ptr_(reinterpret_cast<const T&>(other.get()))
     {
         static_assert(is_base_of<typename remove_pointer<T>::type,

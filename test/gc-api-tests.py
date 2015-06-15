@@ -119,6 +119,16 @@ class TestCompileErrors(unittest.TestCase):
             }
             """);
 
+        # Check we can pass a Stack to an API expecting a traced pointer
+        self.checkOK(
+            """
+            void api(Traced<Cell*> arg) {}
+            void test() {
+                Stack<Cell*> root;
+                api(root);
+            }
+            """);
+
         # Check we can pass GlobalRoot to an API expecting a traced pointer
         self.checkOK(
             """
@@ -176,12 +186,31 @@ class TestCompileErrors(unittest.TestCase):
             """,
             "Invalid conversion")
 
+        self.checkCompileError(
+            """
+            void api(Traced<TestCell*> arg) {}
+            void test() {
+                Stack<Cell*> root;
+                api(root);
+            }
+            """,
+            "Invalid conversion")
+
         # Check we can pass a derived root to something expecting a base class
         self.checkOK(
             """
             void api(Traced<Cell*> arg) {}
             void test() {
                 Root<TestCell*> root;
+                api(root);
+            }
+            """);
+
+        self.checkOK(
+            """
+            void api(Traced<Cell*> arg) {}
+            void test() {
+                Stack<TestCell*> root;
                 api(root);
             }
             """);

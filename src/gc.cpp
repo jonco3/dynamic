@@ -218,6 +218,8 @@ void GC::collect()
     Marker marker;
     for (RootBase* r = rootList; r; r = r->next())
         r->trace(marker);
+    for (StackBase* r = stackList; r; r = r->next())
+        r->trace(marker);
 
     // Mark
     log("- marking reachable");
