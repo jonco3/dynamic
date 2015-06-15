@@ -1090,7 +1090,7 @@ static unique_ptr<SyntaxBlock> ParseModule(const Input& input)
 }
 
 void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
-                        Root<Block*>& blockOut)
+                        MutableTraced<Block*> blockOut)
 {
     unique_ptr<SyntaxBlock> syntax(ParseModule(input));
     Root<Object*> globals(globalsArg);

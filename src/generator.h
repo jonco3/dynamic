@@ -13,8 +13,8 @@ struct GeneratorIter : public Object
 
     virtual void traceChildren(Tracer& t) override;
 
-    bool iter(Root<Value>& resultOut);
-    bool next(Root<Value>& resultOut);
+    bool iter(MutableTraced<Value> resultOut);
+    bool next(MutableTraced<Value> resultOut);
 
     bool resume(Interpreter& interp);
     bool leave(Interpreter& interp);

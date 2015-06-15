@@ -16,8 +16,8 @@ struct ListIter : public Object
 
     void traceChildren(Tracer& t) override;
 
-    bool iter(Root<Value>& resultOut);
-    bool next(Root<Value>& resultOut);
+    bool iter(MutableTraced<Value> resultOut);
+    bool next(MutableTraced<Value> resultOut);
 
   private:
     ListBase* list_;
@@ -54,7 +54,7 @@ static ListBase* asListBase(Object *o)
 }
 
 template <class T>
-static bool listBase_new(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listBase_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
@@ -84,25 +84,25 @@ static bool listBase_new(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool listBase_len(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listBase_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     ListBase* l = asListBase(args[0].toObject());
     return l->len(resultOut);
 }
 
-static bool listBase_getitem(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listBase_getitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     ListBase* l = asListBase(args[0].toObject());
     return l->getitem(args[1], resultOut);
 }
 
-static bool listBase_contains(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listBase_contains(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     ListBase* l = asListBase(args[0].toObject());
     return l->contains(args[1], resultOut);
 }
 
-static bool listBase_iter(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listBase_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     ListBase* l = asListBase(args[0].toObject());
     return l->iter(resultOut);
@@ -140,13 +140,13 @@ void ListBase::traceChildren(Tracer& t)
         gc.trace(t, &elements_[i]);
 }
 
-bool ListBase::len(Root<Value>& resultOut)
+bool ListBase::len(MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(elements_.size());
     return true;
 }
 
-bool ListBase::checkIndex(int32_t index, Root<Value>& resultOut)
+bool ListBase::checkIndex(int32_t index, MutableTraced<Value> resultOut)
 {
     if (index < 0 || size_t(index) >= elements_.size()) {
         resultOut = gc.create<IndexError>(listName() + " index out of range");
@@ -186,7 +186,7 @@ void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step
     stop = ClampIndex(WrapIndex(stop, length), length, false);
 }
 
-bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
+bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
     if (index.isInt32()) {
         int32_t i = WrapIndex(index.asInt32(), len());
@@ -214,7 +214,7 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
             src += step;
         }
 
-        resultOut = result;
+        resultOut = Value(result);
         return true;
     } else {
         resultOut = gc.create<TypeError>(
@@ -223,14 +223,14 @@ bool ListBase::getitem(Traced<Value> index, Root<Value>& resultOut)
     }
 }
 
-bool ListBase::contains(Traced<Value> element, Root<Value>& resultOut)
+bool ListBase::contains(Traced<Value> element, MutableTraced<Value> resultOut)
 {
     bool found = find(elements_.begin(), elements_.end(), element) != elements_.end();
     resultOut = Boolean::get(found);
     return true;
 }
 
-bool ListBase::iter(Root<Value>& resultOut)
+bool ListBase::iter(MutableTraced<Value> resultOut)
 {
     Root<ListBase*> self(this);
     resultOut = gc.create<ListIter>(self);
@@ -301,17 +301,17 @@ void Tuple::print(ostream& s) const
     s << ")";
 }
 
-static bool list_setitem(TracedVector<Value> args, Root<Value>& resultOut) {
+static bool list_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut) {
     List* list = args[0].toObject()->as<List>();
     return list->setitem(args[1], args[2], resultOut);
 }
 
-static bool list_delitem(TracedVector<Value> args, Root<Value>& resultOut) {
+static bool list_delitem(TracedVector<Value> args, MutableTraced<Value> resultOut) {
     List* list = args[0].toObject()->as<List>();
     return list->delitem(args[1], resultOut);
 }
 
-static bool list_append(TracedVector<Value> args, Root<Value>& resultOut) {
+static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut) {
     List* list = args[0].toObject()->as<List>();
     return list->append(args[1], resultOut);
 }
@@ -358,7 +358,7 @@ void List::print(ostream& s) const
     s << "]";
 }
 
-bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut)
+bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut)
 {
     if (!index.isInt32()) {
         resultOut = gc.create<TypeError>(
@@ -380,7 +380,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, Root<Value>& result
     return true;
 }
 
-bool List::delitem(Traced<Value> index, Root<Value>& resultOut)
+bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
     if (!index.isInt32()) {
         resultOut = gc.create<TypeError>(
@@ -402,20 +402,20 @@ bool List::delitem(Traced<Value> index, Root<Value>& resultOut)
     return true;
 }
 
-bool List::append(Traced<Value> element, Root<Value>& resultOut)
+bool List::append(Traced<Value> element, MutableTraced<Value> resultOut)
 {
     elements_.push_back(element);
     resultOut = None;
     return true;
 }
 
-static bool listIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     ListIter* i = args[0].toObject()->as<ListIter>();
     return i->iter(resultOut);
 }
 
-static bool listIter_next(TracedVector<Value> args, Root<Value>& resultOut)
+static bool listIter_next(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     ListIter* i = args[0].toObject()->as<ListIter>();
     return i->next(resultOut);
@@ -438,14 +438,14 @@ void ListIter::traceChildren(Tracer& t)
     gc.trace(t, &list_);
 }
 
-bool ListIter::iter(Root<Value>& resultOut)
+bool ListIter::iter(MutableTraced<Value> resultOut)
 {
     Root<ListIter*> self(this);
-    resultOut = self;
+    resultOut = Value(self);
     return true;
 }
 
-bool ListIter::next(Root<Value>& resultOut)
+bool ListIter::next(MutableTraced<Value> resultOut)
 {
     assert(index_ >= -1);
     if (index_ == -1 || size_t(index_) >= list_->elements_.size()) {

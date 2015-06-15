@@ -17,7 +17,7 @@ Callable::Callable(Traced<Class*> cls, Name name,
     maxArgs_(maxArgs)
 {}
 
-static bool callable_get(TracedVector<Value> args, Root<Value>& resultOut)
+static bool callable_get(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Callable::ObjectClass, resultOut))
         return false;
@@ -25,7 +25,7 @@ static bool callable_get(TracedVector<Value> args, Root<Value>& resultOut)
     Root<Callable*> callable(args[0].asObject()->as<Callable>());
     Root<Object*> instance(args[1].toObject());
     if (instance == None)
-        resultOut = callable;
+        resultOut = Value(callable);
     else
         resultOut = gc.create<Method>(callable, instance);
     return true;
@@ -93,7 +93,7 @@ void initCallable()
 }
 
 bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
-                     Root<Value>& resultOut)
+                     MutableTraced<Value> resultOut)
 {
     if (!v.isInstanceOf(cls)) {
         string message = "Expecting " + cls->name() +

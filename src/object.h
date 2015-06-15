@@ -16,7 +16,7 @@ struct Class;
 struct Native;
 struct Object;
 
-typedef bool (*NativeFunc)(TracedVector<Value>, Root<Value>&);
+typedef bool (*NativeFunc)(TracedVector<Value>, MutableTraced<Value>);
 
 extern GlobalRoot<Object*> None;
 
@@ -151,14 +151,14 @@ extern void initNativeMethod(Traced<Object*> cls, const string& name,
                              unsigned minArgs, unsigned maxArgs = 0);
 
 extern bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
-                            Root<Value>& resultOut);
+                            MutableTraced<Value> resultOut);
 
 template <typename T>
 /* static */ inline Class* Class::createNative(string name, Traced<Class*> base)
 {
     Root<Class*> cls(gc.create<Class>(name, base));
     NativeFunc func =
-        [] (TracedVector<Value> args, Root<Value>& resultOut) -> bool
+        [] (TracedVector<Value> args, MutableTraced<Value> resultOut) -> bool
         {
             if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
                 return false;

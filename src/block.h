@@ -35,7 +35,7 @@ struct InstrThunk
 struct Block : public Cell
 {
     static void buildModule(const Input& input, Traced<Object*> globals,
-                            Root<Block*>& blockOut);
+                            MutableTraced<Block*> blockOut);
 
     Block(Traced<Layout*> layout);
     InstrThunk* startInstr() { return &instrs_[0]; }

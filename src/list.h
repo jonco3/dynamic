@@ -7,10 +7,10 @@ struct ListIter;
 
 struct ListBase : public Object
 {
-    bool len(Root<Value>& resultOut);
-    bool getitem(Traced<Value> index, Root<Value>& resultOut);
-    bool contains(Traced<Value> element, Root<Value>& resultOut);
-    bool iter(Root<Value>& resultOut);
+    bool len(MutableTraced<Value> resultOut);
+    bool getitem(Traced<Value> index, MutableTraced<Value> resultOut);
+    bool contains(Traced<Value> element, MutableTraced<Value> resultOut);
+    bool iter(MutableTraced<Value> resultOut);
 
     virtual const string& listName() const = 0;
     void traceChildren(Tracer& t) override;
@@ -34,7 +34,7 @@ struct ListBase : public Object
 
     virtual ListBase* createDerived(size_t size) = 0;
 
-    bool checkIndex(int32_t index, Root<Value>& resultOut);
+    bool checkIndex(int32_t index, MutableTraced<Value> resultOut);
 };
 
 struct Tuple : public ListBase
@@ -76,9 +76,9 @@ struct List : public ListBase
     virtual const string& listName() const;
     virtual void print(ostream& os) const;
 
-    bool setitem(Traced<Value> index, Traced<Value> value, Root<Value>& resultOut);
-    bool delitem(Traced<Value> index, Root<Value>& resultOut);
-    bool append(Traced<Value> element, Root<Value>& resultOut);
+    bool setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut);
+    bool delitem(Traced<Value> index, MutableTraced<Value> resultOut);
+    bool append(Traced<Value> element, MutableTraced<Value> resultOut);
 
   private:
 

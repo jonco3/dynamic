@@ -17,7 +17,7 @@ for_each_exception_class(define_exception_class)
 GlobalRoot<StopIteration*> StopIterationException;
 
 template <typename T>
-static bool exception_new(TracedVector<Value> args, Root<Value>& resultOut)
+static bool exception_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     assert(args.size() >= 1 && args.size() <= 2);
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))

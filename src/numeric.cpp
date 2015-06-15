@@ -42,7 +42,7 @@ static bool intEQ(int32_t a, int32_t b) { return a == b; }
 static bool intNE(int32_t a, int32_t b) { return a != b; }
 
 template <IntUnaryOp op>
-static bool intUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass)) {
         resultOut = NotImplemented;
@@ -54,7 +54,7 @@ static bool intUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 }
 
 template <IntBinaryOp op>
-static bool intBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
         !args[1].isInstanceOf(Integer::ObjectClass))
@@ -68,7 +68,7 @@ static bool intBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 }
 
 template <IntCompareOp op>
-static bool intCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
         !args[1].isInstanceOf(Integer::ObjectClass))
@@ -81,7 +81,7 @@ static bool intCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool intTrueDiv(TracedVector<Value> args, Root<Value>& resultOut)
+static bool intTrueDiv(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
         !args[1].isInstanceOf(Integer::ObjectClass))
@@ -94,7 +94,7 @@ static bool intTrueDiv(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool intNew(TracedVector<Value> args, Root<Value>& resultOut)
+static bool intNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
@@ -252,7 +252,7 @@ static bool floatOrIntValue(Traced<Value> value, double& out)
 }
 
 template <FloatUnaryOp op>
-static bool floatUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool floatUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -265,7 +265,7 @@ static bool floatUnaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 }
 
 template <FloatBinaryOp op>
-static bool floatBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool floatBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -284,7 +284,7 @@ static bool floatBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 }
 
 template <FloatBinaryOp op>
-static bool floatRBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -303,7 +303,7 @@ static bool floatRBinaryOp(TracedVector<Value> args, Root<Value>& resultOut)
 }
 
 template <FloatCompareOp op>
-static bool floatCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
+static bool floatCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Float::ObjectClass) ||
         !args[1].isInstanceOf(Float::ObjectClass))
@@ -316,7 +316,7 @@ static bool floatCompareOp(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool floatNew(TracedVector<Value> args, Root<Value>& resultOut)
+static bool floatNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;

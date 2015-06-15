@@ -56,7 +56,7 @@ struct Value
     template <typename T> inline T* as();
 
     inline Value getAttr(Name name) const;
-    inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
+    inline bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;
 
     bool operator==(const Value& other) const { return bits == other.bits; }
     bool operator!=(const Value& other) const { return !(*this == other); }

@@ -29,7 +29,7 @@ struct Native : public Callable
 
     Native(Name name, NativeFunc func, unsigned minArgs, unsigned maxArgs = 0);
 
-    bool call(TracedVector<Value> args, Root<Value>& resultOut) const {
+    bool call(TracedVector<Value> args, MutableTraced<Value> resultOut) const {
         return func_(args, resultOut);
     }
 

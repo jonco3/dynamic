@@ -35,7 +35,7 @@ Interpreter* Interpreter::instance_ = nullptr;
     instance_ = new Interpreter;
 }
 
-/* static */ bool Interpreter::exec(Traced<Block*> block, Root<Value>& resultOut)
+/* static */ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(instance_);
     return instance_->interpret(block, resultOut);
@@ -51,7 +51,7 @@ Interpreter::Interpreter()
     loopControlTarget_(0)
 {}
 
-bool Interpreter::interpret(Traced<Block*> block, Root<Value>& resultOut)
+bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
     Root<Frame*> frame(gc.create<Frame>(block));
@@ -96,7 +96,7 @@ void Interpreter::logStackSwap()
 
 #endif
 
-bool Interpreter::run(Root<Value>& resultOut)
+bool Interpreter::run(MutableTraced<Value> resultOut)
 {
 #ifdef DEBUG
     unsigned initialPos = stackPos();
@@ -432,7 +432,7 @@ bool Interpreter::raiseNameError(Name ident)
 
 bool Interpreter::call(Traced<Value> targetValue,
                        const TracedVector<Value>& args,
-                       Root<Value>& resultOut)
+                       MutableTraced<Value> resultOut)
 {
     InstrThunk* oldInstrp = instrp;
     CallStatus status = setupCall(targetValue, args, resultOut);
@@ -469,7 +469,7 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
 
 bool Interpreter::checkArguments(Traced<Callable*> callable,
                                  const TracedVector<Value>& args,
-                                 Root<Value>& resultOut)
+                                 MutableTraced<Value> resultOut)
 {
     unsigned count = args.size();
     if (count < callable->minArgs() || count > callable->maxArgs()) {
@@ -490,7 +490,7 @@ bool Interpreter::checkArguments(Traced<Callable*> callable,
 
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                const TracedVector<Value>& args,
-                                               Root<Value>& resultOut)
+                                               MutableTraced<Value> resultOut)
 {
     Root<Object*> target(targetValue.toObject());
     if (target->is<Native>()) {
@@ -592,7 +592,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 }
 
 Interpreter::CallStatus Interpreter::raiseTypeError(string message,
-                                                    Root<Value>& resultOut)
+                                                    MutableTraced<Value> resultOut)
 {
     resultOut = gc.create<TypeError>(message);
     return CallError;

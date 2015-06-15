@@ -92,7 +92,7 @@ inline Value Value::getAttr(Name name) const
     return obj->getAttr(name);
 }
 
-inline bool Value::maybeGetAttr(Name name, Root<Value>& valueOut) const
+inline bool Value::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
     Object* obj = kind() == IntKind ? Integer::ObjectClass : asObject();
     return obj->maybeGetAttr(name, valueOut);
@@ -167,7 +167,7 @@ inline Value WrapperMixins<W, Value>::getAttr(Name name) const
 }
 
 template <typename W>
-inline bool WrapperMixins<W, Value>::maybeGetAttr(Name name, Root<Value>& valueOut) const
+inline bool WrapperMixins<W, Value>::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
     return get()->maybeGetAttr(name, valueOut);
 }

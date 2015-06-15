@@ -43,10 +43,10 @@ struct ExceptionHandler : public Cell
 struct Interpreter
 {
     static void init();
-    static bool exec(Traced<Block*> block, Root<Value>& resultOut);
+    static bool exec(Traced<Block*> block, MutableTraced<Value> resultOut);
     static Interpreter& instance() { return *instance_; }
 
-    bool interpret(Traced<Block*> block, Root<Value>& resultOut);
+    bool interpret(Traced<Block*> block, MutableTraced<Value> resultOut);
 
     template <typename S>
     void pushStack(const S& element) {
@@ -106,7 +106,7 @@ struct Interpreter
     bool raiseNameError(Name ident);
 
     bool call(Traced<Value> callable, const TracedVector<Value>& args,
-              Root<Value>& resultOut);
+              MutableTraced<Value> resultOut);
     bool startCall(Traced<Value> callable, const TracedVector<Value>& args);
 
     void popFrame();
@@ -194,7 +194,7 @@ struct Interpreter
     unsigned currentOffset();
     TokenPos currentPos();
 
-    bool run(Root<Value>& resultOut);
+    bool run(MutableTraced<Value> resultOut);
 
     bool startNextFinallySuite(JumpKind jumpKind);
 
@@ -206,10 +206,10 @@ struct Interpreter
 
     bool checkArguments(Traced<Callable*> callable,
                         const TracedVector<Value>& args,
-                        Root<Value>& resultOut);
+                        MutableTraced<Value> resultOut);
     CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
-                         Root<Value>& resultOut);
-    CallStatus raiseTypeError(string message, Root<Value>& resultOut);
+                         MutableTraced<Value> resultOut);
+    CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
 
     void replaceInstr(Instr* current, InstrFuncBase newFunc, Instr* newData);
     void replaceInstrFunc(Instr* current, InstrFuncBase newFunc);

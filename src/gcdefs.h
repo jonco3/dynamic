@@ -28,7 +28,7 @@ struct WrapperMixins<W, Value>
     inline Object *toObject() const;
     inline bool isNone() const;
     inline Value getAttr(Name name) const;
-    inline bool maybeGetAttr(Name name, Root<Value>& valueOut) const;
+    inline bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;
     inline Class* type() const;
     template <typename T> inline bool is() const;
     template <typename T> inline T* as();

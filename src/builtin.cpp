@@ -18,7 +18,7 @@
 
 GlobalRoot<Object*> Builtin;
 
-static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
+static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     Object* n = args[1].toObject();
     if (!n->is<String>()) {
@@ -31,7 +31,7 @@ static bool builtin_hasattr(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
+static bool builtin_isinstance(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     // todo: support tuples etc for classInfo
     Root<Class*> cls(args[1].toObject()->as<Class>());
@@ -39,7 +39,7 @@ static bool builtin_isinstance(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool builtin_parse(TracedVector<Value> args, Root<Value>& resultOut)
+static bool builtin_parse(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
         return false;
@@ -59,7 +59,7 @@ static bool builtin_parse(TracedVector<Value> args, Root<Value>& resultOut)
     return true;
 }
 
-static bool builtin_compile(TracedVector<Value> args, Root<Value>& resultOut)
+static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
         return false;

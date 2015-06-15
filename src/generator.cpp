@@ -15,7 +15,7 @@ static inline void log(const char* s, void *p, unsigned x) {}
 
 GlobalRoot<Class*> GeneratorIter::ObjectClass;
 
-static bool generatorIter_iter(TracedVector<Value> args, Root<Value>& resultOut)
+static bool generatorIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     GeneratorIter* i = args[0].toObject()->as<GeneratorIter>();
     return i->iter(resultOut);
@@ -58,10 +58,10 @@ void GeneratorIter::traceChildren(Tracer& t)
         gc.trace(t, &*i);
 }
 
-bool GeneratorIter::iter(Root<Value>& resultOut)
+bool GeneratorIter::iter(MutableTraced<Value> resultOut)
 {
     Root<GeneratorIter*> self(this);
-    resultOut = self;
+    resultOut = Value(self);
     return true;
 }
 
