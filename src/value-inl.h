@@ -23,6 +23,17 @@ inline void GCTraits<Value>::trace(Tracer& t, Value* v)
     }
 }
 
+void GCTraits<Value>::checkValid(Value value)
+{
+#ifdef DEBUG
+    if (value.isObject()) {
+        Object* o = value.asObject();
+        if (o)
+            o->checkValid();
+    }
+#endif
+}
+
 inline Object* Value::toObject() const {
     if (isObject())
         return asObject();

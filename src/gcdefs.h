@@ -11,10 +11,10 @@ struct Value;
 template <>
 struct GCTraits<Value>
 {
-    static Value nullValue();
-    static bool isNonNull(Value value);
-    static void checkValid(Value value);
-    static void trace(Tracer& t, Value* v);
+    static inline Value nullValue();
+    static inline bool isNonNull(Value value);
+    static inline void checkValid(Value value);
+    static inline void trace(Tracer& t, Value* v);
 };
 
 template <typename W>
