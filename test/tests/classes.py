@@ -98,4 +98,11 @@ class C6:
 c = C6()
 assert c.f() == 7
 
+class E:
+  def f(self, a, b, c, d, e, f, g, h, i, j, k, l):
+    return a + b + c + d + e + f + g + h + i + j + k + l
+
+e = E()
+assert(e.f(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1) == 12)
+
 print("ok")

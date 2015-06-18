@@ -55,4 +55,8 @@ assert n(1, 2) == (1, 2, 2, ())
 assert n(1, 2, 3) == (1, 2, 3, ())
 assert n(1, 2, 3, 4) == (1, 2, 3, (4,))
 
+def o(a, b, c, d, e, f, g, h, i, j, k, l):
+    return a + b + c + d + e + f + g + h + i + j + k + l
+assert(o(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1) == 12)
+
 print('ok')

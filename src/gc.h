@@ -730,6 +730,16 @@ struct TracedVector
 #endif
     }
 
+    template <size_t N>
+    TracedVector(RootArray<T, N>& source, unsigned offset, unsigned size)
+      : data_(source.data + offset), size_(size) {
+        assert(offset + size <= source.size());
+#ifdef DEBUG
+        root_ = &source;
+        root_->addUse();
+#endif
+    }
+
     TracedVector(const TracedVector<T>& source, unsigned offset, unsigned size)
       : data_(source.data_ + offset), size_(size) {
         assert(offset + size <= source.size());

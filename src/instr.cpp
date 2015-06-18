@@ -171,11 +171,21 @@
                                      Interpreter& interp)
 {
     Stack<Value> target(interp.peekStack(self->count_));
-    RootVector<Value> args(self->count_);
-    for (unsigned i = 0; i < self->count_; i++)
-        args[i] = interp.peekStack(self->count_ - i - 1);
-    interp.popStack(self->count_ + 1);
-    return interp.startCall(target, args);
+    // todo: evil performance hack to avoid allocating memory
+    if (self->count_ <= 6) {
+        RootArray<Value, 6> args;
+        for (unsigned i = 0; i < self->count_; i++)
+            args[i] = interp.peekStack(self->count_ - i - 1);
+        interp.popStack(self->count_ + 1);
+        return interp.startCall(target,
+                                TracedVector<Value>(args, 0, self->count_));
+    } else {
+        RootVector<Value> args(self->count_);
+        for (unsigned i = 0; i < self->count_; i++)
+            args[i] = interp.peekStack(self->count_ - i - 1);
+        interp.popStack(self->count_ + 1);
+        return interp.startCall(target, args);
+    }
 }
 
 /*
@@ -248,11 +258,20 @@
     bool addSelf = interp.peekStack(self->count_ + 1).as<Boolean>()->value();
     Stack<Value> target(interp.peekStack(self->count_ + 2));
     unsigned argCount = self->count_ + (addSelf ? 1 : 0);
-    RootVector<Value> args(argCount);
-    for (unsigned i = 0; i < argCount; i++)
-        args[i] = interp.peekStack(argCount - i - 1);
-    interp.popStack(self->count_ + 3);
-    return interp.startCall(target, args);
+    // todo: evil performance hack to avoid allocating memory
+    if (argCount <= 6) {
+        RootArray<Value, 6> args;
+        for (unsigned i = 0; i < argCount; i++)
+            args[i] = interp.peekStack(argCount - i - 1);
+        interp.popStack(self->count_ + 3);
+        return interp.startCall(target, TracedVector<Value>(args, 0, argCount));
+    } else {
+        RootVector<Value> args(argCount);
+        for (unsigned i = 0; i < argCount; i++)
+            args[i] = interp.peekStack(argCount - i - 1);
+        interp.popStack(self->count_ + 3);
+        return interp.startCall(target, args);
+    }
 }
 
 /* static */ bool InstrReturn::execute(Traced<InstrReturn*> self,
