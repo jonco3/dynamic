@@ -246,8 +246,7 @@ void Tuple::init()
 {
     ObjectClass.init(Class::createNative("tuple", listBase_new<Tuple>, 2));
     listBase_initNatives(ObjectClass);
-    RootVector<Value> contents;
-    Empty.init(gc.create<Tuple>(contents));
+    Empty.init(gc.create<Tuple>(EmptyValueArray));
 }
 
 /* static */ Tuple* Tuple::get(const TracedVector<Value>& values)

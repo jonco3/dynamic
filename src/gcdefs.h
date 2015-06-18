@@ -66,4 +66,6 @@ struct WrapperMixins<W, T*>
     }
 };
 
+extern RootArray<Value, 0> EmptyValueArray;
+
 #endif

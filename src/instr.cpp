@@ -276,9 +276,9 @@
         return false;
     }
 
-    RootVector<Value> args;
-    args.push_back(Value(container));
-    args.push_back(value);
+    RootArray<Value, 2> args;
+    args[0] = Value(container);
+    args[1] = value;
     return interp.startCall(contains, args);
 }
 
@@ -513,12 +513,14 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         return false;
     }
 
-    RootVector<Value> args;
-    args.push_back(seq);
     Stack<Value> result;
-    if (!interp.call(lenFunc, args, result)) {
-        interp.pushStack(result);
-        return false;
+    {
+        RootArray<Value, 1> args;
+        args[0] = seq;
+        if (!interp.call(lenFunc, args, result)) {
+            interp.pushStack(result);
+            return false;
+        }
     }
 
     if (!result.isInt32()) {
@@ -536,13 +538,16 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         return false;
     }
 
-    args.resize(2);
-    for (unsigned i = self->count_; i != 0; i--) {
-        args[1] = Integer::get(i - 1);
-        bool ok = interp.call(getitemFunc, args, result);
-        interp.pushStack(result);
-        if (!ok)
-            return false;
+    {
+        RootArray<Value, 2> args;
+        args[0] = seq;
+        for (unsigned i = self->count_; i != 0; i--) {
+            args[1] = Integer::get(i - 1);
+            bool ok = interp.call(getitemFunc, args, result);
+            interp.pushStack(result);
+            if (!ok)
+                return false;
+        }
     }
 
     return true;
@@ -611,9 +616,9 @@ static bool maybeCallBinaryOp(Interpreter& interp,
         return false;
 
     Stack<Value> result;
-    RootVector<Value> args;
-    args.push_back(left);
-    args.push_back(right);
+    RootArray<Value, 2> args;
+    args[0] = left;
+    args[1] = right;
     if (!interp.call(method, args, result)) {
         interp.pushStack(result);
         successOut = false;
@@ -679,9 +684,9 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     }
 
     interp.popStack(2);
-    RootVector<Value> args;
-    args.push_back(left);
-    args.push_back(right);
+    RootArray<Value, 2> args;
+    args[0] = left;
+    args[1] = right;
     Stack<Value> result;
     Stack<Value> method(self->method_);
     bool r = interp.call(method, args, result);
@@ -700,10 +705,10 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
 
     Stack<Value> method;
     Stack<Value> result;
+    RootArray<Value, 2> args;
+    args[0] = value;
+    args[1] = update;
     if (value.maybeGetAttr(Name::augAssignMethod[self->op()], method)) {
-        RootVector<Value> args;
-        args.push_back(value);
-        args.push_back(update);
         if (!interp.call(method, args, result)) {
             interp.pushStack(result);
             return false;
@@ -711,9 +716,6 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
         interp.pushStack(result);
         return true;
     } else if (value.maybeGetAttr(Name::binMethod[self->op()], method)) {
-        RootVector<Value> args;
-        args.push_back(value);
-        args.push_back(update);
         if (!interp.call(method, args, result)) {
             interp.pushStack(result);
             return false;

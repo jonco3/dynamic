@@ -33,9 +33,8 @@ void GeneratorIter::init()
     block->append<InstrReturn>();
     static vector<Name> params = { "self" };
     Stack<Frame*> scope; // todo: allow construction of traced for nullptr
-    RootVector<Value> defaults; // todo: find a way of passing an empty vector
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
-    Stack<Value> value(gc.create<Function>("next", info, defaults, scope));
+    Stack<Value> value(gc.create<Function>("next", info, EmptyValueArray, scope));
     ObjectClass->setAttr("next", value);
 }
 
