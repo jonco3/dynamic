@@ -143,36 +143,42 @@ bool Object::hasAttr(Name name) const
 {
     AutoAssertNoGC nogc;
 
-    if (hasOwnAttr(name))
-        return true;
+    const Object* obj = this;
 
-    if (!is<Class>())
-        return type()->hasAttr(name);
+    for (;;) {
+        if (obj->hasOwnAttr(name))
+            return true;
 
-    Stack<Object*> base(as<Class>()->base());
-    if (base == None)
-        return false;
-
-    assert(base->is<Class>());
-    return base->hasAttr(name);
+        if (!obj->is<Class>()) {
+            obj = obj->type();
+        } else {
+            obj = obj->as<Class>()->base();
+            if (obj == None)
+                return false;
+            assert(obj->is<Class>());
+        }
+    }
 }
 
 bool Object::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
     AutoAssertNoGC nogc;
 
-    if (maybeGetOwnAttr(name, valueOut))
-        return true;
+    const Object* obj = this;
 
-    if (!is<Class>())
-        return type()->maybeGetAttr(name, valueOut);
+    for (;;) {
+        if (obj->maybeGetOwnAttr(name, valueOut))
+            return true;
 
-    Stack<Object*> base(as<Class>()->base());
-    if (base == None)
-        return false;
-
-    assert(base->is<Class>());
-    return base->maybeGetAttr(name, valueOut);
+        if (!obj->is<Class>()) {
+            obj = obj->type();
+        } else {
+            obj = obj->as<Class>()->base();
+            if (obj == None)
+                return false;
+            assert(obj->is<Class>());
+        }
+    }
 }
 
 Value Object::getAttr(Name name) const
