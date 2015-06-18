@@ -18,6 +18,7 @@ struct Value
     Value() : objectp(nullptr) {}
     Value(Object* o) : objectp(o) {}
     Value(int16_t i) { *this = i; }
+    Value(const Value& other) : bits(other.bits) {}
 
     Value& operator=(Object* const & o) {
         objectp = o;
@@ -77,7 +78,7 @@ struct Value
     union
     {
         Object* objectp;
-        int32_t bits;
+        uintptr_t bits;
     };
 
     int32_t kind() const { return bits & KindMask; }
