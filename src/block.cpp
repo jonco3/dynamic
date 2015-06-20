@@ -602,7 +602,7 @@ struct ByteCompiler : public SyntaxVisitor
     bool lookupLocal(Name name, int& slotOut) {
         if (!parent)
             return false;
-        slotOut = block->layout()->lookupName(name);
+        slotOut = layout->lookupName(name);
         return slotOut != Layout::NotFound;
     }
 
@@ -613,7 +613,7 @@ struct ByteCompiler : public SyntaxVisitor
         int count = 1;
         ByteCompiler* b = parent;
         while (b && b->parent) {
-            if (b->block->layout()->hasName(name))
+            if (b->layout->hasName(name))
                 return count;
             ++count;
             b = b->parent;
@@ -623,7 +623,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     bool lookupGlobal(Name name) {
         return
-            (!parent && block->layout()->lookupName(name) != Layout::NotFound) ||
+            (!parent && layout->lookupName(name) != Layout::NotFound) ||
             topLevel->hasAttr(name) ||
             contains(globals, name);
     }
@@ -631,7 +631,6 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxName& s) {
         Name name = s.id;
         int slot;
-        Stack<Layout*> layout(block->layout());
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name, slot))
@@ -929,12 +928,6 @@ struct ByteCompiler : public SyntaxVisitor
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
         if (parent) {
             int slot;
-            Stack<Layout*> layout(block->layout());
-            if (!lookupLocal(s.id, slot)) {
-                cout << s.id << endl;
-                cout << *layout << endl;
-                defs->dump(cout); cout << endl;
-           }
             alwaysTrue(lookupLocal(s.id, slot));
             emit<InstrSetLocal>(s.id, slot, layout);
         } else {
@@ -950,7 +943,6 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrCall>(1);
         if (parent) {
             int slot;
-            Stack<Layout*> layout(block->layout());
             alwaysTrue(lookupLocal(s.id, slot));
             emit<InstrSetLocal>(s.id, slot, layout);
         } else {
