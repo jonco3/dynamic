@@ -18,6 +18,7 @@ struct Value
     Value() { setObject(nullptr); }
     Value(Object* obj) { setObject(obj); }
     Value(int32_t value) { setInt32(value); }
+    Value(double value) { setDouble(value); }
     Value(const Value& other) : bits(other.bits) {}
 
     Value& operator=(Object* const & obj) {
@@ -27,6 +28,11 @@ struct Value
 
     Value& operator=(int32_t value) {
         setInt32(value);
+        return *this;
+    }
+
+    Value& operator=(double value) {
+        setDouble(value);
         return *this;
     }
 
@@ -41,12 +47,18 @@ struct Value
         assert(isInt32());
     }
 
+    void setDouble(double value);
+
     bool isObject() const {
         return tagged.tag == ObjectTag;
     }
 
     bool isInt32() const {
         return tagged.tag == IntTag;
+    }
+
+    bool isDouble() const {
+        return tagged.tag > IntTag;
     }
 
     Object* asObject() const {
@@ -63,6 +75,13 @@ struct Value
         return int32.value;
     }
 
+    double asDouble() const {
+        assert(isDouble());
+        DoublePun p;
+        p.bits = bits ^ DoubleXorConstant;
+        return p.value;
+    }
+
     inline Class* type() const;
     inline bool isInstanceOf(Traced<Class*> cls) const;
 
@@ -73,9 +92,11 @@ struct Value
     inline bool isNone() const;
     inline bool isTrue() const;
     inline bool isInt() const;
+    inline bool isFloat() const;
 
     inline Object *toObject() const;
     inline int64_t toInt() const;
+    inline double toFloat() const;
 
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;
@@ -93,7 +114,17 @@ struct Value
 
     static const size_t PayloadBits = 48;
     static const size_t TagBits = 16;
-    static const size_t TagMask = 0xffff000000000000;
+    static const uint64_t TagMask = UINT64_C(0xffff000000000000);
+
+    static const uint64_t DoubleXorConstant  = UINT64_C(0x7fff000000000000);
+    static const uint64_t DoubleExponentMask = UINT64_C(0x7ff0000000000000);
+    static const uint64_t DoubleMantissaMask = UINT64_C(0x000fffffffffffff);
+
+    union DoublePun
+    {
+        double value;
+        uint64_t bits;
+    };
 
     struct PayloadAndTag
     {
@@ -114,6 +145,10 @@ struct Value
         Object* objectp;
         TaggedInt32 int32;
     };
+
+    inline Object* objectOrType() const;
+    inline bool isNaNOrInfinity(uint64_t bits);
+    uint64_t canonicalizeNaN(uint64_t bits);
 };
 
 ostream& operator<<(ostream& s, const Value& v);

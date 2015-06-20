@@ -28,7 +28,8 @@ struct Float : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    static Float* get(double v = 0.0);
+    static Value get(double v);
+    static Object* getObject(double v);
 
     Float(double v = 0.0);
     Float(Traced<Class*> cls);

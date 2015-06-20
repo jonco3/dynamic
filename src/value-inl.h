@@ -34,11 +34,29 @@ void GCTraits<Value>::checkValid(Value value)
 #endif
 }
 
+inline bool Value::isNaNOrInfinity(uint64_t bits)
+{
+    return (bits & DoubleExponentMask) == DoubleExponentMask;
+}
+
+inline void Value::setDouble(double value) {
+    DoublePun p;
+    p.value = value;
+
+    // Canonicalise NaNs and infinity.
+    if (isNaNOrInfinity(p.bits))
+        p.bits = canonicalizeNaN(p.bits);
+
+    bits = p.bits ^ DoubleXorConstant;
+}
+
 inline Object* Value::toObject() const {
     if (isObject())
         return asObject();
-    else
+    else if (isInt32())
         return Integer::getObject(asInt32());
+    else
+        return Float::getObject(asDouble());
 }
 
 bool Value::isNone() const
@@ -48,7 +66,12 @@ bool Value::isNone() const
 
 inline bool Value::isTrue() const
 {
-    return isInt32() ? asInt32() != 0 : toObject()->isTrue();
+    if (isInt32())
+        return asInt32() != 0;
+    else if (isDouble())
+        return asDouble() != 0.0;
+    else
+        return toObject()->isTrue();
 }
 
 inline bool Value::isInstanceOf(Traced<Class*> cls) const
@@ -58,17 +81,34 @@ inline bool Value::isInstanceOf(Traced<Class*> cls) const
 
 inline bool Value::isInt() const
 {
-    return isInt32() || asObject()->is<Integer>();
+    return isInt32() || (isObject() && asObject()->is<Integer>());
+}
+
+inline bool Value::isFloat() const
+{
+    return isDouble() || (isObject() && asObject()->is<Float>());
 }
 
 inline int64_t Value::toInt() const
 {
+    assert(isInt());
     return isInt32() ? asInt32() : as<Integer>()->value();
+}
+
+inline double Value::toFloat() const
+{
+    assert(isFloat());
+    return isDouble() ? asDouble() : as<Float>()->value();
 }
 
 inline Class* Value::type() const
 {
-    return isInt32() ? Integer::ObjectClass : asObject()->type();
+    if (isInt32())
+        return Integer::ObjectClass;
+    else if (isDouble())
+        return Float::ObjectClass;
+    else
+        return asObject()->type();
 }
 
 template <typename T>
@@ -93,17 +133,24 @@ inline const T* Value::as() const
     return obj->as<T>();
 }
 
+inline Object* Value::objectOrType() const
+{
+    if (isInt32())
+        return Integer::ObjectClass;
+    else if (isDouble())
+        return Float::ObjectClass;
+    else
+        return asObject();
+}
 
 inline Value Value::getAttr(Name name) const
 {
-    Object* obj = isInt32() ? Integer::ObjectClass : asObject();
-    return obj->getAttr(name);
+    return objectOrType()->getAttr(name);
 }
 
 inline bool Value::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
-    Object* obj = isInt32() ? Integer::ObjectClass : asObject();
-    return obj->maybeGetAttr(name, valueOut);
+    return objectOrType()->maybeGetAttr(name, valueOut);
 }
 
 template <typename W>
@@ -113,9 +160,21 @@ inline bool WrapperMixins<W, Value>::isInt() const
 }
 
 template <typename W>
+inline bool WrapperMixins<W, Value>::isFloat() const
+{
+    return get()->isFloat();
+}
+
+template <typename W>
 inline int64_t WrapperMixins<W, Value>::toInt() const
 {
     return get()->toInt();
+}
+
+template <typename W>
+inline double WrapperMixins<W, Value>::toFloat() const
+{
+    return get()->toFloat();
 }
 
 template <typename W>

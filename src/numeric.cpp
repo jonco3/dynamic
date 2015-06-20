@@ -221,13 +221,13 @@ static bool floatNE(double a, double b) { return a != b; }
 
 static double floatValue(Traced<Value> value)
 {
-    return value.asObject()->as<Float>()->value();
+    return value.toFloat();
 }
 
 static bool floatValue(Traced<Value> value, double& out)
 {
-    if (value.isInstanceOf(Float::ObjectClass))
-        out = value.asObject()->as<Float>()->value();
+    if (value.isFloat())
+        out = value.toFloat();
     else
         return false;
 
@@ -236,8 +236,8 @@ static bool floatValue(Traced<Value> value, double& out)
 
 static bool floatOrIntValue(Traced<Value> value, double& out)
 {
-    if (value.isInstanceOf(Float::ObjectClass))
-        out = value.asObject()->as<Float>()->value();
+    if (value.isFloat())
+        out = value.toFloat();
     else if (value.isInt())
         out = value.toInt();
     else
@@ -324,10 +324,8 @@ static bool floatNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
     Stack<Value> arg(args[1]);
     if (arg.isInt()) {
         resultOut = Float::get(arg.toInt());
-    } else if (arg.isInstanceOf(Integer::ObjectClass)) {
-        resultOut = Float::get(arg.asObject()->as<Integer>()->value());
-    } else if (arg.isInstanceOf(Float::ObjectClass)) {
-        resultOut = Float::get(arg.asObject()->as<Float>()->value());
+    } else if (arg.isFloat()) {
+        resultOut = Float::get(arg.toFloat());
     } else if (arg.isInstanceOf(String::ObjectClass)) {
         string str = arg.asObject()->as<String>()->value();
         double value = 0;
@@ -399,7 +397,12 @@ void Float::print(ostream& s) const {
     s << buffer;
 }
 
-Float* Float::get(double v)
+Value Float::get(double v)
+{
+    return Value(v);
+}
+
+Object* Float::getObject(double v)
 {
     return gc.create<Float>(v);
 }
