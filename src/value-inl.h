@@ -56,30 +56,19 @@ inline bool Value::isInstanceOf(Traced<Class*> cls) const
     return type()->isDerivedFrom(cls);
 }
 
-inline bool Value::isInt32() const
+inline bool Value::isInt() const
 {
-    if (kind() == IntKind)
-        return true;
-    Object* obj = asObject();
-    if (!obj)
-        return false;
-    return obj->is<Integer>();
+    return isInt32() || asObject()->is<Integer>();
 }
 
-inline int32_t Value::asInt32() const
+inline int32_t Value::toInt32() const
 {
-    if (kind() == IntKind)
-        return payload();
-    else
-        return asObject()->as<Integer>()->value();
+    return isInt32() ? asInt32() : as<Integer>()->value();
 }
 
 inline Class* Value::type() const
 {
-    if (kind() == IntKind)
-        return Integer::ObjectClass;
-    else
-        return asObject()->type();
+    return isInt32() ? Integer::ObjectClass : asObject()->type();
 }
 
 template <typename T>
@@ -96,29 +85,37 @@ inline T* Value::as()
     return obj->as<T>();
 }
 
+template <typename T>
+inline const T* Value::as() const
+{
+    Object* obj = toObject();
+    assert(obj->isInstanceOf(T::ObjectClass));
+    return obj->as<T>();
+}
+
 
 inline Value Value::getAttr(Name name) const
 {
-    Object* obj = kind() == IntKind ? Integer::ObjectClass : asObject();
+    Object* obj = isInt32() ? Integer::ObjectClass : asObject();
     return obj->getAttr(name);
 }
 
 inline bool Value::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
-    Object* obj = kind() == IntKind ? Integer::ObjectClass : asObject();
+    Object* obj = isInt32() ? Integer::ObjectClass : asObject();
     return obj->maybeGetAttr(name, valueOut);
 }
 
 template <typename W>
-inline bool WrapperMixins<W, Value>::isInt32() const
+inline bool WrapperMixins<W, Value>::isInt() const
 {
-    return get()->isInt32();
+    return get()->isInt();
 }
 
 template <typename W>
-inline int32_t WrapperMixins<W, Value>::asInt32() const
+inline int32_t WrapperMixins<W, Value>::toInt32() const
 {
-    return get()->asInt32();
+    return get()->toInt32();
 }
 
 template <typename W>

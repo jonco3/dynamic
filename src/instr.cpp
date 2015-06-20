@@ -207,7 +207,7 @@
     if (!fallback(self, interp))
         return false;
 
-    if (value.isInt32()) {
+    if (value.isInt()) {
         Stack<Value> result(interp.peekStack(2));
         interp.replaceInstr(self,
                             InstrGetMethodInt::execute,
@@ -238,7 +238,7 @@
                                              Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
-    if (!value.isInt32()) {
+    if (!value.isInt()) {
         return interp.replaceInstrAndRestart(
             self,
             InstrGetMethod::fallback,
@@ -542,12 +542,12 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         }
     }
 
-    if (!result.isInt32()) {
+    if (!result.isInt()) {
         interp.pushStack(gc.create<TypeError>("__len__ didn't return an integer"));
         return false;
     }
 
-    int32_t len = result.asInt32();
+    int32_t len = result.toInt32();
     if (len < 0) {
         interp.pushStack(gc.create<ValueError>("__len__ returned negative value"));
         return false;
@@ -611,7 +611,7 @@ void BinaryOpInstr::print(ostream& s) const
     Stack<Value> right(interp.peekStack(0));
     Stack<Value> left(interp.peekStack(1));
 
-    if (left.isInt32() && right.isInt32()) {
+    if (left.isInt() && right.isInt()) {
         Stack<Value> method(
             Integer::ObjectClass->getAttr(Name::binMethod[self->op()]));
         return interp.replaceInstrAndRestart(
@@ -695,7 +695,7 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     Stack<Value> right(interp.peekStack(0));
     Stack<Value> left(interp.peekStack(1));
 
-    if (!left.isInt32() || !right.isInt32()) {
+    if (!left.isInt() || !right.isInt()) {
         return interp.replaceInstrAndRestart(
             self,
             InstrBinaryOp::fallback,

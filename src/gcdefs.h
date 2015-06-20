@@ -20,8 +20,8 @@ struct GCTraits<Value>
 template <typename W>
 struct WrapperMixins<W, Value>
 {
-    inline bool isInt32() const;
-    inline int32_t asInt32() const;
+    inline bool isInt() const;
+    inline int32_t toInt32() const;
     inline bool isObject() const;
     inline Object *asObject() const;
     inline Object *maybeObject() const;

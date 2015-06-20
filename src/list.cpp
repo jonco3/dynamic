@@ -170,7 +170,7 @@ int32_t Slice::getSlotOrDefault(unsigned slot, int32_t def)
     Value value = getSlot(slot);
     if (value == Value(None))
         return def;
-    return value.asInt32();
+    return value.toInt32();
 }
 
 void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step)
@@ -188,8 +188,8 @@ void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step
 
 bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
-    if (index.isInt32()) {
-        int32_t i = WrapIndex(index.asInt32(), len());
+    if (index.isInt()) {
+        int32_t i = WrapIndex(index.toInt32(), len());
         if (!checkIndex(i, resultOut))
             return false;
         resultOut = elements_[i];
@@ -359,13 +359,13 @@ void List::print(ostream& s) const
 
 bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut)
 {
-    if (!index.isInt32()) {
+    if (!index.isInt()) {
         resultOut = gc.create<TypeError>(
             listName() + " indices must be integers");
         return false;
     }
 
-    int32_t i = index.asInt32();
+    int32_t i = index.toInt32();
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
@@ -381,13 +381,13 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value
 
 bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
-    if (!index.isInt32()) {
+    if (!index.isInt()) {
         resultOut = gc.create<TypeError>(
             listName() + " indices must be integers");
         return false;
     }
 
-    int32_t i = index.asInt32();
+    int32_t i = index.toInt32();
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
@@ -479,7 +479,7 @@ void Slice::init()
 
 bool IsInt32OrNone(Value value)
 {
-    return value == Value(None) || value.isInt32();
+    return value == Value(None) || value.isInt();
 }
 
 Slice::Slice(TracedVector<Value> args) :

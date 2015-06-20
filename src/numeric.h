@@ -17,7 +17,7 @@ struct Integer : public Object
     Integer(int v = 0);
     Integer(Traced<Class*> cls);
 
-    int value() { return value_; }
+    int value() const { return value_; }
     void print(ostream& s) const override;
 
   private:

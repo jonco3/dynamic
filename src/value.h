@@ -15,27 +15,38 @@ struct Tracer;
 
 struct Value
 {
-    Value() : objectp(nullptr) {}
-    Value(Object* o) : objectp(o) {}
-    Value(int16_t i) { *this = i; }
+    Value() { setObject(nullptr); }
+    Value(Object* obj) { setObject(obj); }
+    Value(int32_t value) { setInt32(value); }
     Value(const Value& other) : bits(other.bits) {}
 
-    Value& operator=(Object* const & o) {
-        objectp = o;
+    Value& operator=(Object* const & obj) {
+        setObject(obj);
         return *this;
     }
 
-    Value& operator=(int16_t i) {
-        assert(i >= INT16_MIN && i <= INT16_MAX);
-        bits = (i << PayloadShift) | IntKind;
+    Value& operator=(int32_t value) {
+        setInt32(value);
         return *this;
     }
 
-    inline bool isInt32() const;
-    inline int32_t asInt32() const;
+    void setObject(Object* obj) {
+        objectp = obj;
+        assert(isObject());
+    }
+
+    void setInt32(int32_t value) {
+        tagged.payload = (uint64_t)value;
+        tagged.tag = IntTag;
+        assert(isInt32());
+    }
 
     bool isObject() const {
-        return kind() == ObjectKind;
+        return tagged.tag == ObjectTag;
+    }
+
+    bool isInt32() const {
+        return tagged.tag == IntTag;
     }
 
     Object* asObject() const {
@@ -47,42 +58,62 @@ struct Value
         return isObject() ? asObject() : nullptr;
     }
 
-    inline Object *toObject() const;
-
-    inline bool isNone() const;
+    int32_t asInt32() const {
+        assert(isInt32());
+        return int32.value;
+    }
 
     inline Class* type() const;
+    inline bool isInstanceOf(Traced<Class*> cls) const;
 
     template <typename T> inline bool is() const;
     template <typename T> inline T* as();
+    template <typename T> inline const T* as() const;
+
+    inline bool isNone() const;
+    inline bool isTrue() const;
+    inline bool isInt() const;
+
+    inline Object *toObject() const;
+    inline int32_t toInt32() const;
 
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;
 
+    // Not python equality!
     bool operator==(const Value& other) const { return bits == other.bits; }
     bool operator!=(const Value& other) const { return !(*this == other); }
 
-    inline bool isTrue() const;
-    inline bool isInstanceOf(Traced<Class*> cls) const;
-
   private:
-    enum Kind
+    enum
     {
-        ObjectKind = 0,
-        IntKind = 1,
+        ObjectTag = 0,
+        IntTag = 1,
+    };
 
-        PayloadShift = 1,
-        KindMask = (1 << PayloadShift) - 1
+    static const size_t PayloadBits = 48;
+    static const size_t TagBits = 16;
+    static const size_t TagMask = 0xffff000000000000;
+
+    struct PayloadAndTag
+    {
+        uint64_t payload:PayloadBits;
+        uint64_t tag:TagBits;
+    };
+
+    struct TaggedInt32
+    {
+        int32_t value;
+        int32_t rest;
     };
 
     union
     {
-        Object* objectp;
         uintptr_t bits;
+        PayloadAndTag tagged;
+        Object* objectp;
+        TaggedInt32 int32;
     };
-
-    int32_t kind() const { return bits & KindMask; }
-    int32_t payload() const { return bits >> PayloadShift; }
 };
 
 ostream& operator<<(ostream& s, const Value& v);

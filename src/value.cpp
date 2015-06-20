@@ -5,8 +5,8 @@
 RootArray<Value, 0> EmptyValueArray;
 
 ostream& operator<<(ostream& s, const Value& v) {
-    if (v.isInt32())
-        s << v.asInt32();
+    if (v.isInt())
+        s << v.toInt32();
     else {
         Object* obj = v.toObject();
         if (obj)

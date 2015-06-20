@@ -49,7 +49,7 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
         return true;
     }
 
-    resultOut = Integer::get(op(args[0].asInt32()));
+    resultOut = Integer::get(op(args[0].toInt32()));
     return true;
 }
 
@@ -63,7 +63,7 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
         return true;
     }
 
-    resultOut = Integer::get(op(args[0].asInt32(), args[1].asInt32()));
+    resultOut = Integer::get(op(args[0].toInt32(), args[1].toInt32()));
     return true;
 }
 
@@ -77,7 +77,7 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
         return true;
     }
 
-    resultOut = Boolean::get(op(args[0].asInt32(), args[1].asInt32()));
+    resultOut = Boolean::get(op(args[0].toInt32(), args[1].toInt32()));
     return true;
 }
 
@@ -90,7 +90,7 @@ static bool intTrueDiv(TracedVector<Value> args, MutableTraced<Value> resultOut)
         return true;
     }
 
-    resultOut = Float::get(double(args[0].asInt32()) / args[1].asInt32());
+    resultOut = Float::get(double(args[0].toInt32()) / args[1].toInt32());
     return true;
 }
 
@@ -243,8 +243,8 @@ static bool floatOrIntValue(Traced<Value> value, double& out)
 {
     if (value.isInstanceOf(Float::ObjectClass))
         out = value.asObject()->as<Float>()->value();
-    else if (value.isInt32())
-        out = value.asInt32();
+    else if (value.isInt())
+        out = value.toInt32();
     else
         return false;
 
@@ -327,8 +327,8 @@ static bool floatNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
     }
 
     Stack<Value> arg(args[1]);
-    if (arg.isInt32()) {
-        resultOut = Float::get(arg.asInt32());
+    if (arg.isInt()) {
+        resultOut = Float::get(arg.toInt32());
     } else if (arg.isInstanceOf(Integer::ObjectClass)) {
         resultOut = Float::get(arg.asObject()->as<Integer>()->value());
     } else if (arg.isInstanceOf(Float::ObjectClass)) {
