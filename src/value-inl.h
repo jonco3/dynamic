@@ -48,7 +48,7 @@ bool Value::isNone() const
 
 inline bool Value::isTrue() const
 {
-    return toObject()->isTrue();
+    return isInt32() ? asInt32() != 0 : toObject()->isTrue();
 }
 
 inline bool Value::isInstanceOf(Traced<Class*> cls) const
@@ -61,7 +61,7 @@ inline bool Value::isInt() const
     return isInt32() || asObject()->is<Integer>();
 }
 
-inline int32_t Value::toInt32() const
+inline int64_t Value::toInt() const
 {
     return isInt32() ? asInt32() : as<Integer>()->value();
 }
@@ -113,9 +113,9 @@ inline bool WrapperMixins<W, Value>::isInt() const
 }
 
 template <typename W>
-inline int32_t WrapperMixins<W, Value>::toInt32() const
+inline int64_t WrapperMixins<W, Value>::toInt() const
 {
-    return get()->toInt32();
+    return get()->toInt();
 }
 
 template <typename W>

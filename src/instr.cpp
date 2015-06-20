@@ -547,7 +547,7 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         return false;
     }
 
-    int32_t len = result.toInt32();
+    int32_t len = result.toInt();
     if (len < 0) {
         interp.pushStack(gc.create<ValueError>("__len__ returned negative value"));
         return false;

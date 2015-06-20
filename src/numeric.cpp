@@ -11,35 +11,34 @@
 #include <sstream>
 
 GlobalRoot<Class*> Integer::ObjectClass;
-GlobalRoot<Integer*> Integer::Zero;
 GlobalRoot<Class*> Float::ObjectClass;
 
-typedef int32_t (IntUnaryOp)(int32_t);
-static int32_t intPos(int32_t a) { return a; }
-static int32_t intNeg(int32_t a) { return -a; }
-static int32_t intInvert(int32_t a) { return ~a; }
-static int32_t intHash(int32_t a) { return a; }
+typedef int64_t (IntUnaryOp)(int64_t);
+static int64_t intPos(int64_t a) { return a; }
+static int64_t intNeg(int64_t a) { return -a; }
+static int64_t intInvert(int64_t a) { return ~a; }
+static int64_t intHash(int64_t a) { return a; }
 
-typedef int32_t (IntBinaryOp)(int32_t, int32_t);
-static int32_t intAdd(int32_t a, int32_t b) { return a + b; }
-static int32_t intSub(int32_t a, int32_t b) { return a - b; }
-static int32_t intMul(int32_t a, int32_t b) { return a * b; }
-static int32_t intFloorDiv(int32_t a, int32_t b) { return a / b; }
-static int32_t intMod(int32_t a, int32_t b) { return a % b; }
-static int32_t intPow(int32_t a, int32_t b) { return (int)pow(a, b); }
-static int32_t intOr(int32_t a, int32_t b) { return a | b; }
-static int32_t intXor(int32_t a, int32_t b) { return a ^ b; }
-static int32_t intAnd(int32_t a, int32_t b) { return a & b; }
-static int32_t intLeftShift(int32_t a, int32_t b) { return a << b; }
-static int32_t intRightShift(int32_t a, int32_t b) { return a >> b; }
+typedef int64_t (IntBinaryOp)(int64_t, int64_t);
+static int64_t intAdd(int64_t a, int64_t b) { return a + b; }
+static int64_t intSub(int64_t a, int64_t b) { return a - b; }
+static int64_t intMul(int64_t a, int64_t b) { return a * b; }
+static int64_t intFloorDiv(int64_t a, int64_t b) { return a / b; }
+static int64_t intMod(int64_t a, int64_t b) { return a % b; }
+static int64_t intPow(int64_t a, int64_t b) { return (int)pow(a, b); }
+static int64_t intOr(int64_t a, int64_t b) { return a | b; }
+static int64_t intXor(int64_t a, int64_t b) { return a ^ b; }
+static int64_t intAnd(int64_t a, int64_t b) { return a & b; }
+static int64_t intLeftShift(int64_t a, int64_t b) { return a << b; }
+static int64_t intRightShift(int64_t a, int64_t b) { return a >> b; }
 
-typedef bool (IntCompareOp)(int32_t, int32_t);
-static bool intLT(int32_t a, int32_t b) { return a < b; }
-static bool intLE(int32_t a, int32_t b) { return a <= b; }
-static bool intGT(int32_t a, int32_t b) { return a > b; }
-static bool intGE(int32_t a, int32_t b) { return a >= b; }
-static bool intEQ(int32_t a, int32_t b) { return a == b; }
-static bool intNE(int32_t a, int32_t b) { return a != b; }
+typedef bool (IntCompareOp)(int64_t, int64_t);
+static bool intLT(int64_t a, int64_t b) { return a < b; }
+static bool intLE(int64_t a, int64_t b) { return a <= b; }
+static bool intGT(int64_t a, int64_t b) { return a > b; }
+static bool intGE(int64_t a, int64_t b) { return a >= b; }
+static bool intEQ(int64_t a, int64_t b) { return a == b; }
+static bool intNE(int64_t a, int64_t b) { return a != b; }
 
 template <IntUnaryOp op>
 static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
@@ -49,7 +48,7 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
         return true;
     }
 
-    resultOut = Integer::get(op(args[0].toInt32()));
+    resultOut = Integer::get(op(args[0].toInt()));
     return true;
 }
 
@@ -63,7 +62,7 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
         return true;
     }
 
-    resultOut = Integer::get(op(args[0].toInt32(), args[1].toInt32()));
+    resultOut = Integer::get(op(args[0].toInt(), args[1].toInt()));
     return true;
 }
 
@@ -77,7 +76,7 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
         return true;
     }
 
-    resultOut = Boolean::get(op(args[0].toInt32(), args[1].toInt32()));
+    resultOut = Boolean::get(op(args[0].toInt(), args[1].toInt()));
     return true;
 }
 
@@ -90,7 +89,7 @@ static bool intTrueDiv(TracedVector<Value> args, MutableTraced<Value> resultOut)
         return true;
     }
 
-    resultOut = Float::get(double(args[0].toInt32()) / args[1].toInt32());
+    resultOut = Float::get(double(args[0].toInt()) / args[1].toInt());
     return true;
 }
 
@@ -161,11 +160,9 @@ void Integer::init()
     initNativeMethod(cls, "__pow__", intBinaryOp<intPow>, 2);
     initNativeMethod(cls, "__hash__", intUnaryOp<intHash>, 1);
     ObjectClass.init(cls);
-
-    Zero.init(gc.create<Integer>(0));
 }
 
-Integer::Integer(int v)
+Integer::Integer(int64_t v)
   : Object(ObjectClass), value_(v)
 {}
 
@@ -173,17 +170,15 @@ Integer::Integer(Traced<Class*> cls)
   : Object(cls)
 {}
 
-Value Integer::get(int v)
+Value Integer::get(int64_t v)
 {
-    if (v == 0)
-        return Value(Zero);
-    else if (v >= INT16_MIN && v <= INT16_MAX)
-        return Value(v);
+    if (v >= INT32_MIN && v <= INT32_MAX)
+        return Value(static_cast<int32_t>(v));
     else
         return getObject(v);
 }
 
-Object* Integer::getObject(int v)
+Object* Integer::getObject(int64_t v)
 {
     return gc.create<Integer>(v);
 }
@@ -244,7 +239,7 @@ static bool floatOrIntValue(Traced<Value> value, double& out)
     if (value.isInstanceOf(Float::ObjectClass))
         out = value.asObject()->as<Float>()->value();
     else if (value.isInt())
-        out = value.toInt32();
+        out = value.toInt();
     else
         return false;
 
@@ -328,7 +323,7 @@ static bool floatNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
 
     Stack<Value> arg(args[1]);
     if (arg.isInt()) {
-        resultOut = Float::get(arg.toInt32());
+        resultOut = Float::get(arg.toInt());
     } else if (arg.isInstanceOf(Integer::ObjectClass)) {
         resultOut = Float::get(arg.asObject()->as<Integer>()->value());
     } else if (arg.isInstanceOf(Float::ObjectClass)) {

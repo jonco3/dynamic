@@ -1,14 +1,36 @@
 #include "src/numeric.h"
+#include "src/value-inl.h"
 
 #include "src/test.h"
 
 #include "test_interp.h"
 
+static void testIntIsInt32(int64_t i)
+{
+    Value v = Integer::get(i);
+    testTrue(v.isInt());
+    testTrue(v.isInt32());
+    testFalse(v.isObject());
+    testEqual(v.asInt32(), i);
+    testEqual(v.toInt(), i);
+}
+
+static void testIntIsObject(int64_t i)
+{
+    Value v = Integer::get(i);
+    testTrue(v.isInt());
+    testFalse(v.isInt32());
+    testTrue(v.isObject());
+    testEqual(v.toInt(), i);
+}
+
 testcase(numeric)
 {
-    testFalse(Integer::get(1).isObject());
-    testFalse(Integer::get(32767).isObject());
-    testTrue(Integer::get(32768).isObject());
+    testIntIsInt32(0);
+    testIntIsInt32(INT32_MIN);
+    testIntIsInt32(INT32_MAX);
+    testIntIsObject((int64_t)INT32_MIN - 1);
+    testIntIsObject((int64_t)INT32_MAX + 1);
 
     testInterp("1", "1");
     testInterp("2 + 2", "4");
@@ -16,8 +38,13 @@ testcase(numeric)
     testInterp("1 + 0", "1");
     testInterp("+3", "3");
     testInterp("-4", "-4");
-    testInterp("32767 + 1", "32768");
-    testInterp("32768 - 1", "32767");
+
+    testEqual(INT32_MAX, 2147483647ll);
+    testEqual(INT32_MIN, -2147483648ll);
+    testInterp("2147483647 + 1", "2147483648");
+    testInterp("2147483648 - 1", "2147483647");
+    testInterp("-2147483648 - 1", "-2147483649");
+    testInterp("-2147483649 + 1", "-2147483648");
 
     testInterp("2.5", "2.5");
     testInterp("2.0 + 0.5", "2.5");

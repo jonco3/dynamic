@@ -170,7 +170,7 @@ int32_t Slice::getSlotOrDefault(unsigned slot, int32_t def)
     Value value = getSlot(slot);
     if (value == Value(None))
         return def;
-    return value.toInt32();
+    return value.toInt();
 }
 
 void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step)
@@ -189,7 +189,7 @@ void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step
 bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
     if (index.isInt()) {
-        int32_t i = WrapIndex(index.toInt32(), len());
+        int32_t i = WrapIndex(index.toInt(), len());
         if (!checkIndex(i, resultOut))
             return false;
         resultOut = elements_[i];
@@ -365,7 +365,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value
         return false;
     }
 
-    int32_t i = index.toInt32();
+    int32_t i = index.toInt();
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
@@ -387,7 +387,7 @@ bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
         return false;
     }
 
-    int32_t i = index.toInt32();
+    int32_t i = index.toInt();
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {

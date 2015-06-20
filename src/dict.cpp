@@ -208,7 +208,7 @@ size_t Dict::ValueHash::operator()(Value v) const
         throw PythonException(result);
     }
 
-    return result.toInt32();
+    return result.toInt();
 }
 
 bool Dict::ValuesEqual::operator()(Value a, Value b) const

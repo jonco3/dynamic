@@ -9,19 +9,17 @@ struct Integer : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    static GlobalRoot<Integer*> Zero;
+    static Value get(int64_t v);
+    static Object* getObject(int64_t v);
 
-    static Value get(int v);
-    static Object* getObject(int v);
-
-    Integer(int v = 0);
+    Integer(int64_t v = 0);
     Integer(Traced<Class*> cls);
 
-    int value() const { return value_; }
+    int64_t value() const { return value_; }
     void print(ostream& s) const override;
 
   private:
-    int value_;
+    int64_t value_;
 };
 
 struct Float : public Object

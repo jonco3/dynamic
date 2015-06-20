@@ -222,10 +222,10 @@ struct SyntaxInteger : public Syntax
 
     // todo: this probably doesn't correctly parse all python integers
     SyntaxInteger(const Token& token)
-      : Syntax(token), value(atoi(token.text.c_str()))
+      : Syntax(token), value(atol(token.text.c_str()))
     {}
 
-    const int value;
+    const int64_t value;
 };
 
 struct SyntaxFloat : public Syntax

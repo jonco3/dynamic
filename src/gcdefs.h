@@ -21,7 +21,7 @@ template <typename W>
 struct WrapperMixins<W, Value>
 {
     inline bool isInt() const;
-    inline int32_t toInt32() const;
+    inline int64_t toInt() const;
     inline bool isObject() const;
     inline Object *asObject() const;
     inline Object *maybeObject() const;

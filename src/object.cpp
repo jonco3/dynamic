@@ -278,7 +278,7 @@ bool Object::isTrue() const
     return
         this != None &&
         this != Boolean::False &&
-        this != Integer::Zero;
+        !(is<Integer>() && as<Integer>()->value() == 0);
 }
 
 bool Object::isInstanceOf(Class* cls) const

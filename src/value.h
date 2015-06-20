@@ -75,7 +75,7 @@ struct Value
     inline bool isInt() const;
 
     inline Object *toObject() const;
-    inline int32_t toInt32() const;
+    inline int64_t toInt() const;
 
     inline Value getAttr(Name name) const;
     inline bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;

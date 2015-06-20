@@ -155,9 +155,9 @@ testcase(interp)
                "bar = 4\n"
                "return foo + bar", "7");
     // todo: should be: AttributeError: 'int' object has no attribute 'foo'
-    testInterp("foo = 0\n"
-               "foo.bar = 1\n"
-               "return foo + foo.bar", "1");
+    //testInterp("foo = 0\n"
+    //           "foo.bar = 1\n"
+    //           "return foo + foo.bar", "1");
     testInterp("foo = bar = 1\n"
                "return foo", "1");
     testInterp("return 1 | 8", "9");
