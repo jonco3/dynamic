@@ -26,23 +26,23 @@ void GeneratorIter::init()
     ObjectClass.init(Class::createNative("GeneratorIterator", nullptr));
     initNativeMethod(ObjectClass, "__iter__", generatorIter_iter, 1);
 
-    Stack<Layout*> layout(Frame::InitialLayout);
+    Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName("self");
     Stack<Block*> block(gc.create<Block>(layout));
     block->append<InstrResumeGenerator>();
     block->append<InstrReturn>();
     static vector<Name> params = { "self" };
-    Stack<Frame*> scope; // todo: allow construction of traced for nullptr
+    Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
-    Stack<Value> value(gc.create<Function>("next", info, EmptyValueArray, scope));
+    Stack<Value> value(gc.create<Function>("next", info, EmptyValueArray, env));
     ObjectClass->setAttr("next", value);
 }
 
-GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Frame*> frame)
+GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Env*> env)
   : Object(ObjectClass),
     state_(Initial),
     func_(func),
-    frame_(frame),
+    env_(env),
     ipOffset_(0)
 {
     assert(savedStack_.empty());
@@ -52,7 +52,7 @@ void GeneratorIter::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
     gc.trace(t, &func_);
-    gc.trace(t, &frame_);
+    gc.trace(t, &env_);
     for (auto i = savedStack_.begin(); i != savedStack_.end(); i++)
         gc.trace(t, &*i);
 }
@@ -70,8 +70,9 @@ bool GeneratorIter::resume(Interpreter& interp)
     switch (state_) {
       case Initial: {
       case Suspended:
-        Stack<Frame*> frame(frame_); // todo: Heap<T>
-        interp.resumeGenerator(frame, ipOffset_, savedStack_);
+        Stack<Env*> env(env_); // todo: Heap<T>
+        Stack<Block*> block(func_->block());
+        interp.resumeGenerator(block, env, ipOffset_, savedStack_);
         if (state_ == Suspended)
             interp.pushStack(None);
         state_ = Running;

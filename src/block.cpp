@@ -248,7 +248,7 @@ struct ByteCompiler : public SyntaxVisitor
     ByteCompiler()
       : parent(nullptr),
         topLevel(nullptr),
-        layout(Frame::InitialLayout),
+        layout(Env::InitialLayout),
         block(nullptr),
         isClassBlock(false),
         isGenerator(false),

@@ -51,12 +51,12 @@ FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
 Function::Function(Name name,
                    Traced<FunctionInfo*> info,
                    TracedVector<Value> defaults,
-                   Traced<Frame*> scope)
+                   Traced<Env*> env)
   : Callable(ObjectClass, name,
              info->paramCount() - defaults.size() - (info->takesRest_ ? 1 : 0),
              info->takesRest_ ? UINT_MAX : info->paramCount()),
     info_(info),
-    scope_(scope)
+    env_(env)
 {
     assert(info->paramCount() >= defaults.size());
     for (size_t i = 0; i < defaults.size(); i++)
@@ -69,7 +69,7 @@ void Function::traceChildren(Tracer& t)
     gc.trace(t, &info_);
     for (auto i: defaults_)
         gc.trace(t, &i);
-    gc.trace(t, &scope_);
+    gc.trace(t, &env_);
 }
 
 Method::Method(Traced<Callable*> callable, Traced<Object*> object)

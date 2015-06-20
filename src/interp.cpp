@@ -54,8 +54,9 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
-    Stack<Frame*> frame(gc.create<Frame>(block));
-    pushFrame(frame);
+    Stack<Env*> nullParent;
+    Stack<Env*> env(gc.create<Env>(nullParent, block));
+    pushFrame(block, env);
     return run(resultOut);
 }
 
@@ -140,14 +141,9 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
     return true;
 }
 
-Frame* Interpreter::newFrame(Traced<Function*> function)
+void Interpreter::pushFrame(Traced<Block*> block, Traced<Env*> env)
 {
-    Stack<Block*> block(function->block());
-    return gc.create<Frame>(block);
-}
-
-void Interpreter::pushFrame(Traced<Frame*> frame)
-{
+    Stack<Frame*> frame(gc.create<Frame>(block, env));
     frame->setStackPos(stackPos());
     instrp = frame->block()->startInstr();
     frames.push_back(frame);
@@ -222,12 +218,14 @@ void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
     return;
 }
 
-void Interpreter::resumeGenerator(Traced<Frame*> frame,
+void Interpreter::resumeGenerator(Traced<Block*> block,
+                                  Traced<Env*> env,
                                   unsigned ipOffset,
                                   vector<Value>& savedStack)
 {
-    frame->setReturnPoint(instrp);
-    pushFrame(frame);
+    InstrThunk* returnPoint = instrp;
+    pushFrame(block, env);
+    getFrame()->setReturnPoint(returnPoint);
     instrp += ipOffset;
     for (auto i = savedStack.begin(); i != savedStack.end(); i++)
         pushStack(*i);
@@ -400,6 +398,16 @@ Frame* Interpreter::getFrame(unsigned reverseIndex)
     return frames[frames.size() - 1 - reverseIndex];
 }
 
+Env* Interpreter::lexicalEnv(unsigned index)
+{
+    Stack<Env*> env(this->env());
+    for (unsigned i = 0 ; i < index; i++) {
+        env = env->parent();
+        assert(env);
+    }
+    return env;
+}
+
 void Interpreter::branch(int offset)
 {
     InstrThunk* target = instrp + offset - 1;
@@ -503,18 +511,20 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Function*> function(target->as<Function>());
         if (!checkArguments(function, args, resultOut))
             return CallError;
-        Stack<Frame*> callFrame(newFrame(function));
+        Stack<Env*> parentEnv(function->env());
+        Stack<Block*> block(function->block());
+        Stack<Env*> callEnv(gc.create<Env>(parentEnv, block));
         if (function->isGenerator()) {
             Stack<Value> none(None);
-            callFrame->setAttr("%gen", none);
+            callEnv->setAttr("%gen", none);
         }
         unsigned normalArgs = min(args.size(), function->maxNormalArgs());
         for (size_t i = 0; i < normalArgs; i++) {
             // todo: set by slot not name
-            callFrame->setAttr(function->paramName(i), args[i]);
+            callEnv->setAttr(function->paramName(i), args[i]);
         }
         for (size_t i = args.size(); i < function->maxNormalArgs(); i++) {
-            callFrame->setAttr(function->paramName(i),
+            callEnv->setAttr(function->paramName(i),
                                function->paramDefault(i));
         }
         if (function->takesRest()) {
@@ -525,17 +535,17 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 TracedVector<Value> restArgs(args, start, count);
                 rest = Tuple::get(restArgs);
             }
-            callFrame->setAttr(function->paramName(function->restParam()),
+            callEnv->setAttr(function->paramName(function->restParam()),
                                rest);
         }
         if (function->isGenerator()) {
             Stack<Value> iter(
-                gc.create<GeneratorIter>(function, callFrame));
-            callFrame->setAttr("%gen", iter);
+                gc.create<GeneratorIter>(function, callEnv));
+            callEnv->setAttr("%gen", iter);
             resultOut = iter;
             return CallFinished;
         }
-        pushFrame(callFrame);
+        pushFrame(block, callEnv);
         return CallStarted;
     } else if (target->is<Class>()) {
         // todo: this is messy and needs refactoring

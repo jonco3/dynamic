@@ -106,6 +106,9 @@ struct Interpreter
     InstrThunk* nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 
+    Env* env() { return getFrame()->env(); }
+    Env* lexicalEnv(unsigned index);
+
     bool raiseAttrError(Traced<Value> value, Name ident);
     bool raiseNameError(Name ident);
 
@@ -154,7 +157,8 @@ struct Interpreter
                                           reinterpret_cast<InstrFuncBase>(newFunc));
     }
 
-    void resumeGenerator(Traced<Frame*> frame,
+    void resumeGenerator(Traced<Block*> block,
+                         Traced<Env*> env,
                          unsigned ipOffset,
                          vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
@@ -195,8 +199,7 @@ struct Interpreter
     unsigned loopControlTarget_;
 
     Interpreter();
-    Frame* newFrame(Traced<Function*> function);
-    void pushFrame(Traced<Frame*> frame);
+    void pushFrame(Traced<Block*> block, Traced<Env*> env);
     unsigned currentOffset();
     TokenPos currentPos();
 

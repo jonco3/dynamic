@@ -59,4 +59,21 @@ def o(a, b, c, d, e, f, g, h, i, j, k, l):
     return a + b + c + d + e + f + g + h + i + j + k + l
 assert(o(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1) == 12)
 
+# test lexical scoping
+
+def p(x):
+    def p2():
+        return x
+    return p2
+assert(p(1)() == 1)
+
+def q(x):
+    foo = 0
+    def q2():
+        nonlocal foo
+        foo = x
+    q2()
+    return foo
+assert(q(1) == 1)
+
 print('ok')
