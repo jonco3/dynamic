@@ -256,14 +256,18 @@ void Object::dump(ostream& s) const
     s << type()->name();
     s << " object at 0x" << hex << reinterpret_cast<uintptr_t>(this);
     s << " { ";
-    unsigned slot = slots_.size() - 1;
     Layout* layout = layout_;
-    while (layout) {
-        s << layout->name() << ": " << slots_[slot];
-        if (slot != 0)
-            s << ", ";
+    while (layout != Layout::Empty) {
+        s << layout->name() << ": ";
+        unsigned slot = layout->slotIndex();
+        if (slot < slots_.size())
+            s << slots_[slot];
+        else
+            s << "not present";
         layout = layout->parent();
-        slot--;
+        assert(layout);
+        if (layout != Layout::Empty)
+            s << ", ";
     }
     s << " } ";
 }
