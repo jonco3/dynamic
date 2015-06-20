@@ -107,27 +107,34 @@ InstrThunk* Block::findInstr(unsigned type)
 // Find the names that are defined in the current block
 struct DefinitionFinder : public DefaultSyntaxVisitor
 {
-    DefinitionFinder(Layout* layout, vector<Name>& globalsOut)
+    DefinitionFinder(Traced<Layout*> layout, vector<Name>& globalsOut)
       : inAssignTarget_(false),
-        layout_(layout),
         globals_(globalsOut)
-    {}
+    {
+        defs_ = gc.create<Object>(Object::ObjectClass, layout);
+    }
 
     ~DefinitionFinder() {
         assert(!inAssignTarget_);
     }
 
-    static Layout* buildLayout(const Syntax& s, Layout* layout,
-                               vector<Name>& globalsOut)
+    static Object* findDefs(const Syntax& s,
+                            Traced<Layout*> layout,
+                            vector<Name>& globalsOut)
     {
-        DefinitionFinder df(layout, globalsOut);
-        s.accept(df);
-        return df.layout_;
+        DefinitionFinder finder(layout, globalsOut);
+        s.accept(finder);
+        return finder.defs_;
     }
 
     void addName(Name name) {
-        if (!contains(globals_, name) && !contains(nonLocals_, name))
-            layout_ = layout_->maybeAddName(name);
+        if (contains(globals_, name) || contains(nonLocals_, name))
+            return;
+
+        if (defs_->hasOwnAttr(name))
+            return;
+
+        defs_->setAttr(name, Boolean::False);
     }
 
     // Record assignments and definintions
@@ -168,7 +175,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     {
         for (auto name : names) {
             // todo: this should only be a warning
-            if (layout_->hasName(name))
+            if (defs_->hasAttr(name))
                 throw ParseError(token, "name assigned to before declaration");
             if (contains(others, name))
                 throw ParseError(token, "name is nonlocal and global");
@@ -238,7 +245,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
   private:
     bool inAssignTarget_;
-    Root<Layout*> layout_;
+    Root<Object*> defs_;
     vector<Name>& globals_;
     vector<Name> nonLocals_;
 };
@@ -363,6 +370,7 @@ struct ByteCompiler : public SyntaxVisitor
     ByteCompiler* parent;
     Root<Object*> topLevel;
     Root<Layout*> layout;
+    Root<Object*> defs;
     vector<Name> globals;
     Root<Block*> block;
     bool isClassBlock;
@@ -423,9 +431,10 @@ struct ByteCompiler : public SyntaxVisitor
     void build(const Syntax& s) {
         assert(!block);
         assert(topLevel);
-        layout = DefinitionFinder::buildLayout(s, layout, globals);
+        defs = DefinitionFinder::findDefs(s, layout, globals);
         if (!parent)
             topLevel->extend(layout);
+        layout = defs->layout();
         block = gc.create<Block>(layout);
         assert(stackDepth == 0);
         compile(s);
@@ -613,7 +622,10 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     bool lookupGlobal(Name name) {
-        return topLevel->hasAttr(name) || contains(globals, name);
+        return
+            (!parent && block->layout()->lookupName(name) != Layout::NotFound) ||
+            topLevel->hasAttr(name) ||
+            contains(globals, name);
     }
 
     virtual void visit(const SyntaxName& s) {
@@ -918,6 +930,11 @@ struct ByteCompiler : public SyntaxVisitor
         if (parent) {
             int slot;
             Stack<Layout*> layout(block->layout());
+            if (!lookupLocal(s.id, slot)) {
+                cout << s.id << endl;
+                cout << *layout << endl;
+                defs->dump(cout); cout << endl;
+           }
             alwaysTrue(lookupLocal(s.id, slot));
             emit<InstrSetLocal>(s.id, slot, layout);
         } else {
