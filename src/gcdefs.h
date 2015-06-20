@@ -7,6 +7,7 @@
 struct Class;
 struct Object;
 struct Value;
+struct Frame;
 
 template <>
 struct GCTraits<Value>
@@ -15,6 +16,13 @@ struct GCTraits<Value>
     static inline bool isNonNull(Value value);
     static inline void checkValid(Value value);
     static inline void trace(Tracer& t, Value* v);
+};
+
+template <>
+struct GCTraits<Frame>
+{
+    static void trace(Tracer& t, Frame* frame);
+    static void checkValid(const Frame& frame);
 };
 
 template <typename W>
