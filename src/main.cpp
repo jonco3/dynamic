@@ -108,9 +108,11 @@ const char* usageMessage =
     "  dynamic -e EXPRS   -- execute expressions from commandline\n"
     "options:\n"
     "  -l LIBDIR          -- set directory to load libraries from\n"
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
     "  -le                -- log interpreter execution\n"
     "  -lf                -- log interpreter frames only\n"
+#endif
+#ifdef DEBUG
     "  -lg                -- log GC activity\n"
 #endif
     ;
@@ -135,11 +137,13 @@ int main(int argc, const char* argv[])
             expr = true;
         else if (strcmp("-l", opt) == 0 && pos != argc)
             libDir = argv[pos++];
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
         else if (strcmp("-le", opt) == 0)
             logFrames = logExecution = true;
         else if (strcmp("-lf", opt) == 0)
             logFrames = true;
+#endif
+#ifdef DEBUG
         else if (strcmp("-lg", opt) == 0)
             logGC = true;
 #endif

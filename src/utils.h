@@ -6,7 +6,7 @@
 #ifdef DEBUG
 #define alwaysTrue(x) assert(x)
 #else
-#define alwaysTrue(x) x
+#define alwaysTrue(x) (x)
 #endif
 
 template <typename T>

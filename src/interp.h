@@ -12,6 +12,10 @@
 using namespace std;
 
 #ifdef DEBUG
+#define LOG_EXECUTION
+#endif
+
+#ifdef LOG_EXECUTION
 extern bool logFrames;
 extern bool logExecution;
 #endif
@@ -114,6 +118,8 @@ struct Interpreter
     void returnFromFrame(Value value);
 #ifdef DEBUG
     unsigned frameStackDepth();
+#endif
+#ifdef LOG_EXECUTION
     void logStart(int indentDelta = 0);
     void logStackPush(const Value& v);
     void logStackPop(size_t count);

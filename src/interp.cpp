@@ -12,7 +12,7 @@
 
 #include "value-inl.h"
 
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
 bool logFrames = false;
 bool logExecution = false;
 #endif
@@ -59,7 +59,7 @@ bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut
     return run(resultOut);
 }
 
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
 void Interpreter::logStart(int indentDelta)
 {
     size_t indent = frames.size() + indentDelta;
@@ -108,7 +108,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
         func = instrp->func;
         instr = instrp->data;
         instrp++;
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
         if (logExecution) {
             logStart();
             cout << *instr << " at line " << dec << currentPos().line << endl;
@@ -116,7 +116,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 #endif
         if (!func(instr, *this)) {
             Stack<Value> value(popStack());
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
             if (logExecution) {
                 logStart(1);
                 cout << "exception " << value << endl;
@@ -152,7 +152,7 @@ void Interpreter::pushFrame(Traced<Frame*> frame)
     instrp = frame->block()->startInstr();
     frames.push_back(frame);
 
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
     if (logFrames) {
         TokenPos pos = frame->block()->getPos(instrp);
         logStart(-1);
@@ -169,7 +169,7 @@ void Interpreter::popFrame()
            exceptionHandlers.back()->frame() != frame);
     assert(frame->stackPos() <= stackPos());
 
-#ifdef DEBUG
+#ifdef LOG_EXECUTION
     if (logFrames) {
         TokenPos pos = frame->block()->getPos(instrp - 1);
         logStart(-1);
