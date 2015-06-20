@@ -155,8 +155,9 @@ bool Object::hasAttr(Name name) const
             obj = obj->as<Class>()->base();
             if (obj == None)
                 return false;
-            assert(obj->is<Class>());
         }
+
+        assert(obj->is<Class>());
     }
 }
 
@@ -176,8 +177,9 @@ bool Object::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
             obj = obj->as<Class>()->base();
             if (obj == None)
                 return false;
-            assert(obj->is<Class>());
         }
+
+        assert(obj->is<Class>());
     }
 }
 
