@@ -28,7 +28,7 @@ void GeneratorIter::init()
 
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName("self");
-    Stack<Block*> block(gc.create<Block>(layout));
+    Stack<Block*> block(gc.create<Block>(layout, true));
     block->append<InstrResumeGenerator>();
     block->append<InstrReturn>();
     static vector<Name> params = { "self" };

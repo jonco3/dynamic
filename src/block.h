@@ -37,7 +37,9 @@ struct Block : public Cell
     static void buildModule(const Input& input, Traced<Object*> globals,
                             MutableTraced<Block*> blockOut);
 
-    Block(Traced<Layout*> layout);
+    Block(Traced<Layout*> layout, bool createEnv);
+
+    bool createEnv() const { return createEnv_; }
     InstrThunk* startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
     InstrThunk instr(unsigned i) { return instrs_.at(i); }
@@ -77,6 +79,7 @@ struct Block : public Cell
 
   private:
     Layout* layout_;
+    bool createEnv_;
     vector<InstrThunk> instrs_;
     string file_;
     vector<pair<size_t, unsigned>> offsetLines_;

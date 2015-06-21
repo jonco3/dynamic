@@ -49,7 +49,9 @@ bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut
 {
     assert(stackPos() == 0);
     Stack<Env*> nullParent;
-    Stack<Env*> env(gc.create<Env>(nullParent, block));
+    Stack<Env*> env;
+    if (block->createEnv())
+        env = gc.create<Env>(nullParent, block);
     pushFrame(block, env);
     return run(resultOut);
 }

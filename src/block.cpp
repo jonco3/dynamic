@@ -18,8 +18,8 @@
 bool assertStackDepth = true;
 #endif
 
-Block::Block(Traced<Layout*> layout)
-  : layout_(layout)
+Block::Block(Traced<Layout*> layout, bool createEnv)
+  : layout_(layout), createEnv_(createEnv)
 {}
 
 unsigned Block::append(InstrFuncBase func, Traced<Instr*> data)
@@ -109,7 +109,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 {
     DefinitionFinder(Traced<Layout*> layout, vector<Name>& globalsOut)
       : inAssignTarget_(false),
-        globals_(globalsOut)
+        globals_(globalsOut),
+        hasNestedFuctions_(false)
     {
         defs_ = gc.create<Object>(Object::ObjectClass, layout);
     }
@@ -120,10 +121,12 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     static Object* findDefs(const Syntax& s,
                             Traced<Layout*> layout,
-                            vector<Name>& globalsOut)
+                            vector<Name>& globalsOut,
+                            bool& hasNestedFuctionsOut)
     {
         DefinitionFinder finder(layout, globalsOut);
         s.accept(finder);
+        hasNestedFuctionsOut = finder.hasNestedFuctions_;
         return finder.defs_;
     }
 
@@ -162,6 +165,11 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     virtual void visit(const SyntaxDef& s) {
         addName(s.id);
+        hasNestedFuctions_ = true;
+    }
+
+    virtual void visit(const SyntaxLambda& s) {
+        hasNestedFuctions_ = true;
     }
 
     virtual void visit(const SyntaxClass& s) {
@@ -248,6 +256,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     Root<Object*> defs_;
     vector<Name>& globals_;
     vector<Name> nonLocals_;
+    bool hasNestedFuctions_;
 };
 
 struct ByteCompiler : public SyntaxVisitor
@@ -256,6 +265,7 @@ struct ByteCompiler : public SyntaxVisitor
       : parent(nullptr),
         topLevel(nullptr),
         layout(Env::InitialLayout),
+        useLexicalEnv(false),
         block(nullptr),
         isClassBlock(false),
         isGenerator(false),
@@ -326,6 +336,7 @@ struct ByteCompiler : public SyntaxVisitor
         topLevel = parent->topLevel;
         layout = layout->addName(Name::__bases__);
         isClassBlock = true;
+        useLexicalEnv = true;
         build(s);
         emit<InstrPop>();
         emit<InstrMakeClassFromFrame>(id);
@@ -372,6 +383,7 @@ struct ByteCompiler : public SyntaxVisitor
     Root<Layout*> layout;
     Root<Object*> defs;
     vector<Name> globals;
+    bool useLexicalEnv;
     Root<Block*> block;
     bool isClassBlock;
     bool isGenerator;
@@ -431,11 +443,13 @@ struct ByteCompiler : public SyntaxVisitor
     void build(const Syntax& s) {
         assert(!block);
         assert(topLevel);
-        defs = DefinitionFinder::findDefs(s, layout, globals);
+        bool hasNestedFuctions;
+        defs = DefinitionFinder::findDefs(s, layout, globals, hasNestedFuctions);
+        useLexicalEnv = useLexicalEnv || hasNestedFuctions;
         if (!parent)
             topLevel->extend(layout);
         layout = defs->layout();
-        block = gc.create<Block>(layout);
+        block = gc.create<Block>(layout, useLexicalEnv);
         assert(stackDepth == 0);
         compile(s);
         assert(stackDepth == 0);
@@ -600,25 +614,36 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     bool lookupLocal(Name name, int& slotOut) {
-        if (!parent)
+        if (!parent || useLexicalEnv)
             return false;
         slotOut = layout->lookupName(name);
         return slotOut != Layout::NotFound;
     }
 
-    unsigned lookupLexical(Name name) {
+    bool lookupLexical(Name name, unsigned& frameOut) {
         if (contains(globals, name))
-            return 0;
+            return false;
 
-        int count = 1;
-        ByteCompiler* b = parent;
-        while (b && b->parent) {
-            if (b->layout->hasName(name))
-                return count;
-            ++count;
-            b = b->parent;
+        int frame;
+        ByteCompiler* bc;
+        if (useLexicalEnv) {
+            frame = 0;
+            bc = this;
+        } else {
+            frame = 1;
+            bc = parent;
         }
-        return 0;
+
+        while (bc && bc->parent) {
+            if (bc->layout->hasName(name)) {
+                frameOut = frame;
+                return true;
+            }
+            if (bc->useLexicalEnv)
+                ++frame;
+            bc = bc->parent;
+        }
+        return false;
     }
 
     bool lookupGlobal(Name name) {
@@ -631,11 +656,12 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxName& s) {
         Name name = s.id;
         int slot;
+        unsigned frame;
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name, slot))
                 emit<InstrSetLocal>(name, slot, layout);
-            else if (unsigned frame = lookupLexical(name))
+            else if (lookupLexical(name, frame))
                 emit<InstrSetLexical>(frame, name);
             else if (lookupGlobal(name))
                 emit<InstrSetGlobal>(topLevel, name);
@@ -647,7 +673,7 @@ struct ByteCompiler : public SyntaxVisitor
           case Context::Delete:
             if (lookupLocal(name, slot))
                 emit<InstrDelLocal>(name);
-            else if (unsigned frame = lookupLexical(name))
+            else if (lookupLexical(name, frame))
                 emit<InstrDelLexical>(frame, name);
             else if (lookupGlobal(name))
                 emit<InstrDelGlobal>(topLevel, name);
@@ -660,7 +686,7 @@ struct ByteCompiler : public SyntaxVisitor
           default:
             if (lookupLocal(name, slot))
                 emit<InstrGetLocal>(name, slot, layout);
-            else if (unsigned frame = lookupLexical(name))
+            else if (lookupLexical(name, frame))
                 emit<InstrGetLexical>(frame, name);
             else
                 emit<InstrGetGlobal>(topLevel, name);
@@ -926,13 +952,14 @@ struct ByteCompiler : public SyntaxVisitor
                 ByteCompiler().buildFunctionBody(this, s.params, *s.expr);
         }
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
-        if (parent) {
-            int slot;
-            alwaysTrue(lookupLocal(s.id, slot));
+        int slot;
+        unsigned frame;
+        if (lookupLocal(s.id, slot))
             emit<InstrSetLocal>(s.id, slot, layout);
-        } else {
+        else if (lookupLexical(s.id, frame))
+            emit<InstrSetLexical>(frame, s.id);
+        else
             emit<InstrSetGlobal>(topLevel, s.id);
-        }
     }
 
     virtual void visit(const SyntaxClass& s) {
