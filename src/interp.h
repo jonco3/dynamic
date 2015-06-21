@@ -31,16 +31,15 @@ struct ExceptionHandler : public Cell
         CatchHandler, FinallyHandler
     };
 
-    ExceptionHandler(Type type, Traced<Frame*> frame, unsigned offset);
-    virtual void traceChildren(Tracer& t) override;
+    ExceptionHandler(Type type, unsigned frameIndex, unsigned offset);
 
     Type type() { return type_; }
-    Frame* frame() { return frame_; }
+    unsigned frameIndex() { return frameIndex_; }
     unsigned offset() { return offset_; }
 
   protected:
     const Type type_;
-    Frame* frame_;
+    unsigned frameIndex_;
     unsigned offset_;
 };
 
@@ -106,6 +105,9 @@ struct Interpreter
     InstrThunk* nextInstr() { return instrp; }
     unsigned stackPos() { return stack.size(); }
 
+    Env* env() { return getFrame()->env(); }
+    Env* lexicalEnv(unsigned index);
+
     bool raiseAttrError(Traced<Value> value, Name ident);
     bool raiseNameError(Name ident);
 
@@ -154,7 +156,8 @@ struct Interpreter
                                           reinterpret_cast<InstrFuncBase>(newFunc));
     }
 
-    void resumeGenerator(Traced<Frame*> frame,
+    void resumeGenerator(Traced<Block*> block,
+                         Traced<Env*> env,
                          unsigned ipOffset,
                          vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
@@ -183,7 +186,7 @@ struct Interpreter
     static Interpreter* instance_;
 
     InstrThunk *instrp;
-    RootVector<Frame*> frames;
+    RootVector<Frame> frames;
     RootVector<Value> stack;
 
     RootVector<ExceptionHandler*> exceptionHandlers;
@@ -195,8 +198,8 @@ struct Interpreter
     unsigned loopControlTarget_;
 
     Interpreter();
-    Frame* newFrame(Traced<Function*> function);
-    void pushFrame(Traced<Frame*> frame);
+    unsigned frameIndex();
+    void pushFrame(Traced<Block*> block, Traced<Env*> env);
     unsigned currentOffset();
     TokenPos currentPos();
 

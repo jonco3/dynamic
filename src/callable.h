@@ -63,7 +63,7 @@ struct Function : public Callable
     Function(Name name,
              Traced<FunctionInfo*> info,
              TracedVector<Value> defaults,
-             Traced<Frame*> scopeo);
+             Traced<Env*> env);
 
     Name paramName(unsigned i) {
         assert(i < info_->params_.size());
@@ -71,7 +71,7 @@ struct Function : public Callable
     }
 
     Block* block() const { return info_->block_; }
-    Frame* scope() const { return scope_; }
+    Env* env() const { return env_; }
     bool takesRest() const { return info_->takesRest_; }
     bool isGenerator() const { return info_->isGenerator_; }
     Traced<Value> paramDefault(unsigned i) {
@@ -93,7 +93,7 @@ struct Function : public Callable
   private:
     FunctionInfo* info_;
     vector<Value> defaults_;
-    Frame* scope_;
+    Env* env_;
 };
 
 struct Method : public Object

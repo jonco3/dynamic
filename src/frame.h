@@ -7,24 +7,40 @@ struct Block;
 struct InstrThunk;
 struct Interpreter;
 
-struct Frame : public Object
+// Lexical environment object forming a linked list thought parent pointer.
+struct Env : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
     static void init();
 
-    Frame(Traced<Block*> block);
-    void setStackPos(unsigned pos) { stackPos_ = pos; }
-    void setReturnPoint(InstrThunk* instrp) { returnPoint_ = instrp; }
+    Env(Traced<Env*> parent, Traced<Block*> block);
 
-    InstrThunk* returnPoint() { return returnPoint_; }
-    unsigned stackPos() { return stackPos_; }
-    Block* block() { return block_; }
+    Env* parent() const { return parent_; }
 
     virtual void traceChildren(Tracer& t) override;
 
   private:
+    Env* parent_;
+};
+
+// Activation frame.
+struct Frame
+{
+    Frame(); // so we can put these in a RootVector.
+    Frame(Traced<Block*> block, Traced<Env*> env, unsigned stackPos);
+    void setReturnPoint(InstrThunk* instrp) { returnPoint_ = instrp; }
+
+    Block* block() const { return block_; }
+    Env* env() const { return env_; }
+    InstrThunk* returnPoint() const { return returnPoint_; }
+    unsigned stackPos() const { return stackPos_; }
+
+    void traceChildren(Tracer& t);
+
+  private:
     Block* block_;
+    Env* env_;
     InstrThunk* returnPoint_;
     unsigned stackPos_;
 };

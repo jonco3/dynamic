@@ -599,6 +599,9 @@ struct RootVector : private vector<T>, protected RootBase
     using VectorBase::pop_back;
     using VectorBase::resize;
     using VectorBase::size;
+    using VectorBase::emplace_back;
+    using VectorBase::begin;
+    using VectorBase::end;
 
     RootVector() {
         RootBase::insert();

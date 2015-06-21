@@ -29,7 +29,7 @@ void init1()
     Layout::init();
     initObject();
     initCallable();
-    Frame::init();
+    Env::init();
     Boolean::init();
     Integer::init();
     Float::init();

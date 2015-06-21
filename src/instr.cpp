@@ -14,20 +14,20 @@
 /* static */ bool InstrGetLocal::execute(Traced<InstrGetLocal*> self,
                                          Interpreter& interp)
 {
-    Frame* frame = interp.getFrame();
-    if (frame->layout() != self->layout_)
+    Stack<Env*> env(interp.env());
+    if (env->layout() != self->layout_)
         return interp.replaceInstrFuncAndRestart(self, fallback);
 
-    interp.pushStack(frame->getSlot(self->slot_));
+    interp.pushStack(env->getSlot(self->slot_));
     return true;
 }
 
 /* static */ bool InstrGetLocal::fallback(Traced<InstrGetLocal*> self,
                                           Interpreter& interp)
 {
-    Frame* frame = interp.getFrame();
+    Stack<Env*> env(interp.env());
     Stack<Value> value;
-    if (!frame->maybeGetAttr(self->ident, value))
+    if (!env->maybeGetAttr(self->ident, value))
         return interp.raiseNameError(self->ident);
     interp.pushStack(value);
     return true;
@@ -36,12 +36,12 @@
 /* static */ bool InstrSetLocal::execute(Traced<InstrSetLocal*> self,
                                          Interpreter& interp)
 {
-    Frame* frame = interp.getFrame();
-    if (frame->layout() != self->layout_)
+    Stack<Env*> env(interp.env());
+    if (env->layout() != self->layout_)
         return interp.replaceInstrFuncAndRestart(self, fallback);
 
     Stack<Value> value(interp.peekStack(0));
-    interp.getFrame()->setSlot(self->slot_, value);
+    env->setSlot(self->slot_, value);
     return true;
 }
 
@@ -49,16 +49,16 @@
                                           Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
-    interp.getFrame()->setAttr(self->ident, value);
+    interp.env()->setAttr(self->ident, value);
     return true;
 }
 
 /* static */ bool InstrDelLocal::execute(Traced<InstrDelLocal*> self,
                                          Interpreter& interp)
 {
-    Frame* frame = interp.getFrame();
+    Stack<Env*> env(interp.env());
     // Name was present when compiled, but may have been deleted.
-    if (!frame->maybeDelOwnAttr(self->ident))
+    if (!env->maybeDelOwnAttr(self->ident))
         return interp.raiseNameError(self->ident);
     return true;
 }
@@ -66,10 +66,10 @@
 /* static */ bool InstrGetLexical::execute(Traced<InstrGetLexical*> self,
                                            Interpreter& interp)
 {
-    Frame* frame = interp.getFrame(self->frameIndex);
+    Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
     Stack<Value> value;
     // Name was present when compiled, but may have been deleted.
-    if (!frame->maybeGetAttr(self->ident, value))
+    if (!env->maybeGetAttr(self->ident, value))
         return interp.raiseNameError(self->ident);
     interp.pushStack(value);
     return true;
@@ -79,15 +79,16 @@
                                            Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
-    interp.getFrame(self->frameIndex)->setAttr(self->ident, value);
+    Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
+    env->setAttr(self->ident, value);
     return true;
 }
 
 /* static */ bool InstrDelLexical::execute(Traced<InstrDelLexical*> self,
                                            Interpreter& interp)
 {
-    Frame* frame = interp.getFrame(self->frameIndex);
-    if (!frame->maybeDelOwnAttr(self->ident))
+    Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
+    if (!env->maybeDelOwnAttr(self->ident))
         return interp.raiseNameError(self->ident);
     return true;
 }
@@ -391,10 +392,10 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
 {
     Stack<FunctionInfo*> info(self->info_);
     Stack<Block*> block(self->block());
-    Stack<Frame*> frame(interp.getFrame(0));
+    Stack<Env*> env(interp.env());
     TracedVector<Value> defaults(
         interp.stackSlice(self->defaultCount()));
-    Object* obj = gc.create<Function>(self->funcName_, info, defaults, frame);
+    Object* obj = gc.create<Function>(self->funcName_, info, defaults, env);
     interp.popStack(self->defaultCount());
     interp.pushStack(Value(obj));
     return true;
@@ -470,21 +471,18 @@ InstrAssertionFailed::execute(Traced<InstrAssertionFailed*> self,
 InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
                                  Interpreter& interp)
 {
-    Stack<Frame*> frame(interp.getFrame());
+    Stack<Env*> env(interp.env());
+
+    // todo: this layout transplanting should be used to a utility method
     vector<Name> names;
-    for (Layout* l = frame->layout();
-         l != Frame::InitialLayout;
-         l = l->parent())
-    {
-        Name name = l->name();
-        if (name != Name::__bases__)
-            names.push_back(l->name());
-    }
+    for (Layout* l = env->layout(); l != Env::InitialLayout; l = l->parent())
+        names.push_back(l->name());
     Stack<Layout*> layout(Class::InitialLayout);
     for (auto i = names.begin(); i != names.end(); i++)
         layout = layout->addName(*i);
+
     Stack<Value> bases;
-    if (!frame->maybeGetAttr(Name::__bases__, bases)) {
+    if (!env->maybeGetAttr(Name::__bases__, bases)) {
         interp.pushStack(gc.create<AttributeError>("Missing __bases__"));
         return false;
     }
@@ -509,7 +507,7 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     Class* cls = gc.create<Class>(self->ident, base, layout);
     Stack<Value> value;
     for (auto i = names.begin(); i != names.end(); i++) {
-        value = frame->getAttr(*i);
+        value = env->getAttr(*i);
         cls->setAttr(*i, value);
     }
     interp.pushStack(cls);
@@ -752,16 +750,16 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
 InstrResumeGenerator::execute(Traced<InstrResumeGenerator*> self,
                               Interpreter& interp)
 {
-    Frame* frame = interp.getFrame();
-    GeneratorIter *gen = frame->getAttr("self").asObject()->as<GeneratorIter>();
+    Stack<Env*> env(interp.env());
+    Stack<GeneratorIter*> gen(env->getAttr("self").asObject()->as<GeneratorIter>());
     return gen->resume(interp);
 }
 
 /* static */ bool InstrLeaveGenerator::execute(Traced<InstrLeaveGenerator*> self,
                                                Interpreter& interp)
 {
-    Frame* frame = interp.getFrame();
-    GeneratorIter *gen = frame->getAttr("%gen").asObject()->as<GeneratorIter>();
+    Stack<Env*> env(interp.env());
+    Stack<GeneratorIter*> gen(env->getAttr("%gen").asObject()->as<GeneratorIter>());
     return gen->leave(interp);
 }
 
@@ -770,8 +768,8 @@ InstrSuspendGenerator::execute(Traced<InstrSuspendGenerator*> self,
                                Interpreter& interp)
 {
     Stack<Value> value(interp.popStack());
-    Frame* frame = interp.getFrame();
-    GeneratorIter *gen = frame->getAttr("%gen").asObject()->as<GeneratorIter>();
+    Stack<Env*> env(interp.env());
+    Stack<GeneratorIter*> gen(env->getAttr("%gen").asObject()->as<GeneratorIter>());
     gen->suspend(interp, value);
     return true;
 }
