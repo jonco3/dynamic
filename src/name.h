@@ -105,6 +105,7 @@ inline string operator+(const string& a, Name b) {
     return a + b.get();
 }
 
+namespace std {
 template<>
 struct hash<Name>
 {
@@ -116,6 +117,7 @@ struct hash<Name>
         return n.asBits();
     }
 };
+} /* namespace std */
 
 extern void initNames();
 extern void shutdownNames();
