@@ -90,7 +90,6 @@ void Interpreter::logStackSwap()
         cout << "swap" << endl;
     }
 }
-
 #endif
 
 bool Interpreter::run(MutableTraced<Value> resultOut)

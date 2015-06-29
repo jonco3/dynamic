@@ -558,12 +558,16 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
 static bool getAttrOrDescriptor(Traced<Value> value, Name name,
                                 MutableTraced<Value> resultOut, bool& isDescriptor)
 {
-    if (getSpecialAttr(value, name, resultOut))
+    if (getSpecialAttr(value, name, resultOut)) {
+        isDescriptor = false;
         return true;
+    }
 
     FindResult r = findAttrForGet(value, name, resultOut);
-    if (r == FindResult::NotFound)
+    if (r == FindResult::NotFound) {
+        isDescriptor = false;
         return raiseAttrError(value, name, resultOut);
+    }
 
     isDescriptor = r == FindResult::FoundDescriptor;
     return true;
