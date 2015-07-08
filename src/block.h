@@ -19,6 +19,7 @@ struct Syntax;
 
 #ifdef DEBUG
 extern bool assertStackDepth;
+extern bool logCompile;
 #endif
 
 typedef bool (*InstrFuncBase)(Traced<Instr*> self, Interpreter& interp);

@@ -12,10 +12,20 @@
 #include <algorithm>
 #include <memory>
 
-//#define TRACE_BUILD
-
 #ifdef DEBUG
+
 bool assertStackDepth = true;
+bool logCompile = false;
+
+static inline void log(const Block* block) {
+    if (logCompile)
+        cout << "bc: " << repr(*block) << endl;
+}
+
+#else
+
+static inline void log(const Block* block) {}
+
 #endif
 
 Block::Block(Traced<Layout*> layout, bool createEnv)
@@ -288,9 +298,7 @@ struct ByteCompiler : public SyntaxVisitor
         build(*s);
         if (!block->lastInstr().data->is<InstrReturn>())
             emit<InstrReturn>();
-#ifdef TRACE_BUILD
-        cerr << repr(*block) << endl;
-#endif
+        log(block);
         return block;
     }
 
@@ -309,9 +317,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrConst>(None);
             emit<InstrReturn>();
         }
-#ifdef TRACE_BUILD
-        cerr << repr(*block) << endl;
-#endif
+        log(block);
         return block;
     }
 
@@ -324,9 +330,7 @@ struct ByteCompiler : public SyntaxVisitor
             layout = layout->addName(i->name);
         build(s);
         emit<InstrReturn>();
-#ifdef TRACE_BUILD
-        cerr << repr(*block) << endl;
-#endif
+        log(block);
         return block;
     }
 
@@ -341,9 +345,7 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrPop>();
         emit<InstrMakeClassFromFrame>(id);
         emit<InstrReturn>();
-#ifdef TRACE_BUILD
-        cerr << repr(*block) << endl;
-#endif
+        log(block);
         return block;
     }
 
@@ -363,9 +365,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrPop>();
             emit<InstrLeaveGenerator>();
         }
-#ifdef TRACE_BUILD
-        cerr << repr(*block) << endl;
-#endif
+        log(block);
         return block;
     }
 

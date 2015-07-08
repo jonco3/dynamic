@@ -114,6 +114,7 @@ const char* usageMessage =
 #endif
 #ifdef DEBUG
     "  -lg                -- log GC activity\n"
+    "  -lc                -- log compiled bytecode\n"
 #endif
     ;
 
@@ -146,6 +147,8 @@ int main(int argc, const char* argv[])
 #ifdef DEBUG
         else if (strcmp("-lg", opt) == 0)
             logGC = true;
+        else if (strcmp("-lc", opt) == 0)
+            logCompile = true;
 #endif
         else
             badUsage();
