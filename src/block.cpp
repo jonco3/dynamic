@@ -1118,17 +1118,12 @@ struct ByteCompiler : public SyntaxVisitor
     }
 };
 
-static unique_ptr<SyntaxBlock> ParseModule(const Input& input)
-{
-    SyntaxParser parser;
-    parser.start(input);
-    return unique_ptr<SyntaxBlock>(parser.parseModule());
-}
-
 void Block::buildModule(const Input& input, Traced<Object*> globalsArg,
                         MutableTraced<Block*> blockOut)
 {
-    unique_ptr<SyntaxBlock> syntax(ParseModule(input));
+    SyntaxParser parser;
+    parser.start(input);
+    unique_ptr<SyntaxBlock> syntax(parser.parseModule());
     Stack<Object*> globals(globalsArg);
     if (globals->isNone())
         globals = createTopLevel();
