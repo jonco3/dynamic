@@ -698,13 +698,11 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxDef& s) {
         Stack<Block*> exprBlock;
-        if (s.isGenerator) {
-            exprBlock =
-                ByteCompiler().buildGenerator(this, s.params, *s.expr);
-        } else {
-            exprBlock =
-                ByteCompiler().buildFunctionBody(this, s.params, *s.expr);
-        }
+        ByteCompiler compiler;
+        if (s.isGenerator)
+            exprBlock = compiler.buildGenerator(this, s.params, *s.suite);
+        else
+            exprBlock = compiler.buildFunctionBody(this, s.params, *s.suite);
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
         int slot;
         unsigned frame;

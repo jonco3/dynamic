@@ -489,18 +489,18 @@ struct SyntaxDef : public Syntax
     SyntaxDef(const Token& token,
               Name id,
               vector<Parameter> params,
-              unique_ptr<Syntax> expr,  // todo: should be block?
+              unique_ptr<SyntaxBlock> suite,
               bool isGenerator)
       : Syntax(token),
         id(id),
         params(move(params)),
-        expr(move(expr)),
+        suite(move(suite)),
         isGenerator(isGenerator)
     {}
 
     const Name id;
     const vector<Parameter> params;
-    const unique_ptr<Syntax> expr;
+    const unique_ptr<SyntaxBlock> suite;
     const bool isGenerator;
 };
 

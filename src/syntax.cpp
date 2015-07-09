@@ -217,7 +217,7 @@ void SyntaxPrinter::visit(const SyntaxDef& s)
         first = false;
     }
     os_ << "):" << endl;
-    os_ << *s.expr;
+    os_ << *s.suite;
 }
 
 void SyntaxPrinter::visit(const SyntaxIf& s)

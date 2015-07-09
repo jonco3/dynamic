@@ -575,13 +575,15 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
                 hadExpr = false;
             }
             unique_ptr<SyntaxBlock> suite(parseSuite());
-            excepts.emplace_back(new ExceptInfo(token, move(expr), move(as), move(suite)));
+            excepts.emplace_back(new ExceptInfo(token, move(expr), move(as),
+                                                move(suite)));
         }
         if (!excepts.empty() && opt(Token_Else))
             elseSuite = parseSuite();
         if (opt(Token_Finally))
             finallySuite = parseSuite();
-        return make_unique<SyntaxTry>(token, move(suite), move(excepts), move(elseSuite), move(finallySuite));
+        return make_unique<SyntaxTry>(token, move(suite), move(excepts),
+                                      move(elseSuite), move(finallySuite));
     //} else if (opt(Token_With)) {
     } else if (opt(Token_Def)) {
         Token name = match(Token_Identifier);
@@ -589,16 +591,19 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
         vector<Parameter> params = parseParameterList(Token_Ket);
         AutoSetAndRestore asar1(inFunction, true);
         AutoSetAndRestore asar2(isGenerator, false);
-        unique_ptr<Syntax> suite(parseSuite());
-        return make_unique<SyntaxDef>(token, name.text, move(params), move(suite), move(isGenerator));
+        unique_ptr<SyntaxBlock> suite(parseSuite());
+        return make_unique<SyntaxDef>(token, name.text, move(params),
+                                      move(suite), move(isGenerator));
     } else if (opt(Token_Class)) {
         Token name = match(Token_Identifier);
         vector<unique_ptr<Syntax>> bases;
         if (opt(Token_Bra))
             bases = exprListTrailing(Token_Comma, Token_Ket);
-        unique_ptr<SyntaxExprList> baseList(make_unique<SyntaxExprList>(token, move(bases)));
+        unique_ptr<SyntaxExprList> baseList(
+            make_unique<SyntaxExprList>(token, move(bases)));
         unique_ptr<SyntaxBlock> suite(parseSuite());
-        return make_unique<SyntaxClass>(token, name.text, move(baseList), move(suite));
+        return make_unique<SyntaxClass>(token, name.text, move(baseList),
+                                        move(suite));
     } else {
         unique_ptr<Syntax> stmt = parseSimpleStatement();
         if (!atEnd())
