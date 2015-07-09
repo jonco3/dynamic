@@ -2,6 +2,7 @@
 #include "builtin.h"
 #include "callable.h"
 #include "common.h"
+#include "compiler.h"
 #include "dict.h"
 #include "exception.h"
 #include "input.h"
@@ -67,7 +68,7 @@ static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resul
     string source = args[0].asObject()->as<String>()->value();
     Stack<Block*> block;
     try {
-        Block::buildModule(source, None, block);
+        CompileModule(source, None, block);
     } catch (const ParseError& e) {
         SyntaxError* err = gc.create<SyntaxError>(e.what());
         err->setPos(e.pos);
@@ -116,7 +117,7 @@ for_each_exception_class(set_exception_attr)
     string filename = libDir + "/builtin.py";
     string text = readFile(filename);
     Stack<Block*> block;
-    Block::buildModule(Input(text, filename), Builtin, block);
+    CompileModule(Input(text, filename), Builtin, block);
     Stack<Value> result;
     if (!Interpreter::exec(block, result)) {
         printException(result);

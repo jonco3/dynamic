@@ -27,6 +27,8 @@ SRCS = \
 	src/parser.cpp \
 	src/gc.cpp \
 	src/block.cpp \
+	src/analysis.cpp \
+	src/compiler.cpp \
 	src/layout.cpp \
 	src/value.cpp \
 	src/object.cpp \

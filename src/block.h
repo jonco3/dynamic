@@ -35,9 +35,6 @@ struct InstrThunk
 
 struct Block : public Cell
 {
-    static void buildModule(const Input& input, Traced<Object*> globals,
-                            MutableTraced<Block*> blockOut);
-
     Block(Traced<Layout*> layout, bool createEnv);
 
     bool createEnv() const { return createEnv_; }

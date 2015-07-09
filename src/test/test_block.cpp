@@ -1,5 +1,6 @@
 #include "src/block.h"
 
+#include "src/compiler.h"
 #include "src/repr.h"
 #include "src/singletons.h"
 #include "src/test.h"
@@ -13,7 +14,7 @@ static void testBuildModule(const string& input, const string& expected)
 #endif
 
     Stack<Block*> block;
-    Block::buildModule(input, None, block);
+    CompileModule(input, None, block);
     testEqual(repr(*block), expected);
 }
 

@@ -1,6 +1,7 @@
 #include "src/interp.h"
 
 #include "src/block.h"
+#include "src/compiler.h"
 #include "src/exception.h"
 #include "src/instr.h"
 #include "src/repr.h"
@@ -11,7 +12,7 @@
 void testInterp(const string& input, const string& expected)
 {
     Stack<Block*> block;
-    Block::buildModule(input, None, block);
+    CompileModule(input, None, block);
     Stack<Value> result;
     bool ok = Interpreter::exec(block, result);
     if (!ok)
@@ -23,7 +24,7 @@ void testInterp(const string& input, const string& expected)
 void testException(const string& input, const string& expected)
 {
     Stack<Block*> block;
-    Block::buildModule(input, None, block);
+    CompileModule(input, None, block);
     Stack<Value> result;
     testExpectingException = true;
     bool ok = Interpreter::exec(block, result);
@@ -48,7 +49,7 @@ void testReplacement(const string& input,
                      InstrType replacement)
 {
     Stack<Block*> block;
-    Block::buildModule(input, None, block);
+    CompileModule(input, None, block);
 
     InstrThunk* instrp = block->findInstr(Instr_Lambda);
     assert(instrp);
@@ -74,7 +75,7 @@ void testReplacement(const string& input,
                      InstrFunc<T2> replacement)
 {
     Stack<Block*> block;
-    Block::buildModule(input, None, block);
+    CompileModule(input, None, block);
 
     InstrThunk* instrp = block->findInstr(Instr_Lambda);
     assert(instrp);

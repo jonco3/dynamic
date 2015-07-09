@@ -3,6 +3,7 @@
 #include "bool.h"
 #include "builtin.h"
 #include "callable.h"
+#include "compiler.h"
 #include "dict.h"
 #include "exception.h"
 #include "frame.h"
@@ -91,7 +92,7 @@ bool runModule(string text, string filename, Traced<Object*> globals,
     bool ok;
     try {
         Stack<Block*> block;
-        Block::buildModule(Input(text, filename), globals, block);
+        CompileModule(Input(text, filename), globals, block);
         ok = Interpreter::exec(block, result);
     } catch (const ParseError& e) {
         ostringstream s;
