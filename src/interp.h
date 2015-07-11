@@ -111,7 +111,7 @@ struct Interpreter
     bool raiseAttrError(Traced<Value> value, Name ident);
     bool raiseNameError(Name ident);
 
-    bool call(Traced<Value> callable, const TracedVector<Value>& args,
+    bool call(Traced<Value> callable, TracedVector<Value> args,
               MutableTraced<Value> resultOut);
     bool startCall(Traced<Value> callable, const TracedVector<Value>& args);
 

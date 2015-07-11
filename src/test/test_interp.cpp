@@ -140,9 +140,13 @@ testcase(interp)
     testEqual(i.stackPos(), 1u);
     testEqual(i.peekStack(0), Value(None));
     testEqual(i.stackRef(0).get(), Value(None));
-    TracedVector<Value> slice = i.stackSlice(1);
-    testEqual(slice.size(), 1u);
-    testEqual(slice[0].get(), Value(None));
+
+    {
+        TracedVector<Value> slice = i.stackSlice(1);
+        testEqual(slice.size(), 1u);
+        testEqual(slice[0].get(), Value(None));
+    }
+
     testEqual(i.popStack(), Value(None));
     testEqual(i.stackPos(), 0u);
 

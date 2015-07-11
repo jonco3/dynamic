@@ -230,6 +230,15 @@ struct RootBase
 #endif
     }
 
+#ifdef DEBUG
+    // TracedVector stores a pointer directly into the source collection, hence
+    // we need to check this in RootVector when performing an operation that
+    // might cause its storage to be reallocated.
+    bool hasUses() {
+        return useCount_ != 0;
+    }
+#endif
+
   private:
     RootBase* next_;
     RootBase* prev_;
@@ -596,10 +605,7 @@ struct RootVector : private vector<T>, protected RootBase
 
     using VectorBase::back;
     using VectorBase::empty;
-    using VectorBase::pop_back;
-    using VectorBase::resize;
     using VectorBase::size;
-    using VectorBase::emplace_back;
     using VectorBase::begin;
     using VectorBase::end;
 
@@ -627,9 +633,26 @@ struct RootVector : private vector<T>, protected RootBase
         return Traced<T>::fromTracedLocation(&(*this)[index]);
     }
 
+    void resize(size_t size) {
+        assert(!hasUses());
+        VectorBase::resize(size);
+    }
+
     void push_back(T element) {
         GCTraits<T>::checkValid(element);
+        assert(!hasUses());
         VectorBase::push_back(element);
+    }
+
+    void pop_back() {
+        assert(!hasUses());
+        VectorBase::pop_back();
+    }
+
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
+        assert(!hasUses());
+        VectorBase::emplace_back(forward<Args>(args)...);
     }
 
     T& operator[](size_t index) {
@@ -750,7 +773,8 @@ struct TracedVector
 
     ~TracedVector() {
 #ifdef DEBUG
-        root_->removeUse();
+        if (root_)
+            root_->removeUse();
 #endif
     }
 
@@ -763,10 +787,21 @@ struct TracedVector
         return Traced<T>::fromTracedLocation(&data_[index]);
     }
 
+    // Prevent future use of this object, to help with use count assertions when
+    // we know a live TracedVector will never be used.
+    void detach() {
+#ifdef DEBUG
+        assert(data_);
+        data_ = nullptr;
+        size_ = 0;
+        root_->removeUse();
+        root_ = nullptr;
+#endif
+    }
+
     // todo: implement c++ iterators
 
   private:
-    // todo: this is dodgy if it points into a vector which is then modified.
     T* data_;
     unsigned size_;
 #ifdef DEBUG

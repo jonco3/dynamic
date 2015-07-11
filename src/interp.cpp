@@ -464,7 +464,7 @@ bool Interpreter::raiseNameError(Name ident)
 }
 
 bool Interpreter::call(Traced<Value> targetValue,
-                       const TracedVector<Value>& args,
+                       TracedVector<Value> args,
                        MutableTraced<Value> resultOut)
 {
     // Synchronous call while we may already be in the interpreter.
@@ -479,6 +479,7 @@ bool Interpreter::call(Traced<Value> targetValue,
     if (status == CallFinished)
         return true;
 
+    args.detach();
     bool ok = run(resultOut);
     return ok;
 }

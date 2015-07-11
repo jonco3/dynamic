@@ -393,9 +393,10 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
     Stack<FunctionInfo*> info(self->info_);
     Stack<Block*> block(self->block());
     Stack<Env*> env(interp.env());
-    TracedVector<Value> defaults(
-        interp.stackSlice(self->defaultCount()));
-    Object* obj = gc.create<Function>(self->funcName_, info, defaults, env);
+
+    Stack<Object*> obj;
+    obj = gc.create<Function>(self->funcName_, info,
+                              interp.stackSlice(self->defaultCount()), env);
     interp.popStack(self->defaultCount());
     interp.pushStack(Value(obj));
     return true;
@@ -582,9 +583,8 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
 {
     // The stack is already set up with next method and target on top
     Stack<Value> target(interp.peekStack(2));
-    TracedVector<Value> args = interp.stackSlice(1);
     Stack<Value> result;
-    bool ok = interp.call(target, args, result);
+    bool ok = interp.call(target, interp.stackSlice(1), result);
     if (!ok) {
         Stack<Object*> exc(result.toObject());
         if (exc->is<StopIteration>()) {
