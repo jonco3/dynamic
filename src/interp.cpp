@@ -48,6 +48,7 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
+    assert(frames.empty());
     pushFrame(block);
     if (block->createEnv()) {
         Stack<Env*> env;
@@ -147,8 +148,8 @@ unsigned Interpreter::frameIndex()
 
 void Interpreter::pushFrame(Traced<Block*> block)
 {
+    frames.emplace_back(block, stackPos(), instrp);
     instrp = block->startInstr();
-    frames.emplace_back(block, stackPos());
 
 #ifdef LOG_EXECUTION
     if (logFrames) {
@@ -188,6 +189,14 @@ void Interpreter::popFrame()
     stack.resize(frame->stackPos());
     instrp = frame->returnPoint();
     frames.pop_back();
+
+#ifdef LOG_EXECUTION
+    if (logFrames && instrp) {
+        TokenPos pos = frames.back().block()->getPos(instrp);
+        logStart();
+        cout << "  return to " << pos << endl;
+    }
+#endif
 }
 
 #ifdef DEBUG
@@ -235,10 +244,8 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
                                   unsigned ipOffset,
                                   vector<Value>& savedStack)
 {
-    InstrThunk* returnPoint = instrp;
     pushFrame(block);
     setFrameEnv(env);
-    getFrame()->setReturnPoint(returnPoint);
     instrp += ipOffset;
     // todo: can copy this in one go
     for (auto i = savedStack.begin(); i != savedStack.end(); i++)
@@ -456,7 +463,11 @@ bool Interpreter::call(Traced<Value> targetValue,
                        const TracedVector<Value>& args,
                        MutableTraced<Value> resultOut)
 {
-    InstrThunk* oldInstrp = instrp;
+    // Synchronous call while we may already be in the interpreter.
+    // Save the current instruction pointer and set it to null to so the
+    // interpreter loop knows to exit rather than resume the the previous frame.
+    AutoSetAndRestoreValue<InstrThunk*> saveInstrp(instrp, nullptr);
+
     CallStatus status = setupCall(targetValue, args, resultOut);
     if (status == CallError)
         return false;
@@ -465,13 +476,11 @@ bool Interpreter::call(Traced<Value> targetValue,
         return true;
 
     bool ok = run(resultOut);
-    instrp = oldInstrp;
     return ok;
 }
 
 bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>& args)
 {
-    InstrThunk* returnPoint = instrp;
     Stack<Value> result;
     CallStatus status = setupCall(targetValue, args, result);
     if (status == CallError) {
@@ -485,7 +494,6 @@ bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>
     }
 
     assert(status == CallStarted);
-    getFrame()->setReturnPoint(returnPoint);
     return true;
 }
 

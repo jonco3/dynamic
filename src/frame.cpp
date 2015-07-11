@@ -23,10 +23,10 @@ Frame::Frame()
     stackPos_(0)
 {}
 
-Frame::Frame(Traced<Block*> block, unsigned stackPos)
+Frame::Frame(Traced<Block*> block, unsigned stackPos, InstrThunk* returnPoint)
   : block_(block),
     env_(nullptr),
-    returnPoint_(nullptr),
+    returnPoint_(returnPoint),
     stackPos_(stackPos)
 {}
 

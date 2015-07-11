@@ -28,10 +28,9 @@ struct Env : public Object
 struct Frame
 {
     Frame(); // so we can put these in a RootVector.
-    Frame(Traced<Block*> block, unsigned stackPos);
+    Frame(Traced<Block*> block, unsigned stackPos, InstrThunk* returnPoint);
 
     void setEnv(Traced<Env*> env);
-    void setReturnPoint(InstrThunk* instrp) { returnPoint_ = instrp; }
 
     Block* block() const { return block_; }
     Env* env() const { return env_; }
