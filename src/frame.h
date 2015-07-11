@@ -7,7 +7,7 @@ struct Block;
 struct InstrThunk;
 struct Interpreter;
 
-// Lexical environment object forming a linked list thought parent pointer.
+// Lexical environment object forming a linked list through parent pointer.
 struct Env : public Object
 {
     static GlobalRoot<Class*> ObjectClass;
