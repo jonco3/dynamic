@@ -230,6 +230,7 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
     pushFrame(block, env);
     getFrame()->setReturnPoint(returnPoint);
     instrp += ipOffset;
+    // todo: can copy this in one go
     for (auto i = savedStack.begin(); i != savedStack.end(); i++)
         pushStack(*i);
     savedStack.resize(0);
@@ -517,19 +518,12 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Env*> parentEnv(function->env());
         Stack<Block*> block(function->block());
         Stack<Env*> callEnv(gc.create<Env>(parentEnv, block));
-        if (function->isGenerator()) {
-            Stack<Value> none(None);
-            callEnv->setAttr("%gen", none);
-        }
         unsigned normalArgs = min(args.size(), function->maxNormalArgs());
-        for (size_t i = 0; i < normalArgs; i++) {
-            // todo: set by slot not name
+        // todo: set by slot not name
+        for (size_t i = 0; i < normalArgs; i++)
             callEnv->setAttr(function->paramName(i), args[i]);
-        }
-        for (size_t i = args.size(); i < function->maxNormalArgs(); i++) {
-            callEnv->setAttr(function->paramName(i),
-                               function->paramDefault(i));
-        }
+        for (size_t i = args.size(); i < function->maxNormalArgs(); i++)
+            callEnv->setAttr(function->paramName(i), function->paramDefault(i));
         if (function->takesRest()) {
             Stack<Value> rest(Tuple::Empty);
             if (args.size() > function->maxNormalArgs()) {
