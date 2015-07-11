@@ -522,11 +522,11 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Layout*> layout(block->layout());
         Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
         unsigned normalArgs = min(args.size(), function->maxNormalArgs());
-        // todo: set by slot not name
+        unsigned slot = 0;
         for (size_t i = 0; i < normalArgs; i++)
-            callEnv->setAttr(function->paramName(i), args[i]);
+            callEnv->setSlot(slot++, args[i]);
         for (size_t i = args.size(); i < function->maxNormalArgs(); i++)
-            callEnv->setAttr(function->paramName(i), function->paramDefault(i));
+            callEnv->setSlot(slot++, function->paramDefault(i));
         if (function->takesRest()) {
             Stack<Value> rest(Tuple::Empty);
             if (args.size() > function->maxNormalArgs()) {
@@ -535,13 +535,11 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 TracedVector<Value> restArgs(args, start, count);
                 rest = Tuple::get(restArgs);
             }
-            callEnv->setAttr(function->paramName(function->restParam()),
-                               rest);
+            callEnv->setSlot(slot++, rest);
         }
         if (function->isGenerator()) {
-            Stack<Value> iter(
-                gc.create<GeneratorIter>(function, callEnv));
-            callEnv->setAttr("%gen", iter);
+            Stack<Value> iter(gc.create<GeneratorIter>(function, callEnv));
+            callEnv->setSlot(slot++, iter);
             resultOut = iter;
             return CallFinished;
         }
