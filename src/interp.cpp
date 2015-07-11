@@ -579,7 +579,6 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             if (!call(func, funcArgs, resultOut))
                 return CallError;
         } else {
-            // Call the class' native constructor to create an instance
             string message = "cannot create '" + cls->name() + "' instances";
             return raiseTypeError(message, resultOut);
         }
