@@ -708,57 +708,45 @@ template <typename T>
 struct TracedVector
 {
     TracedVector(RootVector<T>& source)
-      : data_(source.data()), size_(source.size()) {
-#ifdef DEBUG
-        root_ = &source;
-        root_->addUse();
-#endif
+      : data_(source.data()), size_(source.size())
+    {
+        addRootUse(source);
     }
 
     TracedVector(RootVector<T>& source, unsigned offset, unsigned size)
-      : data_(source.data() + offset), size_(size) {
+      : data_(source.data() + offset), size_(size)
+    {
         assert(offset + size <= source.size());
-#ifdef DEBUG
-        root_ = &source;
-        root_->addUse();
-#endif
+        addRootUse(source);
     }
 
     template <size_t N>
     TracedVector(RootArray<T, N>& source)
-      : data_(source.data), size_(N) {
-#ifdef DEBUG
-        root_ = &source;
-        root_->addUse();
-#endif
+      : data_(source.data), size_(N)
+    {
+        addRootUse(source);
     }
 
     template <size_t N>
     TracedVector(RootArray<T, N>& source, unsigned offset, unsigned size)
-      : data_(source.data + offset), size_(size) {
+      : data_(source.data + offset), size_(size)
+    {
         assert(offset + size <= source.size());
-#ifdef DEBUG
-        root_ = &source;
-        root_->addUse();
-#endif
+        addRootUse(source);
     }
 
     TracedVector(const TracedVector<T>& source, unsigned offset, unsigned size)
-      : data_(source.data_ + offset), size_(size) {
+      : data_(source.data_ + offset), size_(size)
+    {
         assert(offset + size <= source.size());
-#ifdef DEBUG
-        root_ = source.root_;
-        root_->addUse();
-#endif
+        addRootUse(*source.root_);
     }
 
     TracedVector(const TracedVector& other)
-      : data_(other.data_), size_(other.size_) {
-#ifdef DEBUG
-        root_ = other.root_;
-        root_->addUse();
-#endif
-      }
+      : data_(other.data_), size_(other.size_)
+    {
+        addRootUse(*other.root_);
+    }
 
     ~TracedVector() {
 #ifdef DEBUG
@@ -784,6 +772,13 @@ struct TracedVector
 #ifdef DEBUG
     RootBase* root_;
 #endif
+
+    void addRootUse(RootBase& source) {
+#ifdef DEBUG
+        root_ = &source;
+        root_->addUse();
+#endif
+    }
 
     TracedVector& operator=(const TracedVector& other) = delete;
 };
