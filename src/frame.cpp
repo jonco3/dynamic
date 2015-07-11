@@ -23,12 +23,18 @@ Frame::Frame()
     stackPos_(0)
 {}
 
-Frame::Frame(Traced<Block*> block, Traced<Env*> env, unsigned stackPos)
+Frame::Frame(Traced<Block*> block, unsigned stackPos)
   : block_(block),
-    env_(env),
+    env_(nullptr),
     returnPoint_(nullptr),
     stackPos_(stackPos)
 {}
+
+void Frame::setEnv(Traced<Env*> env)
+{
+    assert(!env_);
+    env_ = env;
+}
 
 void Env::traceChildren(Tracer& t)
 {

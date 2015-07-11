@@ -199,7 +199,8 @@ struct Interpreter
 
     Interpreter();
     unsigned frameIndex();
-    void pushFrame(Traced<Block*> block, Traced<Env*> env);
+    void pushFrame(Traced<Block*> block);
+    void setFrameEnv(Traced<Env*> env);
     unsigned currentOffset();
     TokenPos currentPos();
 

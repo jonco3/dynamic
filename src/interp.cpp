@@ -48,13 +48,14 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
-    Stack<Env*> env;
+    pushFrame(block);
     if (block->createEnv()) {
+        Stack<Env*> env;
         Stack<Env*> nullParent;
         Stack<Layout*> layout(block->layout());
         env = gc.create<Env>(nullParent, layout);
+        setFrameEnv(env);
     }
-    pushFrame(block, env);
     return run(resultOut);
 }
 
@@ -144,10 +145,10 @@ unsigned Interpreter::frameIndex()
     return frames.size() - 1;
 }
 
-void Interpreter::pushFrame(Traced<Block*> block, Traced<Env*> env)
+void Interpreter::pushFrame(Traced<Block*> block)
 {
     instrp = block->startInstr();
-    frames.emplace_back(block, env, stackPos());
+    frames.emplace_back(block, stackPos());
 
 #ifdef LOG_EXECUTION
     if (logFrames) {
@@ -157,6 +158,12 @@ void Interpreter::pushFrame(Traced<Block*> block, Traced<Env*> env)
         cout << "> frame " << pos << endl;
     }
 #endif
+}
+
+void Interpreter::setFrameEnv(Traced<Env*> env)
+{
+    assert(!frames.empty());
+    frames.back().setEnv(env);
 }
 
 void Interpreter::popFrame()
@@ -229,7 +236,8 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
                                   vector<Value>& savedStack)
 {
     InstrThunk* returnPoint = instrp;
-    pushFrame(block, env);
+    pushFrame(block);
+    setFrameEnv(env);
     getFrame()->setReturnPoint(returnPoint);
     instrp += ipOffset;
     // todo: can copy this in one go
@@ -543,7 +551,8 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             resultOut = iter;
             return CallFinished;
         }
-        pushFrame(block, callEnv);
+        pushFrame(block);
+        setFrameEnv(callEnv);
         return CallStarted;
     } else if (target->is<Class>()) {
         // todo: this is messy and needs refactoring
