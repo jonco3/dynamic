@@ -107,7 +107,6 @@ void Exception::print(ostream& s) const
 
 void Exception::setPos(const TokenPos& pos)
 {
-    if (pos_.line != 0)
-        return;
+    assert(!hasPos());
     pos_ = pos;
 }

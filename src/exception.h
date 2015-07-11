@@ -13,6 +13,7 @@ struct Exception : public Object
     Exception(Traced<Class*> cls, const string& message);
     Exception(Traced<Class*> cls, Traced<String*> message);
 
+    bool hasPos() const { return pos_.line != 0; }
     void setPos(const TokenPos& pos);
 
     const TokenPos& pos() const { return pos_; }

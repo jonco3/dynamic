@@ -124,7 +124,8 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 #endif
             assert(value.isInstanceOf(Exception::ObjectClass));
             Stack<Exception*> exception(value.toObject()->as<Exception>());
-            exception->setPos(currentPos());
+            if (!exception->hasPos())
+                exception->setPos(currentPos());
             if (!startExceptionHandler(exception)) {
                 while (instrp)
                     popFrame();
@@ -302,14 +303,17 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
     if (exceptionHandlers.empty())
         return false;
 
+    Stack<ExceptionHandler*> handler(exceptionHandlers.back());
+    while (frameIndex() != handler->frameIndex() && instrp)
+        popFrame();
+    if (!instrp)
+        return false;
+
+    exceptionHandlers.pop_back();
+    instrp = getFrame()->block()->startInstr() + handler->offset();
     inExceptionHandler_ = true;
     jumpKind_ = JumpKind::Exception;
     currentException_ = exception;
-    Stack<ExceptionHandler*> handler(exceptionHandlers.back());
-    exceptionHandlers.pop_back();
-    while (frameIndex() != handler->frameIndex())
-        popFrame();
-    instrp = getFrame()->block()->startInstr() + handler->offset();
     return true;
 }
 
