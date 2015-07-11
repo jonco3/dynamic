@@ -48,10 +48,12 @@ Interpreter::Interpreter()
 bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
-    Stack<Env*> nullParent;
     Stack<Env*> env;
-    if (block->createEnv())
-        env = gc.create<Env>(nullParent, block);
+    if (block->createEnv()) {
+        Stack<Env*> nullParent;
+        Stack<Layout*> layout(block->layout());
+        env = gc.create<Env>(nullParent, layout);
+    }
     pushFrame(block, env);
     return run(resultOut);
 }
@@ -517,7 +519,8 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             return CallError;
         Stack<Env*> parentEnv(function->env());
         Stack<Block*> block(function->block());
-        Stack<Env*> callEnv(gc.create<Env>(parentEnv, block));
+        Stack<Layout*> layout(block->layout());
+        Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
         unsigned normalArgs = min(args.size(), function->maxNormalArgs());
         // todo: set by slot not name
         for (size_t i = 0; i < normalArgs; i++)

@@ -65,10 +65,6 @@ struct Block : public Cell
     virtual void traceChildren(Tracer& t) override;
     virtual void print(ostream& s) const;
 
-    static Traced<Layout*> layout(Traced<Block*> block) {
-        return Traced<Layout*>::fromTracedLocation(&block->layout_);
-    }
-
     void setNextPos(const TokenPos& pos);
     TokenPos getPos(InstrThunk* instrp) const;
 

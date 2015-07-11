@@ -12,8 +12,8 @@ void Env::init()
     InitialLayout.init(Object::InitialLayout);
 }
 
-Env::Env(Traced<Env*> parent, Traced<Block*> block)
-  : Object(ObjectClass, Block::layout(block)), parent_(parent)
+Env::Env(Traced<Env*> parent, Traced<Layout*> layout)
+  : Object(ObjectClass, layout), parent_(parent)
 {}
 
 Frame::Frame()
