@@ -14,7 +14,7 @@ void testInterp(const string& input, const string& expected)
     Stack<Block*> block;
     CompileModule(input, None, block);
     Stack<Value> result;
-    bool ok = Interpreter::exec(block, result);
+    bool ok = interp.exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -27,7 +27,7 @@ void testException(const string& input, const string& expected)
     CompileModule(input, None, block);
     Stack<Value> result;
     testExpectingException = true;
-    bool ok = Interpreter::exec(block, result);
+    bool ok = interp.exec(block, result);
     testExpectingException = false;
     if (ok) {
         cerr << "Expected exception but got: " << result << endl;
@@ -58,7 +58,7 @@ void testReplacement(const string& input,
     assert(instrp);
 
     Stack<Value> result;
-    bool ok = Interpreter::exec(block, result);
+    bool ok = interp.exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -85,7 +85,7 @@ void testReplacement(const string& input,
     testEqual(instrp->func, reinterpret_cast<InstrFuncBase>(initial));
 
     Stack<Value> result;
-    bool ok = Interpreter::exec(block, result);
+    bool ok = interp.exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -134,21 +134,20 @@ void testReplacements(const string& defs,
 
 testcase(interp)
 {
-    Interpreter& i = Interpreter::instance();
-    testEqual(i.stackPos(), 0u);
-    i.pushStack(None);
-    testEqual(i.stackPos(), 1u);
-    testEqual(i.peekStack(0), Value(None));
-    testEqual(i.stackRef(0).get(), Value(None));
+    testEqual(interp.stackPos(), 0u);
+    interp.pushStack(None);
+    testEqual(interp.stackPos(), 1u);
+    testEqual(interp.peekStack(0), Value(None));
+    testEqual(interp.stackRef(0).get(), Value(None));
 
     {
-        TracedVector<Value> slice = i.stackSlice(1);
+        TracedVector<Value> slice = interp.stackSlice(1);
         testEqual(slice.size(), 1u);
         testEqual(slice[0].get(), Value(None));
     }
 
-    testEqual(i.popStack(), Value(None));
-    testEqual(i.stackPos(), 0u);
+    testEqual(interp.popStack(), Value(None));
+    testEqual(interp.stackPos(), 0u);
 
     testInterp("pass", "None");
     testInterp("return 3", "3");

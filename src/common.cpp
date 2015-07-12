@@ -39,7 +39,6 @@ void init1()
     initList();
     Dict::init();
     initSingletons();
-    Interpreter::init();
     GeneratorIter::init();
     initReflect();
 }
@@ -93,7 +92,7 @@ bool runModule(string text, string filename, Traced<Object*> globals,
     try {
         Stack<Block*> block;
         CompileModule(Input(text, filename), globals, block);
-        ok = Interpreter::exec(block, result);
+        ok = interp.exec(block, result);
     } catch (const ParseError& e) {
         ostringstream s;
         s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;

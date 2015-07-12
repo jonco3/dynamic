@@ -583,7 +583,7 @@ static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueIn
     args[1] = isClass ? None : value;
     args[2] = isClass ? value.get() : value.type();
     Stack<Value> result;
-    bool ok = Interpreter::instance().call(func, args, result);
+    bool ok = interp.call(func, args, result);
     valueInOut = result;
     return ok; // todo: drive MutableTraced through interpreter interface
 }
@@ -667,7 +667,7 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
         args[1] = obj;
         args[2] = value.get();
         Stack<Value> result;
-        bool ok = Interpreter::instance().call(func, args, result);
+        bool ok = interp.call(func, args, result);
         resultOut = result;
         return ok; // todo: drive MutableTraced through interpreter interface
     }
@@ -689,7 +689,7 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
         args[0] = desc;
         args[1] = obj;
         Stack<Value> result;
-        bool ok = Interpreter::instance().call(func, args, result);
+        bool ok = interp.call(func, args, result);
         resultOut = result;
         return ok; // todo: drive MutableTraced through interpreter interface
     }

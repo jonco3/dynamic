@@ -17,23 +17,11 @@ bool logFrames = false;
 bool logExecution = false;
 #endif
 
+Interpreter interp;
+
 ExceptionHandler::ExceptionHandler(Type type, unsigned frameIndex, unsigned offset)
   : type_(type), frameIndex_(frameIndex), offset_(offset)
 {}
-
-Interpreter* Interpreter::instance_ = nullptr;
-
-/* static */ void Interpreter::init()
-{
-    assert(!instance_);
-    instance_ = new Interpreter;
-}
-
-/* static */ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
-{
-    assert(instance_);
-    return instance_->interpret(block, resultOut);
-}
 
 Interpreter::Interpreter()
   : instrp(nullptr),
@@ -45,7 +33,7 @@ Interpreter::Interpreter()
     loopControlTarget_(0)
 {}
 
-bool Interpreter::interpret(Traced<Block*> block, MutableTraced<Value> resultOut)
+bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
     assert(frames.empty());

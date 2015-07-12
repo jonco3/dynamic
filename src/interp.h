@@ -45,11 +45,9 @@ struct ExceptionHandler : public Cell
 
 struct Interpreter
 {
-    static void init();
-    static bool exec(Traced<Block*> block, MutableTraced<Value> resultOut);
-    static Interpreter& instance() { return *instance_; }
+    Interpreter();
 
-    bool interpret(Traced<Block*> block, MutableTraced<Value> resultOut);
+    bool exec(Traced<Block*> block, MutableTraced<Value> resultOut);
 
     template <typename S>
     void pushStack(const S& element) {
@@ -183,8 +181,6 @@ struct Interpreter
     void finishHandlingException();
 
   private:
-    static Interpreter* instance_;
-
     InstrThunk *instrp;
     RootVector<Frame> frames;
     RootVector<Value> stack;
@@ -197,7 +193,6 @@ struct Interpreter
     unsigned remainingFinallyCount_;
     unsigned loopControlTarget_;
 
-    Interpreter();
     unsigned frameIndex();
     void pushFrame(Traced<Block*> block);
     void setFrameEnv(Traced<Env*> env);
@@ -227,5 +222,7 @@ struct Interpreter
                                 InstrFuncBase newFunc, Instr* newData);
     bool replaceInstrFuncAndRestart(Instr* current, InstrFuncBase newFunc);
 };
+
+extern Interpreter interp;
 
 #endif

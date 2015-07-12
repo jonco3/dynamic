@@ -200,7 +200,7 @@ size_t Dict::ValueHash::operator()(Value v) const
 
     RootArray<Value, 1> args;
     args[0] = v;
-    if (!Interpreter::instance().call(hashFunc, args, result))
+    if (!interp.call(hashFunc, args, result))
         throw PythonException(result);
 
     if (!result.isInt()) {
@@ -223,7 +223,7 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
     RootArray<Value, 2> args;
     args[0] = a;
     args[1] = b;
-    if (!Interpreter::instance().call(eqFunc, args, result))
+    if (!interp.call(eqFunc, args, result))
         throw PythonException(result);
 
     Stack<Object*> obj(result.toObject());
