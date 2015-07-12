@@ -662,6 +662,13 @@ struct RootVector : private vector<T>, protected RootBase
         return VectorBase::erase(first, last);
     }
 
+    typename VectorBase::iterator insert(typename VectorBase::iterator pos,
+                                         const T& val)
+    {
+        assert(!hasUses());
+        return VectorBase::insert(pos, val);
+    }
+
     void trace(Tracer& t) override {
         for (auto i = this->begin(); i != this->end(); ++i)
             gc.trace(t, &*i);

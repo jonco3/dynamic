@@ -95,6 +95,8 @@ struct Interpreter
     // Remove count stack entries located offsetFromTop entries from the top.
     void removeStackEntries(unsigned offsetFromTop, unsigned count);
 
+    void insertStackEntry(unsigned offsetFromTop, Value value);
+
     void branch(int offset);
 
     InstrThunk* nextInstr() { return instrp; }

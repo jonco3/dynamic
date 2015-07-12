@@ -59,18 +59,37 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 
 void Interpreter::removeStackEntries(unsigned offsetFromTop, unsigned count)
 {
+    size_t initialSize = stack.size();
+
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "removeStackEntries " << offsetFromTop << " " << count << endl;
+        cout << "removeStackEntries @" << (initialSize - offsetFromTop);
+        cout << " " << count << endl;
     }
 #endif
-    size_t initialSize = stack.size();
+
     assert(offsetFromTop + count <= initialSize);
     auto end = stack.begin() + (initialSize - offsetFromTop);
     auto begin = end - count;
     stack.erase(begin, end);
     assert(stack.size() == initialSize - count);
+}
+
+void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
+{
+    size_t initialSize = stack.size();
+
+#ifdef LOG_EXECUTION
+    if (logExecution) {
+        logStart(1);
+        cout << "insertStackEntry @" << (initialSize - offsetFromTop);
+        cout << " " << value << endl;
+    }
+#endif
+
+    auto pos = stack.begin() + (initialSize - offsetFromTop);
+    stack.insert(pos, value);
 }
 
 #ifdef LOG_EXECUTION
@@ -567,15 +586,16 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 #endif
 
     Stack<Object*> target(targetValue.toObject());
-    TracedVector<Value> args(stackSlice(argCount));
     if (target->is<Native>()) {
         Stack<Native*> native(target->as<Native>());
+        TracedVector<Value> args(stackSlice(argCount));
         if (!checkArguments(native, args, resultOut))
             return CallError;
         bool ok = native->call(args, resultOut);
         return ok ? CallFinished : CallError;
     } else if (target->is<Function>()) {
         Stack<Function*> function(target->as<Function>());
+        TracedVector<Value> args(stackSlice(argCount));
         if (!checkArguments(function, args, resultOut))
             return CallError;
         Stack<Env*> parentEnv(function->env());
@@ -611,9 +631,14 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         // todo: this is messy and needs refactoring
         Stack<Class*> cls(target->as<Class>());
         Stack<Value> func;
-        RootVector<Value> funcArgs(args.size() + 1);
-        for (unsigned i = 0; i < args.size(); i++)
-            funcArgs[i + 1] = args[i];
+        RootVector<Value> funcArgs(argCount + 1);
+
+        {
+            TracedVector<Value> args(stackSlice(argCount));
+            for (unsigned i = 0; i < args.size(); i++)
+                funcArgs[i + 1] = args[i];
+        }
+
         if (target->maybeGetAttr(Name::__new__, func) && !func.isNone()) {
             // Create a new instance by calling static __new__ method
             funcArgs[0] = Value(cls);
@@ -639,13 +664,9 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return CallFinished;
     } else if (target->is<Method>()) {
         Stack<Method*> method(target->as<Method>());
-        // todo: insert stack entry instead
-        RootVector<Value> callArgs(args.size() + 1);
-        callArgs[0] = method->object();
-        for (size_t i = 0; i < args.size(); i++)
-            callArgs[i] = args[i];
         Stack<Value> callable(method->callable());
-        return setupCall(callable, callArgs, resultOut);
+        insertStackEntry(argCount, method->object());
+        return setupCall(callable, argCount + 1, resultOut);
     } else {
         // todo: this is untested
         Stack<Value> callHook;
