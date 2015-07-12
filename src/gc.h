@@ -230,15 +230,6 @@ struct RootBase
 #endif
     }
 
-#ifdef DEBUG
-    // TracedVector stores a pointer directly into the source collection, hence
-    // we need to check this in RootVector when performing an operation that
-    // might cause its storage to be reallocated.
-    bool hasUses() {
-        return useCount_ != 0;
-    }
-#endif
-
   private:
     RootBase* next_;
     RootBase* prev_;
@@ -608,6 +599,8 @@ struct RootVector : private vector<T>, protected RootBase
     using VectorBase::size;
     using VectorBase::begin;
     using VectorBase::end;
+    using VectorBase::pop_back;
+    using VectorBase::emplace_back;
 
     RootVector() {
         RootBase::insert();
@@ -634,25 +627,12 @@ struct RootVector : private vector<T>, protected RootBase
     }
 
     void resize(size_t size) {
-        assert(!hasUses());
         VectorBase::resize(size);
     }
 
     void push_back(T element) {
         GCTraits<T>::checkValid(element);
-        assert(!hasUses());
         VectorBase::push_back(element);
-    }
-
-    void pop_back() {
-        assert(!hasUses());
-        VectorBase::pop_back();
-    }
-
-    template <typename... Args>
-    void emplace_back(Args&&... args) {
-        assert(!hasUses());
-        VectorBase::emplace_back(forward<Args>(args)...);
     }
 
     T& operator[](size_t index) {
@@ -677,105 +657,37 @@ struct RootVector : private vector<T>, protected RootBase
     template <typename S> friend struct TracedVector;
 };
 
-template <typename T, size_t N>
-struct RootArray : protected RootBase
-{
-    RootArray() {
-        insert();
-    }
-
-    ~RootArray() {
-        remove();
-    }
-
-    size_t size() {
-        return N;
-    }
-
-    virtual void clear() override {
-        for (size_t i = 0; i < N; i++)
-            data[i] = GCTraits<T>::nullValue();
-    }
-
-    Traced<T> ref(size_t index) {
-        assert(index < N);
-        return Traced<T>::fromTracedLocation(&data[index]);
-    }
-
-    T& operator[](size_t index) {
-        assert(index < N);
-        T& element = data[index];
-        GCTraits<T>::checkValid(element);
-        return element;
-    }
-
-    const T& operator[](size_t index) const {
-        assert(index < N);
-        const T& element = data[index];
-        GCTraits<T>::checkValid(element);
-        return element;
-    }
-
-    void trace(Tracer& t) override {
-        for (size_t i = 0; i < N; i++)
-            gc.trace(t, &data[i]);
-    }
-
-  private:
-    T data[N];
-
-    template <typename S> friend struct TracedVector;
-};
-
 template <typename T>
 struct TracedVector
 {
     TracedVector(RootVector<T>& source)
-      : data_(source.data()), size_(source.size())
+      : root_(source), offset_(0), size_(source.size())
     {
-        addRootUse(source);
+        root_.addUse();
     }
 
-    TracedVector(RootVector<T>& source, unsigned offset, unsigned size)
-      : data_(source.data() + offset), size_(size)
+    TracedVector(RootVector<T>& source, size_t offset, size_t size)
+      : root_(source), offset_(offset), size_(size)
     {
         assert(offset + size <= source.size());
-        addRootUse(source);
+        root_.addUse();
     }
 
-    template <size_t N>
-    TracedVector(RootArray<T, N>& source)
-      : data_(source.data), size_(N)
-    {
-        addRootUse(source);
-    }
-
-    template <size_t N>
-    TracedVector(RootArray<T, N>& source, unsigned offset, unsigned size)
-      : data_(source.data + offset), size_(size)
+    TracedVector(const TracedVector<T>& source, size_t offset, size_t size)
+      : root_(source.root_), offset_(source.offset_ + offset), size_(size)
     {
         assert(offset + size <= source.size());
-        addRootUse(source);
-    }
-
-    TracedVector(const TracedVector<T>& source, unsigned offset, unsigned size)
-      : data_(source.data_ + offset), size_(size)
-    {
-        assert(offset + size <= source.size());
-        addRootUse(*source.root_);
+        root_.addUse();
     }
 
     TracedVector(const TracedVector& other)
-      : data_(other.data_), size_(other.size_)
+      : root_(other.root_), offset_(other.offset_), size_(other.size_)
     {
-        addRootUse(*other.root_);
+        root_.addUse();
     }
 
     ~TracedVector() {
-#ifdef DEBUG
-        if (root_)
-            root_->removeUse();
-#endif
+        root_.removeUse();
     }
 
     size_t size() const {
@@ -784,36 +696,15 @@ struct TracedVector
 
     Traced<T> operator[](unsigned index) const {
         assert(index < size_);
-        return Traced<T>::fromTracedLocation(&data_[index]);
-    }
-
-    // Prevent future use of this object, to help with use count assertions when
-    // we know a live TracedVector will never be used.
-    void detach() {
-#ifdef DEBUG
-        assert(data_);
-        data_ = nullptr;
-        size_ = 0;
-        root_->removeUse();
-        root_ = nullptr;
-#endif
+        return Traced<T>::fromTracedLocation(&root_[index + offset_]);
     }
 
     // todo: implement c++ iterators
 
   private:
-    T* data_;
-    unsigned size_;
-#ifdef DEBUG
-    RootBase* root_;
-#endif
-
-    void addRootUse(RootBase& source) {
-#ifdef DEBUG
-        root_ = &source;
-        root_->addUse();
-#endif
-    }
+    RootVector<T>& root_;
+    size_t offset_;
+    size_t size_;
 
     TracedVector& operator=(const TracedVector& other) = delete;
 };

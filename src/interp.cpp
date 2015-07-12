@@ -467,7 +467,6 @@ bool Interpreter::call(Traced<Value> targetValue,
     if (status == CallFinished)
         return true;
 
-    args.detach();
     bool ok = run(resultOut);
     return ok;
 }

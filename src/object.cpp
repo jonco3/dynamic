@@ -545,7 +545,7 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
             resultOut = gc.create<String>(obj->as<Class>()->name());
             return true;
         } else if (name == Name::__bases__) {
-            RootArray<Value, 1> bases;
+            RootVector<Value> bases(1);
             bases[0] = obj->as<Class>()->base();
             resultOut = gc.create<Tuple>(bases);
             return true;
@@ -578,7 +578,7 @@ static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueIn
     Stack<Object*> desc(valueInOut.asObject());
     Stack<Value> func(desc->getAttr(Name::__get__));
     bool isClass = value.is<Class>();
-    RootArray<Value, 3> args;
+    RootVector<Value> args(3);
     args[0] = desc;
     args[1] = isClass ? None : value;
     args[2] = isClass ? value.get() : value.type();
@@ -662,7 +662,7 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
     if (r == FindResult::FoundDescriptor) {
         Stack<Object*> desc(descValue.asObject());
         Stack<Value> func(desc->getAttr(Name::__set__));
-        RootArray<Value, 3> args;
+        RootVector<Value> args(3);
         args[0] = desc;
         args[1] = obj;
         args[2] = value.get();
@@ -685,7 +685,7 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
     if (r == FindResult::FoundDescriptor) {
         Stack<Object*> desc(descValue.asObject());
         Stack<Value> func(desc->getAttr(Name::__delete__));
-        RootArray<Value, 2> args;
+        RootVector<Value> args(2);
         args[0] = desc;
         args[1] = obj;
         Stack<Value> result;

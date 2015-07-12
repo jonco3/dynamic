@@ -198,7 +198,7 @@ size_t Dict::ValueHash::operator()(Value v) const
         throw PythonException(result);
     }
 
-    RootArray<Value, 1> args;
+    RootVector<Value> args(1);
     args[0] = v;
     if (!interp.call(hashFunc, args, result))
         throw PythonException(result);
@@ -220,7 +220,7 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
         throw PythonException(result);
     }
 
-    RootArray<Value, 2> args;
+    RootVector<Value> args(2);
     args[0] = a;
     args[1] = b;
     if (!interp.call(eqFunc, args, result))

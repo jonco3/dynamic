@@ -172,21 +172,11 @@
                                      Interpreter& interp)
 {
     Stack<Value> target(interp.peekStack(self->count_));
-    // todo: evil performance hack to avoid allocating memory
-    if (self->count_ <= 6) {
-        RootArray<Value, 6> args;
-        for (unsigned i = 0; i < self->count_; i++)
-            args[i] = interp.peekStack(self->count_ - i - 1);
-        interp.popStack(self->count_ + 1);
-        return interp.startCall(target,
-                                TracedVector<Value>(args, 0, self->count_));
-    } else {
-        RootVector<Value> args(self->count_);
-        for (unsigned i = 0; i < self->count_; i++)
-            args[i] = interp.peekStack(self->count_ - i - 1);
-        interp.popStack(self->count_ + 1);
-        return interp.startCall(target, args);
-    }
+    RootVector<Value> args(self->count_);
+    for (unsigned i = 0; i < self->count_; i++)
+        args[i] = interp.peekStack(self->count_ - i - 1);
+    interp.popStack(self->count_ + 1);
+    return interp.startCall(target, args);
 }
 
 /*
@@ -259,20 +249,11 @@
     bool addSelf = interp.peekStack(self->count_ + 1).as<Boolean>()->value();
     Stack<Value> target(interp.peekStack(self->count_ + 2));
     unsigned argCount = self->count_ + (addSelf ? 1 : 0);
-    // todo: evil performance hack to avoid allocating memory
-    if (argCount <= 6) {
-        RootArray<Value, 6> args;
-        for (unsigned i = 0; i < argCount; i++)
-            args[i] = interp.peekStack(argCount - i - 1);
-        interp.popStack(self->count_ + 3);
-        return interp.startCall(target, TracedVector<Value>(args, 0, argCount));
-    } else {
-        RootVector<Value> args(argCount);
-        for (unsigned i = 0; i < argCount; i++)
-            args[i] = interp.peekStack(argCount - i - 1);
-        interp.popStack(self->count_ + 3);
-        return interp.startCall(target, args);
-    }
+    RootVector<Value> args(argCount);
+    for (unsigned i = 0; i < argCount; i++)
+        args[i] = interp.peekStack(argCount - i - 1);
+    interp.popStack(self->count_ + 3);
+    return interp.startCall(target, args);
 }
 
 /* static */ bool InstrReturn::execute(Traced<InstrReturn*> self,
@@ -296,7 +277,7 @@
         return false;
     }
 
-    RootArray<Value, 2> args;
+    RootVector<Value> args(2);
     args[0] = Value(container);
     args[1] = value;
     return interp.startCall(contains, args);
@@ -533,7 +514,7 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
 
     Stack<Value> result;
     {
-        RootArray<Value, 1> args;
+        RootVector<Value> args(1);
         args[0] = seq;
         if (!interp.call(lenFunc, args, result)) {
             interp.pushStack(result);
@@ -557,7 +538,7 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     }
 
     {
-        RootArray<Value, 2> args;
+        RootVector<Value> args(2);
         args[0] = seq;
         for (unsigned i = self->count_; i != 0; i--) {
             args[1] = Integer::get(i - 1);
@@ -633,7 +614,7 @@ static bool maybeCallBinaryOp(Interpreter& interp,
         return false;
 
     Stack<Value> result;
-    RootArray<Value, 2> args;
+    RootVector<Value> args(2);
     args[0] = left;
     args[1] = right;
     if (!interp.call(method, args, result)) {
@@ -701,7 +682,7 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     }
 
     interp.popStack(2);
-    RootArray<Value, 2> args;
+    RootVector<Value> args(2);
     args[0] = left;
     args[1] = right;
     Stack<Value> result;
@@ -722,7 +703,7 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
 
     Stack<Value> method;
     Stack<Value> result;
-    RootArray<Value, 2> args;
+    RootVector<Value> args(2);
     args[0] = value;
     args[1] = update;
     if (value.maybeGetAttr(Name::augAssignMethod[self->op()], method)) {

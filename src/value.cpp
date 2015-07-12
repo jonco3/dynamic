@@ -2,7 +2,7 @@
 
 #include "object.h"
 
-RootArray<Value, 0> EmptyValueArray;
+RootVector<Value> EmptyValueArray(0);
 
 uint64_t Value::canonicalizeNaN(uint64_t bits)
 {
