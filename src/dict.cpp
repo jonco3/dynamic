@@ -198,9 +198,8 @@ size_t Dict::ValueHash::operator()(Value v) const
         throw PythonException(result);
     }
 
-    RootVector<Value> args(1);
-    args[0] = v;
-    if (!interp.call(hashFunc, args, result))
+    interp.pushStack(v);
+    if (!interp.call(hashFunc, 1, result))
         throw PythonException(result);
 
     if (!result.isInt()) {
@@ -220,10 +219,9 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
         throw PythonException(result);
     }
 
-    RootVector<Value> args(2);
-    args[0] = a;
-    args[1] = b;
-    if (!interp.call(eqFunc, args, result))
+    interp.pushStack(a);
+    interp.pushStack(b);
+    if (!interp.call(eqFunc, 2, result))
         throw PythonException(result);
 
     Stack<Object*> obj(result.toObject());

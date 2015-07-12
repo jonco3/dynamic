@@ -52,8 +52,8 @@ struct Interpreter
     template <typename S>
     void pushStack(const S& element) {
         Stack<Value> value(element);
-        stack.push_back(value.get());
         logStackPush(value);
+        stack.push_back(value.get());
     }
 
     // Remove and return the value on the top of the stack.
@@ -78,12 +78,6 @@ struct Interpreter
         return stack[stackPos() - offset - 1];
     }
 
-    // Get a reference to the value at position |offset| counting from zero.
-    Traced<Value> stackRef(unsigned offset) {
-        assert(offset < stack.size());
-        return stack.ref(stackPos() - offset - 1);
-    }
-
     // Return a reference to the |count| topmost values.
     TracedVector<Value> stackSlice(unsigned count) {
         assert(count <= stack.size());
@@ -98,6 +92,9 @@ struct Interpreter
         logStackSwap();
     }
 
+    // Remove count stack entries located offsetFromTop entries from the top.
+    void removeStackEntries(unsigned offsetFromTop, unsigned count);
+
     void branch(int offset);
 
     InstrThunk* nextInstr() { return instrp; }
@@ -109,9 +106,10 @@ struct Interpreter
     bool raiseAttrError(Traced<Value> value, Name ident);
     bool raiseNameError(Name ident);
 
-    bool call(Traced<Value> callable, TracedVector<Value> args,
+    bool call(Traced<Value> callable, unsigned argCount,
               MutableTraced<Value> resultOut);
-    bool startCall(Traced<Value> callable, const TracedVector<Value>& args);
+
+    bool startCall(Traced<Value> callable, unsigned argCount);
 
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
@@ -194,7 +192,7 @@ struct Interpreter
     unsigned loopControlTarget_;
 
     unsigned frameIndex();
-    void pushFrame(Traced<Block*> block);
+    void pushFrame(Traced<Block*> block, unsigned argCount = 0);
     void setFrameEnv(Traced<Env*> env);
     unsigned currentOffset();
     TokenPos currentPos();
@@ -212,7 +210,12 @@ struct Interpreter
     bool checkArguments(Traced<Callable*> callable,
                         const TracedVector<Value>& args,
                         MutableTraced<Value> resultOut);
-    CallStatus setupCall(Traced<Value> target, const TracedVector<Value>& args,
+    bool call(Traced<Value> callable, TracedVector<Value> args,
+              MutableTraced<Value> resultOut);
+    CallStatus setupCall(Traced<Value> target, TracedVector<Value> args,
+                         MutableTraced<Value> resultOut);
+    CallStatus setupCall(Traced<Value> target,
+                         unsigned argCount,
                          MutableTraced<Value> resultOut);
     CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
 

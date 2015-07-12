@@ -138,7 +138,6 @@ testcase(interp)
     interp.pushStack(None);
     testEqual(interp.stackPos(), 1u);
     testEqual(interp.peekStack(0), Value(None));
-    testEqual(interp.stackRef(0).get(), Value(None));
 
     {
         TracedVector<Value> slice = interp.stackSlice(1);

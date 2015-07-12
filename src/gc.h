@@ -230,6 +230,12 @@ struct RootBase
 #endif
     }
 
+#ifdef DEBUG
+    bool hasUses() {
+        return useCount_ != 0;
+    }
+#endif
+
   private:
     RootBase* next_;
     RootBase* prev_;
@@ -647,6 +653,13 @@ struct RootVector : private vector<T>, protected RootBase
         const T& element = *(this->begin() + index);
         GCTraits<T>::checkValid(element);
         return element;
+    }
+
+    typename VectorBase::iterator erase(typename VectorBase::iterator first,
+                                        typename VectorBase::iterator last)
+    {
+        assert(!hasUses());
+        return VectorBase::erase(first, last);
     }
 
     void trace(Tracer& t) override {

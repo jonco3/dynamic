@@ -37,7 +37,15 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
     assert(stackPos() == 0);
     assert(frames.empty());
-    pushFrame(block);
+
+#ifdef LOG_EXECUTION
+    if (logExecution) {
+        logStart();
+        cout << "exec" << endl;
+    }
+#endif
+
+    pushFrame(block, 0);
     if (block->createEnv()) {
         Stack<Env*> env;
         Stack<Env*> nullParent;
@@ -46,6 +54,23 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
         setFrameEnv(env);
     }
     return run(resultOut);
+}
+
+
+void Interpreter::removeStackEntries(unsigned offsetFromTop, unsigned count)
+{
+#ifdef LOG_EXECUTION
+    if (logExecution) {
+        logStart(1);
+        cout << "removeStackEntries " << offsetFromTop << " " << count << endl;
+    }
+#endif
+    size_t initialSize = stack.size();
+    assert(offsetFromTop + count <= initialSize);
+    auto end = stack.begin() + (initialSize - offsetFromTop);
+    auto begin = end - count;
+    stack.erase(begin, end);
+    assert(stack.size() == initialSize - count);
 }
 
 #ifdef LOG_EXECUTION
@@ -61,16 +86,18 @@ void Interpreter::logStackPush(const Value& value)
 {
     if (logExecution) {
         logStart(1);
-        cout << "push " << value << endl;
+        cout << "push @" << stackPos() << " " << value << endl;
     }
 }
 
 void Interpreter::logStackPop(size_t count)
 {
+    size_t pos = stackPos();
     if (logExecution && count > 0) {
         for (size_t i = 0; i < count; i++) {
             logStart(1);
-            cout << "pop " << stack[stack.size() - 1 - i] << endl;
+            Value value = stack[stack.size() - 1 - i];
+            cout << "pop @" << pos-- << " " << value << endl;
         }
     }
 }
@@ -87,8 +114,9 @@ void Interpreter::logStackSwap()
 bool Interpreter::run(MutableTraced<Value> resultOut)
 {
 #ifdef DEBUG
-    unsigned initialPos = stackPos();
+    unsigned initialPos = stackPos() - getFrame()->argCount();
 #endif
+
     Stack<Instr*> instr;
     InstrFuncBase func;
     while (instrp) {
@@ -125,7 +153,12 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
     }
 
     resultOut = popStack();
+
+#ifdef DEBUG
+    if (stackPos() != initialPos)
+        cerr << "Stack error: " << stackPos() << " != " << initialPos << endl;
     assert(stackPos() == initialPos);
+#endif
     return true;
 }
 
@@ -135,9 +168,9 @@ unsigned Interpreter::frameIndex()
     return frames.size() - 1;
 }
 
-void Interpreter::pushFrame(Traced<Block*> block)
+void Interpreter::pushFrame(Traced<Block*> block, unsigned argCount)
 {
-    frames.emplace_back(block, stackPos(), instrp);
+    frames.emplace_back(instrp, block, stackPos(), argCount);
     instrp = block->startInstr();
 
 #ifdef LOG_EXECUTION
@@ -175,7 +208,7 @@ void Interpreter::popFrame()
     }
 #endif
 
-    stack.resize(frame->stackPos());
+    popStack(stackPos() - frame->stackPos() + frame->argCount());
     instrp = frame->returnPoint();
     frames.pop_back();
 
@@ -193,7 +226,7 @@ unsigned Interpreter::frameStackDepth()
 {
     assert(!frames.empty());
     Frame* frame = getFrame();
-    return stackPos() - frame->stackPos();
+    return stackPos() - frame->stackPos()/* - frame->argCount()*/;
 }
 #endif
 
@@ -451,8 +484,16 @@ bool Interpreter::raiseNameError(Name ident)
     return false;
 }
 
-bool Interpreter::call(Traced<Value> targetValue,
-                       TracedVector<Value> args,
+bool Interpreter::call(Traced<Value> targetValue, TracedVector<Value> args,
+                       MutableTraced<Value> resultOut)
+{
+    unsigned argCount = args.size();
+    for (unsigned i = 0; i < argCount; i++)
+        pushStack(args[i]);
+    return call(targetValue, argCount, resultOut);
+}
+
+bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
                        MutableTraced<Value> resultOut)
 {
     // Synchronous call while we may already be in the interpreter.
@@ -460,32 +501,26 @@ bool Interpreter::call(Traced<Value> targetValue,
     // interpreter loop knows to exit rather than resume the the previous frame.
     AutoSetAndRestoreValue<InstrThunk*> saveInstrp(instrp, nullptr);
 
-    CallStatus status = setupCall(targetValue, args, resultOut);
-    if (status == CallError)
-        return false;
-
-    if (status == CallFinished)
-        return true;
+    CallStatus status = setupCall(targetValue, argCount, resultOut);
+    if (status != CallStarted) {
+        popStack(argCount);
+        return status == CallFinished;
+    }
 
     bool ok = run(resultOut);
     return ok;
 }
 
-bool Interpreter::startCall(Traced<Value> targetValue, const TracedVector<Value>& args)
+bool Interpreter::startCall(Traced<Value> targetValue, unsigned argCount)
 {
     Stack<Value> result;
-    CallStatus status = setupCall(targetValue, args, result);
-    if (status == CallError) {
+    CallStatus status = setupCall(targetValue, argCount, result);
+    if (status != CallStarted) {
+        popStack(argCount);
         pushStack(result);
-        return false;
+        return status == CallFinished;
     }
 
-    if (status == CallFinished) {
-        pushStack(result);
-        return true;
-    }
-
-    assert(status == CallStarted);
     return true;
 }
 
@@ -511,10 +546,28 @@ bool Interpreter::checkArguments(Traced<Callable*> callable,
 }
 
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
-                                               const TracedVector<Value>& args,
+                                               TracedVector<Value> args,
                                                MutableTraced<Value> resultOut)
 {
+    unsigned count = args.size();
+    for (unsigned i = 0; i < count; i++)
+        pushStack(args[i]);
+    return setupCall(targetValue, count, resultOut);
+}
+
+Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
+                                               unsigned argCount,
+                                               MutableTraced<Value> resultOut)
+{
+#ifdef LOG_EXECUTION
+    if (logExecution) {
+        logStart(1);
+        cout << "setupCall " << targetValue.get() << endl;
+    }
+#endif
+
     Stack<Object*> target(targetValue.toObject());
+    TracedVector<Value> args(stackSlice(argCount));
     if (target->is<Native>()) {
         Stack<Native*> native(target->as<Native>());
         if (!checkArguments(native, args, resultOut))
@@ -551,7 +604,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             resultOut = iter;
             return CallFinished;
         }
-        pushFrame(block);
+        pushFrame(block, argCount);
         setFrameEnv(callEnv);
         return CallStarted;
     } else if (target->is<Class>()) {
@@ -574,11 +627,8 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             Stack<Value> initFunc;
             if (target->maybeGetAttr(Name::__init__, initFunc)) {
                 Stack<Value> initResult;
-                RootVector<Value> initArgs;
-                initArgs.push_back(resultOut);
-                for (unsigned i = 0; i < args.size(); i++)
-                    initArgs.push_back(args[i]);
-                if (!call(initFunc, initArgs, initResult))
+                funcArgs[0] = resultOut;
+                if (!call(initFunc, funcArgs, initResult))
                     return CallError;
                 if (initResult.get().toObject() != None) {
                     return raiseTypeError(
@@ -589,6 +639,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return CallFinished;
     } else if (target->is<Method>()) {
         Stack<Method*> method(target->as<Method>());
+        // todo: insert stack entry instead
         RootVector<Value> callArgs(args.size() + 1);
         callArgs[0] = method->object();
         for (size_t i = 0; i < args.size(); i++)
@@ -603,7 +654,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 "object is not callable:" + repr(target), resultOut);
         }
 
-        return setupCall(callHook, args, resultOut);
+        return setupCall(callHook, argCount, resultOut);
     }
 }
 

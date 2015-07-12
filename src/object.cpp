@@ -578,12 +578,11 @@ static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueIn
     Stack<Object*> desc(valueInOut.asObject());
     Stack<Value> func(desc->getAttr(Name::__get__));
     bool isClass = value.is<Class>();
-    RootVector<Value> args(3);
-    args[0] = desc;
-    args[1] = isClass ? None : value;
-    args[2] = isClass ? value.get() : value.type();
+    interp.pushStack(desc);
+    interp.pushStack(isClass ? None : value);
+    interp.pushStack(isClass ? value.get() : value.type());
     Stack<Value> result;
-    bool ok = interp.call(func, args, result);
+    bool ok = interp.call(func, 3, result);
     valueInOut = result;
     return ok; // todo: drive MutableTraced through interpreter interface
 }
@@ -662,12 +661,11 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
     if (r == FindResult::FoundDescriptor) {
         Stack<Object*> desc(descValue.asObject());
         Stack<Value> func(desc->getAttr(Name::__set__));
-        RootVector<Value> args(3);
-        args[0] = desc;
-        args[1] = obj;
-        args[2] = value.get();
+        interp.pushStack(desc);
+        interp.pushStack(obj);
+        interp.pushStack(value);
         Stack<Value> result;
-        bool ok = interp.call(func, args, result);
+        bool ok = interp.call(func, 3, result);
         resultOut = result;
         return ok; // todo: drive MutableTraced through interpreter interface
     }
@@ -685,11 +683,10 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
     if (r == FindResult::FoundDescriptor) {
         Stack<Object*> desc(descValue.asObject());
         Stack<Value> func(desc->getAttr(Name::__delete__));
-        RootVector<Value> args(2);
-        args[0] = desc;
-        args[1] = obj;
+        interp.pushStack(desc);
+        interp.pushStack(obj);
         Stack<Value> result;
-        bool ok = interp.call(func, args, result);
+        bool ok = interp.call(func, 2, result);
         resultOut = result;
         return ok; // todo: drive MutableTraced through interpreter interface
     }

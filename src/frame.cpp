@@ -23,12 +23,16 @@ Frame::Frame()
     stackPos_(0)
 {}
 
-Frame::Frame(Traced<Block*> block, unsigned stackPos, InstrThunk* returnPoint)
+Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block,
+             unsigned stackPos, unsigned argCount)
   : block_(block),
     env_(nullptr),
     returnPoint_(returnPoint),
-    stackPos_(stackPos)
-{}
+    stackPos_(stackPos),
+    argCount_(argCount)
+{
+    assert(stackPos >= argCount);
+}
 
 void Frame::setEnv(Traced<Env*> env)
 {

@@ -172,11 +172,8 @@
                                      Interpreter& interp)
 {
     Stack<Value> target(interp.peekStack(self->count_));
-    RootVector<Value> args(self->count_);
-    for (unsigned i = 0; i < self->count_; i++)
-        args[i] = interp.peekStack(self->count_ - i - 1);
-    interp.popStack(self->count_ + 1);
-    return interp.startCall(target, args);
+    interp.removeStackEntries(self->count_, 1);
+    return interp.startCall(target, self->count_);
 }
 
 /*
@@ -249,11 +246,8 @@
     bool addSelf = interp.peekStack(self->count_ + 1).as<Boolean>()->value();
     Stack<Value> target(interp.peekStack(self->count_ + 2));
     unsigned argCount = self->count_ + (addSelf ? 1 : 0);
-    RootVector<Value> args(argCount);
-    for (unsigned i = 0; i < argCount; i++)
-        args[i] = interp.peekStack(argCount - i - 1);
-    interp.popStack(self->count_ + 3);
-    return interp.startCall(target, args);
+    interp.removeStackEntries(argCount, addSelf ? 2 : 3);
+    return interp.startCall(target, argCount);
 }
 
 /* static */ bool InstrReturn::execute(Traced<InstrReturn*> self,
@@ -277,10 +271,9 @@
         return false;
     }
 
-    RootVector<Value> args(2);
-    args[0] = Value(container);
-    args[1] = value;
-    return interp.startCall(contains, args);
+    interp.pushStack(Value(container));
+    interp.pushStack(value);
+    return interp.startCall(contains, 2);
 }
 
 /* static */ bool InstrIs::execute(Traced<InstrIs*> self, Interpreter& interp)
@@ -513,13 +506,10 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     }
 
     Stack<Value> result;
-    {
-        RootVector<Value> args(1);
-        args[0] = seq;
-        if (!interp.call(lenFunc, args, result)) {
-            interp.pushStack(result);
-            return false;
-        }
+    interp.pushStack(seq);
+    if (!interp.call(lenFunc, 1, result)) {
+        interp.pushStack(result);
+        return false;
     }
 
     if (!result.isInt()) {
@@ -537,16 +527,14 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         return false;
     }
 
-    {
-        RootVector<Value> args(2);
-        args[0] = seq;
-        for (unsigned i = self->count_; i != 0; i--) {
-            args[1] = Integer::get(i - 1);
-            bool ok = interp.call(getitemFunc, args, result);
-            interp.pushStack(result);
-            if (!ok)
-                return false;
-        }
+    RootVector<Value> args(2);
+    for (unsigned i = self->count_; i != 0; i--) {
+        interp.pushStack(seq);
+        interp.pushStack(Integer::get(i - 1));
+        bool ok = interp.call(getitemFunc, 2, result);
+        interp.pushStack(result);
+        if (!ok)
+            return false;
     }
 
     return true;
@@ -565,7 +553,8 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     // The stack is already set up with next method and target on top
     Stack<Value> target(interp.peekStack(2));
     Stack<Value> result;
-    bool ok = interp.call(target, interp.stackSlice(1), result);
+    interp.pushStack(interp.peekStack(0));
+    bool ok = interp.call(target, 1, result);
     if (!ok) {
         Stack<Object*> exc(result.toObject());
         if (exc->is<StopIteration>()) {
@@ -614,10 +603,9 @@ static bool maybeCallBinaryOp(Interpreter& interp,
         return false;
 
     Stack<Value> result;
-    RootVector<Value> args(2);
-    args[0] = left;
-    args[1] = right;
-    if (!interp.call(method, args, result)) {
+    interp.pushStack(left);
+    interp.pushStack(right);
+    if (!interp.call(method, 2, result)) {
         interp.pushStack(result);
         successOut = false;
         return true;
@@ -682,12 +670,11 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     }
 
     interp.popStack(2);
-    RootVector<Value> args(2);
-    args[0] = left;
-    args[1] = right;
     Stack<Value> result;
     Stack<Value> method(self->method_);
-    bool r = interp.call(method, args, result);
+    interp.pushStack(left);
+    interp.pushStack(right);
+    bool r = interp.call(method, 2, result);
     assert(r);
     assert(result != Value(NotImplemented));
     interp.pushStack(result);
@@ -703,26 +690,26 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
 
     Stack<Value> method;
     Stack<Value> result;
-    RootVector<Value> args(2);
-    args[0] = value;
-    args[1] = update;
+    interp.pushStack(value);
+    interp.pushStack(update);
     if (value.maybeGetAttr(Name::augAssignMethod[self->op()], method)) {
-        if (!interp.call(method, args, result)) {
+        if (!interp.call(method, 2, result)) {
             interp.pushStack(result);
             return false;
         }
         interp.pushStack(result);
         return true;
     } else if (value.maybeGetAttr(Name::binMethod[self->op()], method)) {
-        if (!interp.call(method, args, result)) {
+        if (!interp.call(method, 2, result)) {
             interp.pushStack(result);
             return false;
         }
         interp.pushStack(result);
         return true;
     } else {
-        interp.pushStack(gc.create<TypeError>(
-                             "unsupported operand type(s) for augmented assignment"));
+        interp.popStack(2);
+        string message = "unsupported operand type(s) for augmented assignment";
+        interp.pushStack(gc.create<TypeError>(message));
         return false;
     }
 }
