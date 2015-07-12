@@ -631,23 +631,14 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         // todo: this is messy and needs refactoring
         Stack<Class*> cls(target->as<Class>());
         Stack<Value> func;
-        RootVector<Value> funcArgs(argCount + 1);
-
-        {
-            TracedVector<Value> args(stackSlice(argCount));
-            for (unsigned i = 0; i < args.size(); i++)
-                funcArgs[i + 1] = args[i];
-        }
-
-        if (target->maybeGetAttr(Name::__new__, func) && !func.isNone()) {
-            // Create a new instance by calling static __new__ method
-            funcArgs[0] = Value(cls);
-            if (!call(func, funcArgs, resultOut))
-                return CallError;
-        } else {
+        if (!target->maybeGetAttr(Name::__new__, func) || func.isNone()) {
             string message = "cannot create '" + cls->name() + "' instances";
             return raiseTypeError(message, resultOut);
         }
+        RootVector<Value> funcArgs(stackSlice(argCount));
+        funcArgs.insert(funcArgs.begin(), Value(cls));
+        if (!call(func, funcArgs, resultOut))
+            return CallError;
         if (resultOut.isInstanceOf(cls)) {
             Stack<Value> initFunc;
             if (target->maybeGetAttr(Name::__init__, initFunc)) {
