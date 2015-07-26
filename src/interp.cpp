@@ -564,6 +564,27 @@ bool Interpreter::checkArguments(Traced<Callable*> callable,
     return true;
 }
 
+unsigned Interpreter::mungeArguments(Traced<Function*> function,
+                                     unsigned argCount)
+{
+    // Fill in default values for missing arguments
+    while (argCount < function->maxNormalArgs())
+        pushStack(function->paramDefault(argCount++));
+
+    // Add rest argument tuple if necessary
+    assert(argCount >= function->maxNormalArgs());
+    if (function->takesRest()) {
+        size_t restCount = argCount - function->maxNormalArgs();
+        TracedVector<Value> restArgs(stackSlice(restCount));
+        Stack<Value> rest(Tuple::get(restArgs));
+        popStack(restCount);
+        pushStack(rest);
+        argCount = argCount - restCount + 1;
+    }
+
+    return argCount;
+}
+
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                TracedVector<Value> args,
                                                MutableTraced<Value> resultOut)
@@ -602,25 +623,14 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Block*> block(function->block());
         Stack<Layout*> layout(block->layout());
         Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
-        unsigned normalArgs = min(args.size(), function->maxNormalArgs());
-        unsigned slot = 0;
-        for (size_t i = 0; i < normalArgs; i++)
-            callEnv->setSlot(slot++, args[i]);
-        for (size_t i = args.size(); i < function->maxNormalArgs(); i++)
-            callEnv->setSlot(slot++, function->paramDefault(i));
-        if (function->takesRest()) {
-            Stack<Value> rest(Tuple::Empty);
-            if (args.size() > function->maxNormalArgs()) {
-                size_t count = args.size() - function->maxNormalArgs();
-                size_t start = function->maxNormalArgs();
-                TracedVector<Value> restArgs(args, start, count);
-                rest = Tuple::get(restArgs);
-            }
-            callEnv->setSlot(slot++, rest);
+        argCount = mungeArguments(function, argCount);
+        for (size_t i = 0; i < argCount; i++) {
+            Root<Value> value(peekStack(argCount - i - 1));
+            callEnv->setSlot(i, value);
         }
         if (function->isGenerator()) {
             Stack<Value> iter(gc.create<GeneratorIter>(function, callEnv));
-            callEnv->setSlot(slot++, iter);
+            callEnv->setSlot(argCount++, iter);
             resultOut = iter;
             return CallFinished;
         }
