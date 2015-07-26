@@ -9,7 +9,7 @@ struct GeneratorIter : public Object
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    GeneratorIter(Traced<Function*> func, Traced<Env*> env);
+    GeneratorIter(Traced<Block*> block, Traced<Env*> env);
 
     virtual void traceChildren(Tracer& t) override;
 
@@ -23,14 +23,13 @@ struct GeneratorIter : public Object
   private:
     enum State
     {
-        Initial,
-        Suspended,
         Running,
+        Suspended,
         Finished
     };
 
     State state_;
-    Function* func_;
+    Block* block_;
     Env* env_;
     size_t ipOffset_;
     vector<Value> savedStack_;

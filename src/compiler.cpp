@@ -205,6 +205,10 @@ struct ByteCompiler : public SyntaxVisitor
         layout = defs->layout();
         block = gc.create<Block>(layout, useLexicalEnv);
         assert(stackDepth == 0);
+        if (isGenerator) {
+            emit<InstrStartGenerator>();
+            emit<InstrPop>();
+        }
         compile(s);
         assert(stackDepth == 0);
     }

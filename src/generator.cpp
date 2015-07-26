@@ -38,10 +38,10 @@ void GeneratorIter::init()
     ObjectClass->setAttr("next", value);
 }
 
-GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Env*> env)
+GeneratorIter::GeneratorIter(Traced<Block*> block, Traced<Env*> env)
   : Object(ObjectClass),
-    state_(Initial),
-    func_(func),
+    state_(Running),
+    block_(block),
     env_(env),
     ipOffset_(0)
 {
@@ -51,7 +51,7 @@ GeneratorIter::GeneratorIter(Traced<Function*> func, Traced<Env*> env)
 void GeneratorIter::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
-    gc.trace(t, &func_);
+    gc.trace(t, &block_);
     gc.trace(t, &env_);
     for (auto i = savedStack_.begin(); i != savedStack_.end(); i++)
         gc.trace(t, &*i);
@@ -68,10 +68,9 @@ bool GeneratorIter::resume(Interpreter& interp)
 {
     log("GeneratorIter::resume", this, state_);
     switch (state_) {
-      case Initial: {
-      case Suspended:
+      case Suspended: {
         Stack<Env*> env(env_); // todo: Heap<T>
-        Stack<Block*> block(func_->block());
+        Stack<Block*> block(block_);
         interp.resumeGenerator(block, env, ipOffset_, savedStack_);
         if (state_ == Suspended)
             interp.pushStack(None);

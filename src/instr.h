@@ -67,6 +67,7 @@ using namespace std;
     instr(BinaryOp)                                                          \
     instr(BinaryOpInt)                                                       \
     instr(AugAssignUpdate)                                                   \
+    instr(StartGenerator)                                                    \
     instr(ResumeGenerator)                                                   \
     instr(LeaveGenerator)                                                    \
     instr(SuspendGenerator)                                                  \
@@ -536,6 +537,7 @@ struct InstrAugAssignUpdate : public BinaryOpInstr
     InstrAugAssignUpdate(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
+define_simple_instr(StartGenerator);
 define_simple_instr(ResumeGenerator);
 define_simple_instr(LeaveGenerator);
 define_simple_instr(SuspendGenerator);

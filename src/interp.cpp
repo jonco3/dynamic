@@ -628,12 +628,6 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             Root<Value> value(peekStack(argCount - i - 1));
             callEnv->setSlot(i, value);
         }
-        if (function->isGenerator()) {
-            Stack<Value> iter(gc.create<GeneratorIter>(function, callEnv));
-            callEnv->setSlot(argCount++, iter);
-            resultOut = iter;
-            return CallFinished;
-        }
         pushFrame(block, argCount);
         setFrameEnv(callEnv);
         return CallStarted;
