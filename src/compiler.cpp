@@ -208,9 +208,10 @@ struct ByteCompiler : public SyntaxVisitor
         if (isGenerator) {
             emit<InstrStartGenerator>();
             emit<InstrPop>();
+            stackDepth++;  // InstrStartGenerator leaves iterator on stack
         }
         compile(s);
-        assert(stackDepth == 0);
+        assert(stackDepth == isGenerator ? 1 : 0);
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {

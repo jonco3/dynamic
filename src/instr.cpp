@@ -722,7 +722,7 @@ InstrStartGenerator::execute(Traced<InstrStartGenerator*> self,
     Stack<Env*> env(interp.env());
     Stack<GeneratorIter*> gen(gc.create<GeneratorIter>(block, env));
     Stack<Value> value(gen);
-    env->setAttr("%gen", value);
+    interp.pushStack(value);
     gen->suspend(interp, value);
     return true;
 }
@@ -739,8 +739,7 @@ InstrResumeGenerator::execute(Traced<InstrResumeGenerator*> self,
 /* static */ bool InstrLeaveGenerator::execute(Traced<InstrLeaveGenerator*> self,
                                                Interpreter& interp)
 {
-    Stack<Env*> env(interp.env());
-    Stack<GeneratorIter*> gen(env->getAttr("%gen").asObject()->as<GeneratorIter>());
+    Stack<GeneratorIter*> gen(interp.getGeneratorIter());
     return gen->leave(interp);
 }
 
@@ -749,8 +748,7 @@ InstrSuspendGenerator::execute(Traced<InstrSuspendGenerator*> self,
                                Interpreter& interp)
 {
     Stack<Value> value(interp.popStack());
-    Stack<Env*> env(interp.env());
-    Stack<GeneratorIter*> gen(env->getAttr("%gen").asObject()->as<GeneratorIter>());
+    Stack<GeneratorIter*> gen(interp.getGeneratorIter());
     gen->suspend(interp, value);
     return true;
 }

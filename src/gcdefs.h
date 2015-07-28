@@ -47,7 +47,11 @@ struct WrapperMixins<W, Value>
 
   private:
     const Value* get() const {
-        return static_cast<const W*>(this)->location();
+        return &static_cast<const W*>(this)->get();
+    }
+
+    Value* get() {
+        return &static_cast<W*>(this)->get();
     }
 };
 
@@ -72,7 +76,7 @@ struct WrapperMixins<W, T*>
 
   private:
     T* const * get() const {
-        return static_cast<W const *>(this)->location();
+        return &static_cast<W const *>(this)->get();
     }
 };
 

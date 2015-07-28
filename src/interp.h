@@ -24,6 +24,7 @@ struct Callable;
 struct Exception;
 struct ExceptionHandler;
 struct Function;
+struct GeneratorIter;
 
 struct ExceptionHandler : public Cell
 {
@@ -96,6 +97,8 @@ struct Interpreter
     void removeStackEntries(unsigned offsetFromTop, unsigned count);
 
     void insertStackEntry(unsigned offsetFromTop, Value value);
+
+    GeneratorIter* getGeneratorIter();
 
     void branch(int offset);
 

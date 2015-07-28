@@ -280,6 +280,14 @@ void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
     return;
 }
 
+GeneratorIter* Interpreter::getGeneratorIter()
+{
+    // GeneratorIter object stored as first stack value.
+    size_t pos = getFrame()->stackPos();
+    Stack<Value> value(stack[pos]);
+    return value.as<GeneratorIter>();
+}
+
 void Interpreter::resumeGenerator(Traced<Block*> block,
                                   Traced<Env*> env,
                                   unsigned ipOffset,
