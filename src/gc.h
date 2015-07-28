@@ -321,8 +321,6 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
     define_comparisions;
     define_immutable_accessors;
 
-    const T* location() const { return &ptr_; }
-
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
     virtual void trace(Tracer& t) {
@@ -367,8 +365,6 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     define_comparisions;
     define_immutable_accessors;
     define_mutable_accessors;
-
-    const T* location() const { return &ptr_; }
 
     template <typename S>
     Root& operator=(const S& ptr) {
@@ -433,8 +429,6 @@ struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
     define_comparisions;
     define_immutable_accessors;
     define_mutable_accessors;
-
-    const T* location() const { return &ptr_; }
 
     template <typename S>
     Stack& operator=(const S& ptr) {
@@ -507,8 +501,6 @@ struct Traced : public WrapperMixins<Traced<T>, T>
     define_comparisions;
     define_immutable_accessors;
 
-    const T* location() const { return &ptr_; }
-
     static Traced<T> fromTracedLocation(T const* traced) {
         return Traced(traced);
     }
@@ -579,8 +571,6 @@ struct MutableTraced : public WrapperMixins<Traced<T>, T>
         ptr_ = other.get();
         return *this;
     }
-
-    const T* location() const { return &ptr_; }
 
     static MutableTraced<T> fromTracedLocation(T* traced) {
         return MutableTraced(traced);
