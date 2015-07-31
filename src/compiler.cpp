@@ -197,6 +197,7 @@ struct ByteCompiler : public SyntaxVisitor
     void build(const Syntax& s) {
         assert(!block);
         assert(topLevel);
+        assert(stackDepth == 0);
         bool hasNestedFuctions;
         defs = FindDefinitions(s, layout, globals, hasNestedFuctions);
         useLexicalEnv = useLexicalEnv || hasNestedFuctions;
@@ -204,7 +205,8 @@ struct ByteCompiler : public SyntaxVisitor
             topLevel->extend(layout);
         layout = defs->layout();
         block = gc.create<Block>(layout, useLexicalEnv);
-        assert(stackDepth == 0);
+        if (parent)
+            emit<InstrCreateEnv>();
         if (isGenerator) {
             emit<InstrStartGenerator>();
             emit<InstrPop>();

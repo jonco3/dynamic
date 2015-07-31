@@ -121,7 +121,6 @@ template <typename T>
 inline T* Value::as()
 {
     Object* obj = toObject();
-    assert(obj->isInstanceOf(T::ObjectClass));
     return obj->as<T>();
 }
 
@@ -129,7 +128,6 @@ template <typename T>
 inline const T* Value::as() const
 {
     Object* obj = toObject();
-    assert(obj->isInstanceOf(T::ObjectClass));
     return obj->as<T>();
 }
 

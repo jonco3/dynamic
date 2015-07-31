@@ -250,6 +250,25 @@
     return interp.startCall(target, argCount);
 }
 
+/* static */ bool InstrCreateEnv::execute(Traced<InstrCreateEnv*> self,
+                                          Interpreter& interp)
+{
+    Frame* frame = interp.getFrame();
+    assert(!frame->env());
+
+    Object* obj = interp.popStack().asObject();
+    Stack<Env*> parentEnv(obj ? obj->as<Env>() : nullptr);
+    Stack<Layout*> layout(frame->block()->layout());
+    Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
+    unsigned argCount = frame->argCount();
+    for (size_t i = 0; i < argCount; i++) {
+        Root<Value> value(interp.peekStack(argCount - i - 1));
+        callEnv->setSlot(i, value);
+    }
+    interp.setFrameEnv(callEnv);
+    return true;
+}
+
 /* static */ bool InstrReturn::execute(Traced<InstrReturn*> self,
                                        Interpreter& interp)
 {
@@ -732,6 +751,7 @@ InstrResumeGenerator::execute(Traced<InstrResumeGenerator*> self,
                               Interpreter& interp)
 {
     Stack<Env*> env(interp.env());
+    // todo: get slot 0
     Stack<GeneratorIter*> gen(env->getAttr("self").asObject()->as<GeneratorIter>());
     return gen->resume(interp);
 }

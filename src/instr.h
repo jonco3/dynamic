@@ -42,6 +42,7 @@ using namespace std;
     instr(GetMethodInt)                                                      \
     instr(Call)                                                              \
     instr(CallMethod)                                                        \
+    instr(CreateEnv)                                                         \
     instr(Return)                                                            \
     instr(In)                                                                \
     instr(Is)                                                                \
@@ -361,6 +362,7 @@ struct InstrCallMethod : public InstrCall
     InstrCallMethod(unsigned count) : InstrCall(count) {}
 };
 
+define_simple_instr(CreateEnv);
 define_simple_instr(Return);
 define_simple_instr(In);
 define_simple_instr(Is);

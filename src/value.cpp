@@ -17,7 +17,9 @@ ostream& operator<<(ostream& s, const Value& v) {
         s << v.asInt32();
     else if (v.isDouble())
         s << v.asDouble();
-    else
+    else if (v.asObject())
         s << *v.asObject();
+    else
+        s << "nullptr";
     return s;
 }

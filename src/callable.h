@@ -80,6 +80,9 @@ struct Function : public Callable
         assert(i < defaults_.size());
         return Traced<Value>::fromTracedLocation(&defaults_[i]);
     }
+    size_t argCount() const {
+        return info_->paramCount();
+    }
     size_t maxNormalArgs() const {
         return info_->paramCount() - (takesRest() ? 1 : 0);
     }

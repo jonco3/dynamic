@@ -107,6 +107,7 @@ struct Interpreter
 
     Env* env() { return getFrame()->env(); }
     Env* lexicalEnv(unsigned index);
+    void setFrameEnv(Traced<Env*> env);
 
     bool raiseAttrError(Traced<Value> value, Name ident);
     bool raiseNameError(Name ident);
@@ -198,7 +199,6 @@ struct Interpreter
 
     unsigned frameIndex();
     void pushFrame(Traced<Block*> block, unsigned argCount = 0);
-    void setFrameEnv(Traced<Env*> env);
     unsigned currentOffset();
     TokenPos currentPos();
 

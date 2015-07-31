@@ -46,14 +46,12 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 #endif
 
     pushFrame(block, 0);
-    if (block->createEnv()) {
-        Stack<Env*> env;
-        Stack<Env*> nullParent;
-        Stack<Layout*> layout(block->layout());
-        env = gc.create<Env>(nullParent, layout);
-        setFrameEnv(env);
-    }
-    return run(resultOut);
+#ifdef DEBUG
+    unsigned initialPos = stackPos() - getFrame()->argCount();
+#endif
+    bool ok = run(resultOut);
+    assert(stackPos() == initialPos);
+    return ok;
 }
 
 
@@ -116,7 +114,7 @@ void Interpreter::logStackPop(size_t count)
         for (size_t i = 0; i < count; i++) {
             logStart(1);
             Value value = stack[stack.size() - 1 - i];
-            cout << "pop @" << pos-- << " " << value << endl;
+            cout << "pop @" << --pos << " " << value << endl;
         }
     }
 }
@@ -132,10 +130,6 @@ void Interpreter::logStackSwap()
 
 bool Interpreter::run(MutableTraced<Value> resultOut)
 {
-#ifdef DEBUG
-    unsigned initialPos = stackPos() - getFrame()->argCount();
-#endif
-
     Stack<Instr*> instr;
     InstrFuncBase func;
     while (instrp) {
@@ -165,19 +159,12 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
                 while (instrp)
                     popFrame();
                 resultOut = value;
-                assert(stackPos() == initialPos);
                 return false;
             }
         }
     }
 
     resultOut = popStack();
-
-#ifdef DEBUG
-    if (stackPos() != initialPos)
-        cerr << "Stack error: " << stackPos() << " != " << initialPos << endl;
-    assert(stackPos() == initialPos);
-#endif
     return true;
 }
 
@@ -205,6 +192,7 @@ void Interpreter::pushFrame(Traced<Block*> block, unsigned argCount)
 void Interpreter::setFrameEnv(Traced<Env*> env)
 {
     assert(!frames.empty());
+    assert(!frames.back().env());
     frames.back().setEnv(env);
 }
 
@@ -534,7 +522,11 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
         return status == CallFinished;
     }
 
+#ifdef DEBUG
+    unsigned initialPos = stackPos() - getFrame()->argCount();
+#endif
     bool ok = run(resultOut);
+    assert(stackPos() == initialPos - 1);
     return ok;
 }
 
@@ -627,17 +619,12 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         TracedVector<Value> args(stackSlice(argCount));
         if (!checkArguments(function, args, resultOut))
             return CallError;
-        Stack<Env*> parentEnv(function->env());
         Stack<Block*> block(function->block());
-        Stack<Layout*> layout(block->layout());
-        Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
         argCount = mungeArguments(function, argCount);
-        for (size_t i = 0; i < argCount; i++) {
-            Root<Value> value(peekStack(argCount - i - 1));
-            callEnv->setSlot(i, value);
-        }
+        assert(argCount == function->argCount());
         pushFrame(block, argCount);
-        setFrameEnv(callEnv);
+        Stack<Env*> parentEnv(function->env());
+        pushStack(parentEnv);
         return CallStarted;
     } else if (target->is<Class>()) {
         // todo: this is messy and needs refactoring
