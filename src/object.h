@@ -70,6 +70,7 @@ struct Object : public Cell
     void setAttr(Name name, Traced<Value> value);
 
     // Slot accessors
+    bool hasSlot(int slot) const;
     Value getSlot(int slot) const;
     void setSlot(int slot, Traced<Value> value);
 

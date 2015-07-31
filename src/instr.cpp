@@ -9,27 +9,15 @@
     return true;
 }
 
-// GetLocal: name was present when compiled, but may have been deleted.
-
 /* static */ bool InstrGetLocal::execute(Traced<InstrGetLocal*> self,
                                          Interpreter& interp)
 {
+    // Name was present when compiled, but may have been deleted.
     Stack<Env*> env(interp.env());
-    if (env->layout() != self->layout_)
-        return interp.replaceInstrFuncAndRestart(self, fallback);
+    if (!env->hasSlot(self->slot_))
+        return interp.raiseNameError(self->ident);
 
     interp.pushStack(env->getSlot(self->slot_));
-    return true;
-}
-
-/* static */ bool InstrGetLocal::fallback(Traced<InstrGetLocal*> self,
-                                          Interpreter& interp)
-{
-    Stack<Env*> env(interp.env());
-    Stack<Value> value;
-    if (!env->maybeGetAttr(self->ident, value))
-        return interp.raiseNameError(self->ident);
-    interp.pushStack(value);
     return true;
 }
 
@@ -37,29 +25,19 @@
                                          Interpreter& interp)
 {
     Stack<Env*> env(interp.env());
-    if (env->layout() != self->layout_)
-        return interp.replaceInstrFuncAndRestart(self, fallback);
-
     Stack<Value> value(interp.peekStack(0));
     env->setSlot(self->slot_, value);
-    return true;
-}
-
-/* static */ bool InstrSetLocal::fallback(Traced<InstrSetLocal*> self,
-                                          Interpreter& interp)
-{
-    Stack<Value> value(interp.peekStack(0));
-    interp.env()->setAttr(self->ident, value);
     return true;
 }
 
 /* static */ bool InstrDelLocal::execute(Traced<InstrDelLocal*> self,
                                          Interpreter& interp)
 {
+    // Delete by setting slot value to UninitializedSlot.
     Stack<Env*> env(interp.env());
-    // Name was present when compiled, but may have been deleted.
-    if (!env->maybeDelOwnAttr(self->ident))
+    if (!env->hasSlot(self->slot_))
         return interp.raiseNameError(self->ident);
+    env->setSlot(self->slot_, UninitializedSlot);
     return true;
 }
 

@@ -421,7 +421,7 @@ struct ByteCompiler : public SyntaxVisitor
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name, slot))
-                emit<InstrSetLocal>(name, slot, layout);
+                emit<InstrSetLocal>(name, slot);
             else if (lookupLexical(name, frame))
                 emit<InstrSetLexical>(frame, name);
             else if (lookupGlobal(name))
@@ -433,7 +433,7 @@ struct ByteCompiler : public SyntaxVisitor
 
           case Context::Delete:
             if (lookupLocal(name, slot))
-                emit<InstrDelLocal>(name);
+                emit<InstrDelLocal>(name, slot);
             else if (lookupLexical(name, frame))
                 emit<InstrDelLexical>(frame, name);
             else if (lookupGlobal(name))
@@ -446,7 +446,7 @@ struct ByteCompiler : public SyntaxVisitor
 
           default:
             if (lookupLocal(name, slot))
-                emit<InstrGetLocal>(name, slot, layout);
+                emit<InstrGetLocal>(name, slot);
             else if (lookupLexical(name, frame))
                 emit<InstrGetLexical>(frame, name);
             else
@@ -714,7 +714,7 @@ struct ByteCompiler : public SyntaxVisitor
         int slot;
         unsigned frame;
         if (lookupLocal(s.id, slot))
-            emit<InstrSetLocal>(s.id, slot, layout);
+            emit<InstrSetLocal>(s.id, slot);
         else if (lookupLexical(s.id, frame))
             emit<InstrSetLexical>(frame, s.id);
         else
@@ -730,7 +730,7 @@ struct ByteCompiler : public SyntaxVisitor
         if (parent) {
             int slot;
             alwaysTrue(lookupLocal(s.id, slot));
-            emit<InstrSetLocal>(s.id, slot, layout);
+            emit<InstrSetLocal>(s.id, slot);
         } else {
             emit<InstrSetGlobal>(topLevel, s.id);
         }

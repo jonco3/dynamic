@@ -99,6 +99,12 @@ void Object::extend(Traced<Layout*> layout)
     layout_ = layout;
 }
 
+bool Object::hasSlot(int slot) const
+{
+    assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    return slots_[slot] != Value(UninitializedSlot);
+}
+
 bool Object::getSlot(Name name, int slot, MutableTraced<Value> valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());

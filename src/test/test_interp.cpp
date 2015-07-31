@@ -309,37 +309,45 @@ testcase(interp)
                      InstrBinaryOp::fallback);
 
     testExpectingException = true;
-    testReplacements("x = None\n"
-                     "def foo():\n"
-                     "  y = 1\n"
-                     "  if x == 0:\n"
-                     "    del y\n"
-                     "  try:\n"
-                     "    return y\n"
-                     "  except:\n"
-                     "    return 0",
-                     "x = 1; foo()", "1",
-                     "x = 0; foo()", "0",
-                     Instr_GetLocal,
-                     InstrGetLocal::execute,
-                     InstrGetLocal::execute,
-                     InstrGetLocal::fallback,
-                     InstrGetLocal::fallback);
+    testInterp("x = None\n"
+               "def foo():\n"
+               "  y = 1\n"
+               "  if x == 0:\n"
+               "    del y\n"
+               "  try:\n"
+               "    return y\n"
+               "  except:\n"
+               "    return 0\n"
+               "x = 1; foo()",
+               "1");
+    testInterp("x = None\n"
+               "def foo():\n"
+               "  y = 1\n"
+               "  if x == 0:\n"
+               "    del y\n"
+               "  try:\n"
+               "    return y\n"
+               "  except:\n"
+               "    return 0\n"
+               "x = 0; foo()",
+               "0");
     testExpectingException = false;
 
     testExpectingException = true;
-    testReplacements("def foo(x):\n"
-                     "  if x == 0:\n"
-                     "    del x\n"
-                     "  x = 1\n"
-                     "  return x\n",
-                     "foo(1)", "1",
-                     "foo(0)", "1",
-                     Instr_SetLocal,
-                     InstrSetLocal::execute,
-                     InstrSetLocal::execute,
-                     InstrSetLocal::fallback,
-                     InstrSetLocal::fallback);
+    testInterp("def foo(x):\n"
+               "  if x == 0:\n"
+               "    del x\n"
+               "  x = 1\n"
+               "  return x\n"
+               "foo(1)",
+               "1");
+    testInterp("def foo(x):\n"
+               "  if x == 0:\n"
+               "    del x\n"
+               "  x = 1\n"
+               "  return x\n"
+               "foo(0)",
+               "1");
     testExpectingException = false;
 
     testInterp("a, b = 1, 2\na", "1");

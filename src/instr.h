@@ -176,50 +176,47 @@ struct IdentInstrBase : public Instr
 struct InstrGetLocal : public IdentInstrBase
 {
     define_instr_members(GetLocal);
-    InstrGetLocal(Name ident, unsigned slot, Traced<Layout*> layout)
-      : IdentInstrBase(ident), slot_(slot), layout_(layout)
+    InstrGetLocal(Name ident, unsigned slot)
+      : IdentInstrBase(ident), slot_(slot)
     {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << ident << " " << slot_ << " " << layout_;
+        s << name() << " " << ident << " " << slot_;
     }
-
-    void traceChildren(Tracer& t) override {
-        Instr::traceChildren(t);
-        gc.trace(t, &layout_);
-    }
-
-    static bool fallback(Traced<InstrGetLocal*> self, Interpreter& interp);
 
   private:
     unsigned slot_;
-    Layout* layout_;
 };
 
 struct InstrSetLocal : public IdentInstrBase
 {
     define_instr_members(SetLocal);
-    InstrSetLocal(Name ident, unsigned slot, Traced<Layout*> layout)
-      : IdentInstrBase(ident), slot_(slot), layout_(layout)
+    InstrSetLocal(Name ident, unsigned slot)
+      : IdentInstrBase(ident), slot_(slot)
     {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << ident << " " << slot_ << " " << layout_;
+        s << name() << " " << ident << " " << slot_;
     }
-
-    void traceChildren(Tracer& t) override {
-        Instr::traceChildren(t);
-        gc.trace(t, &layout_);
-    }
-
-    static bool fallback(Traced<InstrSetLocal*> self, Interpreter& interp);
 
   private:
     unsigned slot_;
-    Layout* layout_;
 };
 
-define_ident_instr(DelLocal);
+struct InstrDelLocal : public IdentInstrBase
+{
+    define_instr_members(DelLocal);
+    InstrDelLocal(Name ident, unsigned slot)
+      : IdentInstrBase(ident), slot_(slot)
+    {}
+
+    virtual void print(ostream& s) const {
+        s << name() << " " << ident << " " << slot_;
+    }
+
+  private:
+    unsigned slot_;
+};
 
 struct InstrGetLexical : public IdentInstrBase
 {
