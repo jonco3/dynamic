@@ -113,7 +113,6 @@ struct ByteCompiler : public SyntaxVisitor
         isGenerator = true;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
-        layout = layout->addName("%gen");
         build(s);
         if (!block->lastInstr().data->is<InstrLeaveGenerator>()) {
             emit<InstrPop>();
