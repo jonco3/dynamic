@@ -9,7 +9,7 @@ struct GeneratorIter : public Object
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    GeneratorIter(Traced<Block*> block, Traced<Env*> env);
+    GeneratorIter(Traced<Block*> block, Traced<Env*> env, unsigned argCount);
 
     virtual void traceChildren(Tracer& t) override;
 
@@ -28,10 +28,12 @@ struct GeneratorIter : public Object
         Finished
     };
 
+    // todo: does it make sense to embed a Frame here?
     State state_;
     Block* block_;
     Env* env_;
     size_t ipOffset_;
+    unsigned argCount_;
     vector<Value> savedStack_;
 };
 

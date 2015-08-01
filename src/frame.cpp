@@ -30,9 +30,7 @@ Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block,
     returnPoint_(returnPoint),
     stackPos_(stackPos),
     argCount_(argCount)
-{
-    assert(stackPos >= argCount);
-}
+{}
 
 void Frame::setEnv(Traced<Env*> env)
 {

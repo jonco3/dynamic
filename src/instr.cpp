@@ -713,11 +713,12 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
 
 /* static */ bool
 InstrStartGenerator::execute(Traced<InstrStartGenerator*> self,
-                              Interpreter& interp)
+                             Interpreter& interp)
 {
-    Stack<Block*> block(interp.getFrame()->block());
+    Frame* frame = interp.getFrame();
+    Stack<Block*> block(frame->block());
     Stack<Env*> env(interp.env());
-    Stack<GeneratorIter*> gen(gc.create<GeneratorIter>(block, env));
+    Stack<GeneratorIter*> gen(gc.create<GeneratorIter>(block, env, frame->argCount()));
     Stack<Value> value(gen);
     interp.pushStack(value);
     gen->suspend(interp, value);

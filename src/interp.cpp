@@ -35,9 +35,6 @@ Interpreter::Interpreter()
 
 bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
-    assert(stackPos() == 0);
-    assert(frames.empty());
-
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart();
@@ -45,9 +42,11 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
     }
 #endif
 
-    pushFrame(block, 0);
+    assert(stackPos() == 0);
+    assert(frames.empty());
+    pushFrame(block, 0, 0);
 #ifdef DEBUG
-    unsigned initialPos = stackPos() - getFrame()->argCount();
+    unsigned initialPos = stackPos();
 #endif
     bool ok = run(resultOut);
     assert(stackPos() == initialPos);
@@ -174,9 +173,11 @@ unsigned Interpreter::frameIndex()
     return frames.size() - 1;
 }
 
-void Interpreter::pushFrame(Traced<Block*> block, unsigned argCount)
+void Interpreter::pushFrame(Traced<Block*> block, unsigned argCount,
+                            unsigned stackStartPos)
 {
-    frames.emplace_back(instrp, block, stackPos(), argCount);
+    assert(stackPos() >= stackStartPos);
+    frames.emplace_back(instrp, block, stackStartPos, argCount);
     instrp = block->startInstr();
 
 #ifdef LOG_EXECUTION
@@ -215,7 +216,7 @@ void Interpreter::popFrame()
     }
 #endif
 
-    popStack(stackPos() - frame->stackPos() + frame->argCount());
+    popStack(stackPos() - frame->stackPos());
     instrp = frame->returnPoint();
     frames.pop_back();
 
@@ -233,7 +234,7 @@ unsigned Interpreter::frameStackDepth()
 {
     assert(!frames.empty());
     Frame* frame = getFrame();
-    return stackPos() - frame->stackPos()/* - frame->argCount()*/;
+    return stackPos() - frame->stackPos() - frame->argCount();
 }
 #endif
 
@@ -270,18 +271,20 @@ void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
 
 GeneratorIter* Interpreter::getGeneratorIter()
 {
-    // GeneratorIter object stored as first stack value.
-    size_t pos = getFrame()->stackPos();
+    // GeneratorIter object stored as first stack value after the arguments.
+    Frame* frame = frame = getFrame();
+    size_t pos = frame->stackPos() + frame->argCount();
     Stack<Value> value(stack[pos]);
     return value.as<GeneratorIter>();
 }
 
 void Interpreter::resumeGenerator(Traced<Block*> block,
                                   Traced<Env*> env,
+                                  unsigned argCount,
                                   unsigned ipOffset,
                                   vector<Value>& savedStack)
 {
-    pushFrame(block);
+    pushFrame(block, argCount, stackPos());
     setFrameEnv(env);
     instrp += ipOffset;
     // todo: can copy this in one go
@@ -602,7 +605,8 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "setupCall " << targetValue.get() << endl;
+        cout << "setupCall @" << stackPos() << " " << targetValue.get();
+        cout<< " " << argCount << endl;
     }
 #endif
 
@@ -622,7 +626,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Block*> block(function->block());
         argCount = mungeArguments(function, argCount);
         assert(argCount == function->argCount());
-        pushFrame(block, argCount);
+        pushFrame(block, argCount, stackPos() - argCount);
         Stack<Env*> parentEnv(function->env());
         pushStack(parentEnv);
         return CallStarted;

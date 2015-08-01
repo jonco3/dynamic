@@ -29,9 +29,9 @@ void GeneratorIter::init()
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName("self");
     Stack<Block*> block(gc.create<Block>(layout, true));
-    block->append<InstrCreateEnv>();
+    block->append<InstrCreateEnv>(); // todo: eventually we can remove this
     block->append<InstrResumeGenerator>();
-    block->append<InstrReturn>();
+    block->append<InstrReturn>(); // todo: eventually we can remove this
     static vector<Name> params = { "self" };
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
@@ -39,12 +39,15 @@ void GeneratorIter::init()
     ObjectClass->setAttr("next", value);
 }
 
-GeneratorIter::GeneratorIter(Traced<Block*> block, Traced<Env*> env)
+GeneratorIter::GeneratorIter(Traced<Block*> block,
+                             Traced<Env*> env,
+                             unsigned argCount)
   : Object(ObjectClass),
     state_(Running),
     block_(block),
     env_(env),
-    ipOffset_(0)
+    ipOffset_(0),
+    argCount_(argCount)
 {
     assert(savedStack_.empty());
 }
@@ -72,7 +75,7 @@ bool GeneratorIter::resume(Interpreter& interp)
       case Suspended: {
         Stack<Env*> env(env_); // todo: Heap<T>
         Stack<Block*> block(block_);
-        interp.resumeGenerator(block, env, ipOffset_, savedStack_);
+        interp.resumeGenerator(block, env, argCount_, ipOffset_, savedStack_);
         if (state_ == Suspended)
             interp.pushStack(None);
         state_ = Running;
