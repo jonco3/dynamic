@@ -152,7 +152,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 #endif
             assert(value.isInstanceOf(Exception::ObjectClass));
             Stack<Exception*> exception(value.toObject()->as<Exception>());
-            if (!exception->hasPos())
+            if (!exception->hasPos() && instrp)
                 exception->setPos(currentPos());
             if (!startExceptionHandler(exception)) {
                 while (instrp)
@@ -284,6 +284,7 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
                                   unsigned ipOffset,
                                   vector<Value>& savedStack)
 {
+    popFrame();
     pushFrame(block, argCount, stackPos());
     setFrameEnv(env);
     instrp += ipOffset;

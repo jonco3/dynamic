@@ -30,8 +30,7 @@ void GeneratorIter::init()
     layout = layout->addName("self");
     Stack<Block*> block(gc.create<Block>(layout, true));
     block->append<InstrCreateEnv>(); // todo: eventually we can remove this
-    block->append<InstrResumeGenerator>();
-    block->append<InstrReturn>(); // todo: eventually we can remove this
+    block->append<InstrResumeGenerator>(); // never returns
     static vector<Name> params = { "self" };
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
