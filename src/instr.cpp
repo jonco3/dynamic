@@ -238,8 +238,9 @@
     Stack<Layout*> layout(block->layout());
     Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
     unsigned argCount = block->argCount();
+    Stack<Value> value;
     for (size_t i = 0; i < argCount; i++) {
-        Root<Value> value(interp.getStackLocal(i));
+        value = interp.getStackLocal(i);
         callEnv->setSlot(i, value);
         interp.setStackLocal(i, UninitializedSlot);
     }
