@@ -19,27 +19,6 @@ static int64_t intNeg(int64_t a) { return -a; }
 static int64_t intInvert(int64_t a) { return ~a; }
 static int64_t intHash(int64_t a) { return a; }
 
-typedef int64_t (IntBinaryOp)(int64_t, int64_t);
-static int64_t intAdd(int64_t a, int64_t b) { return a + b; }
-static int64_t intSub(int64_t a, int64_t b) { return a - b; }
-static int64_t intMul(int64_t a, int64_t b) { return a * b; }
-static int64_t intFloorDiv(int64_t a, int64_t b) { return a / b; }
-static int64_t intMod(int64_t a, int64_t b) { return a % b; }
-static int64_t intPow(int64_t a, int64_t b) { return (int)pow(a, b); }
-static int64_t intOr(int64_t a, int64_t b) { return a | b; }
-static int64_t intXor(int64_t a, int64_t b) { return a ^ b; }
-static int64_t intAnd(int64_t a, int64_t b) { return a & b; }
-static int64_t intLeftShift(int64_t a, int64_t b) { return a << b; }
-static int64_t intRightShift(int64_t a, int64_t b) { return a >> b; }
-
-typedef bool (IntCompareOp)(int64_t, int64_t);
-static bool intLT(int64_t a, int64_t b) { return a < b; }
-static bool intLE(int64_t a, int64_t b) { return a <= b; }
-static bool intGT(int64_t a, int64_t b) { return a > b; }
-static bool intGE(int64_t a, int64_t b) { return a >= b; }
-static bool intEQ(int64_t a, int64_t b) { return a == b; }
-static bool intNE(int64_t a, int64_t b) { return a != b; }
-
 template <IntUnaryOp op>
 static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
@@ -52,7 +31,7 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
-template <IntBinaryOp op>
+template <BinaryOp Op>
 static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
@@ -62,11 +41,11 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
         return true;
     }
 
-    resultOut = Integer::get(op(args[0].toInt(), args[1].toInt()));
+    resultOut = Integer::binaryOp<Op>(args[0].toInt(), args[1].toInt());
     return true;
 }
 
-template <IntCompareOp op>
+template <CompareOp Op>
 static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
@@ -76,20 +55,7 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
         return true;
     }
 
-    resultOut = Boolean::get(op(args[0].toInt(), args[1].toInt()));
-    return true;
-}
-
-static bool intTrueDiv(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    if (!args[0].isInstanceOf(Integer::ObjectClass) ||
-        !args[1].isInstanceOf(Integer::ObjectClass))
-    {
-        resultOut = NotImplemented;
-        return true;
-    }
-
-    resultOut = Float::get(double(args[0].toInt()) / args[1].toInt());
+    resultOut = Integer::compareOp<Op>(args[0].toInt(), args[1].toInt());
     return true;
 }
 
@@ -140,24 +106,24 @@ void Integer::init()
     initNativeMethod(cls, "__pos__", intUnaryOp<intPos>, 1);
     initNativeMethod(cls, "__neg__", intUnaryOp<intNeg>, 1);
     initNativeMethod(cls, "__invert__", intUnaryOp<intInvert>, 1);
-    initNativeMethod(cls, "__lt__", intCompareOp<intLT>, 2);
-    initNativeMethod(cls, "__le__", intCompareOp<intLE>, 2);
-    initNativeMethod(cls, "__gt__", intCompareOp<intGT>, 2);
-    initNativeMethod(cls, "__ge__", intCompareOp<intGE>, 2);
-    initNativeMethod(cls, "__eq__", intCompareOp<intEQ>, 2);
-    initNativeMethod(cls, "__ne__", intCompareOp<intNE>, 2);
-    initNativeMethod(cls, "__or__", intBinaryOp<intOr>, 2);
-    initNativeMethod(cls, "__xor__", intBinaryOp<intXor>, 2);
-    initNativeMethod(cls, "__and__", intBinaryOp<intAnd>, 2);
-    initNativeMethod(cls, "__lshift__", intBinaryOp<intLeftShift>, 2);
-    initNativeMethod(cls, "__rshift__", intBinaryOp<intRightShift>, 2);
-    initNativeMethod(cls, "__add__", intBinaryOp<intAdd>, 2);
-    initNativeMethod(cls, "__sub__", intBinaryOp<intSub>, 2);
-    initNativeMethod(cls, "__mul__", intBinaryOp<intMul>, 2);
-    initNativeMethod(cls, "__truediv__", intTrueDiv, 2);
-    initNativeMethod(cls, "__floordiv__", intBinaryOp<intFloorDiv>, 2);
-    initNativeMethod(cls, "__mod__", intBinaryOp<intMod>, 2);
-    initNativeMethod(cls, "__pow__", intBinaryOp<intPow>, 2);
+    initNativeMethod(cls, "__lt__", intCompareOp<CompareLT>, 2);
+    initNativeMethod(cls, "__le__", intCompareOp<CompareLE>, 2);
+    initNativeMethod(cls, "__gt__", intCompareOp<CompareGT>, 2);
+    initNativeMethod(cls, "__ge__", intCompareOp<CompareGE>, 2);
+    initNativeMethod(cls, "__eq__", intCompareOp<CompareEQ>, 2);
+    initNativeMethod(cls, "__ne__", intCompareOp<CompareNE>, 2);
+    initNativeMethod(cls, "__or__", intBinaryOp<BinaryOr>, 2);
+    initNativeMethod(cls, "__xor__", intBinaryOp<BinaryXor>, 2);
+    initNativeMethod(cls, "__and__", intBinaryOp<BinaryAnd>, 2);
+    initNativeMethod(cls, "__lshift__", intBinaryOp<BinaryLeftShift>, 2);
+    initNativeMethod(cls, "__rshift__", intBinaryOp<BinaryRightShift>, 2);
+    initNativeMethod(cls, "__add__", intBinaryOp<BinaryPlus>, 2);
+    initNativeMethod(cls, "__sub__", intBinaryOp<BinaryMinus>, 2);
+    initNativeMethod(cls, "__mul__", intBinaryOp<BinaryMultiply>, 2);
+    initNativeMethod(cls, "__truediv__", intBinaryOp<BinaryTrueDiv>, 2);
+    initNativeMethod(cls, "__floordiv__", intBinaryOp<BinaryFloorDiv>, 2);
+    initNativeMethod(cls, "__mod__", intBinaryOp<BinaryModulo>, 2);
+    initNativeMethod(cls, "__pow__", intBinaryOp<BinaryPower>, 2);
     initNativeMethod(cls, "__hash__", intUnaryOp<intHash>, 1);
     ObjectClass.init(cls);
 }

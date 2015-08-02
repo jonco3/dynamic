@@ -1,6 +1,7 @@
 #ifndef __NUMERIC_H__
 #define __NUMERIC_H__
 
+#include "bool.h"
 #include "object.h"
 
 struct Integer : public Object
@@ -17,6 +18,12 @@ struct Integer : public Object
 
     int64_t value() const { return value_; }
     void print(ostream& s) const override;
+
+    template <BinaryOp Op>
+    static inline Value binaryOp(int64_t a, int64_t b);
+
+    template <CompareOp Op>
+    static inline Value compareOp(int64_t a, int64_t b);
 
   private:
     int64_t value_;
@@ -40,5 +47,95 @@ struct Float : public Object
   private:
     const double value_;
 };
+
+template <> inline Value Integer::binaryOp<BinaryPlus>(int64_t a, int64_t b)
+{
+    return Integer::get(a + b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryMinus>(int64_t a, int64_t b)
+{
+    return Integer::get(a - b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryMultiply>(int64_t a, int64_t b)
+{
+    return Integer::get(a * b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryTrueDiv>(int64_t a, int64_t b)
+{
+    return Float::get(double(a) / b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryFloorDiv>(int64_t a, int64_t b)
+{
+    return Integer::get(a / b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryModulo>(int64_t a, int64_t b)
+{
+    return Integer::get(a % b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryPower>(int64_t a, int64_t b)
+{
+    return Integer::get((int)pow(a, b));
+}
+
+template <> inline Value Integer::binaryOp<BinaryOr>(int64_t a, int64_t b)
+{
+    return Integer::get(a | b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryXor>(int64_t a, int64_t b)
+{
+    return Integer::get(a ^ b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryAnd>(int64_t a, int64_t b)
+{
+    return Integer::get(a & b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryLeftShift>(int64_t a, int64_t b)
+{
+    return Integer::get(a << b);
+}
+
+template <> inline Value Integer::binaryOp<BinaryRightShift>(int64_t a, int64_t b)
+{
+    return Integer::get(a >> b);
+}
+
+template <> inline Value Integer::compareOp<CompareLT>(int64_t a, int64_t b)
+{
+    return Boolean::get(a < b);
+}
+
+template <> inline Value Integer::compareOp<CompareLE>(int64_t a, int64_t b)
+{
+    return Boolean::get(a <= b);
+}
+
+template <> inline Value Integer::compareOp<CompareGT>(int64_t a, int64_t b)
+{
+    return Boolean::get(a > b);
+}
+
+template <> inline Value Integer::compareOp<CompareGE>(int64_t a, int64_t b)
+{
+    return Boolean::get(a >= b);
+}
+
+template <> inline Value Integer::compareOp<CompareEQ>(int64_t a, int64_t b)
+{
+    return Boolean::get(a == b);
+}
+
+template <> inline Value Integer::compareOp<CompareNE>(int64_t a, int64_t b)
+{
+    return Boolean::get(a != b);
+}
 
 #endif
