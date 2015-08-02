@@ -579,16 +579,6 @@ unsigned Interpreter::mungeArguments(Traced<Function*> function,
 }
 
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
-                                               TracedVector<Value> args,
-                                               MutableTraced<Value> resultOut)
-{
-    unsigned count = args.size();
-    for (unsigned i = 0; i < count; i++)
-        pushStack(args[i]);
-    return setupCall(targetValue, count, resultOut);
-}
-
-Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                unsigned argCount,
                                                MutableTraced<Value> resultOut)
 {

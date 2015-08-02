@@ -253,8 +253,6 @@ struct Interpreter
     unsigned mungeArguments(Traced<Function*> function, unsigned argCount);
     bool call(Traced<Value> callable, TracedVector<Value> args,
               MutableTraced<Value> resultOut);
-    CallStatus setupCall(Traced<Value> target, TracedVector<Value> args,
-                         MutableTraced<Value> resultOut);
     CallStatus setupCall(Traced<Value> target,
                          unsigned argCount,
                          MutableTraced<Value> resultOut);
