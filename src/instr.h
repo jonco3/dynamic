@@ -546,20 +546,15 @@ struct InstrCompareOp : public CompareOpInstr
     define_instr_members(CompareOp);
     InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
     static bool fallback(Traced<InstrCompareOp*> self, Interpreter& interp);
+    static bool replaceWithIntInstr(Traced<InstrCompareOp*> self,
+                                    Interpreter& interp);
 };
 
+template <CompareOp Op>
 struct InstrCompareOpInt : public CompareOpInstr
 {
     define_instr_members(CompareOpInt);
-    InstrCompareOpInt(CompareOp op, Traced<Native*> method)
-      : CompareOpInstr(op), method_(method) {}
-
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &method_);
-    }
-
-  private:
-    Native* method_;
+    InstrCompareOpInt() : CompareOpInstr(Op) {}
 };
 
 struct InstrAugAssignUpdate : public BinaryOpInstr

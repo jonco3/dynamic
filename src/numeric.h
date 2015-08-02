@@ -11,8 +11,9 @@ struct Integer : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     static Value get(int64_t v) {
-        if (v >= INT32_MIN && v <= INT32_MAX)
-            return Value(static_cast<int32_t>(v));
+        int32_t i32 = static_cast<int32_t>(v);
+        if (i32 == v)
+            return Value(i32);
         else
             return getObject(v);
     }

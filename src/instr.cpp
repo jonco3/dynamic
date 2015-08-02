@@ -599,7 +599,6 @@ void BinaryOpInstr::print(ostream& s) const
 {
     Value right = interp.peekStack(0);
     Value left = interp.peekStack(1);
-
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[self->op()]));
         return replaceWithIntInstr(self, interp);
@@ -622,7 +621,7 @@ InstrBinaryOp::replaceWithIntInstr(Traced<InstrBinaryOp*> self,
             gc.create<InstrBinaryOpInt<Binary##name>>());
 
     for_each_binary_op(create_instr)
-#undef define_enum
+#undef create_instr
       default:
         assert(false);
         return false;
@@ -719,22 +718,34 @@ void CompareOpInstr::print(ostream& s) const
 /* static */ bool InstrCompareOp::execute(Traced<InstrCompareOp*> self,
                                          Interpreter& interp)
 {
-    Stack<Value> right(interp.peekStack(0));
-    Stack<Value> left(interp.peekStack(1));
-
-    if (left.isInt() && right.isInt()) {
-        Stack<Value> method(
-            Integer::ObjectClass->getAttr(Name::compareMethod[self->op()]));
-        assert(method.is<Native>());
-        Stack<Native*> native(method.as<Native>());
-        assert(native->minArgs() == 2);
-        assert(native->maxArgs() == 2);
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrCompareOpInt::execute,
-            gc.create<InstrCompareOpInt>(self->op(), native));
+    Value right = interp.peekStack(0);
+    Value left = interp.peekStack(1);
+    if (left.isInt32() && right.isInt32()) {
+        assert(Integer::ObjectClass->hasAttr(Name::compareMethod[self->op()]));
+        return replaceWithIntInstr(self, interp);
     } else {
         return interp.replaceInstrFuncAndRestart(self, fallback);
+    }
+}
+
+/* static */ bool
+InstrCompareOp::replaceWithIntInstr(Traced<InstrCompareOp*> self,
+                                   Interpreter& interp)
+{
+    // todo: can use static table
+    switch (self->op()) {
+#define create_instr(name, token, method, rmethod)                            \
+      case Compare##name:                                                     \
+        return interp.replaceInstrAndRestart(                                 \
+            self,                                                             \
+            InstrCompareOpInt<Compare##name>::execute,                        \
+            gc.create<InstrCompareOpInt<Compare##name>>());
+
+    for_each_compare_op(create_instr)
+#undef create_instr
+      default:
+        assert(false);
+        return false;
     }
 }
 
@@ -785,25 +796,21 @@ void CompareOpInstr::print(ostream& s) const
     return true;
 }
 
-/* static */ bool InstrCompareOpInt::execute(Traced<InstrCompareOpInt*> self,
-                                            Interpreter& interp)
+template <CompareOp Op> /* static */ bool
+InstrCompareOpInt<Op>::execute(Traced<InstrCompareOpInt*> self,
+                               Interpreter& interp)
 {
-    if (!interp.peekStack(0).isInt() || !interp.peekStack(1).isInt()) {
+    if (!interp.peekStack(0).isInt32() || !interp.peekStack(1).isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
             InstrCompareOp::fallback,
             gc.create<InstrCompareOp>(self->op()));
     }
 
-    Stack<Value> result;
-    TracedVector<Value> args(interp.stackSlice(2));
-    // todo: unnecessary argument checking when calling native
-    bool r = self->method_->call(args, result);
-    assert(r);
-    assert(result != Value(NotImplemented));
-    interp.popStack(2);
-    interp.pushStack(result);
-    return r;
+    int32_t b = interp.popStack().asInt32();
+    int32_t a = interp.popStack().asInt32();
+    interp.pushStack(Integer::compareOp<Op>(a, b));
+    return true;
 }
 
 /* static */ bool
