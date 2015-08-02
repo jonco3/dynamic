@@ -12,7 +12,7 @@ static_assert(sizeof(BinaryOpNames) / sizeof(*BinaryOpNames) == CountBinaryOp,
               "Number of names must match number of binary operations");
 
 const char* CompareOpNames[] = {
-#define define_enum(name, token, method)                                      \
+#define define_enum(name, token, method, rmethod)                             \
     token,
 
     for_each_compare_op(define_enum)

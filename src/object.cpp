@@ -391,18 +391,6 @@ static bool object_dump(TracedVector<Value> args, MutableTraced<Value> resultOut
     return true;
 }
 
-static bool object_eq(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    resultOut = Boolean::get(args[0].toObject() == args[1].toObject());
-    return true;
-}
-
-static bool object_ne(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    resultOut = Boolean::get(args[0].toObject() != args[1].toObject());
-    return true;
-}
-
 static bool object_hash(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get((int32_t)(uintptr_t)args[0].toObject());
@@ -434,8 +422,6 @@ void initObject()
     initNativeMethod(Object::ObjectClass, "__new__", object_new, 1, -1);
     initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);
     initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
-    initNativeMethod(Object::ObjectClass, "__eq__", object_eq, 2);
-    initNativeMethod(Object::ObjectClass, "__ne__", object_ne, 2);
     initNativeMethod(Object::ObjectClass, "__hash__", object_hash, 1);
     initNativeMethod(NoneObject::ObjectClass, "__new__", nullptr, 1, -1);
     initNativeMethod(Class::ObjectClass, "__new__", nullptr, 1, -1);

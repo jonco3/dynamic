@@ -300,14 +300,19 @@ static bool floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> result
 template <FloatCompareOp op>
 static bool floatCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    if (!args[0].isInstanceOf(Float::ObjectClass) ||
-        !args[1].isInstanceOf(Float::ObjectClass))
-    {
+    double a;
+    if (!floatValue(args[0], a)) {
         resultOut = NotImplemented;
         return true;
     }
 
-    resultOut = Boolean::get(op(floatValue(args[0]), floatValue(args[1])));
+    double b;
+    if (!floatOrIntValue(args[1], b)) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = Boolean::get(op(a, b));
     return true;
 }
 

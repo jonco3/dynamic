@@ -86,8 +86,7 @@ struct Value
     inline bool isInstanceOf(Traced<Class*> cls) const;
 
     template <typename T> inline bool is() const;
-    template <typename T> inline T* as();
-    template <typename T> inline const T* as() const;
+    template <typename T> inline T* as() const;
 
     inline bool isNone() const;
     inline bool isTrue() const;

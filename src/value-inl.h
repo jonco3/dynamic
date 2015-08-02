@@ -118,14 +118,7 @@ inline bool Value::is() const
 }
 
 template <typename T>
-inline T* Value::as()
-{
-    Object* obj = toObject();
-    return obj->as<T>();
-}
-
-template <typename T>
-inline const T* Value::as() const
+inline T* Value::as() const
 {
     Object* obj = toObject();
     return obj->as<T>();
@@ -220,7 +213,7 @@ inline bool WrapperMixins<W, Value>::is() const
 
 template <typename W>
 template <typename T>
-inline T* WrapperMixins<W, Value>::as()
+inline T* WrapperMixins<W, Value>::as() const
 {
     return get()->template as<T>();
 }

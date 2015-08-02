@@ -624,6 +624,7 @@ static bool maybeCallBinaryOp(Interpreter& interp,
                               Traced<Value> right,
                               bool& successOut)
 {
+    successOut = false;
     Stack<Value> method;
     if (!obj.maybeGetAttr(name, method))
         return false;
@@ -633,7 +634,6 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     interp.pushStack(right);
     if (!interp.call(method, 2, result)) {
         interp.pushStack(result);
-        successOut = false;
         return true;
     }
 
@@ -694,6 +694,102 @@ static bool maybeCallBinaryOp(Interpreter& interp,
 
     Stack<Value> result;
     TracedVector<Value> args(interp.stackSlice(2));
+    // todo: unnecessary argument checking when calling native
+    bool r = self->method_->call(args, result);
+    assert(r);
+    assert(result != Value(NotImplemented));
+    interp.popStack(2);
+    interp.pushStack(result);
+    return r;
+}
+
+void CompareOpInstr::print(ostream& s) const
+{
+    s << name() << " " << CompareOpNames[op()];
+}
+
+/* static */ bool InstrCompareOp::execute(Traced<InstrCompareOp*> self,
+                                         Interpreter& interp)
+{
+    Stack<Value> right(interp.peekStack(0));
+    Stack<Value> left(interp.peekStack(1));
+
+    if (left.isInt() && right.isInt()) {
+        Stack<Value> method(
+            Integer::ObjectClass->getAttr(Name::compareMethod[self->op()]));
+        assert(method.is<Native>());
+        Stack<Native*> native(method.as<Native>());
+        assert(native->minArgs() == 2);
+        assert(native->maxArgs() == 2);
+        return interp.replaceInstrAndRestart(
+            self,
+            InstrCompareOpInt::execute,
+            gc.create<InstrCompareOpInt>(self->op(), native));
+    } else {
+        return interp.replaceInstrFuncAndRestart(self, fallback);
+    }
+}
+
+/* static */ bool InstrCompareOp::fallback(Traced<InstrCompareOp*> self,
+                                          Interpreter& interp)
+{
+    Stack<Value> right(interp.popStack());
+    Stack<Value> left(interp.popStack());
+
+    // "There are no swapped-argument versions of these methods (to be used when
+    // the left argument does not support the operation but the right argument
+    // does); rather, __lt__() and __gt__() are each other's reflection,
+    // __le__() and __ge__() are each other's reflection, and __eq__() and
+    // __ne__() are their own reflection."
+
+    bool success;
+    CompareOp op = self->op();
+    const Name* names = Name::compareMethod;
+    const Name* rnames = Name::compareMethodReflected;
+    if (maybeCallBinaryOp(interp, left, names[op], left, right, success))
+        return success;
+    if (!rnames[op].isNull() &&
+        maybeCallBinaryOp(interp, right, rnames[op], right, left, success)) {
+        return success;
+    }
+    if (op == CompareNE &&
+        maybeCallBinaryOp(interp, left, names[CompareEQ], left, right, success))
+    {
+        if (success) {
+            Stack<Value> result(interp.popStack());
+            interp.pushStack(Boolean::get(!result.as<Boolean>()->value()));
+        }
+        return success;
+    }
+
+    Stack<Value> result;
+    if (op == CompareEQ) {
+        result = Boolean::get(left.toObject() == right.toObject());
+    } else if (op == CompareNE) {
+        result = Boolean::get(left.toObject() != right.toObject());
+    } else {
+        interp.pushStack(gc.create<TypeError>(
+                         "unsupported operand type(s) for compare operation"));
+        return false;
+    }
+
+    interp.pushStack(result);
+    return true;
+}
+
+/* static */ bool InstrCompareOpInt::execute(Traced<InstrCompareOpInt*> self,
+                                            Interpreter& interp)
+{
+    if (!interp.peekStack(0).isInt() || !interp.peekStack(1).isInt()) {
+        return interp.replaceInstrAndRestart(
+            self,
+            InstrCompareOp::fallback,
+            gc.create<InstrCompareOp>(self->op()));
+    }
+
+    Stack<Value> result;
+    TracedVector<Value> args(interp.stackSlice(2));
+    // todo: unnecessary argument checking when calling native
     bool r = self->method_->call(args, result);
     assert(r);
     assert(result != Value(NotImplemented));

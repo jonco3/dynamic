@@ -15,7 +15,7 @@ struct String : public Object
 
     static String* get(const string& v);
 
-    const string& value() { return value_; }
+    const string& value() const { return value_; }
     void print(ostream& s) const override;
 
     String(const string& v);

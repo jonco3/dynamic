@@ -16,6 +16,7 @@ Name Name::binMethod[CountBinaryOp];
 Name Name::binMethodReflected[CountBinaryOp];
 Name Name::augAssignMethod[CountBinaryOp];
 Name Name::compareMethod[CountCompareOp];
+Name Name::compareMethodReflected[CountCompareOp];
 
 void initNames()
 {
@@ -38,8 +39,9 @@ void initNames()
 
 #undef init_name
 
-#define init_name(name, token, method)                                        \
-    Name::compareMethod[Compare##name] = Name(method);
+#define init_name(name, token, method, rmethod)                               \
+    Name::compareMethod[Compare##name] = Name(method);                        \
+    Name::compareMethodReflected[Compare##name] = Name(rmethod);
 
     for_each_compare_op(init_name)
 

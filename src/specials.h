@@ -15,6 +15,14 @@
     op(LeftShift,  "<<", "__lshift__",   "__rlshift__",   "__ilshift__")      \
     op(RightShift, ">>", "__rshift__",   "__rrshift__",   "__irshift__")
 
+#define for_each_compare_op(op)                                               \
+    op(LT, "<",  "__lt__", "__gt__")                                          \
+    op(LE, "<=", "__le__", "__ge__")                                          \
+    op(GT, ">",  "__gt__", "__lt__")                                          \
+    op(GE, ">=", "__ge__", "__le__")                                          \
+    op(EQ, "==", "__eq__", "__eq__")                                           \
+    op(NE, "!=", "__ne__", "__ne__")
+
 enum BinaryOp
 {
 #define define_enum(name, token, method, rmethod, imethod)                    \
@@ -25,17 +33,9 @@ enum BinaryOp
     CountBinaryOp
 };
 
-#define for_each_compare_op(op)                                               \
-    op(LT, "<",  "__lt__")                                                    \
-    op(LE, "<=", "__le__")                                                    \
-    op(GT, ">",  "__gt__")                                                    \
-    op(GE, ">=", "__ge__")                                                    \
-    op(EQ, "==", "__eq__")                                                    \
-    op(NE, "!=", "__ne__")
-
 enum CompareOp
 {
-#define define_enum(name, token, method)                                      \
+#define define_enum(name, token, method, rmethod)                             \
     Compare##name,
     for_each_compare_op(define_enum)
 #undef define_enum

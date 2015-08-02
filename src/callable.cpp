@@ -17,6 +17,13 @@ Callable::Callable(Traced<Class*> cls, Name name,
     maxArgs_(maxArgs)
 {}
 
+void Callable::print(ostream& s) const
+{
+    s << "<" << type()->name();
+    s << " object '" << name_.get();
+    s << "' at 0x" << hex << reinterpret_cast<uintptr_t>(this) << ">";
+}
+
 static bool callable_get(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Callable::ObjectClass, resultOut))

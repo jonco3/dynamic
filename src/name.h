@@ -49,6 +49,7 @@ struct Name
     static Name binMethodReflected[CountBinaryOp];
     static Name augAssignMethod[CountBinaryOp];
     static Name compareMethod[CountCompareOp];
+    static Name compareMethodReflected[CountCompareOp];
 
     Name()
       : string_(nullptr) {}
@@ -57,10 +58,14 @@ struct Name
       : string_(intern(str)) {}
 
     Name(const char* str)
-      : string_(intern(str)) {}
+      : string_(str ? intern(str) : nullptr) {}
+
+    bool isNull() const {
+        return string_ == nullptr;
+    }
 
     const string& get() const {
-        assert(string_);
+        assert(!isNull());
         return *string_;
     }
 

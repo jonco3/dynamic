@@ -45,17 +45,13 @@ struct WrapperMixins<W, Value>
     inline bool maybeGetAttr(Name name, MutableTraced<Value> valueOut) const;
     inline Class* type() const;
     template <typename T> inline bool is() const;
-    template <typename T> inline T* as();
+    template <typename T> inline T* as() const;
     inline bool isTrue() const;
     inline bool isInstanceOf(Traced<Class*> cls) const;
 
   private:
     const Value* get() const {
         return &static_cast<const W*>(this)->get();
-    }
-
-    Value* get() {
-        return &static_cast<W*>(this)->get();
     }
 };
 

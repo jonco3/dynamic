@@ -68,6 +68,8 @@ using namespace std;
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
     instr(BinaryOpInt)                                                       \
+    instr(CompareOp)                                                         \
+    instr(CompareOpInt)                                                      \
     instr(AugAssignUpdate)                                                   \
     instr(StartGenerator)                                                    \
     instr(ResumeGenerator)                                                   \
@@ -523,6 +525,39 @@ struct InstrBinaryOpInt : public BinaryOpInstr
     define_instr_members(BinaryOpInt);
     InstrBinaryOpInt(BinaryOp op, Traced<Native*> method)
       : BinaryOpInstr(op), method_(method) {}
+
+    virtual void traceChildren(Tracer& t) override {
+        gc.trace(t, &method_);
+    }
+
+  private:
+    Native* method_;
+};
+
+struct CompareOpInstr : public Instr
+{
+    CompareOpInstr(CompareOp op) : op_(op) {}
+
+    virtual void print(ostream& s) const;
+
+    CompareOp op() const { return op_; }
+
+  private:
+    CompareOp op_;
+};
+
+struct InstrCompareOp : public CompareOpInstr
+{
+    define_instr_members(CompareOp);
+    InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
+    static bool fallback(Traced<InstrCompareOp*> self, Interpreter& interp);
+};
+
+struct InstrCompareOpInt : public CompareOpInstr
+{
+    define_instr_members(CompareOpInt);
+    InstrCompareOpInt(CompareOp op, Traced<Native*> method)
+      : CompareOpInstr(op), method_(method) {}
 
     virtual void traceChildren(Tracer& t) override {
         gc.trace(t, &method_);

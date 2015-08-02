@@ -17,6 +17,8 @@ struct Callable : public Object
     unsigned minArgs() { return minArgs_; }
     unsigned maxArgs() { return maxArgs_; }
 
+    void print(ostream& s) const override;
+
   private:
     Name name_;
     unsigned minArgs_;

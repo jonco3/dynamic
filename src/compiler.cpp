@@ -358,7 +358,9 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxCompareOp& s) {
         // todo: == should fall back to comparing identity if __eq__ not
         // implemented
-        callBinaryMethod(s, Name::compareMethod[s.op]);
+        compile(s.left);
+        compile(s.right);
+        emit<InstrCompareOp>(s.op);
     }
 
 
