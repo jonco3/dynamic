@@ -45,8 +45,8 @@ FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
     takesRest_(takesRest),
     isGenerator_(isGenerator)
 {
-    assert(!takesRest || paramCount() > 0);
-    assert(paramCount() == block->argCount());
+    assert(!takesRest || argCount() > 0);
+    assert(argCount() == block->argCount());
 }
 
 Function::Function(Name name,
@@ -54,12 +54,12 @@ Function::Function(Name name,
                    TracedVector<Value> defaults,
                    Traced<Env*> env)
   : Callable(ObjectClass, name,
-             info->paramCount() - defaults.size() - (info->takesRest_ ? 1 : 0),
-             info->takesRest_ ? UINT_MAX : info->paramCount()),
+             info->argCount() - defaults.size() - (info->takesRest_ ? 1 : 0),
+             info->takesRest_ ? UINT_MAX : info->argCount()),
     info_(info),
     env_(env)
 {
-    assert(info->paramCount() >= defaults.size());
+    assert(info->argCount() >= defaults.size());
     for (size_t i = 0; i < defaults.size(); i++)
         defaults_.push_back(defaults[i]);
 }

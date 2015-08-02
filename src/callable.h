@@ -47,7 +47,7 @@ struct FunctionInfo : public Cell
         gc.trace(t, &block_);
     }
 
-    size_t paramCount() const { return params_.size(); }
+    size_t argCount() const { return params_.size(); }
 
     vector<Name> params_;
     Block* block_;
@@ -75,20 +75,20 @@ struct Function : public Callable
     bool takesRest() const { return info_->takesRest_; }
     bool isGenerator() const { return info_->isGenerator_; }
     Traced<Value> paramDefault(unsigned i) {
-        assert(i < info_->paramCount());
+        assert(i < info_->argCount());
         i -= maxNormalArgs() - defaults_.size();
         assert(i < defaults_.size());
         return Traced<Value>::fromTracedLocation(&defaults_[i]);
     }
     size_t argCount() const {
-        return info_->paramCount();
+        return info_->argCount();
     }
     size_t maxNormalArgs() const {
-        return info_->paramCount() - (takesRest() ? 1 : 0);
+        return info_->argCount() - (takesRest() ? 1 : 0);
     }
     unsigned restParam() const {
         assert(takesRest());
-        return info_->paramCount() - 1;
+        return info_->argCount() - 1;
     }
 
     void traceChildren(Tracer& t) override;
