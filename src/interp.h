@@ -112,8 +112,18 @@ struct Interpreter
 
     void insertStackEntry(unsigned offsetFromTop, Value value);
 
-    Value getStackLocal(unsigned offset);
-    void setStackLocal(unsigned offset, Traced<Value> value);
+    Value getStackLocal(unsigned offset) {
+        Frame* frame = getFrame();
+        assert(offset < frame->block()->layout()->slotCount());
+        return stack[frame->stackPos() + offset];
+    }
+
+    template <typename S>
+    void setStackLocal(unsigned offset, S&& element) {
+        Frame* frame = getFrame();
+        assert(offset < frame->block()->layout()->slotCount());
+        stack[frame->stackPos() + offset] = Value(element);
+    }
 
     GeneratorIter* getGeneratorIter();
 
@@ -135,7 +145,12 @@ struct Interpreter
     bool startCall(Traced<Value> callable, unsigned argCount);
 
     void popFrame();
-    Frame* getFrame(unsigned reverseIndex = 0);
+
+    Frame* getFrame(unsigned reverseIndex = 0) {
+        assert(reverseIndex < frames.size());
+        return &frames[frameIndex() - reverseIndex];
+    }
+
     void returnFromFrame(Value value);
 #ifdef LOG_EXECUTION
     void logStart(int indentDelta = 0);
@@ -213,7 +228,11 @@ struct Interpreter
     unsigned remainingFinallyCount_;
     unsigned loopControlTarget_;
 
-    unsigned frameIndex();
+    unsigned frameIndex() {
+        assert(!frames.empty());
+        return frames.size() - 1;
+    }
+
     void pushFrame(Traced<Block*> block, unsigned stackStartPos);
     unsigned currentOffset();
     TokenPos currentPos();

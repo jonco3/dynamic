@@ -13,18 +13,23 @@
                                               Interpreter& interp)
 {
     // Name was present when compiled, but may have been deleted.
-    Stack<Value> value(interp.getStackLocal(self->slot_));
-    if (value == Value(UninitializedSlot))
-        return interp.raiseNameError(self->ident);
+    {
+        AutoAssertNoGC nogc;
+        Value value = interp.getStackLocal(self->slot_);
+        if (value != Value(UninitializedSlot)) {
+            interp.pushStack(value);
+            return true;
+        }
+    }
 
-    interp.pushStack(value);
-    return true;
+    return interp.raiseNameError(self->ident);
 }
 
 /* static */ bool InstrSetStackLocal::execute(Traced<InstrSetStackLocal*> self,
                                               Interpreter& interp)
 {
-    Stack<Value> value(interp.peekStack(0));
+    AutoAssertNoGC nogc;
+    Value value = interp.peekStack(0);
     assert(value != Value(UninitializedSlot));
     interp.setStackLocal(self->slot_, value);
     return true;
@@ -34,10 +39,15 @@
                                               Interpreter& interp)
 {
     // Delete by setting slot value to UninitializedSlot.
-    if (interp.getStackLocal(self->slot_) == Value(UninitializedSlot))
-        return interp.raiseNameError(self->ident);
-    interp.setStackLocal(self->slot_, UninitializedSlot);
-    return true;
+    {
+        AutoAssertNoGC nogc;
+        if (interp.getStackLocal(self->slot_) != Value(UninitializedSlot)) {
+            interp.setStackLocal(self->slot_, UninitializedSlot);
+            return true;
+        }
+    }
+
+    return interp.raiseNameError(self->ident);
 }
 
 /* static */ bool InstrGetLexical::execute(Traced<InstrGetLexical*> self,

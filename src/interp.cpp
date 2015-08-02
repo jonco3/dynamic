@@ -89,20 +89,6 @@ void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
     stack.insert(pos, value);
 }
 
-Value Interpreter::getStackLocal(unsigned offset)
-{
-    Frame* frame = getFrame();
-    assert(offset < frame->block()->layout()->slotCount());
-    return stack[frame->stackPos() + offset];
-}
-
-void Interpreter::setStackLocal(unsigned offset, Traced<Value> value)
-{
-    Frame* frame = getFrame();
-    assert(offset < frame->block()->layout()->slotCount());
-    stack[frame->stackPos() + offset] = value;
-}
-
 #ifdef LOG_EXECUTION
 void Interpreter::logStart(int indentDelta)
 {
@@ -189,12 +175,6 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
     resultOut = popStack();
     return true;
-}
-
-unsigned Interpreter::frameIndex()
-{
-    assert(!frames.empty());
-    return frames.size() - 1;
 }
 
 void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos)
@@ -470,12 +450,6 @@ ExceptionHandler* Interpreter::currentExceptionHandler()
         return nullptr;
 
     return handler;
-}
-
-Frame* Interpreter::getFrame(unsigned reverseIndex)
-{
-    assert(reverseIndex < frames.size());
-    return &frames[frameIndex() - reverseIndex];
 }
 
 Env* Interpreter::lexicalEnv(unsigned index)
