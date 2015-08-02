@@ -193,28 +193,27 @@
     if (!getMethodAttr(value, self->ident, result, isCallableDescriptor))
         return interp.raiseAttrError(value, self->ident);
 
-    interp.pushStack(result);
-    interp.pushStack(Boolean::get(isCallableDescriptor));
-    interp.pushStack(value);
+    interp.pushStack(result, Boolean::get(isCallableDescriptor), value);
     return true;
 }
 
 /* static */ bool InstrGetMethodInt::execute(Traced<InstrGetMethodInt*> self,
                                              Interpreter& interp)
 {
-    Stack<Value> value(interp.peekStack(0));
-    if (!value.isInt()) {
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrGetMethod::fallback,
-            gc.create<InstrGetMethod>(self->ident));
+    {
+        AutoAssertNoGC nogc;
+        Value value = interp.peekStack(0);
+        if (value.isInt()) {
+            interp.popStack();
+            interp.pushStack(self->result_, Boolean::True, value);
+            return true;
+        }
     }
 
-    interp.popStack();
-    interp.pushStack(self->result_);
-    interp.pushStack(Boolean::True);
-    interp.pushStack(value);
-    return true;
+    return interp.replaceInstrAndRestart(
+        self,
+        InstrGetMethod::fallback,
+        gc.create<InstrGetMethod>(self->ident));
 }
 
 /* static */ bool InstrCallMethod::execute(Traced<InstrCallMethod*> self,
@@ -286,8 +285,7 @@
         return false;
     }
 
-    interp.pushStack(Value(container));
-    interp.pushStack(value);
+    interp.pushStack(container, value);
     return interp.startCall(contains, 2);
 }
 
@@ -542,10 +540,8 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
         return false;
     }
 
-    RootVector<Value> args(2);
     for (unsigned i = self->count_; i != 0; i--) {
-        interp.pushStack(seq);
-        interp.pushStack(Integer::get(i - 1));
+        interp.pushStack(seq, Integer::get(i - 1));
         bool ok = interp.call(getitemFunc, 2, result);
         interp.pushStack(result);
         if (!ok)

@@ -51,10 +51,24 @@ struct Interpreter
     bool exec(Traced<Block*> block, MutableTraced<Value> resultOut);
 
     template <typename S>
-    void pushStack(const S& element) {
-        Stack<Value> value(element);
+    void pushStack(S&& element) {
+        Value value(element);
         logStackPush(value);
-        stack.push_back(value.get());
+        stack.push_back(value);
+    }
+
+    template <typename S1, typename S2>
+    void pushStack(S1&& element1, S2&& element2) {
+        Value values[2] = { Value(element1), Value(element2) };
+        logStackPush(&values[0], values + 2);
+        stack.insert(stack.end(), &values[0], values + 2);
+    }
+
+    template <typename S1, typename S2, typename S3>
+    void pushStack(S1&& element1, S2&& element2, S3&& element3) {
+        Value values[3] = { Value(element1), Value(element2), Value(element3) };
+        logStackPush(&values[0], values + 3);
+        stack.insert(stack.end(), &values[0], values + 3);
     }
 
     // Remove and return the value on the top of the stack.
@@ -126,11 +140,13 @@ struct Interpreter
 #ifdef LOG_EXECUTION
     void logStart(int indentDelta = 0);
     void logStackPush(const Value& v);
+    void logStackPush(const Value* first, const Value* last);
     void logStackPop(size_t count);
     void logStackSwap();
 #else
     void logStackPush(const Value& v) {}
     void logStackPop(size_t count) {}
+    void logStackPush(const Value* first, const Value* last) {}
     void logStackSwap() {}
 #endif
 

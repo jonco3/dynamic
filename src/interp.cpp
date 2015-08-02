@@ -120,6 +120,16 @@ void Interpreter::logStackPush(const Value& value)
     }
 }
 
+void Interpreter::logStackPush(const Value* first, const Value* last)
+{
+    if (logExecution) {
+        logStart(1);
+        size_t pos = stackPos();
+        while (first != last)
+            cout << "push @" << pos++ << " " << *first++ << endl;
+    }
+}
+
 void Interpreter::logStackPop(size_t count)
 {
     size_t pos = stackPos();

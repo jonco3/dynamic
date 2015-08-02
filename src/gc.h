@@ -666,6 +666,15 @@ struct RootVector : private vector<T>, protected RootBase
         return VectorBase::insert(pos, val);
     }
 
+    template <typename I>
+    typename VectorBase::iterator insert(typename VectorBase::iterator pos,
+                                         I&& first, I&& last)
+    {
+        assert(!hasUses());
+        return VectorBase::insert(pos,
+                                  std::forward<I>(first), std::forward<I>(last));
+    }
+
     void trace(Tracer& t) override {
         for (auto i = this->begin(); i != this->end(); ++i)
             gc.trace(t, &*i);
