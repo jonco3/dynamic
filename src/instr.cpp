@@ -674,21 +674,15 @@ static bool maybeCallBinaryOp(Interpreter& interp,
 /* static */ bool InstrBinaryOpInt::execute(Traced<InstrBinaryOpInt*> self,
                                             Interpreter& interp)
 {
-    Stack<Value> right(interp.peekStack(0));
-    Stack<Value> left(interp.peekStack(1));
-
-    if (!left.isInt() || !right.isInt()) {
+    if (!interp.peekStack(0).isInt() || !interp.peekStack(1).isInt()) {
         return interp.replaceInstrAndRestart(
             self,
             InstrBinaryOp::fallback,
             gc.create<InstrBinaryOp>(self->op()));
     }
 
-    interp.popStack(2);
     Stack<Value> result;
     Stack<Value> method(self->method_);
-    interp.pushStack(left);
-    interp.pushStack(right);
     bool r = interp.call(method, 2, result);
     assert(r);
     assert(result != Value(NotImplemented));
