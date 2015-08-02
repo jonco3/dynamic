@@ -10,7 +10,13 @@ struct Integer : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    static Value get(int64_t v);
+    static Value get(int64_t v) {
+        if (v >= INT32_MIN && v <= INT32_MAX)
+            return Value(static_cast<int32_t>(v));
+        else
+            return getObject(v);
+    }
+
     static Object* getObject(int64_t v);
 
     Integer(int64_t v = 0);

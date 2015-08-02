@@ -597,22 +597,35 @@ void BinaryOpInstr::print(ostream& s) const
 /* static */ bool InstrBinaryOp::execute(Traced<InstrBinaryOp*> self,
                                          Interpreter& interp)
 {
-    Stack<Value> right(interp.peekStack(0));
-    Stack<Value> left(interp.peekStack(1));
+    Value right = interp.peekStack(0);
+    Value left = interp.peekStack(1);
 
-    if (left.isInt() && right.isInt()) {
-        Stack<Value> method(
-            Integer::ObjectClass->getAttr(Name::binMethod[self->op()]));
-        assert(method.is<Native>());
-        Stack<Native*> native(method.as<Native>());
-        assert(native->minArgs() == 2);
-        assert(native->maxArgs() == 2);
-        return interp.replaceInstrAndRestart(
-            self,
-            InstrBinaryOpInt::execute,
-            gc.create<InstrBinaryOpInt>(self->op(), native));
+    if (left.isInt32() && right.isInt32()) {
+        assert(Integer::ObjectClass->hasAttr(Name::binMethod[self->op()]));
+        return replaceWithIntInstr(self, interp);
     } else {
         return interp.replaceInstrFuncAndRestart(self, fallback);
+    }
+}
+
+/* static */ bool
+InstrBinaryOp::replaceWithIntInstr(Traced<InstrBinaryOp*> self,
+                                   Interpreter& interp)
+{
+    // todo: can use static table
+    switch (self->op()) {
+#define create_instr(name, token, method, rmethod, imethod)                   \
+      case Binary##name:                                                      \
+        return interp.replaceInstrAndRestart(                                 \
+            self,                                                             \
+            InstrBinaryOpInt<Binary##name>::execute,                          \
+            gc.create<InstrBinaryOpInt<Binary##name>>());
+
+    for_each_binary_op(create_instr)
+#undef define_enum
+      default:
+        assert(false);
+        return false;
     }
 }
 
@@ -681,25 +694,21 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     return false;
 }
 
-/* static */ bool InstrBinaryOpInt::execute(Traced<InstrBinaryOpInt*> self,
-                                            Interpreter& interp)
+template <BinaryOp Op>
+/* static */ bool InstrBinaryOpInt<Op>::execute(Traced<InstrBinaryOpInt*> self,
+                                                Interpreter& interp)
 {
-    if (!interp.peekStack(0).isInt() || !interp.peekStack(1).isInt()) {
+    if (!interp.peekStack(0).isInt32() || !interp.peekStack(1).isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
             InstrBinaryOp::fallback,
             gc.create<InstrBinaryOp>(self->op()));
     }
 
-    Stack<Value> result;
-    TracedVector<Value> args(interp.stackSlice(2));
-    // todo: unnecessary argument checking when calling native
-    bool r = self->method_->call(args, result);
-    assert(r);
-    assert(result != Value(NotImplemented));
-    interp.popStack(2);
-    interp.pushStack(result);
-    return r;
+    int32_t b = interp.popStack().asInt32();
+    int32_t a = interp.popStack().asInt32();
+    interp.pushStack(Integer::binaryOp<Op>(a, b));
+    return true;
 }
 
 void CompareOpInstr::print(ostream& s) const

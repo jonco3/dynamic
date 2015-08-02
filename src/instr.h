@@ -518,20 +518,15 @@ struct InstrBinaryOp : public BinaryOpInstr
     define_instr_members(BinaryOp);
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
     static bool fallback(Traced<InstrBinaryOp*> self, Interpreter& interp);
+    static bool replaceWithIntInstr(Traced<InstrBinaryOp*> self,
+                                    Interpreter& interp);
 };
 
+template <BinaryOp Op>
 struct InstrBinaryOpInt : public BinaryOpInstr
 {
     define_instr_members(BinaryOpInt);
-    InstrBinaryOpInt(BinaryOp op, Traced<Native*> method)
-      : BinaryOpInstr(op), method_(method) {}
-
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &method_);
-    }
-
-  private:
-    Native* method_;
+    InstrBinaryOpInt() : BinaryOpInstr(Op) {}
 };
 
 struct CompareOpInstr : public Instr

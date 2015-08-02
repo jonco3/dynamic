@@ -136,14 +136,6 @@ Integer::Integer(Traced<Class*> cls)
   : Object(cls)
 {}
 
-Value Integer::get(int64_t v)
-{
-    if (v >= INT32_MIN && v <= INT32_MAX)
-        return Value(static_cast<int32_t>(v));
-    else
-        return getObject(v);
-}
-
 Object* Integer::getObject(int64_t v)
 {
     return gc.create<Integer>(v);

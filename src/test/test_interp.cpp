@@ -304,7 +304,7 @@ testcase(interp)
                      "foo('a', 'b')", "'ab'",
                      Instr_BinaryOp,
                      InstrBinaryOp::execute,
-                     InstrBinaryOpInt::execute,
+                     InstrBinaryOpInt<BinaryPlus>::execute,
                      InstrBinaryOp::fallback,
                      InstrBinaryOp::fallback);
 
