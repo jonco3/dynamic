@@ -5,6 +5,11 @@ Block::Block(Traced<Layout*> layout, unsigned argCount, bool createEnv)
   : layout_(layout), argCount_(argCount), createEnv_(createEnv)
 {}
 
+unsigned Block::stackLocalCount() const
+{
+    return createEnv() ? 0 : layout()->slotCount() - argCount();
+}
+
 unsigned Block::append(InstrFuncBase func, Traced<Instr*> data)
 {
     assert(func);

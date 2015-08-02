@@ -9,35 +9,34 @@
     return true;
 }
 
-/* static */ bool InstrGetLocal::execute(Traced<InstrGetLocal*> self,
-                                         Interpreter& interp)
+/* static */ bool InstrGetStackLocal::execute(Traced<InstrGetStackLocal*> self,
+                                              Interpreter& interp)
 {
     // Name was present when compiled, but may have been deleted.
-    Stack<Env*> env(interp.env());
-    if (!env->hasSlot(self->slot_))
+    Stack<Value> value(interp.getStackLocal(self->slot_));
+    if (value == Value(UninitializedSlot))
         return interp.raiseNameError(self->ident);
 
-    interp.pushStack(env->getSlot(self->slot_));
+    interp.pushStack(value);
     return true;
 }
 
-/* static */ bool InstrSetLocal::execute(Traced<InstrSetLocal*> self,
-                                         Interpreter& interp)
+/* static */ bool InstrSetStackLocal::execute(Traced<InstrSetStackLocal*> self,
+                                              Interpreter& interp)
 {
-    Stack<Env*> env(interp.env());
     Stack<Value> value(interp.peekStack(0));
-    env->setSlot(self->slot_, value);
+    assert(value != Value(UninitializedSlot));
+    interp.setStackLocal(self->slot_, value);
     return true;
 }
 
-/* static */ bool InstrDelLocal::execute(Traced<InstrDelLocal*> self,
-                                         Interpreter& interp)
+/* static */ bool InstrDelStackLocal::execute(Traced<InstrDelStackLocal*> self,
+                                              Interpreter& interp)
 {
     // Delete by setting slot value to UninitializedSlot.
-    Stack<Env*> env(interp.env());
-    if (!env->hasSlot(self->slot_))
+    if (interp.getStackLocal(self->slot_) == Value(UninitializedSlot))
         return interp.raiseNameError(self->ident);
-    env->setSlot(self->slot_, UninitializedSlot);
+    interp.setStackLocal(self->slot_, UninitializedSlot);
     return true;
 }
 
@@ -241,10 +240,28 @@
     Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
     unsigned argCount = block->argCount();
     for (size_t i = 0; i < argCount; i++) {
-        Root<Value> value(interp.peekStack(argCount - i - 1));
+        Root<Value> value(interp.getStackLocal(i));
         callEnv->setSlot(i, value);
+        interp.setStackLocal(i, UninitializedSlot);
     }
     interp.setFrameEnv(callEnv);
+    return true;
+}
+
+/* static */ bool InstrInitStackLocals::execute(Traced<InstrInitStackLocals*> self,
+                                                Interpreter& interp)
+{
+    Frame* frame = interp.getFrame();
+    assert(!frame->env());
+
+    Object* obj = interp.popStack().asObject();
+    Stack<Env*> parentEnv(obj ? obj->as<Env>() : nullptr);
+    interp.setFrameEnv(parentEnv);
+
+    Stack<Block*> block(frame->block());
+    Stack<Layout*> layout(block->layout());
+    for (size_t i = block->argCount(); i < layout->slotCount(); i++)
+        interp.pushStack(UninitializedSlot);
     return true;
 }
 
@@ -829,12 +846,13 @@ InstrAssertStackDepth::execute(Traced<InstrAssertStackDepth*> self,
                                Interpreter& interp)
 {
 #ifdef DEBUG
-    unsigned actual = interp.frameStackDepth();
-    if (actual != self->expected_) {
+    Frame* frame = interp.getFrame();
+    unsigned depth = interp.stackPos() - frame->stackPos();
+    if (depth != self->expected_) {
         cerr << "Excpected stack depth " << dec << self->expected_;
-        cerr << " but got " << actual << " in: " << endl;
+        cerr << " but got " << depth << " in: " << endl;
         cerr << *interp.getFrame()->block() << endl;
-        assert(actual == self->expected_);
+        assert(depth == self->expected_);
     }
 #endif
     return true;

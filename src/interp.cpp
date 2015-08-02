@@ -89,6 +89,20 @@ void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
     stack.insert(pos, value);
 }
 
+Value Interpreter::getStackLocal(unsigned offset)
+{
+    Frame* frame = getFrame();
+    assert(offset < frame->block()->layout()->slotCount());
+    return stack[frame->stackPos() + offset];
+}
+
+void Interpreter::setStackLocal(unsigned offset, Traced<Value> value)
+{
+    Frame* frame = getFrame();
+    assert(offset < frame->block()->layout()->slotCount());
+    stack[frame->stackPos() + offset] = value;
+}
+
 #ifdef LOG_EXECUTION
 void Interpreter::logStart(int indentDelta)
 {
@@ -228,15 +242,6 @@ void Interpreter::popFrame()
 #endif
 }
 
-#ifdef DEBUG
-unsigned Interpreter::frameStackDepth()
-{
-    assert(!frames.empty());
-    Frame* frame = getFrame();
-    return stackPos() - frame->stackPos() - frame->block()->argCount();
-}
-#endif
-
 void Interpreter::returnFromFrame(Value value)
 {
 #ifdef DEBUG
@@ -270,9 +275,11 @@ void Interpreter::loopControlJump(unsigned finallyCount, unsigned target)
 
 GeneratorIter* Interpreter::getGeneratorIter()
 {
-    // GeneratorIter object stored as first stack value after the arguments.
-    Frame* frame = frame = getFrame();
-    size_t pos = frame->stackPos() + frame->block()->argCount();
+    // GeneratorIter object stored as first stack value after any stack locals.
+    Frame* frame = getFrame();
+    Stack<Block*> block(frame->block());
+    size_t pos =
+        frame->stackPos() + block->argCount() + block->stackLocalCount();
     Stack<Value> value(stack[pos]);
     return value.as<GeneratorIter>();
 }

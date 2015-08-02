@@ -98,6 +98,9 @@ struct Interpreter
 
     void insertStackEntry(unsigned offsetFromTop, Value value);
 
+    Value getStackLocal(unsigned offset);
+    void setStackLocal(unsigned offset, Traced<Value> value);
+
     GeneratorIter* getGeneratorIter();
 
     void branch(int offset);
@@ -120,9 +123,6 @@ struct Interpreter
     void popFrame();
     Frame* getFrame(unsigned reverseIndex = 0);
     void returnFromFrame(Value value);
-#ifdef DEBUG
-    unsigned frameStackDepth();
-#endif
 #ifdef LOG_EXECUTION
     void logStart(int indentDelta = 0);
     void logStackPush(const Value& v);

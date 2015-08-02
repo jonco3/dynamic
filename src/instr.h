@@ -26,9 +26,9 @@ using namespace std;
 
 #define for_each_instr(instr)                                                \
     instr(Const)                                                             \
-    instr(GetLocal)                                                          \
-    instr(SetLocal)                                                          \
-    instr(DelLocal)                                                          \
+    instr(GetStackLocal)                                                     \
+    instr(SetStackLocal)                                                     \
+    instr(DelStackLocal)                                                     \
     instr(GetLexical)                                                        \
     instr(SetLexical)                                                        \
     instr(DelLexical)                                                        \
@@ -43,6 +43,7 @@ using namespace std;
     instr(Call)                                                              \
     instr(CallMethod)                                                        \
     instr(CreateEnv)                                                         \
+    instr(InitStackLocals)                                                   \
     instr(Return)                                                            \
     instr(In)                                                                \
     instr(Is)                                                                \
@@ -173,10 +174,10 @@ struct IdentInstrBase : public Instr
         define_instr_members(name);                                           \
     }
 
-struct InstrGetLocal : public IdentInstrBase
+struct InstrGetStackLocal : public IdentInstrBase
 {
-    define_instr_members(GetLocal);
-    InstrGetLocal(Name ident, unsigned slot)
+    define_instr_members(GetStackLocal);
+    InstrGetStackLocal(Name ident, unsigned slot)
       : IdentInstrBase(ident), slot_(slot)
     {}
 
@@ -188,10 +189,10 @@ struct InstrGetLocal : public IdentInstrBase
     unsigned slot_;
 };
 
-struct InstrSetLocal : public IdentInstrBase
+struct InstrSetStackLocal : public IdentInstrBase
 {
-    define_instr_members(SetLocal);
-    InstrSetLocal(Name ident, unsigned slot)
+    define_instr_members(SetStackLocal);
+    InstrSetStackLocal(Name ident, unsigned slot)
       : IdentInstrBase(ident), slot_(slot)
     {}
 
@@ -203,10 +204,10 @@ struct InstrSetLocal : public IdentInstrBase
     unsigned slot_;
 };
 
-struct InstrDelLocal : public IdentInstrBase
+struct InstrDelStackLocal : public IdentInstrBase
 {
-    define_instr_members(DelLocal);
-    InstrDelLocal(Name ident, unsigned slot)
+    define_instr_members(DelStackLocal);
+    InstrDelStackLocal(Name ident, unsigned slot)
       : IdentInstrBase(ident), slot_(slot)
     {}
 
@@ -360,6 +361,7 @@ struct InstrCallMethod : public InstrCall
 };
 
 define_simple_instr(CreateEnv);
+define_simple_instr(InitStackLocals);
 define_simple_instr(Return);
 define_simple_instr(In);
 define_simple_instr(Is);

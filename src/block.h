@@ -37,12 +37,14 @@ struct Block : public Cell
 {
     Block(Traced<Layout*> layout, unsigned argCount, bool createEnv);
 
+    Layout* layout() const { return layout_; }
     unsigned argCount() const { return argCount_; }
+    unsigned stackLocalCount() const;
     bool createEnv() const { return createEnv_; }
     InstrThunk* startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
     InstrThunk instr(unsigned i) { return instrs_.at(i); }
-    Layout* layout() const { return layout_; }
+
 
     unsigned nextIndex() { return instrs_.size(); }
     void branchHere(unsigned source);

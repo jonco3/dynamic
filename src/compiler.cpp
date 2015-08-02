@@ -197,6 +197,7 @@ struct ByteCompiler : public SyntaxVisitor
         assert(!block);
         assert(topLevel);
         assert(stackDepth == 0);
+        assert(!parent || layout->slotCount() == argCount);
         bool hasNestedFuctions;
         defs = FindDefinitions(s, layout, globals, hasNestedFuctions);
         useLexicalEnv = useLexicalEnv || hasNestedFuctions;
@@ -205,15 +206,25 @@ struct ByteCompiler : public SyntaxVisitor
         layout = defs->layout();
         assert(layout->slotCount() >= argCount);
         block = gc.create<Block>(layout, argCount, useLexicalEnv);
-        if (parent)
-            emit<InstrCreateEnv>();
+        if (parent) {
+            if (useLexicalEnv) {
+                emit<InstrCreateEnv>();
+                stackDepth = argCount;
+            } else {
+                emit<InstrInitStackLocals>();
+                stackDepth = layout->slotCount();
+            }
+        }
         if (isGenerator) {
             emit<InstrStartGenerator>();
             emit<InstrPop>();
             stackDepth++;  // InstrStartGenerator leaves iterator on stack
         }
+#ifdef DEBUG
+        unsigned initialStackDepth = stackDepth;
+#endif
         compile(s);
-        assert(stackDepth == isGenerator ? 1 : 0);
+        assert(stackDepth == initialStackDepth);
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
@@ -385,16 +396,8 @@ struct ByteCompiler : public SyntaxVisitor
         if (contains(globals, name))
             return false;
 
-        int frame;
-        ByteCompiler* bc;
-        if (useLexicalEnv) {
-            frame = 0;
-            bc = this;
-        } else {
-            frame = 1;
-            bc = parent;
-        }
-
+        int frame = 0;
+        ByteCompiler* bc = useLexicalEnv ? this : parent;
         while (bc && bc->parent) {
             if (bc->layout->hasName(name)) {
                 frameOut = frame;
@@ -421,7 +424,7 @@ struct ByteCompiler : public SyntaxVisitor
         switch(contextStack.back()) {
           case Context::Assign:
             if (lookupLocal(name, slot))
-                emit<InstrSetLocal>(name, slot);
+                emit<InstrSetStackLocal>(name, slot);
             else if (lookupLexical(name, frame))
                 emit<InstrSetLexical>(frame, name);
             else if (lookupGlobal(name))
@@ -433,7 +436,7 @@ struct ByteCompiler : public SyntaxVisitor
 
           case Context::Delete:
             if (lookupLocal(name, slot))
-                emit<InstrDelLocal>(name, slot);
+                emit<InstrDelStackLocal>(name, slot);
             else if (lookupLexical(name, frame))
                 emit<InstrDelLexical>(frame, name);
             else if (lookupGlobal(name))
@@ -446,7 +449,7 @@ struct ByteCompiler : public SyntaxVisitor
 
           default:
             if (lookupLocal(name, slot))
-                emit<InstrGetLocal>(name, slot);
+                emit<InstrGetStackLocal>(name, slot);
             else if (lookupLexical(name, frame))
                 emit<InstrGetLexical>(frame, name);
             else
@@ -714,7 +717,7 @@ struct ByteCompiler : public SyntaxVisitor
         int slot;
         unsigned frame;
         if (lookupLocal(s.id, slot))
-            emit<InstrSetLocal>(s.id, slot);
+            emit<InstrSetStackLocal>(s.id, slot);
         else if (lookupLexical(s.id, frame))
             emit<InstrSetLexical>(frame, s.id);
         else
@@ -730,7 +733,7 @@ struct ByteCompiler : public SyntaxVisitor
         if (parent) {
             int slot;
             alwaysTrue(lookupLocal(s.id, slot));
-            emit<InstrSetLocal>(s.id, slot);
+            emit<InstrSetStackLocal>(s.id, slot);
         } else {
             emit<InstrSetGlobal>(topLevel, s.id);
         }
