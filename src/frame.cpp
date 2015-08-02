@@ -30,12 +30,6 @@ Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block, unsigned stackPos)
     stackPos_(stackPos)
 {}
 
-void Frame::setEnv(Traced<Env*> env)
-{
-    assert(!env_);
-    env_ = env;
-}
-
 void Env::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);

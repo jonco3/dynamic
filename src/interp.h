@@ -71,6 +71,12 @@ struct Interpreter
         stack.insert(stack.end(), &values[0], values + 3);
     }
 
+    template <typename S>
+    void fillStack(unsigned count, S&& element) {
+        Value value(element);
+        stack.insert(stack.end(), count, value);
+    }
+
     // Remove and return the value on the top of the stack.
     Value popStack() {
         assert(!stack.empty());
@@ -134,7 +140,7 @@ struct Interpreter
 
     Env* env() { return getFrame()->env(); }
     Env* lexicalEnv(unsigned index);
-    void setFrameEnv(Traced<Env*> env);
+    void setFrameEnv(Env* env);
 
     bool raiseAttrError(Traced<Value> value, Name ident);
     bool raiseNameError(Name ident);

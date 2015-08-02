@@ -193,8 +193,9 @@ void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos)
 #endif
 }
 
-void Interpreter::setFrameEnv(Traced<Env*> env)
+void Interpreter::setFrameEnv(Env* env)
 {
+    AutoAssertNoGC nogc;
     assert(!frames.empty());
     assert(!frames.back().env());
     frames.back().setEnv(env);

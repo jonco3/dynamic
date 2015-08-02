@@ -261,17 +261,16 @@
 /* static */ bool InstrInitStackLocals::execute(Traced<InstrInitStackLocals*> self,
                                                 Interpreter& interp)
 {
+    AutoAssertNoGC nogc;
     Frame* frame = interp.getFrame();
     assert(!frame->env());
 
     Object* obj = interp.popStack().asObject();
-    Stack<Env*> parentEnv(obj ? obj->as<Env>() : nullptr);
+    Env* parentEnv = obj ? obj->as<Env>() : nullptr;
     interp.setFrameEnv(parentEnv);
 
-    Stack<Block*> block(frame->block());
-    Stack<Layout*> layout(block->layout());
-    for (size_t i = block->argCount(); i < layout->slotCount(); i++)
-        interp.pushStack(UninitializedSlot);
+    Block* block = frame->block();
+    interp.fillStack(block->stackLocalCount(), UninitializedSlot);
     return true;
 }
 

@@ -666,6 +666,12 @@ struct RootVector : private vector<T>, protected RootBase
         return VectorBase::insert(pos, val);
     }
 
+    void insert(typename VectorBase::iterator pos, size_t count, const T& value)
+    {
+        assert(!hasUses());
+        VectorBase::insert(pos, count, value);
+    }
+
     template <typename I>
     typename VectorBase::iterator insert(typename VectorBase::iterator pos,
                                          I&& first, I&& last)

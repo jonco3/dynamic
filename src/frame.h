@@ -30,7 +30,10 @@ struct Frame
     Frame(); // so we can put these in a RootVector.
     Frame(InstrThunk* returnPoint, Traced<Block*> block, unsigned stackPos);
 
-    void setEnv(Traced<Env*> env);
+    void setEnv(Env* env) {
+        assert(!env_);
+        env_ = env;
+    }
 
     Block* block() const { return block_; }
     Env* env() const { return env_; }
