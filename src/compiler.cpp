@@ -49,7 +49,7 @@ struct ByteCompiler : public SyntaxVisitor
         assert(globals);
         topLevel = globals;
         layout = topLevel->layout();
-        build(*s);
+        build(*s, 0);
         if (!block->lastInstr().data->is<InstrReturn>())
             emit<InstrReturn>();
         log(block);
@@ -65,7 +65,7 @@ struct ByteCompiler : public SyntaxVisitor
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
-        build(s);
+        build(s, params.size());
         if (!block->lastInstr().data->is<InstrReturn>()) {
             emit<InstrPop>();
             emit<InstrConst>(None);
@@ -82,7 +82,7 @@ struct ByteCompiler : public SyntaxVisitor
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
-        build(s);
+        build(s, params.size());
         emit<InstrReturn>();
         log(block);
         return block;
@@ -95,7 +95,7 @@ struct ByteCompiler : public SyntaxVisitor
         layout = layout->addName(Name::__bases__);
         isClassBlock = true;
         useLexicalEnv = true;
-        build(s);
+        build(s, 1);
         emit<InstrPop>();
         emit<InstrMakeClassFromFrame>(id);
         emit<InstrReturn>();
@@ -113,7 +113,7 @@ struct ByteCompiler : public SyntaxVisitor
         isGenerator = true;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
-        build(s);
+        build(s, params.size());
         if (!block->lastInstr().data->is<InstrLeaveGenerator>()) {
             emit<InstrPop>();
             emit<InstrLeaveGenerator>();
@@ -193,7 +193,7 @@ struct ByteCompiler : public SyntaxVisitor
 #endif
     }
 
-    void build(const Syntax& s) {
+    void build(const Syntax& s, unsigned argCount) {
         assert(!block);
         assert(topLevel);
         assert(stackDepth == 0);
@@ -203,7 +203,8 @@ struct ByteCompiler : public SyntaxVisitor
         if (!parent)
             topLevel->extend(layout);
         layout = defs->layout();
-        block = gc.create<Block>(layout, useLexicalEnv);
+        assert(layout->slotCount() >= argCount);
+        block = gc.create<Block>(layout, argCount, useLexicalEnv);
         if (parent)
             emit<InstrCreateEnv>();
         if (isGenerator) {

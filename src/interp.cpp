@@ -44,7 +44,7 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 
     assert(stackPos() == 0);
     assert(frames.empty());
-    pushFrame(block, 0, 0);
+    pushFrame(block, 0);
 #ifdef DEBUG
     unsigned initialPos = stackPos();
 #endif
@@ -173,11 +173,10 @@ unsigned Interpreter::frameIndex()
     return frames.size() - 1;
 }
 
-void Interpreter::pushFrame(Traced<Block*> block, unsigned argCount,
-                            unsigned stackStartPos)
+void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos)
 {
     assert(stackPos() >= stackStartPos);
-    frames.emplace_back(instrp, block, stackStartPos, argCount);
+    frames.emplace_back(instrp, block, stackStartPos);
     instrp = block->startInstr();
 
 #ifdef LOG_EXECUTION
@@ -234,7 +233,7 @@ unsigned Interpreter::frameStackDepth()
 {
     assert(!frames.empty());
     Frame* frame = getFrame();
-    return stackPos() - frame->stackPos() - frame->argCount();
+    return stackPos() - frame->stackPos() - frame->block()->argCount();
 }
 #endif
 
@@ -273,19 +272,18 @@ GeneratorIter* Interpreter::getGeneratorIter()
 {
     // GeneratorIter object stored as first stack value after the arguments.
     Frame* frame = frame = getFrame();
-    size_t pos = frame->stackPos() + frame->argCount();
+    size_t pos = frame->stackPos() + frame->block()->argCount();
     Stack<Value> value(stack[pos]);
     return value.as<GeneratorIter>();
 }
 
 void Interpreter::resumeGenerator(Traced<Block*> block,
                                   Traced<Env*> env,
-                                  unsigned argCount,
                                   unsigned ipOffset,
                                   vector<Value>& savedStack)
 {
     popFrame();
-    pushFrame(block, argCount, stackPos());
+    pushFrame(block, stackPos());
     setFrameEnv(env);
     instrp += ipOffset;
     // todo: can copy this in one go
@@ -527,7 +525,7 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
     }
 
 #ifdef DEBUG
-    unsigned initialPos = stackPos() - getFrame()->argCount();
+    unsigned initialPos = stackPos() - getFrame()->block()->argCount();
 #endif
     bool ok = run(resultOut);
     assert(stackPos() == initialPos - 1);
@@ -627,7 +625,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Block*> block(function->block());
         argCount = mungeArguments(function, argCount);
         assert(argCount == function->argCount());
-        pushFrame(block, argCount, stackPos() - argCount);
+        pushFrame(block, stackPos() - argCount);
         Stack<Env*> parentEnv(function->env());
         pushStack(parentEnv);
         return CallStarted;

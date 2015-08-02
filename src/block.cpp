@@ -1,8 +1,8 @@
 #include "block.h"
 #include "instr.h"
 
-Block::Block(Traced<Layout*> layout, bool createEnv)
-  : layout_(layout), createEnv_(createEnv)
+Block::Block(Traced<Layout*> layout, unsigned argCount, bool createEnv)
+  : layout_(layout), argCount_(argCount), createEnv_(createEnv)
 {}
 
 unsigned Block::append(InstrFuncBase func, Traced<Instr*> data)

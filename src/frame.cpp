@@ -23,13 +23,11 @@ Frame::Frame()
     stackPos_(0)
 {}
 
-Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block,
-             unsigned stackPos, unsigned argCount)
+Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block, unsigned stackPos)
   : block_(block),
     env_(nullptr),
     returnPoint_(returnPoint),
-    stackPos_(stackPos),
-    argCount_(argCount)
+    stackPos_(stackPos)
 {}
 
 void Frame::setEnv(Traced<Env*> env)

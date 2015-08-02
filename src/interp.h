@@ -160,7 +160,6 @@ struct Interpreter
 
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
-                         unsigned argCount,
                          unsigned ipOffset,
                          vector<Value>& savedStack);
     unsigned suspendGenerator(vector<Value>& savedStackx);
@@ -199,8 +198,7 @@ struct Interpreter
     unsigned loopControlTarget_;
 
     unsigned frameIndex();
-    void pushFrame(Traced<Block*> block, unsigned argCount,
-                   unsigned stackStartPos);
+    void pushFrame(Traced<Block*> block, unsigned stackStartPos);
     unsigned currentOffset();
     TokenPos currentPos();
 

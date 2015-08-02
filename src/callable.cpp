@@ -45,7 +45,8 @@ FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
     takesRest_(takesRest),
     isGenerator_(isGenerator)
 {
-    assert(!takesRest || params_.size() > 0);
+    assert(!takesRest || paramCount() > 0);
+    assert(paramCount() == block->argCount());
 }
 
 Function::Function(Name name,

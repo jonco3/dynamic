@@ -236,9 +236,10 @@
 
     Object* obj = interp.popStack().asObject();
     Stack<Env*> parentEnv(obj ? obj->as<Env>() : nullptr);
-    Stack<Layout*> layout(frame->block()->layout());
+    Stack<Block*> block(frame->block());
+    Stack<Layout*> layout(block->layout());
     Stack<Env*> callEnv(gc.create<Env>(parentEnv, layout));
-    unsigned argCount = frame->argCount();
+    unsigned argCount = block->argCount();
     for (size_t i = 0; i < argCount; i++) {
         Root<Value> value(interp.peekStack(argCount - i - 1));
         callEnv->setSlot(i, value);
@@ -718,7 +719,8 @@ InstrStartGenerator::execute(Traced<InstrStartGenerator*> self,
     Frame* frame = interp.getFrame();
     Stack<Block*> block(frame->block());
     Stack<Env*> env(interp.env());
-    Stack<GeneratorIter*> gen(gc.create<GeneratorIter>(block, env, frame->argCount()));
+    Stack<GeneratorIter*> gen;
+    gen = gc.create<GeneratorIter>(block, env, block->argCount());
     Stack<Value> value(gen);
     interp.pushStack(value);
     gen->suspend(interp, value);

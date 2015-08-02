@@ -28,7 +28,7 @@ void GeneratorIter::init()
 
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName("self");
-    Stack<Block*> block(gc.create<Block>(layout, true));
+    Stack<Block*> block(gc.create<Block>(layout, 1, true));
     block->append<InstrCreateEnv>(); // todo: eventually we can remove this
     block->append<InstrResumeGenerator>(); // never returns
     static vector<Name> params = { "self" };
@@ -74,7 +74,7 @@ bool GeneratorIter::resume(Interpreter& interp)
       case Suspended: {
         Stack<Env*> env(env_); // todo: Heap<T>
         Stack<Block*> block(block_);
-        interp.resumeGenerator(block, env, argCount_, ipOffset_, savedStack_);
+        interp.resumeGenerator(block, env, ipOffset_, savedStack_);
         if (state_ == Suspended)
             interp.pushStack(None);
         state_ = Running;

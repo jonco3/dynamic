@@ -35,8 +35,9 @@ struct InstrThunk
 
 struct Block : public Cell
 {
-    Block(Traced<Layout*> layout, bool createEnv);
+    Block(Traced<Layout*> layout, unsigned argCount, bool createEnv);
 
+    unsigned argCount() const { return argCount_; }
     bool createEnv() const { return createEnv_; }
     InstrThunk* startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
@@ -73,6 +74,7 @@ struct Block : public Cell
 
   private:
     Layout* layout_;
+    unsigned argCount_;
     bool createEnv_;
     vector<InstrThunk> instrs_;
     string file_;
