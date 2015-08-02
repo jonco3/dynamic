@@ -326,6 +326,7 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
 
     define_comparisions;
     define_immutable_accessors;
+    define_mutable_accessors;
 
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
