@@ -521,7 +521,7 @@ struct InstrBinaryOp : public BinaryOpInstr
 struct InstrBinaryOpInt : public BinaryOpInstr
 {
     define_instr_members(BinaryOpInt);
-    InstrBinaryOpInt(BinaryOp op, Traced<Value> method)
+    InstrBinaryOpInt(BinaryOp op, Traced<Native*> method)
       : BinaryOpInstr(op), method_(method) {}
 
     virtual void traceChildren(Tracer& t) override {
@@ -529,7 +529,7 @@ struct InstrBinaryOpInt : public BinaryOpInstr
     }
 
   private:
-    Value method_;
+    Native* method_;
 };
 
 struct InstrAugAssignUpdate : public BinaryOpInstr

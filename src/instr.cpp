@@ -604,10 +604,14 @@ void BinaryOpInstr::print(ostream& s) const
     if (left.isInt() && right.isInt()) {
         Stack<Value> method(
             Integer::ObjectClass->getAttr(Name::binMethod[self->op()]));
+        assert(method.is<Native>());
+        Stack<Native*> native(method.as<Native>());
+        assert(native->minArgs() == 2);
+        assert(native->maxArgs() == 2);
         return interp.replaceInstrAndRestart(
             self,
             InstrBinaryOpInt::execute,
-            gc.create<InstrBinaryOpInt>(self->op(), method));
+            gc.create<InstrBinaryOpInt>(self->op(), native));
     } else {
         return interp.replaceInstrFuncAndRestart(self, fallback);
     }
@@ -689,10 +693,11 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     }
 
     Stack<Value> result;
-    Stack<Value> method(self->method_);
-    bool r = interp.call(method, 2, result);
+    TracedVector<Value> args(interp.stackSlice(2));
+    bool r = self->method_->call(args, result);
     assert(r);
     assert(result != Value(NotImplemented));
+    interp.popStack(2);
     interp.pushStack(result);
     return r;
 }
