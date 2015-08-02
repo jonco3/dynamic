@@ -23,16 +23,16 @@ inline void GCTraits<Value>::trace(Tracer& t, Value* v)
     }
 }
 
+#ifdef DEBUG
 void GCTraits<Value>::checkValid(Value value)
 {
-#ifdef DEBUG
     if (value.isObject()) {
         Object* o = value.asObject();
         if (o)
             o->checkValid();
     }
-#endif
 }
+#endif
 
 inline bool Value::isNaNOrInfinity(uint64_t bits)
 {

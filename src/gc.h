@@ -150,19 +150,25 @@ struct GCTraits<T*>
         return cell != nullptr;
     }
 
+#ifdef DEBUG
     static void checkValid(const T* cell) {
         static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
-#ifdef DEBUG
         if (cell)
             cell->checkValid();
-#endif
     }
+#endif
 
     static void trace(Tracer& t, T** cellp) {
         static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
         t.visit(reinterpret_cast<Cell**>(cellp));
     }
 };
+
+#ifdef DEBUG
+#define maybeCheckValid(T, C) GCTraits<T>::checkValid(C)
+#else
+#define maybeCheckValid(T, C)
+#endif
 
 template <typename T>
 void GC::trace(Tracer& t, T* ptr) {
@@ -308,7 +314,7 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
     }
 
     void init(T ptr) {
-        GCTraits<T>::checkValid(ptr);
+        maybeCheckValid(T, ptr);
         if (GCTraits<T>::isNonNull(ptr))
             insert();
         ptr_ = ptr;
@@ -369,7 +375,7 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     template <typename S>
     Root& operator=(const S& ptr) {
         ptr_ = ptr;
-        GCTraits<T>::checkValid(ptr_);
+        maybeCheckValid(T, ptr_);
         return *this;
     }
 
@@ -433,7 +439,7 @@ struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
     template <typename S>
     Stack& operator=(const S& ptr) {
         ptr_ = ptr;
-        GCTraits<T>::checkValid(ptr_);
+        maybeCheckValid(T, ptr_);
         return *this;
     }
 
@@ -627,21 +633,21 @@ struct RootVector : private vector<T>, protected RootBase
     }
 
     void push_back(T element) {
-        GCTraits<T>::checkValid(element);
+        maybeCheckValid(T, element);
         VectorBase::push_back(element);
     }
 
     T& operator[](size_t index) {
         assert(index < size());
         T& element = *(this->begin() + index);
-        GCTraits<T>::checkValid(element);
+        maybeCheckValid(T, element);
         return element;
     }
 
     const T& operator[](size_t index) const {
         assert(index < size());
         const T& element = *(this->begin() + index);
-        GCTraits<T>::checkValid(element);
+        maybeCheckValid(T, element);
         return element;
     }
 

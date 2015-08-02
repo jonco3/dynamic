@@ -52,7 +52,3 @@ void GCTraits<Frame>::trace(Tracer& t, Frame* frame)
 {
     frame->traceChildren(t);
 }
-
-void GCTraits<Frame>::checkValid(const Frame& frame)
-{
-}

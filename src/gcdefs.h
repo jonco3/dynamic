@@ -14,7 +14,9 @@ struct GCTraits<Value>
 {
     static inline Value nullValue();
     static inline bool isNonNull(Value value);
+#ifdef DEBUG
     static inline void checkValid(Value value);
+#endif
     static inline void trace(Tracer& t, Value* v);
 };
 
@@ -22,7 +24,9 @@ template <>
 struct GCTraits<Frame>
 {
     static void trace(Tracer& t, Frame* frame);
-    static void checkValid(const Frame& frame);
+#ifdef DEBUG
+    static void checkValid(const Frame& frame) {}
+#endif
 };
 
 template <typename W>
