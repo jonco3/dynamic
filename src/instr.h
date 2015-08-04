@@ -67,9 +67,25 @@ using namespace std;
     instr(Raise)                                                             \
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
-    instr(BinaryOpInt)                                                       \
+    instr(BinaryOpInt_Plus)                                                  \
+    instr(BinaryOpInt_Minus)                                                 \
+    instr(BinaryOpInt_Multiply)                                              \
+    instr(BinaryOpInt_TrueDiv)                                               \
+    instr(BinaryOpInt_FloorDiv)                                              \
+    instr(BinaryOpInt_Modulo)                                                \
+    instr(BinaryOpInt_Power)                                                 \
+    instr(BinaryOpInt_Or)                                                    \
+    instr(BinaryOpInt_Xor)                                                   \
+    instr(BinaryOpInt_And)                                                   \
+    instr(BinaryOpInt_LeftShift)                                             \
+    instr(BinaryOpInt_RightShift)                                            \
     instr(CompareOp)                                                         \
-    instr(CompareOpInt)                                                      \
+    instr(CompareOpInt_LT)                                                   \
+    instr(CompareOpInt_LE)                                                   \
+    instr(CompareOpInt_GT)                                                   \
+    instr(CompareOpInt_GE)                                                   \
+    instr(CompareOpInt_EQ)                                                   \
+    instr(CompareOpInt_NE)                                                   \
     instr(AugAssignUpdate)                                                   \
     instr(StartGenerator)                                                    \
     instr(ResumeGenerator)                                                   \
@@ -117,8 +133,8 @@ struct Instr : public Cell
 };
 
 #define instr_type(it)                                                        \
-    virtual InstrType type() const { return Type; }                           \
-    static const InstrType Type = Instr_##it
+    static const InstrType Type = it;                                         \
+    virtual InstrType type() const { return Type; }
 
 #define instr_name(nameStr)                                                   \
     virtual string name() const { return nameStr; }
@@ -127,7 +143,7 @@ struct Instr : public Cell
     static bool execute(Traced<Instr##it*> self, Interpreter& interp)
 
 #define define_instr_members(it)                                              \
-    instr_type(it);                                                           \
+    instr_type(Instr_##it);                                                   \
     instr_name(#it);                                                          \
     instr_execute(it)
 
@@ -525,7 +541,9 @@ struct InstrBinaryOp : public BinaryOpInstr
 template <BinaryOp Op>
 struct InstrBinaryOpInt : public BinaryOpInstr
 {
-    define_instr_members(BinaryOpInt);
+    instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Plus + Op));
+    instr_name("BinaryOpInt");
+    instr_execute(BinaryOpInt);
     InstrBinaryOpInt() : BinaryOpInstr(Op) {}
 };
 
@@ -553,7 +571,9 @@ struct InstrCompareOp : public CompareOpInstr
 template <CompareOp Op>
 struct InstrCompareOpInt : public CompareOpInstr
 {
-    define_instr_members(CompareOpInt);
+    instr_type(static_cast<InstrType>(Instr_CompareOpInt_EQ + Op));
+    instr_name("CompareOpInt");
+    instr_execute(CompareOpInt);
     InstrCompareOpInt() : CompareOpInstr(Op) {}
 };
 
