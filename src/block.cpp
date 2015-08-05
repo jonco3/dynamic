@@ -10,12 +10,11 @@ unsigned Block::stackLocalCount() const
     return createEnv() ? 0 : layout()->slotCount() - argCount();
 }
 
-unsigned Block::append(InstrFuncBase func, Traced<Instr*> data)
+unsigned Block::append(Traced<Instr*> data)
 {
-    assert(func);
     assert(data);
     unsigned index = nextIndex();
-    instrs_.push_back(InstrThunk {func, data.get()});
+    instrs_.push_back(InstrThunk {data->type(), data.get()});
     return index;
 }
 

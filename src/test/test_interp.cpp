@@ -67,33 +67,6 @@ void testReplacement(const string& input,
     testEqual(instrp->data->type(), replacement);
 }
 
-template <typename T1, typename T2>
-void testReplacement(const string& input,
-                     const string& expected,
-                     InstrType type,
-                     InstrFunc<T1> initial,
-                     InstrFunc<T2> replacement)
-{
-    Stack<Block*> block;
-    CompileModule(input, None, block);
-
-    InstrThunk* instrp = block->findInstr(Instr_Lambda);
-    assert(instrp);
-    InstrLambda* lambda = instrp->data->as<InstrLambda>();
-    instrp = lambda->block()->findInstr(type);
-    assert(instrp);
-    testEqual(instrp->func, reinterpret_cast<InstrFuncBase>(initial));
-
-    Stack<Value> result;
-    bool ok = interp.exec(block, result);
-    if (!ok)
-        cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
-    testTrue(ok);
-    testEqual(repr(result.get()), expected);
-
-    testEqual(instrp->func, reinterpret_cast<InstrFuncBase>(replacement));
-}
-
 void testReplacements(const string& defs,
                       const string& call1, const string& result1,
                       const string& call2, const string& result2,
@@ -110,26 +83,6 @@ void testReplacements(const string& defs,
                     result2, initial, afterBoth);
     testReplacement(defs + "\n" + call2 + "\n" + call1,
                     result1, initial, afterBoth);
-}
-
-template <typename T1, typename T2, typename T3, typename T4>
-void testReplacements(const string& defs,
-                      const string& call1, const string& result1,
-                      const string& call2, const string& result2,
-                      InstrType type,
-                      InstrFunc<T1> initial,
-                      InstrFunc<T2> afterCall1,
-                      InstrFunc<T3> afterCall2,
-                      InstrFunc<T4> afterBoth)
-{
-    testReplacement(defs + "\n" + call1,
-                    result1, type, initial, afterCall1);
-    testReplacement(defs + "\n" + call2,
-                    result2, type, initial, afterCall2);
-    testReplacement(defs + "\n" + call1 + "\n" + call2,
-                    result2, type, initial, afterBoth);
-    testReplacement(defs + "\n" + call2 + "\n" + call1,
-                    result1, type, initial, afterBoth);
 }
 
 testcase(interp)
@@ -293,20 +246,18 @@ testcase(interp)
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_GetMethod,
-                     InstrGetMethod::execute,
-                     InstrGetMethodInt::execute,
-                     InstrGetMethodFallback::execute,
-                     InstrGetMethodFallback::execute);
+                     Instr_GetMethodInt,
+                     Instr_GetMethodFallback,
+                     Instr_GetMethodFallback);
 
     testReplacements("def foo(x, y):\n"
                      "  return x + y",
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_BinaryOp,
-                     InstrBinaryOp::execute,
-                     InstrBinaryOpInt<BinaryPlus>::execute,
-                     InstrBinaryOpFallback::execute,
-                     InstrBinaryOpFallback::execute);
+                     Instr_BinaryOpInt_Plus,
+                     Instr_BinaryOpFallback,
+                     Instr_BinaryOpFallback);
 
     testExpectingException = true;
     testInterp("x = None\n"

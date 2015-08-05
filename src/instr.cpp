@@ -3,14 +3,16 @@
 #include "builtin.h"
 #include "generator.h"
 
-/* static */ bool InstrConst::execute(Traced<InstrConst*> self, Interpreter& interp)
+/* static */ inline bool
+InstrConst::execute(Traced<InstrConst*> self, Interpreter& interp)
 {
     interp.pushStack(self->value);
     return true;
 }
 
-/* static */ bool InstrGetStackLocal::execute(Traced<InstrGetStackLocal*> self,
-                                              Interpreter& interp)
+/* static */ inline bool
+InstrGetStackLocal::execute(Traced<InstrGetStackLocal*> self,
+                            Interpreter& interp)
 {
     // Name was present when compiled, but may have been deleted.
     {
@@ -25,8 +27,9 @@
     return interp.raiseNameError(self->ident);
 }
 
-/* static */ bool InstrSetStackLocal::execute(Traced<InstrSetStackLocal*> self,
-                                              Interpreter& interp)
+/* static */ inline bool
+InstrSetStackLocal::execute(Traced<InstrSetStackLocal*> self,
+                            Interpreter& interp)
 {
     AutoAssertNoGC nogc;
     Value value = interp.peekStack(0);
@@ -35,8 +38,9 @@
     return true;
 }
 
-/* static */ bool InstrDelStackLocal::execute(Traced<InstrDelStackLocal*> self,
-                                              Interpreter& interp)
+/* static */ inline bool
+InstrDelStackLocal::execute(Traced<InstrDelStackLocal*> self,
+                            Interpreter& interp)
 {
     // Delete by setting slot value to UninitializedSlot.
     {
@@ -50,8 +54,9 @@
     return interp.raiseNameError(self->ident);
 }
 
-/* static */ bool InstrGetLexical::execute(Traced<InstrGetLexical*> self,
-                                           Interpreter& interp)
+/* static */ inline bool
+InstrGetLexical::execute(Traced<InstrGetLexical*> self,
+                         Interpreter& interp)
 {
     Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
     Stack<Value> value;
@@ -62,8 +67,8 @@
     return true;
 }
 
-/* static */ bool InstrSetLexical::execute(Traced<InstrSetLexical*> self,
-                                           Interpreter& interp)
+/* static */ inline bool
+InstrSetLexical::execute(Traced<InstrSetLexical*> self, Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
     Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
@@ -71,8 +76,8 @@
     return true;
 }
 
-/* static */ bool InstrDelLexical::execute(Traced<InstrDelLexical*> self,
-                                           Interpreter& interp)
+/* static */ inline bool
+InstrDelLexical::execute(Traced<InstrDelLexical*> self, Interpreter& interp)
 {
     Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
     if (!env->maybeDelOwnAttr(self->ident))
@@ -80,8 +85,8 @@
     return true;
 }
 
-/* static */ bool InstrGetGlobal::execute(Traced<InstrGetGlobal*> self,
-                                          Interpreter& interp)
+/* static */ inline bool
+InstrGetGlobal::execute(Traced<InstrGetGlobal*> self, Interpreter& interp)
 {
     Stack<Value> value;
     if (self->global->maybeGetAttr(self->ident, value)) {
@@ -102,24 +107,24 @@
     return interp.raiseNameError(self->ident);
 }
 
-/* static */ bool InstrSetGlobal::execute(Traced<InstrSetGlobal*> self,
-                                          Interpreter& interp)
+/* static */ inline bool
+InstrSetGlobal::execute(Traced<InstrSetGlobal*> self, Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
     self->global->setAttr(self->ident, value);
     return true;
 }
 
-/* static */ bool InstrDelGlobal::execute(Traced<InstrDelGlobal*> self,
-                                          Interpreter& interp)
+/* static */ inline bool
+InstrDelGlobal::execute(Traced<InstrDelGlobal*> self, Interpreter& interp)
 {
     if (!self->global->maybeDelOwnAttr(self->ident))
         return interp.raiseNameError(self->ident);
     return true;
 }
 
-/* static */ bool InstrGetAttr::execute(Traced<InstrGetAttr*> self,
-                                        Interpreter& interp)
+/* static */ inline bool
+InstrGetAttr::execute(Traced<InstrGetAttr*> self, Interpreter& interp)
 {
     Stack<Value> value(interp.popStack());
     Stack<Value> result;
@@ -128,8 +133,8 @@
     return ok;
 }
 
-/* static */ bool InstrSetAttr::execute(Traced<InstrSetAttr*> self,
-                                        Interpreter& interp)
+/* static */ inline bool
+InstrSetAttr::execute(Traced<InstrSetAttr*> self, Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(1));
     Stack<Object*> obj(interp.popStack().toObject());
@@ -142,8 +147,8 @@
     return true;
 }
 
-/* static */ bool InstrDelAttr::execute(Traced<InstrDelAttr*> self,
-                                        Interpreter& interp)
+/* static */ inline bool
+InstrDelAttr::execute(Traced<InstrDelAttr*> self, Interpreter& interp)
 {
     Stack<Object*> obj(interp.popStack().toObject());
     Stack<Value> result;
@@ -155,8 +160,8 @@
     return true;
 }
 
-/* static */ bool InstrCall::execute(Traced<InstrCall*> self,
-                                     Interpreter& interp)
+/* static */ inline bool
+InstrCall::execute(Traced<InstrCall*> self, Interpreter& interp)
 {
     Stack<Value> target(interp.peekStack(self->count_));
     interp.removeStackEntries(self->count_, 1);
@@ -188,8 +193,8 @@ static bool getMethod(Name ident, Interpreter& interp)
     return true;
 }
 
-/* static */ bool InstrGetMethod::execute(Traced<InstrGetMethod*> self,
-                                          Interpreter& interp)
+/* static */ inline bool
+InstrGetMethod::execute(Traced<InstrGetMethod*> self, Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
     if (!getMethod(self->ident, interp))
@@ -198,11 +203,9 @@ static bool getMethod(Name ident, Interpreter& interp)
     if (value.isInt()) {
         Stack<Value> result(interp.peekStack(2));
         interp.replaceInstr(self,
-                            InstrGetMethodInt::execute,
                             gc.create<InstrGetMethodInt>(self->ident, result));
     } else {
         interp.replaceInstr(self,
-                            InstrGetMethodFallback::execute,
                             gc.create<InstrGetMethodFallback>(self->ident));
     }
 
@@ -216,8 +219,8 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return getMethod(self->ident, interp);
 }
 
-/* static */ bool InstrGetMethodInt::execute(Traced<InstrGetMethodInt*> self,
-                                             Interpreter& interp)
+/* static */ inline bool
+InstrGetMethodInt::execute(Traced<InstrGetMethodInt*> self, Interpreter& interp)
 {
     {
         AutoAssertNoGC nogc;
@@ -231,12 +234,11 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
 
     return interp.replaceInstrAndRestart(
         self,
-        InstrGetMethodFallback::execute,
         gc.create<InstrGetMethodFallback>(self->ident));
 }
 
-/* static */ bool InstrCallMethod::execute(Traced<InstrCallMethod*> self,
-                                           Interpreter& interp)
+/* static */ inline bool
+InstrCallMethod::execute(Traced<InstrCallMethod*> self, Interpreter& interp)
 {
     bool addSelf = interp.peekStack(self->count_ + 1).as<Boolean>()->value();
     Stack<Value> target(interp.peekStack(self->count_ + 2));
@@ -245,8 +247,8 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return interp.startCall(target, argCount);
 }
 
-/* static */ bool InstrCreateEnv::execute(Traced<InstrCreateEnv*> self,
-                                          Interpreter& interp)
+/* static */ inline bool
+InstrCreateEnv::execute(Traced<InstrCreateEnv*> self, Interpreter& interp)
 {
     Frame* frame = interp.getFrame();
     assert(!frame->env());
@@ -267,8 +269,9 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrInitStackLocals::execute(Traced<InstrInitStackLocals*> self,
-                                                Interpreter& interp)
+/* static */ inline bool
+InstrInitStackLocals::execute(Traced<InstrInitStackLocals*> self,
+                              Interpreter& interp)
 {
     AutoAssertNoGC nogc;
     Frame* frame = interp.getFrame();
@@ -283,15 +286,15 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrReturn::execute(Traced<InstrReturn*> self,
-                                       Interpreter& interp)
+/* static */ inline bool
+InstrReturn::execute(Traced<InstrReturn*> self, Interpreter& interp)
 {
     Value value = interp.popStack();
     interp.returnFromFrame(value);
     return true;
 }
 
-/* static */ bool InstrIn::execute(Traced<InstrIn*> self, Interpreter& interp)
+/* static */ inline bool InstrIn::execute(Traced<InstrIn*> self, Interpreter& interp)
 {
     // todo: implement this
     // https://docs.python.org/2/reference/expressions.html#membership-test-details
@@ -308,7 +311,8 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return interp.startCall(contains, 2);
 }
 
-/* static */ bool InstrIs::execute(Traced<InstrIs*> self, Interpreter& interp)
+/* static */ inline bool
+InstrIs::execute(Traced<InstrIs*> self, Interpreter& interp)
 {
     Value b = interp.popStack();
     Value a = interp.popStack();
@@ -317,7 +321,8 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrNot::execute(Traced<InstrNot*> self, Interpreter& interp)
+/* static */ inline bool
+InstrNot::execute(Traced<InstrNot*> self, Interpreter& interp)
 {
     // the following values are interpreted as false: False, None, numeric zero
     // of all types, and empty strings and containers (including strings,
@@ -328,15 +333,16 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrBranchAlways::execute(Traced<InstrBranchAlways*> self,
-                                             Interpreter& interp) {
+/* static */ inline bool
+InstrBranchAlways::execute(Traced<InstrBranchAlways*> self, Interpreter& interp)
+{
     assert(self->offset_);
     interp.branch(self->offset_);
     return true;
 }
 
-/* static */ bool InstrBranchIfTrue::execute(Traced<InstrBranchIfTrue*> self,
-                                             Interpreter& interp)
+/* static */ inline bool
+InstrBranchIfTrue::execute(Traced<InstrBranchIfTrue*> self, Interpreter& interp)
 {
     assert(self->offset_);
     Object *x = interp.popStack().toObject();
@@ -345,8 +351,9 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrBranchIfFalse::execute(Traced<InstrBranchIfFalse*> self,
-                                              Interpreter& interp)
+/* static */ inline bool
+InstrBranchIfFalse::execute(Traced<InstrBranchIfFalse*> self,
+                            Interpreter& interp)
 {
     assert(self->offset_);
     Object *x = interp.popStack().toObject();
@@ -355,7 +362,8 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrOr::execute(Traced<InstrOr*> self, Interpreter& interp)
+/* static */ inline bool
+InstrOr::execute(Traced<InstrOr*> self, Interpreter& interp)
 {
     // The expression |x or y| first evaluates x; if x is true, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
@@ -370,7 +378,8 @@ InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
     return true;
 }
 
-/* static */ bool InstrAnd::execute(Traced<InstrAnd*> self, Interpreter& interp)
+/* static */ inline bool
+InstrAnd::execute(Traced<InstrAnd*> self, Interpreter& interp)
 {
     // The expression |x and y| first evaluates x; if x is false, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
@@ -393,8 +402,8 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
                                   isGenerator))
 {}
 
-/* static */ bool InstrLambda::execute(Traced<InstrLambda*> self,
-                                       Interpreter& interp)
+/* static */ inline bool
+InstrLambda::execute(Traced<InstrLambda*> self, Interpreter& interp)
 {
     Stack<FunctionInfo*> info(self->info_);
     Stack<Block*> block(self->block());
@@ -408,27 +417,29 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
     return true;
 }
 
-/* static */ bool InstrDup::execute(Traced<InstrDup*> self, Interpreter& interp)
+/* static */ inline bool
+InstrDup::execute(Traced<InstrDup*> self, Interpreter& interp)
 {
     interp.pushStack(interp.peekStack(self->index_));
     return true;
 }
 
-/* static */ bool InstrPop::execute(Traced<InstrPop*> self, Interpreter& interp)
+/* static */ inline bool
+InstrPop::execute(Traced<InstrPop*> self, Interpreter& interp)
 {
     interp.popStack();
     return true;
 }
 
-/* static */ bool InstrSwap::execute(Traced<InstrSwap*> self,
-                                     Interpreter& interp)
+/* static */ inline bool
+InstrSwap::execute(Traced<InstrSwap*> self, Interpreter& interp)
 {
     interp.swapStack();
     return true;
 }
 
-/* static */ bool InstrTuple::execute(Traced<InstrTuple*> self,
-                                      Interpreter& interp)
+/* static */ inline bool
+InstrTuple::execute(Traced<InstrTuple*> self, Interpreter& interp)
 {
     Tuple* tuple = Tuple::get(interp.stackSlice(self->size));
     interp.popStack(self->size);
@@ -436,8 +447,8 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
     return true;
 }
 
-/* static */ bool InstrList::execute(Traced<InstrList*> self,
-                                     Interpreter& interp)
+/* static */ inline bool
+InstrList::execute(Traced<InstrList*> self, Interpreter& interp)
 {
     List* list = gc.create<List>(interp.stackSlice(self->size));
     interp.popStack(self->size);
@@ -445,8 +456,8 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
     return true;
 }
 
-/* static */ bool InstrDict::execute(Traced<InstrDict*> self,
-                                     Interpreter& interp)
+/* static */ inline bool
+InstrDict::execute(Traced<InstrDict*> self, Interpreter& interp)
 {
     Dict* dict = gc.create<Dict>(interp.stackSlice(self->size * 2));
     interp.popStack(self->size * 2);
@@ -454,8 +465,8 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
     return true;
 }
 
-/* static */ bool InstrSlice::execute(Traced<InstrSlice*> self,
-                                      Interpreter& interp)
+/* static */ inline bool
+InstrSlice::execute(Traced<InstrSlice*> self, Interpreter& interp)
 {
     Slice* slice = gc.create<Slice>(interp.stackSlice(3));
     interp.popStack(3);
@@ -463,7 +474,7 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrAssertionFailed::execute(Traced<InstrAssertionFailed*> self,
                               Interpreter& interp)
 {
@@ -474,7 +485,7 @@ InstrAssertionFailed::execute(Traced<InstrAssertionFailed*> self,
     return false;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
                                  Interpreter& interp)
 {
@@ -521,8 +532,8 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     return true;
 }
 
-/* static */ bool InstrDestructure::execute(Traced<InstrDestructure*> self,
-                                            Interpreter& interp)
+/* static */ inline bool
+InstrDestructure::execute(Traced<InstrDestructure*> self, Interpreter& interp)
 {
     Stack<Value> seq(interp.popStack());
     Stack<Value> lenFunc;
@@ -570,15 +581,15 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     return true;
 }
 
-/* static */ bool InstrRaise::execute(Traced<InstrRaise*> self,
-                                      Interpreter& interp)
+/* static */ inline bool
+InstrRaise::execute(Traced<InstrRaise*> self, Interpreter& interp)
 {
     // todo: exceptions must be old-style classes or derived from BaseException
     return false;
 }
 
-/* static */ bool InstrIteratorNext::execute(Traced<InstrIteratorNext*> self,
-                                             Interpreter& interp)
+/* static */ inline bool
+InstrIteratorNext::execute(Traced<InstrIteratorNext*> self, Interpreter& interp)
 {
     // The stack is already set up with next method and target on top
     Stack<Value> target(interp.peekStack(2));
@@ -603,8 +614,8 @@ void BinaryOpInstr::print(ostream& s) const
     s << name() << " " << BinaryOpNames[op()];
 }
 
-/* static */ bool InstrBinaryOp::execute(Traced<InstrBinaryOp*> self,
-                                         Interpreter& interp)
+/* static */ inline bool
+InstrBinaryOp::execute(Traced<InstrBinaryOp*> self, Interpreter& interp)
 {
     Value right = interp.peekStack(0);
     Value left = interp.peekStack(1);
@@ -614,7 +625,6 @@ void BinaryOpInstr::print(ostream& s) const
     } else {
         return interp.replaceInstrAndRestart(
             self,
-            InstrBinaryOpFallback::execute,
             gc.create<InstrBinaryOpFallback>(self->op()));
     }
 }
@@ -629,7 +639,6 @@ InstrBinaryOp::replaceWithIntInstr(Traced<InstrBinaryOp*> self,
       case Binary##name:                                                      \
         return interp.replaceInstrAndRestart(                                 \
             self,                                                             \
-            InstrBinaryOpInt<Binary##name>::execute,                          \
             gc.create<InstrBinaryOpInt<Binary##name>>());
 
     for_each_binary_op(create_instr)
@@ -640,7 +649,7 @@ InstrBinaryOp::replaceWithIntInstr(Traced<InstrBinaryOp*> self,
     }
 }
 
-static bool maybeCallBinaryOp(Interpreter& interp,
+static inline bool maybeCallBinaryOp(Interpreter& interp,
                               Traced<Value> obj,
                               Name name,
                               Traced<Value> left,
@@ -668,7 +677,7 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrBinaryOpFallback::execute(Traced<InstrBinaryOpFallback*> self,
                                Interpreter& interp)
 {
@@ -707,13 +716,13 @@ InstrBinaryOpFallback::execute(Traced<InstrBinaryOpFallback*> self,
 }
 
 template <BinaryOp Op>
-/* static */ bool InstrBinaryOpInt<Op>::execute(Traced<InstrBinaryOpInt*> self,
-                                                Interpreter& interp)
+/* static */ inline bool
+InstrBinaryOpInt<Op>::execute(Traced<InstrBinaryOpInt*> self,
+                              Interpreter& interp)
 {
     if (!interp.peekStack(0).isInt32() || !interp.peekStack(1).isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
-            InstrBinaryOpFallback::execute,
             gc.create<InstrBinaryOpFallback>(self->op()));
     }
 
@@ -728,8 +737,8 @@ void CompareOpInstr::print(ostream& s) const
     s << name() << " " << CompareOpNames[op()];
 }
 
-/* static */ bool InstrCompareOp::execute(Traced<InstrCompareOp*> self,
-                                         Interpreter& interp)
+/* static */ inline bool
+InstrCompareOp::execute(Traced<InstrCompareOp*> self, Interpreter& interp)
 {
     Value right = interp.peekStack(0);
     Value left = interp.peekStack(1);
@@ -739,14 +748,13 @@ void CompareOpInstr::print(ostream& s) const
     } else {
         return interp.replaceInstrAndRestart(
             self,
-            InstrCompareOpFallback::execute,
             gc.create<InstrCompareOpFallback>(self->op()));
     }
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrCompareOp::replaceWithIntInstr(Traced<InstrCompareOp*> self,
-                                   Interpreter& interp)
+                                    Interpreter& interp)
 {
     // todo: can use static table
     switch (self->op()) {
@@ -754,7 +762,6 @@ InstrCompareOp::replaceWithIntInstr(Traced<InstrCompareOp*> self,
       case Compare##name:                                                     \
         return interp.replaceInstrAndRestart(                                 \
             self,                                                             \
-            InstrCompareOpInt<Compare##name>::execute,                        \
             gc.create<InstrCompareOpInt<Compare##name>>());
 
     for_each_compare_op(create_instr)
@@ -765,7 +772,7 @@ InstrCompareOp::replaceWithIntInstr(Traced<InstrCompareOp*> self,
     }
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrCompareOpFallback::execute(Traced<InstrCompareOpFallback*> self,
                                 Interpreter& interp)
 {
@@ -813,14 +820,13 @@ InstrCompareOpFallback::execute(Traced<InstrCompareOpFallback*> self,
     return true;
 }
 
-template <CompareOp Op> /* static */ bool
+template <CompareOp Op> /* static */ inline bool
 InstrCompareOpInt<Op>::execute(Traced<InstrCompareOpInt*> self,
                                Interpreter& interp)
 {
     if (!interp.peekStack(0).isInt32() || !interp.peekStack(1).isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
-            InstrCompareOpFallback::execute,
             gc.create<InstrCompareOpFallback>(self->op()));
     }
 
@@ -830,7 +836,7 @@ InstrCompareOpInt<Op>::execute(Traced<InstrCompareOpInt*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
                               Interpreter& interp)
 {
@@ -863,7 +869,7 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
     }
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrStartGenerator::execute(Traced<InstrStartGenerator*> self,
                              Interpreter& interp)
 {
@@ -878,7 +884,7 @@ InstrStartGenerator::execute(Traced<InstrStartGenerator*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrResumeGenerator::execute(Traced<InstrResumeGenerator*> self,
                               Interpreter& interp)
 {
@@ -888,14 +894,15 @@ InstrResumeGenerator::execute(Traced<InstrResumeGenerator*> self,
     return gen->resume(interp);
 }
 
-/* static */ bool InstrLeaveGenerator::execute(Traced<InstrLeaveGenerator*> self,
-                                               Interpreter& interp)
+/* static */ inline bool
+InstrLeaveGenerator::execute(Traced<InstrLeaveGenerator*> self,
+                             Interpreter& interp)
 {
     Stack<GeneratorIter*> gen(interp.getGeneratorIter());
     return gen->leave(interp);
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrSuspendGenerator::execute(Traced<InstrSuspendGenerator*> self,
                                Interpreter& interp)
 {
@@ -905,7 +912,7 @@ InstrSuspendGenerator::execute(Traced<InstrSuspendGenerator*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrEnterCatchRegion::execute(Traced<InstrEnterCatchRegion*> self,
                                Interpreter& interp)
 {
@@ -913,7 +920,7 @@ InstrEnterCatchRegion::execute(Traced<InstrEnterCatchRegion*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrLeaveCatchRegion::execute(Traced<InstrLeaveCatchRegion*> self,
                                Interpreter& interp)
 {
@@ -921,7 +928,7 @@ InstrLeaveCatchRegion::execute(Traced<InstrLeaveCatchRegion*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrMatchCurrentException::execute(Traced<InstrMatchCurrentException*> self,
                                     Interpreter& interp)
 {
@@ -936,7 +943,7 @@ InstrMatchCurrentException::execute(Traced<InstrMatchCurrentException*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrHandleCurrentException::execute(Traced<InstrHandleCurrentException*> self,
                                      Interpreter& interp)
 {
@@ -944,7 +951,7 @@ InstrHandleCurrentException::execute(Traced<InstrHandleCurrentException*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrEnterFinallyRegion::execute(Traced<InstrEnterFinallyRegion*> self,
                                  Interpreter& interp)
 {
@@ -952,7 +959,7 @@ InstrEnterFinallyRegion::execute(Traced<InstrEnterFinallyRegion*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrLeaveFinallyRegion::execute(Traced<InstrLeaveFinallyRegion*> self,
                                  Interpreter& interp)
 {
@@ -960,14 +967,14 @@ InstrLeaveFinallyRegion::execute(Traced<InstrLeaveFinallyRegion*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrFinishExceptionHandler::execute(Traced<InstrFinishExceptionHandler*> self,
                                      Interpreter& interp)
 {
     return interp.maybeContinueHandlingException();
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrLoopControlJump::execute(Traced<InstrLoopControlJump*> self,
                               Interpreter& interp)
 {
@@ -975,7 +982,7 @@ InstrLoopControlJump::execute(Traced<InstrLoopControlJump*> self,
     return true;
 }
 
-/* static */ bool
+/* static */ inline bool
 InstrAssertStackDepth::execute(Traced<InstrAssertStackDepth*> self,
                                Interpreter& interp)
 {
@@ -989,5 +996,57 @@ InstrAssertStackDepth::execute(Traced<InstrAssertStackDepth*> self,
         assert(depth == self->expected_);
     }
 #endif
+    return true;
+}
+
+#define typedef_binary_op_int(name, token, method, rmethod, imethod)          \
+    typedef InstrBinaryOpInt<Binary##name> InstrBinaryOpInt_##name;
+    for_each_binary_op(typedef_binary_op_int)
+#undef typedef_binary_op_int
+
+#define typedef_compare_op_int(name, token, method, rmethod)                  \
+    typedef InstrCompareOpInt<Compare##name> InstrCompareOpInt_##name;
+    for_each_compare_op(typedef_compare_op_int)
+#undef typedef_compare_op_int
+
+bool Interpreter::run(MutableTraced<Value> resultOut)
+{
+    static const void* dispatchTable[] =
+    {
+#define dispatch_table_entry(it)                                              \
+        &&instr_##it,
+    for_each_instr(dispatch_table_entry)
+#undef dispatch_table_entry
+    };
+    static_assert(sizeof(dispatchTable) / sizeof(void*) == InstrTypeCount,
+        "Dispatch table is not correct size");
+
+    InstrThunk* thunk;
+
+#define dispatch()                                                            \
+    assert(getFrame()->block()->contains(instrp));                            \
+    thunk = instrp++;                                                         \
+    logInstr(thunk->data);                                                    \
+    assert(thunk->type < InstrTypeCount);                                     \
+    goto *dispatchTable[thunk->type]
+
+    dispatch();
+
+#define handle_instr(it)                                                      \
+    instr_##it: {                                                             \
+        Instr##it** ip = reinterpret_cast<Instr##it**>(&thunk->data);         \
+        bool ok = Instr##it::execute(                                         \
+            Traced<Instr##it*>::fromTracedLocation(ip), interp);              \
+        if (!ok && !handleException(resultOut))                               \
+            return false;                                                     \
+        if (!instrp)                                                          \
+            goto done;                                                        \
+        dispatch();                                                           \
+    }
+    for_each_instr(handle_instr)
+#undef handle_instr
+
+  done:
+    resultOut = popStack();
     return true;
 }

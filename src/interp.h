@@ -164,25 +164,17 @@ struct Interpreter
     void logStackPush(const Value* first, const Value* last);
     void logStackPop(size_t count);
     void logStackSwap();
+    void logInstr(Instr* instr);
 #else
     void logStackPush(const Value& v) {}
     void logStackPop(size_t count) {}
     void logStackPush(const Value* first, const Value* last) {}
     void logStackSwap() {}
+    void logInstr(Instr* instr) {}
 #endif
 
-    template <typename T>
-    void replaceInstr(Instr* current, InstrFunc<T> newFunc, T* newData) {
-        replaceInstr(current, reinterpret_cast<InstrFuncBase>(newFunc), newData);
-    }
-
-    template <typename T>
-    bool replaceInstrAndRestart(Instr* current, InstrFunc<T> newFunc, T* newData)
-    {
-        return replaceInstrAndRestart(current,
-                                      reinterpret_cast<InstrFuncBase>(newFunc),
-                                      newData);
-    }
+    void replaceInstr(Instr* current, Instr* newData);
+    bool replaceInstrAndRestart(Instr* current, Instr* newData);
 
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
@@ -201,7 +193,6 @@ struct Interpreter
 
     void pushExceptionHandler(ExceptionHandler::Type type, unsigned offset);
     void popExceptionHandler(ExceptionHandler::Type type);
-    bool startExceptionHandler(Traced<Exception*> exception);
     bool isHandlingException() const;
     bool isHandlingDeferredReturn() const;
     bool isHandlingLoopControl() const;
@@ -233,7 +224,8 @@ struct Interpreter
     TokenPos currentPos();
 
     bool run(MutableTraced<Value> resultOut);
-
+    bool handleException(MutableTraced<Value> resultOut);
+    bool startExceptionHandler(Traced<Exception*> exception);
     bool startNextFinallySuite(JumpKind jumpKind);
 
     enum CallStatus {
@@ -252,10 +244,6 @@ struct Interpreter
                          unsigned argCount,
                          MutableTraced<Value> resultOut);
     CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
-
-    void replaceInstr(Instr* current, InstrFuncBase newFunc, Instr* newData);
-    bool replaceInstrAndRestart(Instr* current,
-                                InstrFuncBase newFunc, Instr* newData);
 };
 
 extern Interpreter interp;

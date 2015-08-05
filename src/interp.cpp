@@ -135,47 +135,15 @@ void Interpreter::logStackSwap()
         cout << "swap" << endl;
     }
 }
-#endif
 
-bool Interpreter::run(MutableTraced<Value> resultOut)
+void Interpreter::logInstr(Instr* instr)
 {
-    Stack<Instr*> instr;
-    InstrFuncBase func;
-    while (instrp) {
-        assert(getFrame()->block()->contains(instrp));
-        func = instrp->func;
-        instr = instrp->data;
-        instrp++;
-#ifdef LOG_EXECUTION
-        if (logExecution) {
-            logStart();
-            cout << *instr << " at line " << dec << currentPos().line << endl;
-        }
-#endif
-        if (!func(instr, *this)) {
-            Stack<Value> value(popStack());
-#ifdef LOG_EXECUTION
-            if (logExecution) {
-                logStart(1);
-                cout << "exception " << value << endl;
-            }
-#endif
-            assert(value.isInstanceOf(Exception::ObjectClass));
-            Stack<Exception*> exception(value.toObject()->as<Exception>());
-            if (!exception->hasPos() && instrp)
-                exception->setPos(currentPos());
-            if (!startExceptionHandler(exception)) {
-                while (instrp)
-                    popFrame();
-                resultOut = value;
-                return false;
-            }
-        }
+    if (logExecution) {
+        logStart();
+        cout << *instr << " at line " << dec << currentPos().line << endl;
     }
-
-    resultOut = popStack();
-    return true;
 }
+#endif
 
 void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos)
 {
@@ -332,6 +300,30 @@ void Interpreter::popExceptionHandler(ExceptionHandler::Type type)
     assert(handler->type() == type);
 #endif
     exceptionHandlers.pop_back();
+}
+
+bool Interpreter::handleException(MutableTraced<Value> resultOut)
+{
+    Stack<Value> value(popStack());
+
+#ifdef LOG_EXECUTION
+    if (logExecution) {
+        logStart(1);
+        cout << "exception " << value << endl;
+    }
+#endif
+
+    assert(value.isInstanceOf(Exception::ObjectClass));
+    Stack<Exception*> exception(value.toObject()->as<Exception>());
+    if (!exception->hasPos() && instrp)
+        exception->setPos(currentPos());
+    if (startExceptionHandler(exception))
+        return true;
+
+    while (instrp)
+        popFrame();
+    resultOut = value;
+    return false;
 }
 
 bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
@@ -662,20 +654,19 @@ Interpreter::CallStatus Interpreter::raiseTypeError(string message,
 }
 
 void Interpreter::replaceInstr(Instr* current,
-                               InstrFuncBase newFunc,
                                Instr* newData)
 {
     InstrThunk& it = instrp[-1];
     assert(it.data == current);
-    it.func = newFunc;
+    it.type = newData->type();
     it.data = newData;
 }
 
 bool Interpreter::replaceInstrAndRestart(Instr* current,
-                                         InstrFuncBase newFunc,
                                          Instr* newData)
 {
-    replaceInstr(current, newFunc, newData);
+    replaceInstr(current, newData);
     Stack<Instr*> instr(newData);
-    return newFunc(instr, *this);
+    instrp--;
+    return true;
 }

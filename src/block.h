@@ -29,7 +29,7 @@ using InstrFunc = bool (*)(Traced<T*> self, Interpreter& interp);
 
 struct InstrThunk
 {
-    InstrFuncBase func;
+    unsigned type;
     Instr* data;
 };
 
@@ -54,7 +54,7 @@ struct Block : public Cell
     template <typename T, typename... Args>
     inline unsigned append(Args&& ...args);
 
-    unsigned append(InstrFuncBase func, Traced<Instr*> data);
+    unsigned append(Traced<Instr*> data);
 
     const InstrThunk& lastInstr() {
         assert(!instrs_.empty());
@@ -87,8 +87,7 @@ template <typename T, typename... Args>
 unsigned Block::append(Args&& ...args)
 {
     Stack<Instr*> instr(gc.create<T>(forward<Args>(args)...));
-    InstrFunc<T> func = T::execute;
-    return append(reinterpret_cast<InstrFuncBase>(func), instr);
+    return append(instr);
 }
 
 #endif

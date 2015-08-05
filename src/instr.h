@@ -143,7 +143,7 @@ struct Instr : public Cell
     virtual string name() const { return nameStr; }
 
 #define instr_execute(it)                                                     \
-    static bool execute(Traced<Instr##it*> self, Interpreter& interp)
+    static inline bool execute(Traced<Instr##it*> self, Interpreter& interp)
 
 #define define_instr_members(it)                                              \
     instr_type(Instr_##it);                                                   \
@@ -578,7 +578,7 @@ struct InstrCompareOpFallback : public CompareOpInstr
 template <CompareOp Op>
 struct InstrCompareOpInt : public CompareOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_CompareOpInt_EQ + Op));
+    instr_type(static_cast<InstrType>(Instr_CompareOpInt_LT + Op));
     instr_name("CompareOpInt");
     instr_execute(CompareOpInt);
     InstrCompareOpInt() : CompareOpInstr(Op) {}
@@ -646,5 +646,7 @@ struct InstrAssertStackDepth : public Instr
 #undef define_simple_instr
 #undef define_branch_instr
 #undef define_ident_instr
+
+extern bool executeInstr(Interpreter& interp, InstrThunk* thunk);
 
 #endif
