@@ -39,6 +39,7 @@ using namespace std;
     instr(SetAttr)                                                           \
     instr(DelAttr)                                                           \
     instr(GetMethod)                                                         \
+    instr(GetMethodFallback)                                                 \
     instr(GetMethodInt)                                                      \
     instr(Call)                                                              \
     instr(CallMethod)                                                        \
@@ -67,6 +68,7 @@ using namespace std;
     instr(Raise)                                                             \
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
+    instr(BinaryOpFallback)                                                  \
     instr(BinaryOpInt_Plus)                                                  \
     instr(BinaryOpInt_Minus)                                                 \
     instr(BinaryOpInt_Multiply)                                              \
@@ -80,6 +82,7 @@ using namespace std;
     instr(BinaryOpInt_LeftShift)                                             \
     instr(BinaryOpInt_RightShift)                                            \
     instr(CompareOp)                                                         \
+    instr(CompareOpFallback)                                                 \
     instr(CompareOpInt_LT)                                                   \
     instr(CompareOpInt_LE)                                                   \
     instr(CompareOpInt_GT)                                                   \
@@ -336,14 +339,8 @@ struct InstrDelGlobal : public IdentInstrBase
 define_ident_instr(GetAttr);
 define_ident_instr(SetAttr);
 define_ident_instr(DelAttr);
-
-struct InstrGetMethod : public IdentInstrBase
-{
-    define_instr_members(GetMethod);
-    InstrGetMethod(Name name) : IdentInstrBase(name) {}
-
-    static bool fallback(Traced<InstrGetMethod*> self, Interpreter& interp);
-};
+define_ident_instr(GetMethod);
+define_ident_instr(GetMethodFallback);
 
 struct InstrGetMethodInt : public IdentInstrBase
 {
@@ -533,9 +530,14 @@ struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(BinaryOp);
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
-    static bool fallback(Traced<InstrBinaryOp*> self, Interpreter& interp);
     static bool replaceWithIntInstr(Traced<InstrBinaryOp*> self,
                                     Interpreter& interp);
+};
+
+struct InstrBinaryOpFallback : public BinaryOpInstr
+{
+    define_instr_members(BinaryOpFallback);
+    InstrBinaryOpFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
 template <BinaryOp Op>
@@ -563,9 +565,14 @@ struct InstrCompareOp : public CompareOpInstr
 {
     define_instr_members(CompareOp);
     InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
-    static bool fallback(Traced<InstrCompareOp*> self, Interpreter& interp);
     static bool replaceWithIntInstr(Traced<InstrCompareOp*> self,
                                     Interpreter& interp);
+};
+
+struct InstrCompareOpFallback : public CompareOpInstr
+{
+    define_instr_members(CompareOpFallback);
+    InstrCompareOpFallback(CompareOp op) : CompareOpInstr(op) {}
 };
 
 template <CompareOp Op>

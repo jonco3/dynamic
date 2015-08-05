@@ -175,11 +175,24 @@
  * value as the self parameter if necessary by simply incrementing the argument
  * count.
  */
+
+static bool getMethod(Name ident, Interpreter& interp)
+{
+    Stack<Value> value(interp.popStack());
+    Stack<Value> result;
+    bool isCallableDescriptor;
+    if (!getMethodAttr(value, ident, result, isCallableDescriptor))
+        return interp.raiseAttrError(value, ident);
+
+    interp.pushStack(result, Boolean::get(isCallableDescriptor), value);
+    return true;
+}
+
 /* static */ bool InstrGetMethod::execute(Traced<InstrGetMethod*> self,
                                           Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
-    if (!fallback(self, interp))
+    if (!getMethod(self->ident, interp))
         return false;
 
     if (value.isInt()) {
@@ -188,23 +201,19 @@
                             InstrGetMethodInt::execute,
                             gc.create<InstrGetMethodInt>(self->ident, result));
     } else {
-        interp.replaceInstrFunc(self, fallback);
+        interp.replaceInstr(self,
+                            InstrGetMethodFallback::execute,
+                            gc.create<InstrGetMethodFallback>(self->ident));
     }
 
     return true;
 }
 
-/* static */ bool InstrGetMethod::fallback(Traced<InstrGetMethod*> self,
-                                           Interpreter& interp)
+/* static */ bool
+InstrGetMethodFallback::execute(Traced<InstrGetMethodFallback*> self,
+                                Interpreter& interp)
 {
-    Stack<Value> value(interp.popStack());
-    Stack<Value> result;
-    bool isCallableDescriptor;
-    if (!getMethodAttr(value, self->ident, result, isCallableDescriptor))
-        return interp.raiseAttrError(value, self->ident);
-
-    interp.pushStack(result, Boolean::get(isCallableDescriptor), value);
-    return true;
+    return getMethod(self->ident, interp);
 }
 
 /* static */ bool InstrGetMethodInt::execute(Traced<InstrGetMethodInt*> self,
@@ -222,8 +231,8 @@
 
     return interp.replaceInstrAndRestart(
         self,
-        InstrGetMethod::fallback,
-        gc.create<InstrGetMethod>(self->ident));
+        InstrGetMethodFallback::execute,
+        gc.create<InstrGetMethodFallback>(self->ident));
 }
 
 /* static */ bool InstrCallMethod::execute(Traced<InstrCallMethod*> self,
@@ -603,7 +612,10 @@ void BinaryOpInstr::print(ostream& s) const
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[self->op()]));
         return replaceWithIntInstr(self, interp);
     } else {
-        return interp.replaceInstrFuncAndRestart(self, fallback);
+        return interp.replaceInstrAndRestart(
+            self,
+            InstrBinaryOpFallback::execute,
+            gc.create<InstrBinaryOpFallback>(self->op()));
     }
 }
 
@@ -656,8 +668,9 @@ static bool maybeCallBinaryOp(Interpreter& interp,
     return true;
 }
 
-/* static */ bool InstrBinaryOp::fallback(Traced<InstrBinaryOp*> self,
-                                          Interpreter& interp)
+/* static */ bool
+InstrBinaryOpFallback::execute(Traced<InstrBinaryOpFallback*> self,
+                               Interpreter& interp)
 {
     Stack<Value> right(interp.popStack());
     Stack<Value> left(interp.popStack());
@@ -700,8 +713,8 @@ template <BinaryOp Op>
     if (!interp.peekStack(0).isInt32() || !interp.peekStack(1).isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
-            InstrBinaryOp::fallback,
-            gc.create<InstrBinaryOp>(self->op()));
+            InstrBinaryOpFallback::execute,
+            gc.create<InstrBinaryOpFallback>(self->op()));
     }
 
     int32_t b = interp.popStack().asInt32();
@@ -724,7 +737,10 @@ void CompareOpInstr::print(ostream& s) const
         assert(Integer::ObjectClass->hasAttr(Name::compareMethod[self->op()]));
         return replaceWithIntInstr(self, interp);
     } else {
-        return interp.replaceInstrFuncAndRestart(self, fallback);
+        return interp.replaceInstrAndRestart(
+            self,
+            InstrCompareOpFallback::execute,
+            gc.create<InstrCompareOpFallback>(self->op()));
     }
 }
 
@@ -749,8 +765,9 @@ InstrCompareOp::replaceWithIntInstr(Traced<InstrCompareOp*> self,
     }
 }
 
-/* static */ bool InstrCompareOp::fallback(Traced<InstrCompareOp*> self,
-                                          Interpreter& interp)
+/* static */ bool
+InstrCompareOpFallback::execute(Traced<InstrCompareOpFallback*> self,
+                                Interpreter& interp)
 {
     Stack<Value> right(interp.popStack());
     Stack<Value> left(interp.popStack());
@@ -803,8 +820,8 @@ InstrCompareOpInt<Op>::execute(Traced<InstrCompareOpInt*> self,
     if (!interp.peekStack(0).isInt32() || !interp.peekStack(1).isInt32()) {
         return interp.replaceInstrAndRestart(
             self,
-            InstrCompareOp::fallback,
-            gc.create<InstrCompareOp>(self->op()));
+            InstrCompareOpFallback::execute,
+            gc.create<InstrCompareOpFallback>(self->op()));
     }
 
     int32_t b = interp.popStack().asInt32();

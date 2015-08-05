@@ -295,8 +295,8 @@ testcase(interp)
                      Instr_GetMethod,
                      InstrGetMethod::execute,
                      InstrGetMethodInt::execute,
-                     InstrGetMethod::fallback,
-                     InstrGetMethod::fallback);
+                     InstrGetMethodFallback::execute,
+                     InstrGetMethodFallback::execute);
 
     testReplacements("def foo(x, y):\n"
                      "  return x + y",
@@ -305,8 +305,8 @@ testcase(interp)
                      Instr_BinaryOp,
                      InstrBinaryOp::execute,
                      InstrBinaryOpInt<BinaryPlus>::execute,
-                     InstrBinaryOp::fallback,
-                     InstrBinaryOp::fallback);
+                     InstrBinaryOpFallback::execute,
+                     InstrBinaryOpFallback::execute);
 
     testExpectingException = true;
     testInterp("x = None\n"

@@ -177,22 +177,11 @@ struct Interpreter
     }
 
     template <typename T>
-    void replaceInstrFunc(Instr* current, InstrFunc<T> newFunc) {
-        replaceInstrFunc(current, reinterpret_cast<InstrFuncBase>(newFunc));
-    }
-
-    template <typename T>
     bool replaceInstrAndRestart(Instr* current, InstrFunc<T> newFunc, T* newData)
     {
         return replaceInstrAndRestart(current,
                                       reinterpret_cast<InstrFuncBase>(newFunc),
                                       newData);
-    }
-
-    template <typename T>
-    bool replaceInstrFuncAndRestart(Instr* current, InstrFunc<T> newFunc) {
-        return replaceInstrFuncAndRestart(current,
-                                          reinterpret_cast<InstrFuncBase>(newFunc));
     }
 
     void resumeGenerator(Traced<Block*> block,
@@ -265,10 +254,8 @@ struct Interpreter
     CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
 
     void replaceInstr(Instr* current, InstrFuncBase newFunc, Instr* newData);
-    void replaceInstrFunc(Instr* current, InstrFuncBase newFunc);
     bool replaceInstrAndRestart(Instr* current,
                                 InstrFuncBase newFunc, Instr* newData);
-    bool replaceInstrFuncAndRestart(Instr* current, InstrFuncBase newFunc);
 };
 
 extern Interpreter interp;

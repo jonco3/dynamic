@@ -671,27 +671,11 @@ void Interpreter::replaceInstr(Instr* current,
     it.data = newData;
 }
 
-void Interpreter::replaceInstrFunc(Instr* current,
-                                   InstrFuncBase newFunc)
-{
-    InstrThunk& it = instrp[-1];
-    assert(it.data == current);
-    it.func = newFunc;
-}
-
 bool Interpreter::replaceInstrAndRestart(Instr* current,
                                          InstrFuncBase newFunc,
                                          Instr* newData)
 {
     replaceInstr(current, newFunc, newData);
     Stack<Instr*> instr(newData);
-    return newFunc(instr, *this);
-}
-
-bool Interpreter::replaceInstrFuncAndRestart(Instr* current,
-                                             InstrFuncBase newFunc)
-{
-    replaceInstrFunc(current, newFunc);
-    Stack<Instr*> instr(current);
     return newFunc(instr, *this);
 }
