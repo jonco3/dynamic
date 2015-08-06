@@ -143,7 +143,7 @@ struct Instr : public Cell
     virtual string name() const { return nameStr; }
 
 #define instr_execute(it)                                                     \
-    static inline bool execute(Traced<Instr##it*> self, Interpreter& interp)
+    static bool execute(Traced<Instr##it*> self, Interpreter& interp)
 
 #define define_instr_members(it)                                              \
     instr_type(Instr_##it);                                                   \
