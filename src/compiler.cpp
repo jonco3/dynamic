@@ -186,6 +186,15 @@ struct ByteCompiler : public SyntaxVisitor
         breakInstrs.clear();
     }
 
+    void incStackDepth(unsigned increment = 1) {
+        stackDepth += increment;
+    }
+
+    void decStackDepth(unsigned decrement = 1) {
+        assert(stackDepth >= decrement);
+        stackDepth -= decrement;
+    }
+
     void maybeAssertStackDepth(unsigned delta = 0) {
 #if defined(DEBUG)
         if (assertStackDepth)
@@ -209,16 +218,16 @@ struct ByteCompiler : public SyntaxVisitor
         if (parent) {
             if (useLexicalEnv) {
                 emit<InstrCreateEnv>();
-                stackDepth = argCount;
+                incStackDepth(argCount);
             } else {
                 emit<InstrInitStackLocals>();
-                stackDepth = layout->slotCount();
+                incStackDepth(layout->slotCount());
             }
         }
         if (isGenerator) {
             emit<InstrStartGenerator>();
             emit<InstrPop>();
-            stackDepth++;  // InstrStartGenerator leaves iterator on stack
+            incStackDepth(); // InstrStartGenerator leaves iterator on stack
         }
 #ifdef DEBUG
         unsigned initialStackDepth = stackDepth;
@@ -538,7 +547,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrGetMethod>(Name::__iter__);
             emit<InstrCallMethod>(0);
             emit<InstrGetMethod>("next");
-            stackDepth += 3; // Leave the iterator and next method on the stack
+            incStackDepth(3); // Leave the iterator and next method on the stack
 
             for (unsigned i = 0; i < targets.size(); i++) {
                 emit<InstrIteratorNext>();
@@ -555,7 +564,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrPop>();
             emit<InstrPop>();
             emit<InstrPop>();
-            stackDepth -= 3;
+            decStackDepth(3);
         } else {
             for (unsigned i = 0; i < targets.size(); i++) {
                 compile(targets[i]);
@@ -685,7 +694,7 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrGetMethod>(Name::__iter__);
         emit<InstrCallMethod>(0);
         emit<InstrGetMethod>("next");
-        stackDepth += 3; // Leave the iterator and next method on the stack
+        incStackDepth(3); // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop heap)
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
@@ -725,7 +734,7 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrPop>();
         emit<InstrPop>();
         emit<InstrPop>();
-        stackDepth -= 3;
+        decStackDepth(3);
         emit<InstrConst>(None);
     }
 
