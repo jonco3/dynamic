@@ -64,7 +64,6 @@ using namespace std;
     instr(Slice)                                                             \
     instr(AssertionFailed)                                                   \
     instr(MakeClassFromFrame)                                                \
-    instr(Destructure)                                                       \
     instr(Raise)                                                             \
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
@@ -456,7 +455,7 @@ struct InstrLambda : public Instr
 struct InstrDup : public Instr
 {
     define_instr_members(Dup);
-    InstrDup(unsigned index) : index_(index) {}
+    InstrDup(unsigned index = 0) : index_(index) {}
 
     virtual void print(ostream& s) const {
         s << name() << " " << index_;
@@ -501,15 +500,6 @@ define_simple_instr(Slice);
 define_simple_instr(AssertionFailed);
 
 define_ident_instr(MakeClassFromFrame);
-
-struct InstrDestructure : public Instr
-{
-    define_instr_members(Destructure);
-    InstrDestructure(unsigned count) : count_(count) {}
-
-  private:
-    unsigned count_;
-};
 
 define_simple_instr(Raise);
 define_simple_instr(IteratorNext);

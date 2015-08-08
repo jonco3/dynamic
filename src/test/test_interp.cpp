@@ -303,6 +303,8 @@ testcase(interp)
 
     testInterp("a, b = 1, 2\na", "1");
     testInterp("a, b = 1, 2\nb", "2");
+    testException("a, b = 1,", "wrong number");
+    testException("a, b = 1, 2, 3", "wrong number");
 
     testException("raise Exception('an exception')", "an exception");
 
