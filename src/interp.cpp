@@ -25,6 +25,8 @@ ExceptionHandler::ExceptionHandler(Type type, unsigned frameIndex, unsigned offs
 
 Interpreter::Interpreter()
   : instrp(nullptr),
+    stack(1),
+    stackPos_(0),
     inExceptionHandler_(false),
     jumpKind_(JumpKind::None),
     currentException_(nullptr),
@@ -50,43 +52,62 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 #endif
     bool ok = run(resultOut);
     assert(stackPos() == initialPos);
+    stack.resize(0);
     return ok;
 }
 
 
 void Interpreter::removeStackEntries(unsigned offsetFromTop, unsigned count)
 {
-    size_t initialSize = stack.size();
-
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "removeStackEntries @" << (initialSize - offsetFromTop);
-        cout << " " << count << endl;
+        cout << "removeStackEntries " << offsetFromTop << " " << count << endl;
     }
 #endif
 
-    assert(offsetFromTop + count <= initialSize);
-    auto end = stack.begin() + (initialSize - offsetFromTop);
-    auto begin = end - count;
-    stack.erase(begin, end);
-    assert(stack.size() == initialSize - count);
+    assert(stackPos() >= count + offsetFromTop);
+    size_t initialPos = stackPos();
+
+    // todo: could memmove here
+    unsigned end = initialPos - count;
+    unsigned begin = end - offsetFromTop;
+    for (unsigned i = begin; i != end; i++) {
+        assert(i + count < stackPos());
+#ifdef LOG_EXECUTION
+        if (logExecution) {
+            logStart(2);
+            Value value1 = stack[i];
+            Value value2 = stack[i + count];
+            cout << "@" << i << " " << value1;
+            cout << " := @" << (i + count) << " " << value2 << endl;
+        }
+#endif
+        stack[i] = stack[i + count];
+    }
+    for (unsigned i = end; i != stackPos_; i++)
+        stack[i] = Value(None);
+    stackPos_ -= count;
 }
 
 void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
 {
-    size_t initialSize = stack.size();
-
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "insertStackEntry @" << (initialSize - offsetFromTop);
-        cout << " " << value << endl;
+        cout << "insertStackEntry " << offsetFromTop << " " << value << endl;
     }
 #endif
 
-    auto pos = stack.begin() + (initialSize - offsetFromTop);
-    stack.insert(pos, value);
+    assert(stackPos_ + 1 <= stack.size());
+    assert(stackPos() >= offsetFromTop);
+
+    unsigned end = stackPos() - 1;
+    unsigned begin = end - offsetFromTop;
+    for (unsigned i = end; i != begin; i--)
+        stack[i] = stack[i - 1];
+    stack[stackPos_ - offsetFromTop] = value;
+    stackPos_++;
 }
 
 #ifdef LOG_EXECUTION
@@ -109,10 +130,11 @@ void Interpreter::logStackPush(const Value& value)
 void Interpreter::logStackPush(const Value* first, const Value* last)
 {
     if (logExecution) {
-        logStart(1);
         size_t pos = stackPos();
-        while (first != last)
+        while (first != last) {
+            logStart(1);
             cout << "push @" << pos++ << " " << *first++ << endl;
+        }
     }
 }
 
@@ -122,7 +144,7 @@ void Interpreter::logStackPop(size_t count)
     if (logExecution && count > 0) {
         for (size_t i = 0; i < count; i++) {
             logStart(1);
-            Value value = stack[stack.size() - 1 - i];
+            Value value = stack[stackPos() - 1 - i];
             cout << "pop @" << --pos << " " << value << endl;
         }
     }
@@ -151,22 +173,19 @@ void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos)
     frames.emplace_back(instrp, block, stackStartPos);
     instrp = block->startInstr();
 
+    unsigned newStackSize = stackStartPos + block->maxStackDepth();
+    assert(newStackSize >= stackPos());
+    if (newStackSize > stack.size())
+        stack.resize(newStackSize);
+
 #ifdef LOG_EXECUTION
     if (logFrames) {
         Frame* frame = getFrame();
         TokenPos pos = frame->block()->getPos(instrp);
         logStart(-1);
-        cout << "> frame " << pos << endl;
+        cout << "> frame " << pos << " " << newStackSize << endl;
     }
 #endif
-}
-
-void Interpreter::setFrameEnv(Env* env)
-{
-    AutoAssertNoGC nogc;
-    assert(!frames.empty());
-    assert(!frames.back().env());
-    frames.back().setEnv(env);
 }
 
 void Interpreter::popFrame()
@@ -188,7 +207,10 @@ void Interpreter::popFrame()
     }
 #endif
 
-    popStack(stackPos() - frame->stackPos());
+    // Update stack pos but don't resize backing vector on frame pop.
+    assert(frame->stackPos() <= stackPos());
+    stackPos_ = frame->stackPos();  // todo: log removed values
+
     instrp = frame->returnPoint();
     frames.pop_back();
 
@@ -199,6 +221,14 @@ void Interpreter::popFrame()
         cout << "  return to " << pos << endl;
     }
 #endif
+}
+
+void Interpreter::setFrameEnv(Env* env)
+{
+    AutoAssertNoGC nogc;
+    assert(!frames.empty());
+    assert(!frames.back().env());
+    frames.back().setEnv(env);
 }
 
 void Interpreter::returnFromFrame(Value value)

@@ -87,20 +87,6 @@ void testReplacements(const string& defs,
 
 testcase(interp)
 {
-    testEqual(interp.stackPos(), 0u);
-    interp.pushStack(None);
-    testEqual(interp.stackPos(), 1u);
-    testEqual(interp.peekStack(0), Value(None));
-
-    {
-        TracedVector<Value> slice = interp.stackSlice(1);
-        testEqual(slice.size(), 1u);
-        testEqual(slice[0].get(), Value(None));
-    }
-
-    testEqual(interp.popStack(), Value(None));
-    testEqual(interp.stackPos(), 0u);
-
     testInterp("pass", "None");
     testInterp("return 3", "3");
     testInterp("return 2 + 2", "4");

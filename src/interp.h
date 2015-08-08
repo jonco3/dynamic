@@ -52,64 +52,73 @@ struct Interpreter
 
     template <typename S>
     void pushStack(S&& element) {
+        assert(stackPos_ + 1 <= stack.size());
         Value value(element);
         logStackPush(value);
-        stack.push_back(value);
+        stack[stackPos_++] = value;
     }
 
     template <typename S1, typename S2>
     void pushStack(S1&& element1, S2&& element2) {
+        assert(stackPos_ + 2 <= stack.size());
         Value values[2] = { Value(element1), Value(element2) };
         logStackPush(&values[0], values + 2);
-        stack.insert(stack.end(), &values[0], values + 2);
+        stack[stackPos_++] = values[0];
+        stack[stackPos_++] = values[1];
     }
 
     template <typename S1, typename S2, typename S3>
     void pushStack(S1&& element1, S2&& element2, S3&& element3) {
+        assert(stackPos_ + 3 <= stack.size());
         Value values[3] = { Value(element1), Value(element2), Value(element3) };
         logStackPush(&values[0], values + 3);
-        stack.insert(stack.end(), &values[0], values + 3);
+        stack[stackPos_++] = values[0];
+        stack[stackPos_++] = values[1];
+        stack[stackPos_++] = values[2];
     }
 
     template <typename S>
     void fillStack(unsigned count, S&& element) {
+        assert(stackPos_ + count <= stack.size());
         Value value(element);
-        stack.insert(stack.end(), count, value);
+        for (unsigned i = 0; i < count; i++)
+            stack[stackPos_++] = value;
     }
 
     // Remove and return the value on the top of the stack.
     Value popStack() {
-        assert(!stack.empty());
+        assert(stackPos() >= 1);
         logStackPop(1);
-        Value result = stack.back();
-        stack.pop_back();
+        Value result = stack[--stackPos_];
+        stack[stackPos_] = Value(None);
         return result;
     }
 
     // Remove |count| values from the top of the stack.
     void popStack(unsigned count) {
-        assert(count <= stack.size());
+        assert(stackPos() >= count);
         logStackPop(count);
-        stack.resize(stack.size() - count);
+        stackPos_ -= count;
+        for (unsigned i = 0; i < count; i++)
+            stack[stackPos_ + i] = Value(None);
     }
 
     // Return the value at position |offset| counting from zero.
     Value peekStack(unsigned offset) {
-        assert(offset < stack.size());
-        return stack[stackPos() - offset - 1];
+        assert(stackPos() >= offset + 1);
+        return stack[stackPos_ - offset - 1];
     }
 
     // Return a reference to the |count| topmost values.
     TracedVector<Value> stackSlice(unsigned count) {
-        assert(count <= stack.size());
-        return TracedVector<Value>(stack, stackPos() - count, count);
+        assert(stackPos() >= count);
+        return TracedVector<Value>(stack, stackPos_ - count, count);
     }
 
     // Swap the two values on the top of the stack.
     void swapStack() {
-        assert(stack.size() >= 2);
-        unsigned pos = stackPos();
-        swap(stack[pos - 1], stack[pos - 2]);
+        assert(stackPos() >= 2);
+        swap(stack[stackPos_ - 1], stack[stackPos_ - 2]);
         logStackSwap();
     }
 
@@ -136,7 +145,11 @@ struct Interpreter
     void branch(int offset);
 
     InstrThunk* nextInstr() { return instrp; }
-    unsigned stackPos() { return stack.size(); }
+
+    unsigned stackPos() const {
+        assert(stackPos_ <= stack.size());
+        return stackPos_;
+    }
 
     Env* env() { return getFrame()->env(); }
     Env* lexicalEnv(unsigned index);
@@ -205,6 +218,7 @@ struct Interpreter
     InstrThunk *instrp;
     RootVector<Frame> frames;
     RootVector<Value> stack;
+    unsigned stackPos_;
 
     RootVector<ExceptionHandler*> exceptionHandlers;
     bool inExceptionHandler_;

@@ -31,6 +31,7 @@ void GeneratorIter::init()
     Stack<Block*> block(gc.create<Block>(layout, 1, true));
     block->append<InstrCreateEnv>(); // todo: eventually we can remove this
     block->append<InstrResumeGenerator>(); // never returns
+    block->setMaxStackDepth(1);
     static vector<Name> params = { "self" };
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));

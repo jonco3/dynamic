@@ -237,13 +237,16 @@ struct ByteCompiler : public SyntaxVisitor
 #endif
         compile(s);
         assert(stackDepth == initialStackDepth);
-        block->setMaxStackDepth(maxStackDepth + 3);
+        block->setMaxStackDepth(maxStackDepth + 1);
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {
         compile(s.right);
+        incStackDepth();
         emit<InstrGetMethod>(name);
+        incStackDepth(3);
         emit<InstrCallMethod>(0);
+        decStackDepth(4);
     }
 
     template <typename BaseType>
@@ -251,9 +254,13 @@ struct ByteCompiler : public SyntaxVisitor
                           string name)
     {
         compile(s.left);
+        incStackDepth();
         emit<InstrGetMethod>(name);
+        incStackDepth(3);
         compile(s.right);
+        incStackDepth();
         emit<InstrCallMethod>(1);
+        decStackDepth(5);
     }
 
     virtual void visit(const SyntaxPass& s) {
@@ -298,23 +305,32 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxExprList& s) {
-        for (const auto& i : s.elements)
+        for (const auto& i : s.elements) {
             compile(*i);
+            incStackDepth();
+        }
         emit<InstrTuple>(s.elements.size());
+        decStackDepth(s.elements.size());
     }
 
     virtual void visit(const SyntaxList& s) {
-        for (const auto& i : s.elements)
+        for (const auto& i : s.elements) {
             compile(*i);
+            incStackDepth();
+        }
         emit<InstrList>(s.elements.size());
+        decStackDepth(s.elements.size());
     }
 
     virtual void visit(const SyntaxDict& s) {
         for (const auto& i : s.entries) {
             compile(i.first);
+            incStackDepth();
             compile(i.second);
+            incStackDepth();
         }
         emit<InstrDict>(s.entries.size());
+        decStackDepth(s.entries.size() * 2);
     }
 
     virtual void visit(const SyntaxOr& s) {
@@ -350,8 +366,11 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxBinaryOp& s) {
         compile(s.left);
+        incStackDepth();
         compile(s.right);
+        incStackDepth();
         emit<InstrBinaryOp>(s.op);
+        decStackDepth(2);
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
@@ -372,27 +391,34 @@ struct ByteCompiler : public SyntaxVisitor
         // todo: == should fall back to comparing identity if __eq__ not
         // implemented
         compile(s.left);
+        incStackDepth();
         compile(s.right);
         emit<InstrCompareOp>(s.op);
+        decStackDepth();
     }
 
 
-#define define_vist_binary_instr(syntax, instr)                               \
+#define define_visit_binary_instr(syntax, instr)                              \
     virtual void visit(const syntax& s) {                                     \
         compile(s.left);                                                      \
+        incStackDepth();                                                      \
         compile(s.right);                                                     \
+        incStackDepth();                                                      \
         emit<instr>();                                                        \
+        decStackDepth(2);                                                     \
     }
 
-    define_vist_binary_instr(SyntaxIn, InstrIn);
-    define_vist_binary_instr(SyntaxIs, InstrIs);
+    define_visit_binary_instr(SyntaxIn, InstrIn);
+    define_visit_binary_instr(SyntaxIs, InstrIs);
 
-#undef define_vist_binary_instr
+#undef define_visit_binary_instr
 
     virtual void visit(const SyntaxAssign& s) {
         compile(s.right);
+        incStackDepth();
         AutoPushContext enterAssign(contextStack, Context::Assign);
         compile(s.left);
+        decStackDepth();
     }
 
     virtual void visit(const SyntaxDel& s) {
@@ -501,13 +527,16 @@ struct ByteCompiler : public SyntaxVisitor
           case Context::Assign: {
             AutoPushContext clearContext(contextStack, Context::None);
             compile(s.left);
+            incStackDepth();
             emit<InstrGetMethod>(Name::__setitem__);
+            incStackDepth(3);
             compile(s.right);
             // todo: there may be a better way than this stack manipulation
             emit<InstrDup>(4);
             emit<InstrCallMethod>(2);
             emit<InstrSwap>();
             emit<InstrPop>();
+            decStackDepth(4);
             break;
           }
 
@@ -518,7 +547,7 @@ struct ByteCompiler : public SyntaxVisitor
           }
 
           default:
-              callBinaryMethod(s, Name::__getitem__);
+            callBinaryMethod(s, Name::__getitem__);
             break;
         }
     }
@@ -609,14 +638,19 @@ struct ByteCompiler : public SyntaxVisitor
         } else {
             compile(s.left);
         }
+        incStackDepth(3);
 
-        for (const auto& i : s.right)
+        for (const auto& i : s.right) {
             compile(*i);
+            incStackDepth();
+        }
+
         unsigned count = s.right.size();
         if (methodCall)
             emit<InstrCallMethod>(count);
         else
             emit<InstrCall>(count);
+        decStackDepth(count + 3);
     }
 
     virtual void visit(const SyntaxReturn& s) {
@@ -806,8 +840,11 @@ struct ByteCompiler : public SyntaxVisitor
             unsigned endBranch = emit<InstrBranchIfTrue>();
             if (s.message) {
                 compile(s.message);
+                incStackDepth();
                 emit<InstrGetMethod>(Name::__str__);
+                incStackDepth(3);
                 emit<InstrCallMethod>(0);
+                decStackDepth(4);
             } else {
                 emit<InstrConst>(None);
             }
