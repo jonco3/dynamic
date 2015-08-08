@@ -40,11 +40,13 @@ struct Block : public Cell
     Layout* layout() const { return layout_; }
     unsigned argCount() const { return argCount_; }
     unsigned stackLocalCount() const;
+    unsigned maxStackDepth() const { return maxStackDepth_; }
     bool createEnv() const { return createEnv_; }
     InstrThunk* startInstr() { return &instrs_[0]; }
     unsigned instrCount() { return instrs_.size(); }
     InstrThunk instr(unsigned i) { return instrs_.at(i); }
 
+    void setMaxStackDepth(unsigned stackDepth);
 
     unsigned nextIndex() { return instrs_.size(); }
     void branchHere(unsigned source);
@@ -77,6 +79,7 @@ struct Block : public Cell
   private:
     Layout* layout_;
     unsigned argCount_;
+    unsigned maxStackDepth_;
     bool createEnv_;
     vector<InstrThunk> instrs_;
     string file_;

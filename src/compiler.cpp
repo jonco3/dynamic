@@ -35,7 +35,8 @@ struct ByteCompiler : public SyntaxVisitor
         isGenerator(false),
         contextStack({Context::None}),
         loopHeadOffset(0),
-        stackDepth(0)
+        stackDepth(0),
+        maxStackDepth(0)
     {}
 
     ~ByteCompiler() {
@@ -144,6 +145,7 @@ struct ByteCompiler : public SyntaxVisitor
     unsigned loopHeadOffset;
     vector<unsigned> breakInstrs;
     unsigned stackDepth;
+    unsigned maxStackDepth;
     TokenPos currentPos;
 
     using AutoPushContext = AutoPushStack<Context>;
@@ -188,6 +190,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     void incStackDepth(unsigned increment = 1) {
         stackDepth += increment;
+        maxStackDepth = max(stackDepth, maxStackDepth);
     }
 
     void decStackDepth(unsigned decrement = 1) {
@@ -234,6 +237,7 @@ struct ByteCompiler : public SyntaxVisitor
 #endif
         compile(s);
         assert(stackDepth == initialStackDepth);
+        block->setMaxStackDepth(maxStackDepth + 3);
     }
 
     void callUnaryMethod(const UnarySyntax& s, string name) {

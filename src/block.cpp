@@ -2,12 +2,22 @@
 #include "instr.h"
 
 Block::Block(Traced<Layout*> layout, unsigned argCount, bool createEnv)
-  : layout_(layout), argCount_(argCount), createEnv_(createEnv)
+  : layout_(layout),
+    argCount_(argCount),
+    maxStackDepth_(0),
+    createEnv_(createEnv)
 {}
 
 unsigned Block::stackLocalCount() const
 {
     return createEnv() ? 0 : layout()->slotCount() - argCount();
+}
+
+void Block::setMaxStackDepth(unsigned stackDepth)
+{
+    assert(maxStackDepth_ == 0);
+    assert(stackDepth > 0);
+    maxStackDepth_ = stackDepth;
 }
 
 unsigned Block::append(Traced<Instr*> data)
