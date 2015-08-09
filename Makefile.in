@@ -50,25 +50,9 @@ SRCS = \
 	src/generator.cpp \
 	src/reflect.cpp
 
-TEST_SRCS = \
-	src/test.cpp \
-	src/test/test_token.cpp \
-	src/test/test_parser.cpp \
-	src/test/test_gc.cpp \
-	src/test/test_block.cpp \
-	src/test/test_layout.cpp \
-	src/test/test_object.cpp \
-	src/test/test_interp.cpp \
-	src/test/test_exception.cpp \
-	src/test/test_numeric.cpp \
-	src/test/test_string.cpp \
-	src/test/test_list.cpp \
-	src/test/test_dict.cpp \
-	src/test/test_builtin.cpp
-
 MAINSRCS = src/main.cpp $(SRCS)
-TESTSRCS = src/unittests.cpp $(TEST_SRCS) $(SRCS)
-ALLSRCS = $(MAINSRCS) $(TESTSRCS)
+TESTSRCS = src/unittests.cpp $(SRCS)
+ALLSRCS = src/main.cpp src/unittests.cpp $(SRCS)
 
 TESTOBJS = $(subst src,build,$(TESTSRCS:.cpp=.o))
 MAINOBJS = $(subst src,build,$(MAINSRCS:.cpp=.o))
@@ -89,10 +73,10 @@ config.status: configure
 	./config.status --recheck
 
 unittests: $(TESTOBJS) Makefile
-	$(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o unittests
+	/usr/bin/time $(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o unittests
 
 dynamic: $(MAINOBJS) Makefile
-	$(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
+	/usr/bin/time $(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
 
 build/gcapitest: src/gc.h $(srcdir)/test/gc-api-tests.py
 	mkdir -p build
@@ -129,4 +113,4 @@ clean:
 
 build/%.o: $(srcdir)/src/%.cpp Makefile
 	mkdir -p build/test
-	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $< -o $@
+	/usr/bin/time $(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $< -o $@
