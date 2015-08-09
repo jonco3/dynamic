@@ -73,10 +73,10 @@ config.status: configure
 	./config.status --recheck
 
 unittests: $(TESTOBJS) Makefile
-	/usr/bin/time $(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o unittests
+	$(LD) $(TESTOBJS) $(FLAGS) $(LDFLAGS) $(TESTLDFLAGS) -o unittests
 
 dynamic: $(MAINOBJS) Makefile
-	/usr/bin/time $(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
+	$(LD) $(MAINOBJS) $(FLAGS) $(LDFLAGS) $(MAINLDFLAGS) -o dynamic
 
 build/gcapitest: src/gc.h $(srcdir)/test/gc-api-tests.py
 	mkdir -p build
@@ -113,4 +113,4 @@ clean:
 
 build/%.o: $(srcdir)/src/%.cpp Makefile
 	mkdir -p build/test
-	/usr/bin/time $(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -c -MMD $(FLAGS) $(CXXFLAGS) $< -o $@
