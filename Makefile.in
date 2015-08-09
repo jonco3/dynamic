@@ -51,6 +51,7 @@ SRCS = \
 	src/reflect.cpp
 
 TEST_SRCS = \
+	src/test.cpp \
 	src/test/test_token.cpp \
 	src/test/test_parser.cpp \
 	src/test/test_gc.cpp \
@@ -66,8 +67,8 @@ TEST_SRCS = \
 	src/test/test_builtin.cpp
 
 MAINSRCS = src/main.cpp $(SRCS)
-TESTSRCS = src/test.cpp $(TEST_SRCS) $(SRCS)
-ALLSRCS = src/main.cpp src/test.cpp $(TEST_SRCS) $(SRCS)
+TESTSRCS = src/unittests.cpp $(TEST_SRCS) $(SRCS)
+ALLSRCS = $(MAINSRCS) $(TESTSRCS)
 
 TESTOBJS = $(subst src,build,$(TESTSRCS:.cpp=.o))
 MAINOBJS = $(subst src,build,$(MAINSRCS:.cpp=.o))
