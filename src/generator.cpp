@@ -69,7 +69,7 @@ bool GeneratorIter::iter(MutableTraced<Value> resultOut)
     return true;
 }
 
-bool GeneratorIter::resume(Interpreter& interp)
+void GeneratorIter::resume(Interpreter& interp)
 {
     log("GeneratorIter::resume", this, state_);
     switch (state_) {
@@ -81,19 +81,21 @@ bool GeneratorIter::resume(Interpreter& interp)
             interp.pushStack(None);
         state_ = Running;
         assert(savedStack_.empty());
-        return true;
+        break;
       }
 
       case Running:
         assert(savedStack_.empty());
         interp.pushStack(gc.create<ValueError>("Generator running"));
-        return false;
+        interp.raiseException();
+        break;
 
       case Finished:
         assert(savedStack_.empty());
         // todo: not sure about this behaviour, need tests
         interp.pushStack(gc.create<StopIteration>());
-        return false;
+        interp.raiseException();
+        break;
 
       default:
         assert(false);
@@ -101,15 +103,15 @@ bool GeneratorIter::resume(Interpreter& interp)
     }
 }
 
-bool GeneratorIter::leave(Interpreter& interp)
+void GeneratorIter::leave(Interpreter& interp)
 {
     log("GeneratorIter::leave", this, state_);
     assert(state_ == Running);
     assert(savedStack_.empty());
     interp.popFrame();
     state_ = Finished;
-    interp.pushStack(gc.create<StopIteration>());
-    return false;
+    Stack<Value> exception(gc.create<StopIteration>());
+    interp.raiseException(exception);
 }
 
 void GeneratorIter::suspend(Interpreter& interp, Traced<Value> value)

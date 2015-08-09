@@ -436,7 +436,7 @@ Exception* Interpreter::currentException()
     return currentException_;
 }
 
-bool Interpreter::maybeContinueHandlingException()
+void Interpreter::maybeContinueHandlingException()
 {
     switch (jumpKind_) {
       case JumpKind::Exception: {
@@ -444,10 +444,8 @@ bool Interpreter::maybeContinueHandlingException()
         assert(currentException_);
         Stack<Exception*> exception(currentException_);
         finishHandlingException();
-        if (!startExceptionHandler(exception)) {
-            pushStack(exception);
-            return false;
-        }
+        pushStack(exception);
+        raiseException();
         break;
       }
 
@@ -466,11 +464,9 @@ bool Interpreter::maybeContinueHandlingException()
         break;
       }
 
-      default:
+      case JumpKind::None:
         break;
     }
-
-    return true;
 }
 
 void Interpreter::finishHandlingException()
@@ -569,17 +565,16 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
     return ok;
 }
 
-bool Interpreter::startCall(Traced<Value> targetValue, unsigned argCount)
+void Interpreter::startCall(Traced<Value> targetValue, unsigned argCount)
 {
     Stack<Value> result;
     CallStatus status = setupCall(targetValue, argCount, result);
     if (status != CallStarted) {
         popStack(argCount);
         pushStack(result);
-        return status == CallFinished;
+        if (status == CallError)
+            raiseException();
     }
-
-    return true;
 }
 
 bool Interpreter::checkArguments(Traced<Callable*> callable,
@@ -688,7 +683,6 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         insertStackEntry(argCount, method->object());
         return setupCall(callable, argCount + 1, resultOut);
     } else {
-        // todo: this is untested
         Stack<Value> callHook;
         if (!getAttr(targetValue, Name::__call__, callHook)) {
             return raiseTypeError(
@@ -706,8 +700,7 @@ Interpreter::CallStatus Interpreter::raiseTypeError(string message,
     return CallError;
 }
 
-void Interpreter::replaceInstr(Instr* current,
-                               Instr* newData)
+void Interpreter::replaceInstr(Instr* current, Instr* newData)
 {
     InstrThunk& it = instrp[-1];
     assert(it.data == current);
@@ -715,11 +708,9 @@ void Interpreter::replaceInstr(Instr* current,
     it.data = newData;
 }
 
-bool Interpreter::replaceInstrAndRestart(Instr* current,
-                                         Instr* newData)
+void Interpreter::replaceInstrAndRestart(Instr* current, Instr* newData)
 {
     replaceInstr(current, newData);
     Stack<Instr*> instr(newData);
     instrp--;
-    return true;
 }

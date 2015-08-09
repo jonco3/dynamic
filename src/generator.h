@@ -16,8 +16,8 @@ struct GeneratorIter : public Object
     bool iter(MutableTraced<Value> resultOut);
     bool next(MutableTraced<Value> resultOut);
 
-    bool resume(Interpreter& interp);
-    bool leave(Interpreter& interp);
+    void resume(Interpreter& interp);
+    void leave(Interpreter& interp);
     void suspend(Interpreter& interp, Traced<Value> value);
 
   private:

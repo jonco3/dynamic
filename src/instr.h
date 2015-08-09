@@ -143,7 +143,7 @@ struct Instr : public Cell
     virtual string name() const { return nameStr; }
 
 #define instr_execute(it)                                                     \
-    static bool execute(Traced<Instr##it*> self, Interpreter& interp)
+    static void execute(Traced<Instr##it*> self, Interpreter& interp)
 
 #define define_instr_members(it)                                              \
     instr_type(Instr_##it);                                                   \
@@ -536,7 +536,7 @@ struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(BinaryOp);
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
-    static bool replaceWithIntInstr(Traced<InstrBinaryOp*> self,
+    static void replaceWithIntInstr(Traced<InstrBinaryOp*> self,
                                     Interpreter& interp);
 };
 
@@ -571,7 +571,7 @@ struct InstrCompareOp : public CompareOpInstr
 {
     define_instr_members(CompareOp);
     InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
-    static bool replaceWithIntInstr(Traced<InstrCompareOp*> self,
+    static void replaceWithIntInstr(Traced<InstrCompareOp*> self,
                                     Interpreter& interp);
 };
 

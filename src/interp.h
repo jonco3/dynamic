@@ -162,7 +162,7 @@ struct Interpreter
     bool call(Traced<Value> callable, unsigned argCount,
               MutableTraced<Value> resultOut);
 
-    bool startCall(Traced<Value> callable, unsigned argCount);
+    void startCall(Traced<Value> callable, unsigned argCount);
 
     void popFrame();
 
@@ -188,7 +188,7 @@ struct Interpreter
 #endif
 
     void replaceInstr(Instr* current, Instr* newData);
-    bool replaceInstrAndRestart(Instr* current, Instr* newData);
+    void replaceInstrAndRestart(Instr* current, Instr* newData);
 
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
@@ -214,7 +214,7 @@ struct Interpreter
     bool isHandlingLoopControl() const;
     Exception* currentException();
     ExceptionHandler* currentExceptionHandler();
-    bool maybeContinueHandlingException();
+    void maybeContinueHandlingException();
     void finishHandlingException();
 
   private:
