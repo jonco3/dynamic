@@ -341,6 +341,12 @@ void Interpreter::popExceptionHandler(ExceptionHandler::Type type)
     exceptionHandlers.pop_back();
 }
 
+void Interpreter::raiseException(Traced<Value> exception)
+{
+    pushStack(exception);
+    raiseException();
+}
+
 void Interpreter::raiseException()
 {
     if (!handleException())
@@ -520,6 +526,7 @@ bool Interpreter::raiseAttrError(Traced<Value> value, Name ident)
     string message =
         "'" + cls->name() + "' object has no attribute '" + ident + "'";
     pushStack(gc.create<AttributeError>(message));
+    raiseException();
     return false;
 }
 
@@ -527,6 +534,7 @@ bool Interpreter::raiseNameError(Name ident)
 {
     string message = "name '" + ident + "' is not defined";
     pushStack(gc.create<NameError>(message));
+    raiseException();
     return false;
 }
 

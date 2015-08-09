@@ -26,7 +26,8 @@ InstrGetStackLocal::execute(Traced<InstrGetStackLocal*> self,
         }
     }
 
-    return interp.raiseNameError(self->ident);
+    interp.raiseNameError(self->ident);
+    return true;
 }
 
 /* static */ INLINE_INSTRS bool
@@ -53,7 +54,8 @@ InstrDelStackLocal::execute(Traced<InstrDelStackLocal*> self,
         }
     }
 
-    return interp.raiseNameError(self->ident);
+    interp.raiseNameError(self->ident);
+    return true;
 }
 
 /* static */ INLINE_INSTRS bool
@@ -63,8 +65,10 @@ InstrGetLexical::execute(Traced<InstrGetLexical*> self,
     Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
     Stack<Value> value;
     // Name was present when compiled, but may have been deleted.
-    if (!env->maybeGetAttr(self->ident, value))
-        return interp.raiseNameError(self->ident);
+    if (!env->maybeGetAttr(self->ident, value)) {
+        interp.raiseNameError(self->ident);
+        return true;
+    }
     interp.pushStack(value);
     return true;
 }
@@ -82,8 +86,10 @@ InstrSetLexical::execute(Traced<InstrSetLexical*> self, Interpreter& interp)
 InstrDelLexical::execute(Traced<InstrDelLexical*> self, Interpreter& interp)
 {
     Stack<Env*> env(interp.lexicalEnv(self->frameIndex));
-    if (!env->maybeDelOwnAttr(self->ident))
-        return interp.raiseNameError(self->ident);
+    if (!env->maybeDelOwnAttr(self->ident)) {
+        interp.raiseNameError(self->ident);
+        return true;
+    }
     return true;
 }
 
@@ -106,7 +112,8 @@ InstrGetGlobal::execute(Traced<InstrGetGlobal*> self, Interpreter& interp)
         return true;
     }
 
-    return interp.raiseNameError(self->ident);
+    interp.raiseNameError(self->ident);
+    return true;
 }
 
 /* static */ INLINE_INSTRS bool
@@ -120,8 +127,10 @@ InstrSetGlobal::execute(Traced<InstrSetGlobal*> self, Interpreter& interp)
 /* static */ INLINE_INSTRS bool
 InstrDelGlobal::execute(Traced<InstrDelGlobal*> self, Interpreter& interp)
 {
-    if (!self->global->maybeDelOwnAttr(self->ident))
-        return interp.raiseNameError(self->ident);
+    if (!self->global->maybeDelOwnAttr(self->ident)) {
+        interp.raiseNameError(self->ident);
+        return true;
+    }
     return true;
 }
 
@@ -142,8 +151,8 @@ InstrSetAttr::execute(Traced<InstrSetAttr*> self, Interpreter& interp)
     Stack<Object*> obj(interp.popStack().toObject());
     Stack<Value> result;
     if (!setAttr(obj, self->ident, value, result)) {
-        interp.pushStack(result);
-        return false;
+        interp.raiseException(result);
+        return true;
     }
 
     return true;
@@ -155,8 +164,8 @@ InstrDelAttr::execute(Traced<InstrDelAttr*> self, Interpreter& interp)
     Stack<Object*> obj(interp.popStack().toObject());
     Stack<Value> result;
     if (!delAttr(obj, self->ident, result)) {
-        interp.pushStack(result);
-        return false;
+        interp.raiseException(result);
+        return true;
     }
 
     return true;
@@ -188,8 +197,10 @@ static bool getMethod(Name ident, Interpreter& interp)
     Stack<Value> value(interp.popStack());
     Stack<Value> result;
     bool isCallableDescriptor;
-    if (!getMethodAttr(value, ident, result, isCallableDescriptor))
-        return interp.raiseAttrError(value, ident);
+    if (!getMethodAttr(value, ident, result, isCallableDescriptor)) {
+        interp.raiseAttrError(value, ident);
+        return false;
+    }
 
     interp.pushStack(result, Boolean::get(isCallableDescriptor), value);
     return true;
@@ -200,7 +211,7 @@ InstrGetMethod::execute(Traced<InstrGetMethod*> self, Interpreter& interp)
 {
     Stack<Value> value(interp.peekStack(0));
     if (!getMethod(self->ident, interp))
-        return false;
+        return true;
 
     if (value.isInt()) {
         Stack<Value> result(interp.peekStack(2));
@@ -299,7 +310,8 @@ InstrIn::execute(Traced<InstrIn*> self, Interpreter& interp)
     Stack<Value> contains;
     if (!container->maybeGetAttr(Name::__contains__, contains)) {
         interp.pushStack(gc.create<TypeError>("Argument is not iterable"));
-        return false;
+        interp.raiseException();
+        return true;
     }
 
     interp.pushStack(container, value);
@@ -477,7 +489,8 @@ InstrAssertionFailed::execute(Traced<InstrAssertionFailed*> self,
     assert(obj->is<String>() || obj == None);
     string message = obj != None ? obj->as<String>()->value() : "";
     interp.pushStack(gc.create<AssertionError>(message));
-    return false;
+    interp.raiseException();
+    return true;
 }
 
 /* static */ INLINE_INSTRS bool
@@ -497,23 +510,27 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
     Stack<Value> bases;
     if (!env->maybeGetAttr(Name::__bases__, bases)) {
         interp.pushStack(gc.create<AttributeError>("Missing __bases__"));
-        return false;
+        interp.raiseException();
+        return true;
     }
     if (!bases.toObject()->is<Tuple>()) {
         interp.pushStack(gc.create<TypeError>("__bases__ is not a tuple"));
-        return false;
+        interp.raiseException();
+        return true;
     }
     Stack<Tuple*> tuple(bases.toObject()->as<Tuple>());
     Stack<Class*> base(Object::ObjectClass);
     if (tuple->len() > 1) {
         interp.pushStack(gc.create<NotImplementedError>(
                              "Multiple inheritance not NYI"));
-        return false;
+        interp.raiseException();
+        return true;
     } else if (tuple->len() == 1) {
         Stack<Value> value(tuple->getitem(0));
         if (!value.toObject()->is<Class>()) {
             interp.pushStack(gc.create<TypeError>("__bases__[0] is not a class"));
-            return false;
+            interp.raiseException();
+            return true;
         }
         base = value.toObject()->as<Class>();
     }
@@ -659,7 +676,8 @@ InstrBinaryOpFallback::execute(Traced<InstrBinaryOpFallback*> self,
 
     interp.pushStack(gc.create<TypeError>(
                          "unsupported operand type(s) for binary operation"));
-    return false;
+    interp.raiseException();
+    return true;
 }
 
 template <BinaryOp Op>
@@ -760,7 +778,8 @@ InstrCompareOpFallback::execute(Traced<InstrCompareOpFallback*> self,
     } else {
         interp.pushStack(gc.create<TypeError>(
                          "unsupported operand type(s) for compare operation"));
-        return false;
+        interp.raiseException();
+        return true;
     }
 
     interp.pushStack(result);
@@ -796,15 +815,15 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
     interp.pushStack(update);
     if (value.maybeGetAttr(Name::augAssignMethod[self->op()], method)) {
         if (!interp.call(method, 2, result)) {
-            interp.pushStack(result);
-            return false;
+            interp.raiseException(result);
+            return true;
         }
         interp.pushStack(result);
         return true;
     } else if (value.maybeGetAttr(Name::binMethod[self->op()], method)) {
         if (!interp.call(method, 2, result)) {
-            interp.pushStack(result);
-            return false;
+            interp.raiseException(result);
+            return true;
         }
         interp.pushStack(result);
         return true;
@@ -812,7 +831,8 @@ InstrAugAssignUpdate::execute(Traced<InstrAugAssignUpdate*> self,
         interp.popStack(2);
         string message = "unsupported operand type(s) for augmented assignment";
         interp.pushStack(gc.create<TypeError>(message));
-        return false;
+        interp.raiseException();
+        return true;
     }
 }
 

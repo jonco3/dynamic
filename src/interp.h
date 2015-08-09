@@ -205,6 +205,7 @@ struct Interpreter
         LoopControl
     };
 
+    void raiseException(Traced<Value> exception);
     void raiseException();
     void pushExceptionHandler(ExceptionHandler::Type type, unsigned offset);
     void popExceptionHandler(ExceptionHandler::Type type);
