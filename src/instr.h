@@ -104,7 +104,8 @@ using namespace std;
 
 enum InstrType
 {
-    Instr_Return = 0,
+    Instr_Abort = 0,
+    Instr_Return,
 #define instr_enum(name) Instr_##name,
     for_each_instr(instr_enum)
 #undef instr_enum
@@ -155,10 +156,18 @@ struct Instr : public Cell
         define_instr_members(it);                                             \
     }
 
+struct InstrAbort : public Instr
+{
+    // Special instruction to exit the interpreter with an exception.  Doesn't
+    // have an execute() method.
+    instr_type(Instr_Abort)
+    instr_name("Abort");
+};
+
 struct InstrReturn : public Instr
 {
-    // Special instruction to exit interpreter, doesn't have an execute()
-    // method.
+    // Special instruction to return from a function call / module execution.
+    // Doesn't have an execute() method.
     instr_type(Instr_Return)
     instr_name("Return");
 };

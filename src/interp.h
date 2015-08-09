@@ -47,6 +47,7 @@ struct ExceptionHandler : public Cell
 struct Interpreter
 {
     Interpreter();
+    static void init();
 
     bool exec(Traced<Block*> block, MutableTraced<Value> resultOut);
 
@@ -204,6 +205,7 @@ struct Interpreter
         LoopControl
     };
 
+    void raiseException();
     void pushExceptionHandler(ExceptionHandler::Type type, unsigned offset);
     void popExceptionHandler(ExceptionHandler::Type type);
     bool isHandlingException() const;
@@ -215,6 +217,8 @@ struct Interpreter
     void finishHandlingException();
 
   private:
+    static GlobalRoot<Block*> AbortTrampoline;
+
     InstrThunk *instrp;
     RootVector<Frame> frames;
     RootVector<Value> stack;
@@ -238,7 +242,7 @@ struct Interpreter
     TokenPos currentPos();
 
     bool run(MutableTraced<Value> resultOut);
-    bool handleException(MutableTraced<Value> resultOut);
+    bool handleException();
     bool startExceptionHandler(Traced<Exception*> exception);
     bool startNextFinallySuite(JumpKind jumpKind);
 

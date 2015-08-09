@@ -531,7 +531,8 @@ InstrMakeClassFromFrame::execute(Traced<InstrMakeClassFromFrame*> self,
 InstrRaise::execute(Traced<InstrRaise*> self, Interpreter& interp)
 {
     // todo: exceptions must be old-style classes or derived from BaseException
-    return false;
+    interp.raiseException();
+    return true;
 }
 
 /* static */ INLINE_INSTRS bool
@@ -959,6 +960,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 {
     static const void* dispatchTable[] =
     {
+        &&instr_Abort,
         &&instr_Return,
 #define dispatch_table_entry(it)                                              \
         &&instr_##it,
@@ -979,6 +981,12 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
     dispatch();
 
+  instr_Abort: {
+        resultOut = popStack();
+        popFrame();
+        return false;
+    }
+
   instr_Return: {
         Value value = interp.popStack();
         interp.returnFromFrame(value);
@@ -992,8 +1000,8 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
         Instr##it** ip = reinterpret_cast<Instr##it**>(&thunk->data);         \
         bool ok = Instr##it::execute(                                         \
             Traced<Instr##it*>::fromTracedLocation(ip), interp);              \
-        if (!ok && !handleException(resultOut))                               \
-            return false;                                                     \
+        if (!ok)                                                              \
+            raiseException();                                                 \
         assert(instrp);                                                       \
         dispatch();                                                           \
     }

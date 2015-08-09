@@ -41,6 +41,7 @@ void init1()
     initSingletons();
     GeneratorIter::init();
     initReflect();
+    Interpreter::init();
 }
 
 void init2(const string& libDir)

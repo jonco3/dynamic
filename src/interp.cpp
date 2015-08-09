@@ -17,6 +17,8 @@ bool logFrames = false;
 bool logExecution = false;
 #endif
 
+GlobalRoot<Block*> Interpreter::AbortTrampoline;
+
 Interpreter interp;
 
 ExceptionHandler::ExceptionHandler(Type type, unsigned frameIndex, unsigned offset)
@@ -34,6 +36,14 @@ Interpreter::Interpreter()
     remainingFinallyCount_(0),
     loopControlTarget_(0)
 {}
+
+void Interpreter::init()
+{
+    // Create a block that will cause the interpreter loop to exit.
+    AbortTrampoline.init(gc.create<Block>(Env::InitialLayout, 1, false));
+    AbortTrampoline->append<InstrAbort>();
+    AbortTrampoline->setMaxStackDepth(1);
+}
 
 bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 {
@@ -331,7 +341,13 @@ void Interpreter::popExceptionHandler(ExceptionHandler::Type type)
     exceptionHandlers.pop_back();
 }
 
-bool Interpreter::handleException(MutableTraced<Value> resultOut)
+void Interpreter::raiseException()
+{
+    if (!handleException())
+        pushFrame(AbortTrampoline, stackPos() - 1);
+}
+
+bool Interpreter::handleException()
 {
     Stack<Value> value(popStack());
 
@@ -351,7 +367,7 @@ bool Interpreter::handleException(MutableTraced<Value> resultOut)
 
     while (instrp)
         popFrame();
-    resultOut = value;
+    pushStack(value);
     return false;
 }
 
