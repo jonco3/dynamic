@@ -45,7 +45,6 @@ using namespace std;
     instr(CallMethod)                                                        \
     instr(CreateEnv)                                                         \
     instr(InitStackLocals)                                                   \
-    instr(Return)                                                            \
     instr(In)                                                                \
     instr(Is)                                                                \
     instr(Not)                                                               \
@@ -105,6 +104,7 @@ using namespace std;
 
 enum InstrType
 {
+    Instr_Return = 0,
 #define instr_enum(name) Instr_##name,
     for_each_instr(instr_enum)
 #undef instr_enum
@@ -154,6 +154,14 @@ struct Instr : public Cell
     {                                                                         \
         define_instr_members(it);                                             \
     }
+
+struct InstrReturn : public Instr
+{
+    // Special instruction to exit interpreter, doesn't have an execute()
+    // method.
+    instr_type(Instr_Return)
+    instr_name("Return");
+};
 
 struct InstrConst : public Instr
 {
@@ -376,7 +384,6 @@ struct InstrCallMethod : public InstrCall
 
 define_simple_instr(CreateEnv);
 define_simple_instr(InitStackLocals);
-define_simple_instr(Return);
 define_simple_instr(In);
 define_simple_instr(Is);
 define_simple_instr(Not);

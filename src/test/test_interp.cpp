@@ -88,60 +88,60 @@ void testReplacements(const string& defs,
 testcase(interp)
 {
     testInterp("pass", "None");
-    testInterp("return 3", "3");
-    testInterp("return 2 + 2", "4");
-    testInterp("return 2 ** 4 - 1", "15");
+    testInterp("3", "3");
+    testInterp("2 + 2", "4");
+    testInterp("2 ** 4 - 1", "15");
     testInterp("foo = 2 + 3\n"
-               "return foo", "5");
+               "foo", "5");
     testInterp("foo = 3\n"
                "bar = 4\n"
-               "return foo + bar", "7");
+               "foo + bar", "7");
     // todo: should be: AttributeError: 'int' object has no attribute 'foo'
     //testInterp("foo = 0\n"
     //           "foo.bar = 1\n"
-    //           "return foo + foo.bar", "1");
+    //           "foo + foo.bar", "1");
     testInterp("foo = bar = 1\n"
-               "return foo", "1");
-    testInterp("return 1 | 8", "9");
-    testInterp("return 3 ^ 5", "6");
-    testInterp("return 3 & 5", "1");
-    testInterp("return 2 > 3", "False");
-    testInterp("return 3 > 3", "False");
-    testInterp("return 3 > 2", "True");
-    testInterp("return 2 == 3", "False");
-    testInterp("return 3 == 3", "True");
-    testInterp("return 3 == 2", "False");
-    testInterp("return 1 or 2", "1");
-    testInterp("return 0 or 2", "2");
-    testInterp("return 1 and 2", "2");
-    testInterp("return 0 and 2", "0");
-    testInterp("return -2", "-2");
-    testInterp("return --2", "2");
-    testInterp("return -2 + 1", "-1");
-    testInterp("return 2 - -1", "3");
-    testInterp("return 1 if 2 < 3 else 0", "1");
-    testInterp("return 1 if 2 > 3 else 2 + 2", "4");
-    testInterp("return (lambda: 2 + 2)()", "4");
-    testInterp("return (lambda x: x + 1)(1)", "2");
-    testInterp("x = 0\nreturn (lambda x: x + 1)(1)", "2");
-    testInterp("x = 0\nreturn (lambda y: x + 1)(1)", "1");
-    testInterp("return not 1", "False");
-    testInterp("return not 0", "True");
+               "foo", "1");
+    testInterp("1 | 8", "9");
+    testInterp("3 ^ 5", "6");
+    testInterp("3 & 5", "1");
+    testInterp("2 > 3", "False");
+    testInterp("3 > 3", "False");
+    testInterp("3 > 2", "True");
+    testInterp("2 == 3", "False");
+    testInterp("3 == 3", "True");
+    testInterp("3 == 2", "False");
+    testInterp("1 or 2", "1");
+    testInterp("0 or 2", "2");
+    testInterp("1 and 2", "2");
+    testInterp("0 and 2", "0");
+    testInterp("-2", "-2");
+    testInterp("--2", "2");
+    testInterp("-2 + 1", "-1");
+    testInterp("2 - -1", "3");
+    testInterp("1 if 2 < 3 else 0", "1");
+    testInterp("1 if 2 > 3 else 2 + 2", "4");
+    testInterp("(lambda: 2 + 2)()", "4");
+    testInterp("(lambda x: x + 1)(1)", "2");
+    testInterp("x = 0\n(lambda x: x + 1)(1)", "2");
+    testInterp("x = 0\n(lambda y: x + 1)(1)", "1");
+    testInterp("not 1", "False");
+    testInterp("not 0", "True");
 
     testInterp("if 1:\n"
-               "  return 2\n", "2");
+               "  2\n", "2");
     testInterp("if 0:\n"
-               "  return 2\n"
+               "  2\n"
                "else:\n"
-               "  return 3\n",
+               "  3\n",
                "3");
     testInterp("x = 1\n"
                "if x == 0:\n"
-               "  return 4\n"
+               "  4\n"
                "elif x == 1:\n"
-               "  return 5\n"
+               "  5\n"
                "else:\n"
-               "  return 6\n",
+               "  6\n",
                "5");
 
     testInterp("x = 0\n"
@@ -149,7 +149,7 @@ testcase(interp)
                "while y > 0:\n"
                "  x = x + y\n"
                "  y = y - 1\n"
-               "return x\n",
+               "x\n",
                "6");
 
     testInterp("def foo():\n"

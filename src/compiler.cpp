@@ -46,13 +46,13 @@ struct ByteCompiler : public SyntaxVisitor
         assert(breakInstrs.empty());
     }
 
-    Block* buildModule(Traced<Object*> globals, const Syntax* s) {
+    Block* buildModule(Traced<Object*> globals, const SyntaxBlock* s) {
         assert(globals);
+        assert(!parent);
         topLevel = globals;
         layout = topLevel->layout();
         build(*s, 0);
-        if (!block->lastInstr().data->is<InstrReturn>())
-            emit<InstrReturn>();
+        emit<InstrReturn>();
         log(block);
         return block;
     }
@@ -663,12 +663,14 @@ struct ByteCompiler : public SyntaxVisitor
                                  "SyntaxError: 'return' with argument inside generator");
             }
             emit<InstrLeaveGenerator>();
-        } else {
+        } else if (parent) {
             if (s.right)
                 compile(s.right);
             else
                 emit<InstrConst>(None);
             emit<InstrReturn>();
+        } else {
+            throw ParseError(s.token, "SyntaxError: 'return' outside function");
         }
     }
 
@@ -693,18 +695,15 @@ struct ByteCompiler : public SyntaxVisitor
             compile(suites[i].cond);
             lastCondFailed = emit<InstrBranchIfFalse>();
             compile(suites[i].suite);
-            emit<InstrPop>();
-            if (s.elseSuite || i != suites.size() - 1)
-                branchesToEnd.push_back(emit<InstrBranchAlways>());
+            branchesToEnd.push_back(emit<InstrBranchAlways>());
         }
         block->branchHere(lastCondFailed);
-        if (s.elseSuite) {
+        if (s.elseSuite)
             compile(s.elseSuite);
-            emit<InstrPop>();
-        }
+        else
+            emit<InstrConst>(None);
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
             block->branchHere(branchesToEnd[i]);
-        emit<InstrConst>(None);
     }
 
     virtual void visit(const SyntaxWhile& s) {

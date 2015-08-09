@@ -61,23 +61,20 @@ testcase(block)
     testBuildModule("1",
                     "Const 1, Return");
 
-    testBuildModule("return 1",
-                    "Const 1, Return");
-
     testBuildModule("foo = 1\n"
                     "bar = 1\n"
-                    "return foo in bar",
+                    "foo in bar",
                     "Const 1, SetGlobal foo, Pop, "
                     "Const 1, SetGlobal bar, Pop, "
                     "GetGlobal foo, GetGlobal bar, In, Return");
 
     testBuildModule("foo = 1\n"
                     "bar = 1\n"
-                    "return foo is not bar",
+                    "foo is not bar",
                     "Const 1, SetGlobal foo, Pop, "
                     "Const 1, SetGlobal bar, Pop, "
                     "GetGlobal foo, GetGlobal bar, Is, Not, Return");
 
-    testBuildModule("return 2 - - 1",
+    testBuildModule("2 - - 1",
                     "Const 2, Const 1, GetMethod __neg__, CallMethod 0, BinaryOp -, Return");
 }

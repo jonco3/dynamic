@@ -278,7 +278,6 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
                                   unsigned ipOffset,
                                   vector<Value>& savedStack)
 {
-    popFrame();
     pushFrame(block, stackPos());
     setFrameEnv(env);
     instrp += ipOffset;

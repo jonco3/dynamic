@@ -289,14 +289,6 @@ InstrInitStackLocals::execute(Traced<InstrInitStackLocals*> self,
 }
 
 /* static */ INLINE_INSTRS bool
-InstrReturn::execute(Traced<InstrReturn*> self, Interpreter& interp)
-{
-    Value value = interp.popStack();
-    interp.returnFromFrame(value);
-    return true;
-}
-
-/* static */ INLINE_INSTRS bool
 InstrIn::execute(Traced<InstrIn*> self, Interpreter& interp)
 {
     // todo: implement this
@@ -967,6 +959,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 {
     static const void* dispatchTable[] =
     {
+        &&instr_Return,
 #define dispatch_table_entry(it)                                              \
         &&instr_##it,
     for_each_instr(dispatch_table_entry)
@@ -986,6 +979,14 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
     dispatch();
 
+  instr_Return: {
+        Value value = interp.popStack();
+        interp.returnFromFrame(value);
+        if (!instrp)
+            goto exit;
+        dispatch();
+    }
+
 #define handle_instr(it)                                                      \
     instr_##it: {                                                             \
         Instr##it** ip = reinterpret_cast<Instr##it**>(&thunk->data);         \
@@ -993,14 +994,14 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
             Traced<Instr##it*>::fromTracedLocation(ip), interp);              \
         if (!ok && !handleException(resultOut))                               \
             return false;                                                     \
-        if (!instrp)                                                          \
-            goto done;                                                        \
+        assert(instrp);                                                       \
         dispatch();                                                           \
     }
     for_each_instr(handle_instr)
 #undef handle_instr
 
-  done:
+  exit:
+    assert(!instrp);
     resultOut = popStack();
     return true;
 }
