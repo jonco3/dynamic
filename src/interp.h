@@ -3,6 +3,7 @@
 
 #include "block.h"
 #include "frame.h"
+#include "instr.h"
 #include "token.h"
 #include "value-inl.h"
 
@@ -263,6 +264,18 @@ struct Interpreter
                          unsigned argCount,
                          MutableTraced<Value> resultOut);
     CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
+
+    // Instruction implementations
+#define declare_instr_method(name)                                            \
+    void executeInstr_##name(Traced<Instr##name*> self);
+    for_each_outofline_instr(declare_instr_method)
+#undef declare_instr_method
+
+    template <BinaryOp Op>
+    void executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> self);
+
+    template <CompareOp Op>
+    void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> self);
 };
 
 extern Interpreter interp;

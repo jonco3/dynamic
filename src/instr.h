@@ -133,13 +133,9 @@ struct Instr : public Cell
 #define instr_name(nameStr)                                                   \
     virtual string name() const { return nameStr; }
 
-#define instr_execute(it)                                                     \
-    static void execute(Traced<Instr##it*> self, Interpreter& interp)
-
 #define define_instr_members(it)                                              \
     instr_type(Instr_##it);                                                   \
-    instr_name(#it);                                                          \
-    instr_execute(it)
+    instr_name(#it)
 
 #define define_simple_instr(it)                                               \
     struct Instr##it : public Instr                                           \
@@ -147,21 +143,9 @@ struct Instr : public Cell
         define_instr_members(it);                                             \
     }
 
-struct InstrAbort : public Instr
-{
-    // Special instruction to exit the interpreter with an exception.  Doesn't
-    // have an execute() method.
-    instr_type(Instr_Abort)
-    instr_name("Abort");
-};
 
-struct InstrReturn : public Instr
-{
-    // Special instruction to return from a function call / module execution.
-    // Doesn't have an execute() method.
-    instr_type(Instr_Return)
-    instr_name("Return");
-};
+define_simple_instr(Abort);
+define_simple_instr(Return);
 
 struct InstrConst : public Instr
 {
@@ -178,7 +162,6 @@ struct InstrConst : public Instr
         gc.trace(t, &value);
     }
 
-  private:
     Value value;
 };
 
@@ -213,8 +196,7 @@ struct InstrGetStackLocal : public IdentInstrBase
         s << name() << " " << ident << " " << slot_;
     }
 
-  private:
-    unsigned slot_;
+    const unsigned slot_;
 };
 
 struct InstrSetStackLocal : public IdentInstrBase
@@ -228,8 +210,7 @@ struct InstrSetStackLocal : public IdentInstrBase
         s << name() << " " << ident << " " << slot_;
     }
 
-  private:
-    unsigned slot_;
+    const unsigned slot_;
 };
 
 struct InstrDelStackLocal : public IdentInstrBase
@@ -243,8 +224,7 @@ struct InstrDelStackLocal : public IdentInstrBase
         s << name() << " " << ident << " " << slot_;
     }
 
-  private:
-    unsigned slot_;
+    const unsigned slot_;
 };
 
 struct InstrGetLexical : public IdentInstrBase
@@ -257,8 +237,7 @@ struct InstrGetLexical : public IdentInstrBase
         s << name() << " " << frameIndex << " " << ident;
     }
 
-  private:
-    unsigned frameIndex;
+    const unsigned frameIndex;
 };
 
 struct InstrSetLexical : public IdentInstrBase
@@ -271,8 +250,7 @@ struct InstrSetLexical : public IdentInstrBase
         s << name() << " " << frameIndex << " " << ident;
     }
 
-  private:
-    unsigned frameIndex;
+    const unsigned frameIndex;
 };
 
 struct InstrDelLexical : public IdentInstrBase
@@ -285,8 +263,7 @@ struct InstrDelLexical : public IdentInstrBase
         s << name() << " " << frameIndex << " " << ident;
     }
 
-  private:
-    unsigned frameIndex;
+    const unsigned frameIndex;
 };
 
 struct InstrGetGlobal : public IdentInstrBase
@@ -303,7 +280,6 @@ struct InstrGetGlobal : public IdentInstrBase
         gc.trace(t, &global);
     }
 
-  private:
     Object* global;
 };
 
@@ -321,7 +297,6 @@ struct InstrSetGlobal : public IdentInstrBase
         gc.trace(t, &global);
     }
 
-  private:
     Object* global;
 };
 
@@ -339,7 +314,6 @@ struct InstrDelGlobal : public IdentInstrBase
         gc.trace(t, &global);
     }
 
-  private:
     Object* global;
 };
 
@@ -359,7 +333,6 @@ struct InstrGetMethodInt : public IdentInstrBase
         gc.trace(t, &result_);
     }
 
-  private:
     Value result_;
 };
 
@@ -372,8 +345,7 @@ struct InstrCall : public Instr
         s << name() << " " << count_;
     }
 
-  protected:
-    unsigned count_;
+    const unsigned count_;
 };
 
 struct InstrCallMethod : public InstrCall
@@ -402,7 +374,6 @@ struct Branch : public Instr
         s << name() << " " << offset_;
     }
 
-  protected:
     int offset_;
 };
 
@@ -438,6 +409,7 @@ struct InstrLambda : public Instr
                 bool isGenerator = false);
 
     Name functionName() const { return funcName_; }
+    FunctionInfo* functionInfo() const { return info_; }
     const vector<Name>& paramNames() const { return info_->params_; }
     Block* block() const { return info_->block_; }
     unsigned defaultCount() const { return info_->defaultCount_; }
@@ -468,8 +440,7 @@ struct InstrDup : public Instr
         s << name() << " " << index_;
     }
 
-  private:
-    unsigned index_;
+    const unsigned index_;
 };
 
 define_simple_instr(Pop);
@@ -479,27 +450,21 @@ struct InstrTuple : public Instr
 {
     define_instr_members(Tuple);
     InstrTuple(unsigned size) : size(size) {}
-
-  private:
-    unsigned size;
+    const unsigned size;
 };
 
 struct InstrList : public Instr
 {
     define_instr_members(List);
     InstrList(unsigned size) : size(size) {}
-
-  private:
-    unsigned size;
+    const unsigned size;
 };
 
 struct InstrDict : public Instr
 {
     define_instr_members(Dict);
     InstrDict(unsigned size) : size(size) {}
-
-  private:
-    unsigned size;
+    const unsigned size;
 };
 
 define_simple_instr(Slice);
@@ -542,9 +507,13 @@ struct InstrBinaryOpInt : public BinaryOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Plus + Op));
     instr_name("BinaryOpInt");
-    instr_execute(BinaryOpInt);
     InstrBinaryOpInt() : BinaryOpInstr(Op) {}
 };
+
+#define typedef_binary_op_int(name, token, method, rmethod, imethod)          \
+    typedef InstrBinaryOpInt<Binary##name> InstrBinaryOpInt_##name;
+    for_each_binary_op(typedef_binary_op_int)
+#undef typedef_binary_op_int
 
 struct CompareOpInstr : public Instr
 {
@@ -577,9 +546,13 @@ struct InstrCompareOpInt : public CompareOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_CompareOpInt_LT + Op));
     instr_name("CompareOpInt");
-    instr_execute(CompareOpInt);
     InstrCompareOpInt() : CompareOpInstr(Op) {}
 };
+
+#define typedef_compare_op_int(name, token, method, rmethod)                  \
+    typedef InstrCompareOpInt<Compare##name> InstrCompareOpInt_##name;
+    for_each_compare_op(typedef_compare_op_int)
+#undef typedef_compare_op_int
 
 struct InstrAugAssignUpdate : public BinaryOpInstr
 {
@@ -608,6 +581,9 @@ struct InstrLoopControlJump : public Instr
       : finallyCount_(finallyCount), target_(target)
     {}
 
+    unsigned finallyCount() const { return finallyCount_; }
+    unsigned target() const { return target_; }
+
     void setTarget(unsigned target) {
         assert(!target_);
         assert(target);
@@ -632,18 +608,14 @@ struct InstrAssertStackDepth : public Instr
         s << name() << " " << expected_;
     }
 
-  private:
-    unsigned expected_;
+    const unsigned expected_;
 };
 
 #undef instr_type
 #undef instr_name
-#undef instr_execute
 #undef define_instr_members
 #undef define_simple_instr
 #undef define_branch_instr
 #undef define_ident_instr
-
-extern bool executeInstr(Interpreter& interp, InstrThunk* thunk);
 
 #endif
