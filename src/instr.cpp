@@ -172,17 +172,17 @@ Interpreter::executeInstr_Call(Traced<InstrCall*> instr)
  * count.
  */
 
-static bool getMethod(Name ident, Interpreter& interp)
+bool Interpreter::getMethod(Name ident)
 {
-    Stack<Value> value(interp.popStack());
+    Stack<Value> value(popStack());
     Stack<Value> result;
     bool isCallableDescriptor;
     if (!getMethodAttr(value, ident, result, isCallableDescriptor)) {
-        interp.raiseAttrError(value, ident);
+        raiseAttrError(value, ident);
         return false;
     }
 
-    interp.pushStack(result, Boolean::get(isCallableDescriptor), value);
+    pushStack(result, Boolean::get(isCallableDescriptor), value);
     return true;
 }
 
@@ -190,7 +190,7 @@ INLINE_INSTRS void
 Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
 {
     Stack<Value> value(peekStack(0));
-    if (!getMethod(instr->ident, *this))
+    if (!getMethod(instr->ident))
         return;
 
     if (value.isInt()) {
@@ -201,10 +201,10 @@ Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
     }
 }
 
-/* static */ void
+INLINE_INSTRS void
 Interpreter::executeInstr_GetMethodFallback(Traced<InstrGetMethodFallback*> instr)
 {
-    getMethod(instr->ident, *this);
+    getMethod(instr->ident);
 }
 
 INLINE_INSTRS void
@@ -566,28 +566,25 @@ InstrBinaryOp::replaceWithIntInstr(Traced<InstrBinaryOp*> instr, Interpreter& in
     }
 }
 
-static inline bool maybeCallBinaryOp(Interpreter& interp,
-                                     Traced<Value> obj,
-                                     Name name,
-                                     Traced<Value> left,
-                                     Traced<Value> right)
+bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
+                                    Traced<Value> left, Traced<Value> right)
 {
     Stack<Value> method;
     if (!obj.maybeGetAttr(name, method))
         return false;
 
     Stack<Value> result;
-    interp.pushStack(left);
-    interp.pushStack(right);
-    if (!interp.call(method, 2, result)) {
-        interp.pushStack(result);
+    pushStack(left);
+    pushStack(right);
+    if (!call(method, 2, result)) {
+        pushStack(result);
         return true;
     }
 
     if (result == Value(NotImplemented))
         return false;
 
-    interp.pushStack(result);
+    pushStack(result);
     return true;
 }
 
@@ -611,14 +608,14 @@ Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
     const Name* rnames = Name::binMethodReflected;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        if (maybeCallBinaryOp(*this, right, rnames[op], right, left))
+        if (maybeCallBinaryOp(right, rnames[op], right, left))
             return;
-        if (maybeCallBinaryOp(*this, left, names[op], left, right))
+        if (maybeCallBinaryOp(left, names[op], left, right))
             return;
     } else {
-        if (maybeCallBinaryOp(*this, left, names[op], left, right))
+        if (maybeCallBinaryOp(left, names[op], left, right))
             return;
-        if (maybeCallBinaryOp(*this, right, rnames[op], right, left))
+        if (maybeCallBinaryOp(right, rnames[op], right, left))
             return;
     }
 
@@ -703,14 +700,14 @@ Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> inst
     CompareOp op = instr->op();
     const Name* names = Name::compareMethod;
     const Name* rnames = Name::compareMethodReflected;
-    if (maybeCallBinaryOp(*this, left, names[op], left, right))
+    if (maybeCallBinaryOp(left, names[op], left, right))
         return;
     if (!rnames[op].isNull() &&
-        maybeCallBinaryOp(*this, right, rnames[op], right, left)) {
+        maybeCallBinaryOp(right, rnames[op], right, left)) {
         return;
     }
     if (op == CompareNE &&
-        maybeCallBinaryOp(*this, left, names[CompareEQ], left, right))
+        maybeCallBinaryOp(left, names[CompareEQ], left, right))
     {
         if (!isHandlingException()) {
             Stack<Value> result(popStack());
