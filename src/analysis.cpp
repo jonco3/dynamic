@@ -45,7 +45,6 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     virtual void visit(const SyntaxTargetList& s) {
         assert(inAssignTarget_);
-        // todo: target list is backwards
         for (auto i = s.targets.rbegin(); i != s.targets.rend(); i++)
             (*i)->accept(*this);
     }
