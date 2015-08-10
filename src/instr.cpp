@@ -1,7 +1,11 @@
 #include "instr.h"
 
 #include "builtin.h"
+#include "dict.h"
+#include "exception.h"
 #include "generator.h"
+#include "singletons.h"
+#include "list.h"
 
 #define INLINE_INSTRS /*inline*/
 

@@ -6,6 +6,7 @@
 #include "input.h"
 #include "instr.h"
 #include "interp.h"
+#include "list.h"
 #include "name.h"
 #include "repr.h"
 #include "utils.h"

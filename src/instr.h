@@ -1,21 +1,9 @@
 #ifndef __INSTR_H__
 #define __INSTR_H__
 
-#include "bool.h"
 #include "callable.h"
-#include "dict.h"
-#include "exception.h"
-#include "frame.h"
 #include "gcdefs.h"
-#include "numeric.h"
-#include "interp.h"
-#include "list.h"
 #include "name.h"
-#include "object.h"
-#include "singletons.h"
-#include "specials.h"
-#include "string.h"
-#include "list.h"
 
 #include "value-inl.h"
 

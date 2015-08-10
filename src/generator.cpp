@@ -1,6 +1,7 @@
 #include "generator.h"
 
 #include "callable.h"
+#include "exception.h"
 #include "instr.h"
 
 //#define TRACE_GENERATOR

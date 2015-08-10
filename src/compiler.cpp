@@ -1,6 +1,7 @@
 #include "analysis.h"
 #include "common.h"
 #include "compiler.h"
+#include "exception.h"
 #include "frame.h"
 #include "instr.h"
 #include "parser.h"
