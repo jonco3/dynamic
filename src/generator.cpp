@@ -2,7 +2,9 @@
 
 #include "callable.h"
 #include "exception.h"
+#include "frame.h"
 #include "instr.h"
+#include "interp.h"
 
 //#define TRACE_GENERATOR
 

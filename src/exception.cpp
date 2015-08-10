@@ -5,6 +5,8 @@
 #include "string.h"
 #include "test.h"
 
+#include "value-inl.h"
+
 #include <sstream>
 
 GlobalRoot<Class*> Exception::ObjectClass;

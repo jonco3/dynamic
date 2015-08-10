@@ -3,7 +3,10 @@
 #include "bool.h"
 #include "callable.h"
 #include "exception.h"
+#include "numeric.h"
 #include "singletons.h"
+
+#include "value-inl.h"
 
 #include <algorithm>
 

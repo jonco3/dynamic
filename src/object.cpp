@@ -3,6 +3,7 @@
 #include "bool.h"
 #include "callable.h"
 #include "exception.h"
+#include "interp.h"
 #include "list.h"
 #include "numeric.h"
 #include "singletons.h"

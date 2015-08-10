@@ -2,13 +2,14 @@
 #define __CALLABLE_H__
 
 #include "object.h"
-#include "interp.h"
 #include "block.h"
 
 #include <memory>
 #include <vector>
 
 using namespace std;
+
+struct Env;
 
 struct Callable : public Object
 {

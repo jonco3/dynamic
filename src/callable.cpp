@@ -1,7 +1,10 @@
 #include "callable.h"
 
 #include "exception.h"
+#include "frame.h"
 #include "object.h"
+
+#include "value-inl.h"
 
 #include <climits>
 

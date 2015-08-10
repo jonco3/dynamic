@@ -6,6 +6,7 @@
 #include "dict.h"
 #include "exception.h"
 #include "input.h"
+#include "interp.h"
 #include "numeric.h"
 #include "list.h"
 #include "parser.h"

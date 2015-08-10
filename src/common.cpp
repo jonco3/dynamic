@@ -8,6 +8,7 @@
 #include "exception.h"
 #include "frame.h"
 #include "input.h"
+#include "interp.h"
 #include "name.h"
 #include "numeric.h"
 #include "list.h"

@@ -4,6 +4,7 @@
 #include "dict.h"
 #include "exception.h"
 #include "generator.h"
+#include "interp.h"
 #include "singletons.h"
 #include "list.h"
 
