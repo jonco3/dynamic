@@ -154,9 +154,9 @@ Interpreter::executeInstr_DelAttr(Traced<InstrDelAttr*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_Call(Traced<InstrCall*> instr)
 {
-    Stack<Value> target(peekStack(instr->count_));
-    removeStackEntries(instr->count_, 1);
-    startCall(target, instr->count_);
+    Stack<Value> target(peekStack(instr->count));
+    removeStackEntries(instr->count, 1);
+    startCall(target, instr->count);
 }
 
 /*
@@ -226,9 +226,9 @@ Interpreter::executeInstr_GetMethodInt(Traced<InstrGetMethodInt*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
 {
-    bool addInstr = peekStack(instr->count_ + 1).as<Boolean>()->value();
-    Stack<Value> target(peekStack(instr->count_ + 2));
-    unsigned argCount = instr->count_ + (addInstr ? 1 : 0);
+    bool addInstr = peekStack(instr->count + 1).as<Boolean>()->value();
+    Stack<Value> target(peekStack(instr->count + 2));
+    unsigned argCount = instr->count + (addInstr ? 1 : 0);
     removeStackEntries(argCount, addInstr ? 2 : 3);
     return startCall(target, argCount);
 }
@@ -390,7 +390,7 @@ Interpreter::executeInstr_Lambda(Traced<InstrLambda*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_Dup(Traced<InstrDup*> instr)
 {
-    pushStack(peekStack(instr->index_));
+    pushStack(peekStack(instr->index));
 }
 
 INLINE_INSTRS void
@@ -531,7 +531,7 @@ Interpreter::executeInstr_IteratorNext(Traced<InstrIteratorNext*> instr)
 
 void BinaryOpInstr::print(ostream& s) const
 {
-    s << name() << " " << BinaryOpNames[op()];
+    s << name() << " " << BinaryOpNames[op];
 }
 
 INLINE_INSTRS void
@@ -541,10 +541,10 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     Value left = peekStack(1);
     Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
-        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op()]));
+        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replacement = instr->specializeForInt();
     } else {
-        replacement = gc.create<InstrBinaryOpFallback>(instr->op());
+        replacement = gc.create<InstrBinaryOpFallback>(instr->op);
     }
     replaceInstrAndRestart(instr, replacement);
 }
@@ -552,7 +552,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 Instr* InstrBinaryOp::specializeForInt()
 {
     // todo: could use static table
-    switch (op()) {
+    switch (op) {
 #define create_instr(name, token, method, rmethod, imethod)                   \
       case Binary##name:                                                      \
           return gc.create<InstrBinaryOpInt<Binary##name>>();
@@ -602,7 +602,7 @@ Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
 
     Stack<Class*> ltype(left.type());
     Stack<Class*> rtype(right.type());
-    BinaryOp op = instr->op();
+    BinaryOp op = instr->op;
     const Name* names = Name::binMethod;
     const Name* rnames = Name::binMethodReflected;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
@@ -629,7 +629,7 @@ Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr)
 {
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrBinaryOpFallback>(instr->op()));
+            instr, gc.create<InstrBinaryOpFallback>(instr->op));
         return;
     }
 
@@ -649,7 +649,7 @@ for_each_binary_op(define_execute_binary_op_int)
 
 void CompareOpInstr::print(ostream& s) const
 {
-    s << name() << " " << CompareOpNames[op()];
+    s << name() << " " << CompareOpNames[op];
 }
 
 INLINE_INSTRS void
@@ -659,10 +659,10 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
     Value left = peekStack(1);
     Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
-        assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op()]));
+        assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
         replacement = instr->specializeForInt();
     } else {
-        replacement = gc.create<InstrCompareOpFallback>(instr->op());
+        replacement = gc.create<InstrCompareOpFallback>(instr->op);
     }
     replaceInstrAndRestart(instr, replacement);
 }
@@ -670,7 +670,7 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
 Instr* InstrCompareOp::specializeForInt()
 {
     // todo: could use static table
-    switch (op()) {
+    switch (op) {
 #define create_instr(name, token, method, rmethod)                            \
       case Compare##name:                                                     \
           return gc.create<InstrCompareOpInt<Compare##name>>();
@@ -695,7 +695,7 @@ Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> inst
     // __le__() and __ge__() are each other's reflection, and __eq__() and
     // __ne__() are their own reflection."
 
-    CompareOp op = instr->op();
+    CompareOp op = instr->op;
     const Name* names = Name::compareMethod;
     const Name* rnames = Name::compareMethodReflected;
     if (maybeCallBinaryOp(left, names[op], left, right))
@@ -735,7 +735,7 @@ Interpreter::executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr)
 {
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrCompareOpFallback>(instr->op()));
+            instr, gc.create<InstrCompareOpFallback>(instr->op));
         return;
     }
 
@@ -763,13 +763,13 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     Stack<Value> result;
     pushStack(value);
     pushStack(update);
-    if (value.maybeGetAttr(Name::augAssignMethod[instr->op()], method)) {
+    if (value.maybeGetAttr(Name::augAssignMethod[instr->op], method)) {
         if (!call(method, 2, result)) {
             raiseException(result);
             return;
         }
         pushStack(result);
-    } else if (value.maybeGetAttr(Name::binMethod[instr->op()], method)) {
+    } else if (value.maybeGetAttr(Name::binMethod[instr->op], method)) {
         if (!call(method, 2, result)) {
             raiseException(result);
             return;
@@ -881,11 +881,11 @@ Interpreter::executeInstr_AssertStackDepth(Traced<InstrAssertStackDepth*> instr)
 #ifdef DEBUG
     Frame* frame = getFrame();
     unsigned depth = stackPos() - frame->stackPos();
-    if (depth != instr->expected_) {
-        cerr << "Excpected stack depth " << dec << instr->expected_;
+    if (depth != instr->expected) {
+        cerr << "Excpected stack depth " << dec << instr->expected;
         cerr << " but got " << depth << " in: " << endl;
         cerr << *getFrame()->block() << endl;
-        assert(depth == instr->expected_);
+        assert(depth == instr->expected);
     }
 #endif
 }

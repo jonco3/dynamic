@@ -294,13 +294,13 @@ struct InstrGetMethodInt : public IdentInstrBase
 struct InstrCall : public Instr
 {
     define_instr_members(Call);
-    InstrCall(unsigned count) : count_(count) {}
+    InstrCall(unsigned count) : count(count) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << count_;
+        s << name() << " " << count;
     }
 
-    const unsigned count_;
+    const unsigned count;
 };
 
 struct InstrCallMethod : public InstrCall
@@ -389,13 +389,13 @@ struct InstrLambda : public Instr
 struct InstrDup : public Instr
 {
     define_instr_members(Dup);
-    InstrDup(unsigned index = 0) : index_(index) {}
+    InstrDup(unsigned index = 0) : index(index) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << index_;
+        s << name() << " " << index;
     }
 
-    const unsigned index_;
+    const unsigned index;
 };
 
 define_simple_instr(Pop);
@@ -433,14 +433,11 @@ define_simple_instr(IteratorNext);
 
 struct BinaryOpInstr : public Instr
 {
-    BinaryOpInstr(BinaryOp op) : op_(op) {}
+    BinaryOpInstr(BinaryOp op) : op(op) {}
 
     virtual void print(ostream& s) const;
 
-    BinaryOp op() const { return op_; }
-
-  private:
-    BinaryOp op_;
+    const BinaryOp op;
 };
 
 struct InstrBinaryOp : public BinaryOpInstr
@@ -471,14 +468,11 @@ struct InstrBinaryOpInt : public BinaryOpInstr
 
 struct CompareOpInstr : public Instr
 {
-    CompareOpInstr(CompareOp op) : op_(op) {}
+    CompareOpInstr(CompareOp op) : op(op) {}
 
     virtual void print(ostream& s) const;
 
-    CompareOp op() const { return op_; }
-
-  private:
-    CompareOp op_;
+    const CompareOp op;
 };
 
 struct InstrCompareOp : public CompareOpInstr
@@ -555,13 +549,13 @@ struct InstrLoopControlJump : public Instr
 struct InstrAssertStackDepth : public Instr
 {
     define_instr_members(AssertStackDepth);
-    InstrAssertStackDepth(unsigned expected) : expected_(expected) {}
+    InstrAssertStackDepth(unsigned expected) : expected(expected) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << expected_;
+        s << name() << " " << expected;
     }
 
-    const unsigned expected_;
+    const unsigned expected;
 };
 
 #undef instr_type
