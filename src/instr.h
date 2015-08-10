@@ -143,28 +143,6 @@ struct Instr : public Cell
         define_instr_members(it);                                             \
     }
 
-
-define_simple_instr(Abort);
-define_simple_instr(Return);
-
-struct InstrConst : public Instr
-{
-    define_instr_members(Const);
-    explicit InstrConst(Traced<Value> v) : value(v) {}
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << value;
-    }
-
-    Value getValue() { return value; }
-
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &value);
-    }
-
-    Value value;
-};
-
 struct IdentInstrBase : public Instr
 {
     IdentInstrBase(Name ident) : ident(ident) {}
@@ -173,6 +151,7 @@ struct IdentInstrBase : public Instr
         s << name() << " " << ident;
     }
 
+    // todo: move to Interpreter
     bool raiseAttrError(Traced<Value> value, Interpreter& interp);
 
     const Name ident;
@@ -185,137 +164,113 @@ struct IdentInstrBase : public Instr
         define_instr_members(name);                                           \
     }
 
-struct InstrGetStackLocal : public IdentInstrBase
+struct IdentAndSlotInstrBase : public Instr
 {
-    define_instr_members(GetStackLocal);
-    InstrGetStackLocal(Name ident, unsigned slot)
-      : IdentInstrBase(ident), slot_(slot)
-    {}
+    IdentAndSlotInstrBase(Name ident, unsigned slot)
+      : ident(ident), slot(slot) {}
 
-    virtual void print(ostream& s) const {
-        s << name() << " " << ident << " " << slot_;
+    void print(ostream& s) const override {
+        s << name() << " " << ident << " " << slot;
     }
 
-    const unsigned slot_;
+    // todo: move to Interpreter
+    bool raiseAttrError(Traced<Value> value, Interpreter& interp);
+
+    const Name ident;
+    const unsigned slot;
 };
 
-struct InstrSetStackLocal : public IdentInstrBase
-{
-    define_instr_members(SetStackLocal);
-    InstrSetStackLocal(Name ident, unsigned slot)
-      : IdentInstrBase(ident), slot_(slot)
-    {}
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << ident << " " << slot_;
+#define define_ident_and_slot_instr(name)                                     \
+    struct Instr##name : public IdentAndSlotInstrBase                         \
+    {                                                                         \
+        Instr##name(Name ident, unsigned slot)                                \
+          : IdentAndSlotInstrBase(ident, slot)                                \
+        {}                                                                    \
+        define_instr_members(name);                                           \
     }
 
-    const unsigned slot_;
-};
-
-struct InstrDelStackLocal : public IdentInstrBase
+struct FrameAndIdentInstrBase : public Instr
 {
-    define_instr_members(DelStackLocal);
-    InstrDelStackLocal(Name ident, unsigned slot)
-      : IdentInstrBase(ident), slot_(slot)
-    {}
+    FrameAndIdentInstrBase(unsigned frameIndex, Name ident)
+      : frameIndex(frameIndex), ident(ident) {}
 
-    virtual void print(ostream& s) const {
-        s << name() << " " << ident << " " << slot_;
-    }
-
-    const unsigned slot_;
-};
-
-struct InstrGetLexical : public IdentInstrBase
-{
-    define_instr_members(GetLexical);
-    InstrGetLexical(unsigned frame, Name ident)
-      : IdentInstrBase(ident), frameIndex(frame) {}
-
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << name() << " " << frameIndex << " " << ident;
     }
 
     const unsigned frameIndex;
+    const Name ident;
 };
 
-struct InstrSetLexical : public IdentInstrBase
-{
-    define_instr_members(SetLexical);
-    InstrSetLexical(unsigned frame, Name ident)
-      : IdentInstrBase(ident), frameIndex(frame) {}
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << frameIndex << " " << ident;
+#define define_frame_and_ident_instr(name)                                    \
+    struct Instr##name : public FrameAndIdentInstrBase                        \
+    {                                                                         \
+        Instr##name(unsigned frameIndex, Name ident)                          \
+          : FrameAndIdentInstrBase(frameIndex, ident)                         \
+        {}                                                                    \
+        define_instr_members(name);                                           \
     }
 
-    const unsigned frameIndex;
-};
-
-struct InstrDelLexical : public IdentInstrBase
+struct GlobalInstrBase : public IdentInstrBase
 {
-    define_instr_members(DelLexical);
-    InstrDelLexical(unsigned frame, Name ident)
-      : IdentInstrBase(ident), frameIndex(frame) {}
-
-    virtual void print(ostream& s) const {
-        s << name() << " " << frameIndex << " " << ident;
-    }
-
-    const unsigned frameIndex;
-};
-
-struct InstrGetGlobal : public IdentInstrBase
-{
-    define_instr_members(GetGlobal);
-
-    InstrGetGlobal(Object* global, Name ident)
-      : IdentInstrBase(ident), global(global)
+    GlobalInstrBase(Traced<Object*> global, Name ident)
+      : IdentInstrBase(ident), global_(global)
     {
         assert(global);
     }
 
+    Object* global() const { return global_; }
+
     virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &global);
+        gc.trace(t, &global_);
     }
 
-    Object* global;
+  private:
+    Object* global_;
 };
 
-struct InstrSetGlobal : public IdentInstrBase
+#define define_global_instr(name)                                             \
+    struct Instr##name : public GlobalInstrBase                               \
+    {                                                                         \
+        Instr##name(Traced<Object*> global, Name ident)                       \
+          : GlobalInstrBase(global, ident)                                    \
+        {}                                                                    \
+        define_instr_members(name);                                           \
+    }
+
+define_simple_instr(Abort);
+define_simple_instr(Return);
+
+struct InstrConst : public Instr
 {
-    define_instr_members(SetGlobal);
+    define_instr_members(Const);
+    explicit InstrConst(Traced<Value> v) : value_(v) {}
 
-    InstrSetGlobal(Object* global, Name ident)
-      : IdentInstrBase(ident), global(global)
-    {
-        assert(global);
+    void print(ostream& s) const override {
+        s << name() << " " << value_;
     }
+
+    Value value() { return value_; }
 
     virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &global);
+        gc.trace(t, &value_);
     }
 
-    Object* global;
+  private:
+    Value value_;
 };
 
-struct InstrDelGlobal : public IdentInstrBase
-{
-    define_instr_members(DelGlobal);
+define_ident_and_slot_instr(GetStackLocal);
+define_ident_and_slot_instr(SetStackLocal);
+define_ident_and_slot_instr(DelStackLocal);
 
-    InstrDelGlobal(Object* global, Name ident)
-      : IdentInstrBase(ident), global(global)
-    {
-        assert(global);
-    }
+define_frame_and_ident_instr(GetLexical);
+define_frame_and_ident_instr(SetLexical);
+define_frame_and_ident_instr(DelLexical);
 
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &global);
-    }
-
-    Object* global;
-};
+define_global_instr(GetGlobal);
+define_global_instr(SetGlobal);
+define_global_instr(DelGlobal);
 
 define_ident_instr(GetAttr);
 define_ident_instr(SetAttr);

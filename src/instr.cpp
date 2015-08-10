@@ -13,7 +13,7 @@
 INLINE_INSTRS void
 Interpreter::executeInstr_Const(Traced<InstrConst*> self)
 {
-    pushStack(self->value);
+    pushStack(self->value());
 }
 
 INLINE_INSTRS void
@@ -22,7 +22,7 @@ Interpreter::executeInstr_GetStackLocal(Traced<InstrGetStackLocal*> self)
     // Name was present when compiled, but may have been deleted.
     {
         AutoAssertNoGC nogc;
-        Value value = getStackLocal(self->slot_);
+        Value value = getStackLocal(self->slot);
         if (value != Value(UninitializedSlot)) {
             pushStack(value);
             return;
@@ -38,7 +38,7 @@ Interpreter::executeInstr_SetStackLocal(Traced<InstrSetStackLocal*> self)
     AutoAssertNoGC nogc;
     Value value = peekStack(0);
     assert(value != Value(UninitializedSlot));
-    setStackLocal(self->slot_, value);
+    setStackLocal(self->slot, value);
 }
 
 INLINE_INSTRS void
@@ -47,8 +47,8 @@ Interpreter::executeInstr_DelStackLocal(Traced<InstrDelStackLocal*> self)
     // Delete by setting slot value to UninitializedSlot.
     {
         AutoAssertNoGC nogc;
-        if (getStackLocal(self->slot_) != Value(UninitializedSlot)) {
-            setStackLocal(self->slot_, UninitializedSlot);
+        if (getStackLocal(self->slot) != Value(UninitializedSlot)) {
+            setStackLocal(self->slot, UninitializedSlot);
             return;
         }
     }
@@ -89,14 +89,14 @@ INLINE_INSTRS void
 Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> self)
 {
     Stack<Value> value;
-    if (self->global->maybeGetAttr(self->ident, value)) {
+    if (self->global()->maybeGetAttr(self->ident, value)) {
         assert(value.toObject());
         pushStack(value);
         return;
     }
 
     Stack<Value> builtins;
-    if (self->global->maybeGetAttr(Name::__builtins__, builtins) &&
+    if (self->global()->maybeGetAttr(Name::__builtins__, builtins) &&
         builtins.maybeGetAttr(self->ident, value))
     {
         assert(value.toObject());
@@ -111,13 +111,13 @@ INLINE_INSTRS void
 Interpreter::executeInstr_SetGlobal(Traced<InstrSetGlobal*> self)
 {
     Stack<Value> value(peekStack(0));
-    self->global->setAttr(self->ident, value);
+    self->global()->setAttr(self->ident, value);
 }
 
 INLINE_INSTRS void
 Interpreter::executeInstr_DelGlobal(Traced<InstrDelGlobal*> self)
 {
-    if (!self->global->maybeDelOwnAttr(self->ident))
+    if (!self->global()->maybeDelOwnAttr(self->ident))
         raiseNameError(self->ident);
 }
 
