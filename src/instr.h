@@ -24,7 +24,11 @@
 
 using namespace std;
 
-#define for_each_instr(instr)                                                \
+#define for_each_inline_instr(instr)                                         \
+    instr(Abort)                                                             \
+    instr(Return)
+
+#define for_each_outofline_instr(instr)                                      \
     instr(Const)                                                             \
     instr(GetStackLocal)                                                     \
     instr(SetStackLocal)                                                     \
@@ -104,10 +108,9 @@ using namespace std;
 
 enum InstrType
 {
-    Instr_Abort = 0,
-    Instr_Return,
 #define instr_enum(name) Instr_##name,
-    for_each_instr(instr_enum)
+    for_each_inline_instr(instr_enum)
+    for_each_outofline_instr(instr_enum)
 #undef instr_enum
     InstrTypeCount
 };

@@ -917,11 +917,10 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 {
     static const void* dispatchTable[] =
     {
-        &&instr_Abort,
-        &&instr_Return,
 #define dispatch_table_entry(it)                                              \
         &&instr_##it,
-    for_each_instr(dispatch_table_entry)
+    for_each_inline_instr(dispatch_table_entry)
+    for_each_outofline_instr(dispatch_table_entry)
 #undef dispatch_table_entry
     };
     static_assert(sizeof(dispatchTable) / sizeof(void*) == InstrTypeCount,
@@ -960,7 +959,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
         assert(instrp);                                                       \
         dispatch();                                                           \
     }
-    for_each_instr(handle_instr)
+    for_each_outofline_instr(handle_instr)
 #undef handle_instr
 
   exit:
