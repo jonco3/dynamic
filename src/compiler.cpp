@@ -374,8 +374,6 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
-        // todo: we'll need to change this if we want to specialise depending on
-        // whether the target implements update-in-place methods
         compile(s.left);
         compile(s.right);
         emit<InstrAugAssignUpdate>(s.op);
@@ -388,8 +386,6 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
-        // todo: == should fall back to comparing identity if __eq__ not
-        // implemented
         compile(s.left);
         incStackDepth();
         compile(s.right);
