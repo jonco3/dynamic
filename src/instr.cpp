@@ -539,30 +539,29 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
     Value right = peekStack(0);
     Value left = peekStack(1);
+    Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op()]));
-        InstrBinaryOp::replaceWithIntInstr(instr, *this);
+        replacement = instr->specializeForInt();
     } else {
-        replaceInstrAndRestart(
-            instr, gc.create<InstrBinaryOpFallback>(instr->op()));
+        replacement = gc.create<InstrBinaryOpFallback>(instr->op());
     }
+    replaceInstrAndRestart(instr, replacement);
 }
 
-/* static */ void
-InstrBinaryOp::replaceWithIntInstr(Traced<InstrBinaryOp*> instr, Interpreter& interp)
+Instr* InstrBinaryOp::specializeForInt()
 {
-    // todo: can use static table
-    switch (instr->op()) {
+    // todo: could use static table
+    switch (op()) {
 #define create_instr(name, token, method, rmethod, imethod)                   \
       case Binary##name:                                                      \
-          interp.replaceInstrAndRestart(                                      \
-            instr, gc.create<InstrBinaryOpInt<Binary##name>>());               \
-        return;
+          return gc.create<InstrBinaryOpInt<Binary##name>>();
 
     for_each_binary_op(create_instr)
 #undef create_instr
       default:
         assert(false);
+        exit(1);
     }
 }
 
@@ -658,30 +657,29 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
 {
     Value right = peekStack(0);
     Value left = peekStack(1);
+    Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op()]));
-        InstrCompareOp::replaceWithIntInstr(instr, *this);
+        replacement = instr->specializeForInt();
     } else {
-        replaceInstrAndRestart(
-            instr, gc.create<InstrCompareOpFallback>(instr->op()));
+        replacement = gc.create<InstrCompareOpFallback>(instr->op());
     }
+    replaceInstrAndRestart(instr, replacement);
 }
 
-/* static */ inline void
-InstrCompareOp::replaceWithIntInstr(Traced<InstrCompareOp*> instr, Interpreter& interp)
+Instr* InstrCompareOp::specializeForInt()
 {
-    // todo: can use static table
-    switch (instr->op()) {
+    // todo: could use static table
+    switch (op()) {
 #define create_instr(name, token, method, rmethod)                            \
       case Compare##name:                                                     \
-        interp.replaceInstrAndRestart(                                        \
-            instr, gc.create<InstrCompareOpInt<Compare##name>>());             \
-        return;
+          return gc.create<InstrCompareOpInt<Compare##name>>();
 
     for_each_compare_op(create_instr)
 #undef create_instr
       default:
         assert(false);
+        exit(1);
     }
 }
 

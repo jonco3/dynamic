@@ -447,8 +447,7 @@ struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(BinaryOp);
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
-    static void replaceWithIntInstr(Traced<InstrBinaryOp*> self,
-                                    Interpreter& interp);
+    Instr* specializeForInt();
 };
 
 struct InstrBinaryOpFallback : public BinaryOpInstr
@@ -486,8 +485,7 @@ struct InstrCompareOp : public CompareOpInstr
 {
     define_instr_members(CompareOp);
     InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
-    static void replaceWithIntInstr(Traced<InstrCompareOp*> self,
-                                    Interpreter& interp);
+    Instr* specializeForInt();
 };
 
 struct InstrCompareOpFallback : public CompareOpInstr
