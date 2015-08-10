@@ -272,10 +272,10 @@ struct Interpreter
 #undef declare_instr_method
 
     template <BinaryOp Op>
-    void executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> self);
+    void executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> self);
+    void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr);
 };
 
 extern Interpreter interp;
