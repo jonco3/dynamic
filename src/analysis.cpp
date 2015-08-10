@@ -45,8 +45,8 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     virtual void visit(const SyntaxTargetList& s) {
         assert(inAssignTarget_);
-        for (auto i = s.targets.rbegin(); i != s.targets.rend(); i++)
-            (*i)->accept(*this);
+        for (const auto& i : s.targets)
+            i->accept(*this);
     }
 
     virtual void visit(const SyntaxName& s) {
