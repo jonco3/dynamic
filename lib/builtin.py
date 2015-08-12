@@ -37,3 +37,27 @@ def range(*args):
         result.append(i)
         i += step
     return result
+
+def max(*args):
+    l = len(args)
+    if l == 0:
+        raise "Not enough arguments to max"
+    elif l == 1:
+        args = args[0]
+    r = None
+    for x in args:
+        if r is None or x > r:
+            r = x
+    return r
+
+def min(*args):
+    l = len(args)
+    if l == 0:
+        raise "Not enough arguments to max"
+    elif l == 1:
+        args = args[0]
+    r = None
+    for x in args:
+        if r is None or x < r:
+            r = x
+    return r
