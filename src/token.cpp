@@ -410,7 +410,7 @@ Token Tokenizer::findNextToken()
                     break;
                 if (escape == 'n')
                     s << "\n";
-                else if (escape == '\t')
+                else if (escape == 't')
                     s << "\t";
                 else
                     throw TokenError("Unimplimented string escape", pos);

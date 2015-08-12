@@ -167,10 +167,19 @@ testcase(tokenizer)
     testThrows(tokenize("\"string'"), TokenError);
 
     tz.start("'$tring'");
-    testEqual(tz.nextToken().type, Token_String);
+    t = tz.nextToken();
+    testEqual(t.type, Token_String);
+    testEqual(t.text, "$tring");
 
     tz.start("\"gnirts\"");
-    testEqual(tz.nextToken().type, Token_String);
+    t = tz.nextToken();
+    testEqual(t.type, Token_String);
+    testEqual(t.text, "gnirts");
+
+    tz.start("\"\\n\\t\"");
+    t = tz.nextToken();
+    testEqual(t.type, Token_String);
+    testEqual(t.text, "\n\t");
 
     tz.start("is is not not not in in");
     testEqual(tz.nextToken().type, Token_Is);
