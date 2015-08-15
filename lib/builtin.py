@@ -41,7 +41,7 @@ def range(*args):
 def max(*args):
     l = len(args)
     if l == 0:
-        raise "Not enough arguments to max"
+        raise TypeError("Not enough arguments to max")
     elif l == 1:
         args = args[0]
     r = None
@@ -53,7 +53,7 @@ def max(*args):
 def min(*args):
     l = len(args)
     if l == 0:
-        raise "Not enough arguments to max"
+        raise TypeError("Not enough arguments to max")
     elif l == 1:
         args = args[0]
     r = None
