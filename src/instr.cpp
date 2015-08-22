@@ -7,6 +7,7 @@
 #include "interp.h"
 #include "singletons.h"
 #include "list.h"
+#include "utils.h"
 
 #define INLINE_INSTRS /*inline*/
 
@@ -514,17 +515,23 @@ Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
     bool isCallableDescriptor;
     Stack<Value> result;
 
+    // Call __iter__ method to get iterator if it's present.
     if (getMethodAttr(target, Name::__iter__, method, isCallableDescriptor)) {
         if (isCallableDescriptor)
             pushStack(target);
         startCall(method, isCallableDescriptor ? 1 : 0);
-    } else if (getMethodAttr(target, Name::__iter__, method,
-                             isCallableDescriptor))
-    {
-        raiseNotImplementedError(); // todo
-    } else {
-        raiseTypeError("Object not iterable");
+        return;
     }
+
+    // Otherwise create a SequenceIterator wrapping the target iterable.
+    if (!getMethodAttr(target, Name::__getitem__, method, isCallableDescriptor))
+    {
+        raiseTypeError("Object not iterable");
+        return;
+    }
+
+    pushStack(target);
+    startCall(SequenceIterator, 1);
 }
 
 INLINE_INSTRS void

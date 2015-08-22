@@ -146,5 +146,24 @@ else:
     didElse = True
 assert(not didElse)
 
+class OwnSequence:
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+
+    def __getitem__(self, index):
+        return self.wrapped[index]
+
+count = 0
+total = 0
+last = 0
+for i in OwnSequence([1, 2, 3]):
+    count += 1
+    total += i
+    last = i
+assert count == 3
+assert total == 6
+assert last == 3
+
+
 print('ok')
 

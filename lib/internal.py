@@ -28,3 +28,16 @@ tuple.__eq__ = listEqual
 tuple.__ne__ = listNotEqual
 dict.__eq__ = dictEqual
 dict.__ne__ = dictNotEqual
+
+class SequenceIterator:
+    def __init__(self, target):
+        self.target = target
+        self.index = 0
+
+    def next(self):
+        try:
+            result = self.target[self.index]
+            self.index += 1
+            return result
+        except IndexError:
+            raise StopIteration()

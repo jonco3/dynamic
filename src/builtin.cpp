@@ -19,6 +19,7 @@
 #include <sstream>
 
 GlobalRoot<Object*> Builtin;
+GlobalRoot<Class*> SequenceIterator;
 
 static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
@@ -125,7 +126,11 @@ for_each_exception_class(set_exception_attr)
         exit(1);
     }
 
+    Stack<Object*> internals(createTopLevel());
     filename = libDir + "/internal.py";
     text = readFile(filename);
-    runModule(text, filename, None);
+    runModule(text, filename, internals);
+
+    value = internals->getAttr("SequenceIterator");
+    SequenceIterator.init(value.as<Class>());
 }

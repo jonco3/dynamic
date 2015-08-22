@@ -6,7 +6,13 @@
 #ifdef DEBUG
 #define alwaysTrue(x) assert(x)
 #else
-#define alwaysTrue(x) (x)
+#define alwaysTrue(x)                                                         \
+    do {                                                                      \
+        if (!x) {                                                             \
+            printf(stderr, "Internal error\n");                               \
+            exit(1);                                                          \
+        }                                                                     \
+    } while (false)
 #endif
 
 template <typename T>
