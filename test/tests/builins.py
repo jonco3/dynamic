@@ -22,4 +22,27 @@ except TypeError:
     exception = True
 assert(exception)
 
+def testIter(iterable):
+    i = iter(iterable)
+    assert(i.next() == 1)
+    assert(i.next() == 2)
+    assert(i.next() == 3)
+    caught = False
+    try:
+        i.next()
+    except StopIteration:
+        caught = True
+    assert(caught)
+
+class OwnSequence:
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+
+    def __getitem__(self, index):
+        return self.wrapped[index]
+
+
+testIter([1, 2, 3])
+testIter(OwnSequence([1, 2, 3]))
+
 print('ok')

@@ -82,18 +82,34 @@ static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resul
     return true;
 }
 
+static Value make_builtin_iter()
+{
+    Stack<Layout*> layout(Env::InitialLayout);
+    layout = layout->addName("iterable");
+    Stack<Block*> block(gc.create<Block>(layout, 1, false));
+    block->append<InstrInitStackLocals>();
+    block->append<InstrGetIterator>();
+    block->append<InstrReturn>();
+    block->setMaxStackDepth(1);
+    Stack<Env*> env; // todo: allow construction of traced for nullptr
+    vector<Name> args = { "iterable" };
+    Stack<FunctionInfo*> info(gc.create<FunctionInfo>(args, block));
+    return gc.create<Function>("iter", info, EmptyValueArray, env);
+}
+
 void initBuiltins(const string& libDir)
 {
     Builtin.init(Object::create());
+    Stack<Value> value;
 
     // Functions
     initNativeMethod(Builtin, "hasattr", builtin_hasattr, 2);
     initNativeMethod(Builtin, "isinstance", builtin_isinstance, 2);
     initNativeMethod(Builtin, "compile", builtin_compile, 1);
     initNativeMethod(Builtin, "parse", builtin_parse, 1);
+    value = make_builtin_iter(); Builtin->setAttr("iter", value);
 
     // Constants
-    Stack<Value> value;
     value = Boolean::True; Builtin->setAttr("True", value);
     value = Boolean::False; Builtin->setAttr("False", value);
     value = None; Builtin->setAttr("None", value);

@@ -10,6 +10,7 @@ Block::Block(Traced<Layout*> layout, unsigned argCount, bool createEnv)
 
 unsigned Block::stackLocalCount() const
 {
+    assert(layout()->slotCount() >= argCount());
     return createEnv() ? 0 : layout()->slotCount() - argCount();
 }
 
