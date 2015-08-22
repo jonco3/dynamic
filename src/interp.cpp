@@ -517,22 +517,32 @@ TokenPos Interpreter::currentPos()
     return getFrame()->block()->getPos(instrp - 1);
 }
 
-bool Interpreter::raiseAttrError(Traced<Value> value, Name ident)
+void Interpreter::raiseAttrError(Traced<Value> value, Name ident)
 {
     const Class* cls = value.toObject()->type();
     string message =
         "'" + cls->name() + "' object has no attribute '" + ident + "'";
     pushStack(gc.create<AttributeError>(message));
     raiseException();
-    return false;
 }
 
-bool Interpreter::raiseNameError(Name ident)
+void Interpreter::raiseNameError(Name ident)
 {
     string message = "name '" + ident + "' is not defined";
     pushStack(gc.create<NameError>(message));
     raiseException();
-    return false;
+}
+
+void Interpreter::raiseTypeError(string message)
+{
+    pushStack(gc.create<TypeError>(message));
+    raiseException();
+}
+
+void Interpreter::raiseNotImplementedError()
+{
+    pushStack(gc.create<NotImplementedError>("Not implemented"));
+    raiseException();
 }
 
 bool Interpreter::call(Traced<Value> targetValue, TracedVector<Value> args,

@@ -56,6 +56,7 @@ using namespace std;
     instr(AssertionFailed)                                                   \
     instr(MakeClassFromFrame)                                                \
     instr(Raise)                                                             \
+    instr(GetIterator)                                                       \
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
     instr(BinaryOpFallback)                                                  \
@@ -429,6 +430,7 @@ define_simple_instr(AssertionFailed);
 define_ident_instr(MakeClassFromFrame);
 
 define_simple_instr(Raise);
+define_simple_instr(GetIterator);
 define_simple_instr(IteratorNext);
 
 struct BinaryOpInstr : public Instr

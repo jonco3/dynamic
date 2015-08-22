@@ -157,8 +157,10 @@ struct Interpreter
     Env* lexicalEnv(unsigned index);
     void setFrameEnv(Env* env);
 
-    bool raiseAttrError(Traced<Value> value, Name ident);
-    bool raiseNameError(Name ident);
+    void raiseAttrError(Traced<Value> value, Name ident);
+    void raiseNameError(Name ident);
+    void raiseTypeError(string message);
+    void raiseNotImplementedError();
 
     bool call(Traced<Value> callable, unsigned argCount,
               MutableTraced<Value> resultOut);

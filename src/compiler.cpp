@@ -725,8 +725,7 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxFor& s) {
         // 1. Get iterator
         compile(s.exprs);
-        emit<InstrGetMethod>(Name::__iter__);
-        emit<InstrCallMethod>(0);
+        emit<InstrGetIterator>();
         emit<InstrGetMethod>("next");
         incStackDepth(3); // Leave the iterator and next method on the stack
 

@@ -226,10 +226,10 @@ Interpreter::executeInstr_GetMethodInt(Traced<InstrGetMethodInt*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
 {
-    bool addInstr = peekStack(instr->count + 1).as<Boolean>()->value();
+    bool extraArg = peekStack(instr->count + 1).as<Boolean>()->value();
     Stack<Value> target(peekStack(instr->count + 2));
-    unsigned argCount = instr->count + (addInstr ? 1 : 0);
-    removeStackEntries(argCount, addInstr ? 2 : 3);
+    unsigned argCount = instr->count + (extraArg ? 1 : 0);
+    removeStackEntries(argCount, extraArg ? 2 : 3);
     return startCall(target, argCount);
 }
 
@@ -504,6 +504,27 @@ Interpreter::executeInstr_Raise(Traced<InstrRaise*> instr)
 {
     // todo: exceptions must be old-style classes or derived from BaseException
     raiseException();
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
+{
+    Stack<Value> target(popStack());
+    Stack<Value> method;
+    bool isCallableDescriptor;
+    Stack<Value> result;
+
+    if (getMethodAttr(target, Name::__iter__, method, isCallableDescriptor)) {
+        if (isCallableDescriptor)
+            pushStack(target);
+        startCall(method, isCallableDescriptor ? 1 : 0);
+    } else if (getMethodAttr(target, Name::__iter__, method,
+                             isCallableDescriptor))
+    {
+        raiseNotImplementedError(); // todo
+    } else {
+        raiseTypeError("Object not iterable");
+    }
 }
 
 INLINE_INSTRS void
