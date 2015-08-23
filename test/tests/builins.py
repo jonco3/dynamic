@@ -24,12 +24,12 @@ assert(exception)
 
 def testIter(iterable):
     i = iter(iterable)
-    assert(i.next() == 1)
-    assert(i.next() == 2)
-    assert(i.next() == 3)
+    assert(next(i) == 1)
+    assert(next(i) == 2)
+    assert(next(i) == 3)
     caught = False
     try:
-        i.next()
+        next(i)
     except StopIteration:
         caught = True
     assert(caught)

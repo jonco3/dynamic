@@ -5,17 +5,17 @@ def foo(x):
     yield x
 
 iter = foo(2)
-assert iter.next() == 1
-assert iter.next() == 2
+assert next(iter) == 1
+assert next(iter) == 2
 
 def bar(array):
     for x in array:
         yield 2 * x
 
 iter = bar([1, 2, 3])
-assert iter.next() == 2
-assert iter.next() == 4
-assert iter.next() == 6
+assert next(iter) == 2
+assert next(iter) == 4
+assert next(iter) == 6
 
 def collect(iter):
     result = []

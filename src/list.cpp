@@ -444,7 +444,7 @@ void ListIter::init()
 {
     ObjectClass.init(Class::createNative("listiterator", nullptr));
     initNativeMethod(ObjectClass, "__iter__", listIter_iter, 1);
-    initNativeMethod(ObjectClass, "next", listIter_next, 1);
+    initNativeMethod(ObjectClass, "__next__", listIter_next, 1);
 }
 
 ListIter::ListIter(Traced<ListBase*> list)

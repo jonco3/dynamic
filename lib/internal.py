@@ -34,7 +34,7 @@ class SequenceIterator:
         self.target = target
         self.index = 0
 
-    def next(self):
+    def __next__(self):
         try:
             result = self.target[self.index]
             self.index += 1

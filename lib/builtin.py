@@ -64,7 +64,7 @@ def min(*args):
 
 def next(iterator):
     # todo: default arg
-    return iterator.next()
+    return iterator.__next__()
 
 def zip(*iterables):
     if len(iterables) == 0:

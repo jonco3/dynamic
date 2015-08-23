@@ -576,7 +576,7 @@ struct ByteCompiler : public SyntaxVisitor
             // Get iterator
             emit<InstrGetMethod>(Name::__iter__);
             emit<InstrCallMethod>(0);
-            emit<InstrGetMethod>("next");
+            emit<InstrGetMethod>("__next__");
             incStackDepth(3); // Leave the iterator and next method on the stack
 
             for (unsigned i = 0; i < targets.size(); i++) {
@@ -726,7 +726,7 @@ struct ByteCompiler : public SyntaxVisitor
         // 1. Get iterator
         compile(s.exprs);
         emit<InstrGetIterator>();
-        emit<InstrGetMethod>("next");
+        emit<InstrGetMethod>("__next__");
         incStackDepth(3); // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop heap)
