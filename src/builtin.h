@@ -3,9 +3,13 @@
 
 #include "object.h"
 
+struct Function;
+
 extern GlobalRoot<Object*> Builtin;
 
+// Self-hosted classes and functions.
 extern GlobalRoot<Class*> SequenceIterator;
+extern GlobalRoot<Function*> IterableToList;
 
 extern void initBuiltins(const string& libDir);
 

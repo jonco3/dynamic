@@ -41,3 +41,9 @@ class SequenceIterator:
             return result
         except IndexError:
             raise StopIteration()
+
+def iterableToList(iterable):
+    result = []
+    for x in iterable:
+        result.append(x)
+    return result

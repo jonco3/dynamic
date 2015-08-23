@@ -22,9 +22,8 @@ GlobalRoot<Block*> Interpreter::AbortTrampoline;
 
 Interpreter interp;
 
-ExceptionHandler::ExceptionHandler(Type type, unsigned frameIndex,
-                                   unsigned offset)
-  : next_(nullptr), type_(type), frameIndex_(frameIndex), offset_(offset)
+ExceptionHandler::ExceptionHandler(Type type, unsigned stackPos, unsigned offset)
+  : next_(nullptr), type_(type), stackPos_(stackPos), offset_(offset)
 {}
 
 void ExceptionHandler::setNext(ExceptionHandler* eh)
@@ -338,7 +337,7 @@ void Interpreter::pushExceptionHandler(ExceptionHandler::Type type,
     assert(offset);
     // todo: Why do we store instruction offsets rather than indices?
     Stack<ExceptionHandler*> handler(
-        gc.create<ExceptionHandler>(type, frameIndex(), offset + currentOffset()));
+        gc.create<ExceptionHandler>(type, stackPos(), offset + currentOffset()));
     getFrame()->pushHandler(handler);
 }
 
@@ -395,6 +394,8 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
 
     ExceptionHandler* handler = getFrame()->popHandler();
     instrp = getFrame()->block()->startInstr() + handler->offset();
+    assert(handler->stackPos() <= stack.size());
+    stackPos_ = handler->stackPos();
     inExceptionHandler_ = true;
     jumpKind_ = JumpKind::Exception;
     currentException_ = exception;

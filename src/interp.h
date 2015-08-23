@@ -33,11 +33,11 @@ struct ExceptionHandler : public Cell
         CatchHandler, FinallyHandler
     };
 
-    ExceptionHandler(Type type, unsigned frameIndex, unsigned offset);
+    ExceptionHandler(Type type, unsigned stackPos, unsigned offset);
 
     ExceptionHandler* next() { return next_; }
     Type type() { return type_; }
-    unsigned frameIndex() { return frameIndex_; }
+    unsigned stackPos() { return stackPos_; }
     unsigned offset() { return offset_; }
 
     void setNext(ExceptionHandler* eh);
@@ -47,7 +47,7 @@ struct ExceptionHandler : public Cell
   protected:
     ExceptionHandler* next_;
     const Type type_;
-    unsigned frameIndex_;
+    unsigned stackPos_;
     unsigned offset_;
 };
 

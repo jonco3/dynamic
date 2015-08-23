@@ -45,4 +45,14 @@ class OwnSequence:
 testIter([1, 2, 3])
 testIter(OwnSequence([1, 2, 3]))
 
+def inc(x):
+    return x + 1
+
+assert(map(inc, []) == [])
+assert(map(inc, [1, 2, 3]) == [2, 3, 4])
+
+assert(list(zip()) == [])
+assert(list(zip([1], [2])) == [(1, 2)])
+assert(list(zip([1, 2], [2, 3])) == [(1, 2), (2, 3)])
+
 print('ok')

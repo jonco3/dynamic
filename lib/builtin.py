@@ -61,3 +61,31 @@ def min(*args):
         if r is None or x < r:
             r = x
     return r
+
+def next(iterator):
+    # todo: default arg
+    return iterator.next()
+
+def zip(*iterables):
+    if len(iterables) == 0:
+        return
+    iters = list(map(iter, iterables))
+    try:
+        while True:
+            elements = []
+            for i in iters:
+                elements.append(next(i))
+            yield tuple(elements)
+    except StopIteration:
+        pass
+
+def map(function, *iterables):
+    if len(iterables) == 0:
+        raise TypeError("Not enough arguments to map")
+    elif len(iterables) == 1:
+        for x in iterables[0]:
+            yield(function(x))
+    else:
+        for x in zip(iterables):
+            raise Exception("not implmemented")
+            #yield(function(*x))

@@ -22,4 +22,18 @@ assert(TupleDerived() == ())
 assert(TupleDerived([1, 2, 3]) == (1, 2, 3))
 assert(TupleDerived((1, 2, 3)) == (1, 2, 3))
 
+def empty():
+    if False:
+        yield 1
+
+def gen():
+    yield 1
+    yield 2
+    yield 3
+
+assert(list(empty()) == [])
+assert(tuple(empty()) == ())
+assert(list(gen()) == [1, 2, 3])
+assert(tuple(gen()) == (1, 2, 3))
+
 print('ok')

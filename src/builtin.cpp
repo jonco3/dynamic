@@ -20,6 +20,7 @@
 
 GlobalRoot<Object*> Builtin;
 GlobalRoot<Class*> SequenceIterator;
+GlobalRoot<Function*> IterableToList;
 
 static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
@@ -149,4 +150,7 @@ for_each_exception_class(set_exception_attr)
 
     value = internals->getAttr("SequenceIterator");
     SequenceIterator.init(value.as<Class>());
+
+    value = internals->getAttr("iterableToList");
+    IterableToList.init(value.as<Function>());
 }

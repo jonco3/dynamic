@@ -1,8 +1,10 @@
 #include "list.h"
 
 #include "bool.h"
+#include "builtin.h"
 #include "callable.h"
 #include "exception.h"
+#include "interp.h"
 #include "numeric.h"
 #include "singletons.h"
 
@@ -64,6 +66,9 @@ static bool listBase_new(TracedVector<Value> args, MutableTraced<Value> resultOu
 
     Stack<ListBase*> init;
     Stack<Class*> cls(args[0].asObject()->as<Class>());
+    assert(cls->isDerivedFrom(List::ObjectClass) ||
+           cls->isDerivedFrom(Tuple::ObjectClass));
+
     if (args.size() == 1) {
         resultOut = gc.create<T>(cls, init);
         return true;
@@ -73,17 +78,29 @@ static bool listBase_new(TracedVector<Value> args, MutableTraced<Value> resultOu
     if (arg->isInstanceOf(List::ObjectClass)) {
         init = arg->as<List>();
         resultOut = gc.create<T>(cls, init);
-    } else if (arg->isInstanceOf(Tuple::ObjectClass)) {
+        return true;
+    }
+
+    if (arg->isInstanceOf(Tuple::ObjectClass)) {
         init = arg->as<Tuple>();
         resultOut = gc.create<T>(cls, init);
-    } else if (true) /* todo: check if arg is iterable */ {
-        resultOut = gc.create<T>(cls, init);
-        // todo: call extend
-    } else {
-        resultOut = gc.create<TypeError>("list creation from unsupported type");
+        return true;
+    }
+
+    Stack<Value> result;
+    interp.pushStack(arg);
+    if (!interp.call(IterableToList, 1, result)) {
+        resultOut = result;
         return false;
     }
 
+    if (cls->isDerivedFrom(List::ObjectClass)) {
+        resultOut = result;
+        return true;
+    }
+
+    init = result.as<List>();
+    resultOut = gc.create<T>(cls, init);
     return true;
 }
 
