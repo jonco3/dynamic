@@ -556,6 +556,7 @@ struct ByteCompiler : public SyntaxVisitor
         const auto& targets = s.targets;
         if (contextStack.back() == Context::Assign) {
             // Get length
+            // todo: we don't necessarily have a __len__ method to call.
             emit<InstrDup>();
             emit<InstrGetMethod>(Name::__len__);
             emit<InstrCallMethod>(0);
@@ -577,7 +578,9 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrGetMethod>(Name::__iter__);
             emit<InstrCallMethod>(0);
             emit<InstrGetMethod>("__next__");
-            incStackDepth(3); // Leave the iterator and next method on the stack
+            // Leave the iterator and next method on the stack, and allow room
+            // for the extracted value.
+            incStackDepth(4);
 
             for (unsigned i = 0; i < targets.size(); i++) {
                 emit<InstrIteratorNext>();
@@ -594,7 +597,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrPop>();
             emit<InstrPop>();
             emit<InstrPop>();
-            decStackDepth(3);
+            decStackDepth(4);
         } else {
             for (unsigned i = 0; i < targets.size(); i++) {
                 compile(targets[i]);
