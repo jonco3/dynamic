@@ -4,6 +4,7 @@
 #include "object.h"
 
 struct Block;
+struct ExceptionHandler;
 struct InstrThunk;
 struct Interpreter;
 
@@ -39,6 +40,13 @@ struct Frame
     Env* env() const { return env_; }
     InstrThunk* returnPoint() const { return returnPoint_; }
     unsigned stackPos() const { return stackPos_; }
+    ExceptionHandler* exceptionHandlers() const { return exceptionHandlers_; }
+
+    void pushHandler(Traced<ExceptionHandler*> eh);
+    ExceptionHandler* popHandler();
+
+    void setHandlers(Traced<ExceptionHandler*> ehs);
+    ExceptionHandler* takeHandlers();
 
     void traceChildren(Tracer& t);
 
@@ -47,6 +55,7 @@ struct Frame
     Env* env_;
     InstrThunk* returnPoint_;
     unsigned stackPos_;
+    ExceptionHandler* exceptionHandlers_;
 };
 
 #endif

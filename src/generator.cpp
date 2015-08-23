@@ -50,6 +50,7 @@ GeneratorIter::GeneratorIter(Traced<Block*> block,
     state_(Running),
     block_(block),
     env_(env),
+    exceptionHandlers_(nullptr),
     ipOffset_(0),
     argCount_(argCount)
 {
@@ -79,7 +80,8 @@ void GeneratorIter::resume(Interpreter& interp)
       case Suspended: {
         Stack<Env*> env(env_); // todo: Heap<T>
         Stack<Block*> block(block_);
-        interp.resumeGenerator(block, env, ipOffset_, savedStack_);
+        Stack<ExceptionHandler*> ehs(exceptionHandlers_);
+        interp.resumeGenerator(block, env, ipOffset_, savedStack_, ehs);
         if (state_ == Suspended)
             interp.pushStack(None);
         state_ = Running;
@@ -122,7 +124,9 @@ void GeneratorIter::suspend(Interpreter& interp, Traced<Value> value)
     log("GeneratorIter::suspend", this, state_);
     assert(state_ == Running);
     assert(savedStack_.empty());
-    ipOffset_ = interp.suspendGenerator(savedStack_);
+    Stack<ExceptionHandler*> ehs;
+    ipOffset_ = interp.suspendGenerator(savedStack_, ehs);
+    exceptionHandlers_ = ehs;
     state_ = Suspended;
     interp.pushStack(value);
 }

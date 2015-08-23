@@ -4,6 +4,8 @@
 #include "object.h"
 #include "callable.h"
 
+struct ExceptionHandler;
+
 struct GeneratorIter : public Object
 {
     static void init();
@@ -32,6 +34,7 @@ struct GeneratorIter : public Object
     State state_;
     Block* block_;
     Env* env_;
+    ExceptionHandler* exceptionHandlers_;
     size_t ipOffset_;
     unsigned argCount_;
     vector<Value> savedStack_;

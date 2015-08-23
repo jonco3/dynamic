@@ -35,11 +35,17 @@ struct ExceptionHandler : public Cell
 
     ExceptionHandler(Type type, unsigned frameIndex, unsigned offset);
 
+    ExceptionHandler* next() { return next_; }
     Type type() { return type_; }
     unsigned frameIndex() { return frameIndex_; }
     unsigned offset() { return offset_; }
 
+    void setNext(ExceptionHandler* eh);
+
+    void traceChildren(Tracer& t) override;
+
   protected:
+    ExceptionHandler* next_;
     const Type type_;
     unsigned frameIndex_;
     unsigned offset_;
@@ -196,8 +202,10 @@ struct Interpreter
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
                          unsigned ipOffset,
-                         vector<Value>& savedStack);
-    unsigned suspendGenerator(vector<Value>& savedStackx);
+                         vector<Value>& savedStack,
+                         MutableTraced<ExceptionHandler*> savedHandlers);
+    unsigned suspendGenerator(vector<Value>& savedStack,
+                              MutableTraced<ExceptionHandler*> savedHandlers);
 
     void loopControlJump(unsigned finallyCount, unsigned target);
 
@@ -216,7 +224,6 @@ struct Interpreter
     bool isHandlingDeferredReturn() const;
     bool isHandlingLoopControl() const;
     Exception* currentException();
-    ExceptionHandler* currentExceptionHandler();
     void maybeContinueHandlingException();
     void finishHandlingException();
 
@@ -228,7 +235,6 @@ struct Interpreter
     RootVector<Value> stack;
     unsigned stackPos_;
 
-    RootVector<ExceptionHandler*> exceptionHandlers;
     bool inExceptionHandler_;
     JumpKind jumpKind_;
     Stack<Exception*> currentException_;

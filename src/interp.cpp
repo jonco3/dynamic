@@ -22,9 +22,21 @@ GlobalRoot<Block*> Interpreter::AbortTrampoline;
 
 Interpreter interp;
 
-ExceptionHandler::ExceptionHandler(Type type, unsigned frameIndex, unsigned offset)
-  : type_(type), frameIndex_(frameIndex), offset_(offset)
+ExceptionHandler::ExceptionHandler(Type type, unsigned frameIndex,
+                                   unsigned offset)
+  : next_(nullptr), type_(type), frameIndex_(frameIndex), offset_(offset)
 {}
+
+void ExceptionHandler::setNext(ExceptionHandler* eh)
+{
+    assert(!next_);
+    next_ = eh;
+}
+
+void ExceptionHandler::traceChildren(Tracer& t)
+{
+    gc.trace(t, &next_);
+}
 
 Interpreter::Interpreter()
   : instrp(nullptr),
@@ -204,11 +216,7 @@ void Interpreter::popFrame()
     assert(!frames.empty());
     Frame* frame = getFrame();
 
-#ifdef DEBUG
-    for (const auto handler : exceptionHandlers)
-        assert(handler->frameIndex() < frameIndex());
-    assert(frame->stackPos() <= stackPos());
-#endif
+    assert(!frame->exceptionHandlers());
 
 #ifdef LOG_EXECUTION
     if (logFrames) {
@@ -287,18 +295,22 @@ GeneratorIter* Interpreter::getGeneratorIter()
 void Interpreter::resumeGenerator(Traced<Block*> block,
                                   Traced<Env*> env,
                                   unsigned ipOffset,
-                                  vector<Value>& savedStack)
+                                  vector<Value>& savedStack,
+                                  MutableTraced<ExceptionHandler*> savedHandlers)
 {
     pushFrame(block, stackPos());
     setFrameEnv(env);
+    getFrame()->setHandlers(savedHandlers);
     instrp += ipOffset;
     // todo: can copy this in one go
     for (auto i = savedStack.begin(); i != savedStack.end(); i++)
         pushStack(*i);
     savedStack.resize(0);
+    savedHandlers = nullptr;
 }
 
-unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
+unsigned Interpreter::suspendGenerator(vector<Value>& savedStack,
+                                       MutableTraced<ExceptionHandler*> savedHandlers)
 {
     Frame* frame = getFrame();
     assert(frame->stackPos() <= stackPos());
@@ -309,6 +321,8 @@ unsigned Interpreter::suspendGenerator(vector<Value>& savedStack)
     for (unsigned i = 0; i < len; i++)
         savedStack[i] = stack[i + frame->stackPos()];
     unsigned ipOffset = instrp - frame->block()->startInstr();
+    assert(!savedHandlers);
+    savedHandlers = frame->takeHandlers();
     popFrame();
     return ipOffset;
 }
@@ -324,22 +338,17 @@ void Interpreter::pushExceptionHandler(ExceptionHandler::Type type,
                                        unsigned offset)
 {
     assert(offset);
-    assert(exceptionHandlers.empty() ||
-           exceptionHandlers.back()->frameIndex() <= frameIndex());
-    // todo: Why do we store instruct offsets rather than indices?
+    // todo: Why do we store instruction offsets rather than indices?
     Stack<ExceptionHandler*> handler(
         gc.create<ExceptionHandler>(type, frameIndex(), offset + currentOffset()));
-    exceptionHandlers.push_back(handler);
+    getFrame()->pushHandler(handler);
 }
 
 void Interpreter::popExceptionHandler(ExceptionHandler::Type type)
 {
-#ifdef DEBUG
-    ExceptionHandler* handler = exceptionHandlers.back();
-    assert(handler->frameIndex() == frameIndex());
-    assert(handler->type() == type);
-#endif
-    exceptionHandlers.pop_back();
+    ExceptionHandler* eh = getFrame()->popHandler();
+    assert(eh->type() == type);
+    (void)eh;
 }
 
 void Interpreter::raiseException(Traced<Value> exception)
@@ -380,16 +389,13 @@ bool Interpreter::handleException()
 
 bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
 {
-    if (exceptionHandlers.empty())
-        return false;
-
-    Stack<ExceptionHandler*> handler(exceptionHandlers.back());
-    while (frameIndex() != handler->frameIndex() && instrp)
+    while (!getFrame()->exceptionHandlers()) {
         popFrame();
-    if (!instrp)
-        return false;
+        if (!instrp)
+            return false;
+    }
 
-    exceptionHandlers.pop_back();
+    ExceptionHandler* handler = getFrame()->popHandler();
     instrp = getFrame()->block()->startInstr() + handler->offset();
     inExceptionHandler_ = true;
     jumpKind_ = JumpKind::Exception;
@@ -400,10 +406,11 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
 bool Interpreter::startNextFinallySuite(JumpKind jumpKind)
 {
     assert(jumpKind == JumpKind::Return || jumpKind == JumpKind::LoopControl);
-    while (ExceptionHandler* handler = currentExceptionHandler()) {
-        if (handler->frameIndex() != frameIndex())
-            break;
-        exceptionHandlers.pop_back();
+
+    Frame* frame = getFrame();
+    while (frame->exceptionHandlers())
+    {
+        ExceptionHandler* handler = frame->popHandler();
         if (handler->type() == ExceptionHandler::FinallyHandler) {
             inExceptionHandler_ = true;
             jumpKind_ = jumpKind;
@@ -479,18 +486,6 @@ void Interpreter::finishHandlingException()
     deferredReturnValue_ = None;
     remainingFinallyCount_ = 0;
     loopControlTarget_ = 0;
-}
-
-ExceptionHandler* Interpreter::currentExceptionHandler()
-{
-    if (exceptionHandlers.empty())
-        return nullptr;
-
-    ExceptionHandler* handler = exceptionHandlers.back();
-    if (handler->frameIndex() != frameIndex())
-        return nullptr;
-
-    return handler;
 }
 
 Env* Interpreter::lexicalEnv(unsigned index)

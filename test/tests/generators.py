@@ -28,4 +28,19 @@ assert len(r) == 2
 assert r[0] == 1
 assert r[1] == 0
 
+def noExcept(f):
+    try:
+        yield f()
+    except:
+        yield None
+
+def a():
+    return 1
+
+def b():
+    raise Exception()
+
+assert(collect(noExcept(a)) == [1])
+assert(collect(noExcept(b)) == [None])
+
 print('ok')
