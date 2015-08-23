@@ -100,10 +100,8 @@ void Interpreter::removeStackEntries(unsigned offsetFromTop, unsigned count)
 #ifdef LOG_EXECUTION
         if (logExecution) {
             logStart(2);
-            Value value1 = stack[i];
-            Value value2 = stack[i + count];
-            cout << "@" << i << " " << value1;
-            cout << " := @" << (i + count) << " " << value2 << endl;
+            Value value = stack[i + count];
+            cout << "@" << dec << i << " := " << value << endl;
         }
 #endif
         stack[i] = stack[i + count];
@@ -146,7 +144,7 @@ void Interpreter::logStackPush(const Value& value)
 {
     if (logExecution) {
         logStart(1);
-        cout << "push @" << stackPos() << " " << value << endl;
+        cout << "push @" << dec << stackPos() << " " << value << endl;
     }
 }
 
@@ -156,7 +154,7 @@ void Interpreter::logStackPush(const Value* first, const Value* last)
         size_t pos = stackPos();
         while (first != last) {
             logStart(1);
-            cout << "push @" << pos++ << " " << *first++ << endl;
+            cout << "push @" << dec << pos++ << " " << *first++ << endl;
         }
     }
 }
@@ -168,7 +166,7 @@ void Interpreter::logStackPop(size_t count)
         for (size_t i = 0; i < count; i++) {
             logStart(1);
             Value value = stack[stackPos() - 1 - i];
-            cout << "pop @" << --pos << " " << value << endl;
+            cout << "pop @" << dec << --pos << " " << value << endl;
         }
     }
 }
@@ -632,7 +630,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "setupCall @" << stackPos() << " " << targetValue.get();
+        cout << "setupCall @" << dec << stackPos() << " " << targetValue.get();
         cout<< " " << argCount << endl;
     }
 #endif
