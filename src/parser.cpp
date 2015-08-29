@@ -191,14 +191,13 @@ SyntaxParser::SyntaxParser()
         return make_unique<SyntaxAttrRef>(token, move(l), move(name));
     });
 
-    addPrefixHandler(Token_Return, [] (ParserT& parser,
-                                            Token token) {
+    addPrefixHandler(Token_Return, [=] (ParserT& parser, Token token) {
         unique_ptr<Syntax> expr;
         if (parser.notFollowedBy(Token_EOF) &&
             parser.notFollowedBy(Token_Newline) &&
             parser.notFollowedBy(Token_Dedent))
         {
-            expr = parser.expression();
+            expr = parseExprOrExprList();
         }
         return make_unique<SyntaxReturn>(token, move(expr));
     });
