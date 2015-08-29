@@ -16,7 +16,6 @@ for i in range(0, 100, 2):
     del a[i]
 assert(len(a) == 50)
 for i in range(0, 100):
-    # todo: False == 0 in python
     assert (i in a) == ((i % 2) != 0)
 
 a = {}

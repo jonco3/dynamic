@@ -1,12 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import os
 import re
 import subprocess
 import sys
+import time
 
 parser = argparse.ArgumentParser(description='Run tests.')
+parser.add_argument('--benchmark', action='store_true',
+                    help = 'Output time take to run tests')
 parser.add_argument('command', metavar='CMD',
                     help='python interpreter command')
 parser.add_argument('dirs', metavar='TEST_DIR', nargs='+',
@@ -41,42 +44,55 @@ def runTest(dirname, name):
             elif key == 'args':
                 args.extend(value.split())
             else:
-                return 'BAD'
+                return 'BAD', 'Error parsing header option: ' + key
 
     if not expect:
-        return 'BAD'
+        return 'BAD', 'No expected output header'
 
+    ok = True
+    startTime = time.perf_counter()
     try:
-        ok = True
         output = subprocess.check_output(command + [filename] + args,
                                          stderr = subprocess.STDOUT)
+        endTime = time.perf_counter()
+        output = output.decode()
     except subprocess.CalledProcessError as e:
         ok = False
         output = e.output
 
     if not ok:
-        return 'FAIL'
+        return 'FAIL', 'Execution failed: ' + output
 
     output = output.strip()
     if output != "\n".join(expect):
-        print "Expected: " + "|".join(expect)
-        print "Actual:   " + output.replace("\n", "|")
-        return 'FAIL'
+        message = ('    Output did not match expected:\n' +
+                   '      Expected: ' + '|'.join(expect) + '\n' +
+                   '      Actual:   ' + output.replace('\n', '|'))
+        return 'FAIL', message
 
     passCount += 1
-    return 'PASS'
+    return 'PASS', endTime - startTime
 
-def runTestDir(arg, dirname, names):
+def formatTime(secs):
+    return "%6.2f" % (secs * 1000)
+
+def runTestDir(dirname, names):
     for name in names:
         if name.endswith('.py'):
-            result = runTest(dirname, name)
+            result, extra = runTest(dirname, name)
+            header = '  %-20s ' % name
             if result != 'PASS':
-                result = '     ' + result
-            print('  %-20s %s' % (name, result))
+                print(header + ' ' + result)
+                print(extra)
+            elif args.benchmark:
+                print(header + '       ' + formatTime(extra))
+            else:
+                print(header)
 
 print("Running tests...")
 for testDir in args.dirs:
-    os.path.walk(testDir, runTestDir, None)
+    for dirpath, dirnames, filenames in os.walk(testDir):
+        runTestDir(dirpath, filenames)
 print("%d tests passed out of %d" % (passCount, runCount))
 if passCount != runCount:
     sys.exit(1)

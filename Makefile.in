@@ -61,7 +61,7 @@ ALLOBJS = $(subst src,build,$(ALLSRCS:.cpp=.o))
 DEPS = $(ALLOBJS:.o=.d)
 
 WRAPPER = python $(srcdir)/test/debug-wrapper
-RUN-TESTS = python $(srcdir)/test/run-tests
+RUN-TESTS = python3 $(srcdir)/test/run-tests
 TESTDIRS = $(srcdir)/test/tests $(srcdir)/bench/tests
 
 .PHONY: all
