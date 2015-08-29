@@ -5,11 +5,18 @@ import re
 import subprocess
 import sys
 
-command = sys.argv[1:]
-if not command:
-    sys.exit("usage: run-tests EXE...")
+args = sys.argv[1:]
+testDirs = []
+while args and os.path.isdir(args[0]):
+    testDirs.append(args.pop(0))
 
-testsDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
+command = args
+
+if not testDirs or not command:
+    sys.exit("usage: run-tests TEST_DIRS... COMMAND...")
+
+testDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
+benchDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
 
 runCount = 0
 passCount = 0
@@ -54,7 +61,8 @@ def runTestDir(arg, dirname, names):
             print('  %-20s %s' % (name, result))
 
 print("Running tests...")
-os.path.walk(testsDir, runTestDir, None)
+for testDir in testDirs:
+    os.path.walk(testDir, runTestDir, None)
 print("%d tests passed out of %d" % (passCount, runCount))
 if passCount != runCount:
     sys.exit(1)
