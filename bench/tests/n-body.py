@@ -1,6 +1,7 @@
 # args: 10
 # output: -0.16907516382852444
 # output: -0.16907302171469984
+# bench-args: 2000
 
 # The Computer Language Benchmarks Game
 # http://benchmarksgame.alioth.debian.org/

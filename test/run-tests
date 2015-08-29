@@ -15,7 +15,6 @@ parser.add_argument('command', metavar='CMD',
 parser.add_argument('dirs', metavar='TEST_DIR', nargs='+',
                     help='directory containing tests to run')
 args = parser.parse_args()
-command = args.command.split()
 
 testDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
 benchDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
@@ -23,18 +22,18 @@ benchDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
 runCount = 0
 passCount = 0
 
-def runTest(dirname, name):
+def runTest(dirname, name, benchmark):
     global runCount, passCount
     runCount += 1
     filename = os.path.join(dirname, name)
 
-    args = []
+    command = args.command.split() + [filename]
     expect = []
 
     with open(filename) as f:
         while True:
             line = f.readline().rstrip()
-            match = re.match('# (\w+): (.*)$', line)
+            match = re.match('# ([\w-]+): (.*)$', line)
             if not match:
                 break
 
@@ -42,7 +41,11 @@ def runTest(dirname, name):
             if key == 'output':
                 expect.append(value)
             elif key == 'args':
-                args.extend(value.split())
+                if not benchmark:
+                    command.extend(value.split())
+            elif key == 'bench-args':
+                if benchmark:
+                    command.extend(value.split())
             else:
                 return 'BAD', 'Error parsing header option: ' + key
 
@@ -52,34 +55,35 @@ def runTest(dirname, name):
     ok = True
     startTime = time.perf_counter()
     try:
-        output = subprocess.check_output(command + [filename] + args,
-                                         stderr = subprocess.STDOUT)
+        output = subprocess.check_output(command, stderr = subprocess.STDOUT)
         endTime = time.perf_counter()
-        output = output.decode()
     except subprocess.CalledProcessError as e:
         ok = False
         output = e.output
 
+    output = output.decode().strip()
+
     if not ok:
         return 'FAIL', 'Execution failed: ' + output
 
-    output = output.strip()
-    if output != "\n".join(expect):
-        message = ('    Output did not match expected:\n' +
-                   '      Expected: ' + '|'.join(expect) + '\n' +
-                   '      Actual:   ' + output.replace('\n', '|'))
-        return 'FAIL', message
+    if not args.benchmark:
+        output = output.strip()
+        if output != "\n".join(expect):
+            message = ('    Output did not match expected:\n' +
+                       '      Expected: ' + '|'.join(expect) + '\n' +
+                       '      Actual:   ' + output.replace('\n', '|'))
+            return 'FAIL', message
 
     passCount += 1
     return 'PASS', endTime - startTime
 
 def formatTime(secs):
-    return "%6.2f" % (secs * 1000)
+    return "%8.2f" % (secs * 1000)
 
 def runTestDir(dirname, names):
     for name in names:
         if name.endswith('.py'):
-            result, extra = runTest(dirname, name)
+            result, extra = runTest(dirname, name, args.benchmark)
             header = '  %-20s ' % name
             if result != 'PASS':
                 print(header + ' ' + result)
