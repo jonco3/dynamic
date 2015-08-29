@@ -181,6 +181,11 @@ testcase(tokenizer)
     testEqual(t.type, Token_String);
     testEqual(t.text, "\n\t");
 
+    tz.start("\"\\:\"");
+    t = tz.nextToken();
+    testEqual(t.type, Token_String);
+    testEqual(t.text, "\\:");
+
     tz.start("is is not not not in in");
     testEqual(tz.nextToken().type, Token_Is);
     testEqual(tz.nextToken().type, Token_IsNot);

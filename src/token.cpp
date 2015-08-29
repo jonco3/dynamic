@@ -405,15 +405,15 @@ Token Tokenizer::findNextToken()
             if (c != '\\') {
                 s << c;
             } else {
-                char escape = nextChar();
-                if (!escape)
+                char c2 = nextChar();
+                if (!c2)
                     break;
-                if (escape == 'n')
+                if (c2 == 'n')
                     s << "\n";
-                else if (escape == 't')
+                else if (c2 == 't')
                     s << "\t";
                 else
-                    throw TokenError("Unimplimented string escape", pos);
+                    s << c << c2;
             }
         }
         if (c != delimiter)
