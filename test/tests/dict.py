@@ -17,7 +17,7 @@ for i in range(0, 100, 2):
 assert(len(a) == 50)
 for i in range(0, 100):
     # todo: False == 0 in python
-    assert (i in a) == not not (i % 2)
+    assert (i in a) == ((i % 2) != 0)
 
 a = {}
 for i in range(0, 100):
@@ -33,6 +33,6 @@ for i in range(0, 100, 2):
     del a[str(i)]
 assert(len(a) == 50)
 for i in range(0, 100):
-    assert (str(i) in a) == not not (i % 2)
+    assert (str(i) in a) == ((i % 2) != 0)
 
 print('ok')
