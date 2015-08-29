@@ -27,7 +27,7 @@ def runTest(dirname, name):
     filename = os.path.join(dirname, name)
 
     args = []
-    expect = None
+    expect = []
 
     with open(filename) as f:
         while True:
@@ -38,7 +38,7 @@ def runTest(dirname, name):
 
             key, value = match.groups()
             if key == 'output':
-                expect = value
+                expect.append(value)
             elif key == 'args':
                 args.extend(value.split())
             else:
@@ -57,7 +57,11 @@ def runTest(dirname, name):
 
     if not ok:
         return 'FAIL'
-    if output.rstrip() != expect:
+
+    output = output.strip()
+    if output != "\n".join(expect):
+        print "Expected: " + "|".join(expect)
+        print "Actual:   " + output.replace("\n", "|")
         return 'FAIL'
 
     passCount += 1
