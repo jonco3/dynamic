@@ -593,12 +593,12 @@ bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
 }
 
 /*
- * Get the value of an attribute that might be a descript.  If it is a
- * descriptor that is also callable, don't call its __get__ method but indicate
- * this by setting isCallableDescriptor.
+ * Get the value of an attribute that might be a descript.  If it is a callable
+ * descriptor of a type we understand (either a function or a native), don't
+ * call its __get__ method but indicate this by setting isCallableDescriptor.
  */
-bool getMethodAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut,
-                   bool& isCallableDescriptor)
+bool getMethodAttr(Traced<Value> value, Name name,
+                   MutableTraced<Value> resultOut, bool& isCallableDescriptor)
 {
     bool isDescriptor;
     if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
