@@ -97,4 +97,4 @@ def sum(iterable, start = 0):
     return result
 
 def divmod(a, b):
-    return a // b, a % b
+    return (a // b, a % b)

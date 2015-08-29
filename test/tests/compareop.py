@@ -175,4 +175,16 @@ except TypeError as e:
     exception = True
 assert exception
 
+# test exception handling when performing comparisions
+class E:
+    def __eq__(self, other):
+        raise Exception()
+
+exception = False
+try:
+    1 == E()
+except Exception as e:
+    exception = True
+assert exception
+
 print('ok')

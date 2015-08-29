@@ -1,6 +1,6 @@
 # Set up some self-hosted methods
 
-def listEqual(a, b):
+def sequenceEqual(a, b):
     if len(a) != len(b):
         return False
     for i in range(0, len(a)):
@@ -8,8 +8,21 @@ def listEqual(a, b):
             return False
     return True
 
+def listEqual(a, b):
+    if not isinstance(b, list):
+        return False
+    return sequenceEqual(a, b)
+
 def listNotEqual(a, b):
     return not listEqual(a, b)
+
+def tupleEqual(a, b):
+    if not isinstance(b, tuple):
+        return False
+    return sequenceEqual(a, b)
+
+def tupleNotEqual(a, b):
+    return not tupleEqual(a, b)
 
 def dictEqual(a, b):
     if len(a) != len(b):
@@ -24,8 +37,8 @@ def dictNotEqual(a, b):
 
 list.__eq__ = listEqual
 list.__ne__ = listNotEqual
-tuple.__eq__ = listEqual
-tuple.__ne__ = listNotEqual
+tuple.__eq__ = tupleEqual
+tuple.__ne__ = tupleNotEqual
 dict.__eq__ = dictEqual
 dict.__ne__ = dictNotEqual
 

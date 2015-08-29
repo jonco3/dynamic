@@ -605,6 +605,7 @@ bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
     pushStack(right);
     if (!call(method, 2, result)) {
         pushStack(result);
+        raiseException();
         return true;
     }
 
@@ -944,6 +945,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
   instr_Abort: {
         resultOut = popStack();
+        assert(resultOut.isInstanceOf(Exception::ObjectClass));
         popFrame();
         return false;
     }
