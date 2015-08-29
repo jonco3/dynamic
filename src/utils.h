@@ -9,7 +9,7 @@
 #define alwaysTrue(x)                                                         \
     do {                                                                      \
         if (!x) {                                                             \
-            printf(stderr, "Internal error\n");                               \
+            fprintf(stderr, "Internal error\n");                              \
             exit(1);                                                          \
         }                                                                     \
     } while (false)
