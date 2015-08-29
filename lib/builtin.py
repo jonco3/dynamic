@@ -95,3 +95,6 @@ def sum(iterable, start = 0):
     for element in iterable:
         result += element
     return result
+
+def divmod(a, b):
+    return a // b, a % b

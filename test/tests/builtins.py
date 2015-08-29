@@ -59,4 +59,11 @@ assert(sum([]) == 0)
 assert(sum([1, 2, 3]) == 6)
 assert(sum((1, 2, 3), 4) == 10)
 
+# todo: these tests are probably not sufficient
+assert(divmod(5, 2) == (2, 1))
+assert(divmod(4.5, 1.5) == (3.0, 0.0))
+assert(divmod(5, 1.5) == (3.0, 0.5))
+assert(divmod(1, -1) == (-1, 0))
+assert(divmod(-1, 1) == (-1, 0))
+
 print('ok')
