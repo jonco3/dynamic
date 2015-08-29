@@ -26,22 +26,36 @@ def runTest(dirname, name):
     runCount += 1
     filename = os.path.join(dirname, name)
 
+    args = []
+    expect = None
+
     with open(filename) as f:
-        line = f.readline().rstrip()
-    match = re.match('# (\w+): (.*)$', line)
-    if not match:
+        while True:
+            line = f.readline().rstrip()
+            match = re.match('# (\w+): (.*)$', line)
+            if not match:
+                break
+
+            key, value = match.groups()
+            if key == 'output':
+                expect = value
+            elif key == 'args':
+                args.extend(value.split())
+            else:
+                return 'BAD'
+
+    if not expect:
         return 'BAD'
-    if match.group(1) != 'output':
-        return 'BAD'
-    expect = match.group(2)
 
     try:
         ok = True
-        output = subprocess.check_output(command + [filename],
+        output = subprocess.check_output(command + [filename] + args,
                                          stderr = subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         ok = False
         output = e.output
+
+    print(output)
 
     if not ok:
         return 'FAIL'
