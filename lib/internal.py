@@ -29,6 +29,12 @@ tuple.__ne__ = listNotEqual
 dict.__eq__ = dictEqual
 dict.__ne__ = dictNotEqual
 
+def listExtend(a, b):
+    for element in b:
+        a.append(element)
+
+list.extend = listExtend
+
 class SequenceIterator:
     def __init__(self, target):
         self.target = target

@@ -48,11 +48,15 @@ testIter(OwnSequence([1, 2, 3]))
 def inc(x):
     return x + 1
 
-assert(map(inc, []) == [])
-assert(map(inc, [1, 2, 3]) == [2, 3, 4])
+assert(list(map(inc, [])) == [])
+assert(list(map(inc, [1, 2, 3])) == [2, 3, 4])
 
 assert(list(zip()) == [])
 assert(list(zip([1], [2])) == [(1, 2)])
 assert(list(zip([1, 2], [2, 3])) == [(1, 2), (2, 3)])
+
+assert(sum([]) == 0)
+assert(sum([1, 2, 3]) == 6)
+assert(sum((1, 2, 3), 4) == 10)
 
 print('ok')

@@ -89,3 +89,9 @@ def map(function, *iterables):
         for x in zip(iterables):
             raise Exception("not implmemented")
             #yield(function(*x))
+
+def sum(iterable, start = 0):
+    result = start
+    for element in iterable:
+        result += element
+    return result

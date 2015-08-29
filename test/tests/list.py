@@ -36,4 +36,11 @@ assert(tuple(empty()) == ())
 assert(list(gen()) == [1, 2, 3])
 assert(tuple(gen()) == (1, 2, 3))
 
+a = [1, 2]
+a.extend([3, 4])
+assert(a == [1, 2, 3, 4])
+a = [1, 2]
+a.extend((3, 4))
+assert(a == [1, 2, 3, 4])
+
 print('ok')
