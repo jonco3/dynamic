@@ -61,7 +61,7 @@ ALLOBJS = $(subst src,build,$(ALLSRCS:.cpp=.o))
 DEPS = $(ALLOBJS:.o=.d)
 
 WRAPPER = python $(srcdir)/test/debug-wrapper
-TEST-RUNNER = python $(srcdir)/test/run-tests
+RUN-TESTS = python $(srcdir)/test/run-tests
 TESTDIRS = $(srcdir)/test/tests $(srcdir)/bench/tests
 
 .PHONY: all
@@ -97,7 +97,7 @@ unittest: unittests # gcapitest
 
 .PHONY: pythontest
 pythontest: dynamic unittest
-	$(TEST-RUNNER) $(TESTDIRS) ./dynamic -l $(srcdir)/lib
+	$(RUN-TESTS) "./dynamic -l $(srcdir)/lib" $(TESTDIRS) 
 
 .PHONY: test
 test: pythontest

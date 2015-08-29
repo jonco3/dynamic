@@ -1,19 +1,18 @@
-#!/bin/env python
+#!/usr/bin/env python
 
+import argparse
 import os
 import re
 import subprocess
 import sys
 
-args = sys.argv[1:]
-testDirs = []
-while args and os.path.isdir(args[0]):
-    testDirs.append(args.pop(0))
-
-command = args
-
-if not testDirs or not command:
-    sys.exit("usage: run-tests TEST_DIRS... COMMAND...")
+parser = argparse.ArgumentParser(description='Run tests.')
+parser.add_argument('command', metavar='CMD',
+                    help='python interpreter command')
+parser.add_argument('dirs', metavar='TEST_DIR', nargs='+',
+                    help='directory containing tests to run')
+args = parser.parse_args()
+command = args.command.split()
 
 testDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
 benchDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
@@ -76,7 +75,7 @@ def runTestDir(arg, dirname, names):
             print('  %-20s %s' % (name, result))
 
 print("Running tests...")
-for testDir in testDirs:
+for testDir in args.dirs:
     os.path.walk(testDir, runTestDir, None)
 print("%d tests passed out of %d" % (passCount, runCount))
 if passCount != runCount:
