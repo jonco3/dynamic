@@ -456,8 +456,6 @@ void initObject()
  *     Raise AttributeError
  */
 
-static Name foo;
-
 static bool isNonDataDescriptor(Traced<Value> value)
 {
     if (!value.isObject())
@@ -587,10 +585,10 @@ bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
     if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
         return false;
 
-    if (isDescriptor && !getDescriptorValue(value, resultOut))
-        return false;
+    if (!isDescriptor)
+        return true;
 
-    return true;
+    return getDescriptorValue(value, resultOut);
 }
 
 /*
@@ -606,17 +604,16 @@ bool getMethodAttr(Traced<Value> value, Name name,
     if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
         return false;
 
-    isCallableDescriptor = false;
-    if (isDescriptor) {
-        if (resultOut.is<Function>() || resultOut.is<Native>()) {
-            isCallableDescriptor = true;
-        } else {
-            if (!getDescriptorValue(value, resultOut))
-                return false;
-        }
+    if (!isDescriptor) {
+        isCallableDescriptor = false;
+        return true;
     }
 
-    return true;
+    isCallableDescriptor = resultOut.is<Function>() || resultOut.is<Native>();
+    if (isCallableDescriptor)
+        return true;
+
+    return getDescriptorValue(value, resultOut);
 }
 
 /*
