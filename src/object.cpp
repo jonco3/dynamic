@@ -549,7 +549,8 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
 }
 
 static bool getAttrOrDescriptor(Traced<Value> value, Name name,
-                                MutableTraced<Value> resultOut, bool& isDescriptor)
+                                MutableTraced<Value> resultOut,
+                                bool& isDescriptor)
 {
     if (getSpecialAttr(value, name, resultOut)) {
         isDescriptor = false;

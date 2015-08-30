@@ -98,11 +98,30 @@ class C6:
 c = C6()
 assert c.f() == 7
 
+def g():
+  return 8
+
+c.f = g
+assert c.f() == 8
+
 class E:
   def f(self, a, b, c, d, e, f, g, h, i, j, k, l):
     return a + b + c + d + e + f + g + h + i + j + k + l
 
 e = E()
 assert(e.f(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1) == 12)
+
+class F:
+  pass
+
+f = F()
+f.g = g
+assert f.g() == 8
+
+F.g = lambda x: 9
+assert f.g() == 8
+
+del f.g
+assert f.g() == 9
 
 print("ok")
