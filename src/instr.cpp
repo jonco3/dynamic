@@ -274,19 +274,26 @@ INLINE_INSTRS void
 Interpreter::executeInstr_In(Traced<InstrIn*> instr)
 {
     // todo: implement this
-    // https://docs.python.org/2/reference/expressions.html#membership-test-details
+    // https://docs.python.org/3/reference/expressions.html#membership-test-details
 
     Stack<Object*> container(popStack().toObject());
     Stack<Value> value(popStack());
+
+    Stack<Value> type(container->type());
     Stack<Value> contains;
-    if (!container->maybeGetAttr(Name::__contains__, contains)) {
+    bool isCallableDescriptor;
+    if (!getMethodAttr(type, Name::__contains__, contains,
+                       isCallableDescriptor))
+    {
         pushStack(gc.create<TypeError>("Argument is not iterable"));
         raiseException();
         return;
     }
 
-    pushStack(container, value);
-    startCall(contains, 2);
+    if (isCallableDescriptor)
+        pushStack(container);
+    pushStack(value);
+    startCall(contains, isCallableDescriptor ? 2 : 1);
 }
 
 INLINE_INSTRS void

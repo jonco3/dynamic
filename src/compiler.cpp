@@ -820,6 +820,7 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxClass& s) {
         Stack<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
         vector<Name> params = { Name::__bases__ };
+        incStackDepth();
         emit<InstrLambda>(s.id, params, suite);
         compile(s.bases);
         emit<InstrCall>(1);
@@ -830,6 +831,7 @@ struct ByteCompiler : public SyntaxVisitor
         } else {
             emit<InstrSetGlobal>(topLevel, s.id);
         }
+        decStackDepth();
     }
 
     virtual void visit(const SyntaxAssert& s) {

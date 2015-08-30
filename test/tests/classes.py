@@ -124,4 +124,29 @@ assert f.g() == 8
 del f.g
 assert f.g() == 9
 
+f = F()
+f.__contains__ = lambda x: True
+
+assert f.__contains__(0)
+threw = False
+try:
+  0 in f
+except TypeError as e:
+  threw = 'not iterable' in str(e)
+assert threw
+
+del f.__contains__
+F.__contains__ = lambda x, y: True
+
+assert 0 in f
+
+class Callable:
+  def __call__(self, x):
+    return isinstance(self, Callable)
+
+f = F()
+F.__contains__ = Callable()
+
+assert 0 in f
+
 print("ok")

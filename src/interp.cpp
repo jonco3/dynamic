@@ -124,7 +124,7 @@ void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
 
     unsigned end = stackPos() - 1;
     unsigned begin = end - offsetFromTop;
-    for (unsigned i = end; i != begin; i--)
+    for (unsigned i = end; i > 0 && i != begin; i--)
         stack[i] = stack[i - 1];
     stack[stackPos_ - offsetFromTop] = value;
     stackPos_++;
