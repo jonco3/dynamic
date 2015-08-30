@@ -472,15 +472,9 @@ static bool isDataDescriptor(Traced<Value> value)
         value.asObject()->hasAttr(Name::__set__);
 }
 
-enum class FindResult
-{
-    NotFound,
-    FoundValue,
-    FoundDescriptor
-};
-
-static FindResult findAttrForGet(Traced<Value> value, Name name,
-                                 MutableTraced<Value> resultOut)
+static bool findAttrForGet(Traced<Value> value, Name name,
+                           MutableTraced<Value> resultOut,
+                           bool& isDescriptor)
 {
     Stack<Class*> cls(value.type());
     Stack<Value> classAttr;
@@ -488,30 +482,33 @@ static FindResult findAttrForGet(Traced<Value> value, Name name,
 
     if (foundOnClass && isDataDescriptor(classAttr)) {
         resultOut = classAttr;
-        return FindResult::FoundDescriptor;
+        isDescriptor = true;
+        return true;
     }
 
     Stack<Object*> obj(value.maybeObject());
     if (obj) {
         if (obj->is<Class>()) {
             if (obj->maybeGetAttr(name, resultOut)) {
-                return isNonDataDescriptor(resultOut) ?
-                    FindResult::FoundDescriptor : FindResult::FoundValue;
+                isDescriptor = isNonDataDescriptor(resultOut);
+                return true;
             }
         } else {
             if (obj->maybeGetOwnAttr(name, resultOut)) {
-                return FindResult::FoundValue;
+                isDescriptor = false;
+                return true;
             }
         }
     }
 
     if (foundOnClass) {
         resultOut = classAttr;
-        return isNonDataDescriptor(resultOut) ?
-            FindResult::FoundDescriptor : FindResult::FoundValue;
+        isDescriptor = isNonDataDescriptor(resultOut);
+        return true;
     }
 
-    return FindResult::NotFound;
+    isDescriptor = false;
+    return false;
 }
 
 static bool raiseAttrError(Traced<Value> value, Name name,
@@ -555,13 +552,9 @@ static bool getAttrOrDescriptor(Traced<Value> value, Name name,
         return true;
     }
 
-    FindResult r = findAttrForGet(value, name, resultOut);
-    if (r == FindResult::NotFound) {
-        isDescriptor = false;
+    if (!findAttrForGet(value, name, resultOut, isDescriptor))
         return raiseAttrError(value, name, resultOut);
-    }
 
-    isDescriptor = r == FindResult::FoundDescriptor;
     return true;
 }
 
@@ -627,7 +620,7 @@ bool getMethodAttr(Traced<Value> value, Name name,
  *     Insert something into objectname.__dict__ for key "attrname".
  */
 
-FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
+bool findDescriptorForSetOrDelete(Name name, Traced<Object*> obj,
                                   MutableTraced<Value> resultOut)
 {
     // todo: check for specials?
@@ -637,56 +630,51 @@ FindResult findAttrForSetOrDelete(Name name, Traced<Object*> obj,
     Stack<Value> classAttr;
     bool foundOnClass = cls->maybeGetAttr(name, classAttr);
 
-    if (foundOnClass && isDataDescriptor(classAttr)) {
-        resultOut = classAttr;
-        return FindResult::FoundDescriptor;
-    }
+    if (!foundOnClass || !isDataDescriptor(classAttr))
+        return false;
 
-    return FindResult::NotFound;
+    resultOut = classAttr;
+    return true;
 }
 
 bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
              MutableTraced<Value> resultOut)
 {
     Stack<Value> descValue;
-    FindResult r = findAttrForSetOrDelete(name, obj, descValue);
-    if (r == FindResult::FoundDescriptor) {
-        Stack<Object*> desc(descValue.asObject());
-        Stack<Value> func(desc->getAttr(Name::__set__));
-        interp.pushStack(desc);
-        interp.pushStack(obj);
-        interp.pushStack(value);
-        Stack<Value> result;
-        bool ok = interp.call(func, 3, result);
-        resultOut = result;
-        return ok; // todo: drive MutableTraced through interpreter interface
+    if (!findDescriptorForSetOrDelete(name, obj, descValue)) {
+        obj->setAttr(name, value);
+        resultOut = None;
+        return true;
     }
 
-    assert(r == FindResult::NotFound);
-    obj->setAttr(name, value);
-    resultOut = None;
-    return true;
+    Stack<Object*> desc(descValue.asObject());
+    Stack<Value> func(desc->getAttr(Name::__set__));
+    interp.pushStack(desc);
+    interp.pushStack(obj);
+    interp.pushStack(value);
+    Stack<Value> result;
+    bool ok = interp.call(func, 3, result);
+    resultOut = result;
+    return ok; // todo: drive MutableTraced through interpreter interface
 }
 
 bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
 {
     Stack<Value> descValue;
-    FindResult r = findAttrForSetOrDelete(name, obj, descValue);
-    if (r == FindResult::FoundDescriptor) {
-        Stack<Object*> desc(descValue.asObject());
-        Stack<Value> func(desc->getAttr(Name::__delete__));
-        interp.pushStack(desc);
-        interp.pushStack(obj);
-        Stack<Value> result;
-        bool ok = interp.call(func, 2, result);
-        resultOut = result;
-        return ok; // todo: drive MutableTraced through interpreter interface
+    if (!findDescriptorForSetOrDelete(name, obj, descValue)) {
+        if (!obj->maybeDelOwnAttr(name))
+            return raiseAttrError(obj, name, resultOut);
+
+        return true;
     }
 
-    assert(r == FindResult::NotFound);
-    if (!obj->maybeDelOwnAttr(name))
-        return raiseAttrError(obj, name, resultOut);
-
-    return true;
+    Stack<Object*> desc(descValue.asObject());
+    Stack<Value> func(desc->getAttr(Name::__delete__));
+    interp.pushStack(desc);
+    interp.pushStack(obj);
+    Stack<Value> result;
+    bool ok = interp.call(func, 2, result);
+    resultOut = result;
+    return ok; // todo: drive MutableTraced through interpreter interface
 }
 
