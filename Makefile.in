@@ -103,7 +103,7 @@ test: pythontest
 
 .PHONY: bench
 bench: dynamic
-	python benchmarks/run_benchmarks.py
+	$(RUN-TESTS) --benchmark --dir $(srcdir)/bench/tests --command "./dynamic -l $(srcdir)/lib" --command python3 --command pypy3
 
 .PHONY: clean
 clean:

@@ -3,7 +3,7 @@
 # output: 128	 trees of depth 4	 check: -128
 # output: 32	 trees of depth 6	 check: -32
 # output: long lived tree of depth 6	 check: -1
-# bench-args: 9
+# bench-args: 11
 
 # The Computer Language Benchmarks Game
 # http://benchmarksgame.alioth.debian.org/

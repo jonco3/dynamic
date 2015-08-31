@@ -82,7 +82,7 @@ def runTest(filename, command):
     return 'PASS', endTime - startTime
 
 def formatTime(secs):
-    return "%18.2f  " % (secs * 1000)
+    return "%-20.2f" % (secs * 1000)
 
 def formatResult(result):
     return "%-20s" % result
