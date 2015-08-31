@@ -67,7 +67,7 @@ assert(divmod(1, -1) == (-1, 0))
 assert(divmod(-1, 1) == (-1, 0))
 
 # Builtin classes are not modifiable
-builtinClasses = [ bool, dict, Exception, tuple, list, int, float]
+builtinClasses = [ bool, dict, tuple, list, int, float, object ]
 
 def checkException(thunk, exceptionType, message):
     try:
@@ -82,5 +82,10 @@ def addAttr(c):
 
 for c in builtinClasses:
     assert checkException(lambda: addAttr(c), TypeError, "can't set attributes")
+
+# Can't add attributes to instances of builtin classes
+for c in builtinClasses:
+    assert checkException(lambda: addAttr(c()), AttributeError,
+                          "object has no attribute")
 
 print('ok')

@@ -406,14 +406,16 @@ static bool object_hash(TracedVector<Value> args, MutableTraced<Value> resultOut
 
 void initObject()
 {
-
     Object::InitialLayout.init(Layout::Empty);
     Class::InitialLayout.init(Object::InitialLayout);
 
     Stack<Class*> objectBase(nullptr);
-    Object::ObjectClass.init(gc.create<Class>("object", objectBase));
-    NoneObject::ObjectClass.init(gc.create<Class>("None"));
-    Class::ObjectClass.init(gc.create<Class>("class"));
+    Object::ObjectClass.init(
+        gc.create<Class>("object", objectBase, Class::InitialLayout, true));
+    NoneObject::ObjectClass.init(
+        gc.create<Class>("None", Object::ObjectClass, Class::InitialLayout, true));
+    Class::ObjectClass.init(
+        gc.create<Class>("class", Object::ObjectClass, Class::InitialLayout, true));
 
     None.init(gc.create<NoneObject>());
 
