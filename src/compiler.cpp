@@ -376,7 +376,9 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxAugAssign& s) {
         compile(s.left);
+        incStackDepth();
         compile(s.right);
+        incStackDepth();
         emit<InstrAugAssignUpdate>(s.op);
         {
             AutoPushContext enterAssign(contextStack, Context::Assign);
@@ -384,6 +386,7 @@ struct ByteCompiler : public SyntaxVisitor
         }
         emit<InstrPop>();
         emit<InstrConst>(None);
+        decStackDepth(2);
     }
 
     virtual void visit(const SyntaxCompareOp& s) {

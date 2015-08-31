@@ -51,4 +51,8 @@ assert str(B()) == 'str'
 assert repr(C()) == 'repr'
 assert str(C()) == 'str'
 
+a = "a"
+a += "b"
+assert a == "ab"
+
 print('ok')
