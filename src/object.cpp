@@ -559,7 +559,7 @@ static bool getAttrOrDescriptor(Traced<Value> value, Name name,
     }
 
     if (!findAttrForGet(value, name, resultOut, isDescriptor))
-        return raiseAttrError(value, name, resultOut);
+        return false;
 
     return true;
 }
@@ -582,7 +582,7 @@ bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
 {
     bool isDescriptor;
     if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
-        return false;
+        return raiseAttrError(value, name, resultOut);
 
     if (!isDescriptor)
         return true;

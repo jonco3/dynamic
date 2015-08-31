@@ -144,4 +144,28 @@ v[11] |= 5
 
 assert list(map(lambda x: x.value, v)) == r
 
+class C:
+    def __init__(self, value):
+        self.value = value
+
+o = C(1)
+
+def incValue(self, other):
+    self.value += other
+    return self
+
+o.__iadd__ = incValue
+
+threw = False
+try:
+    o += 1
+except TypeError as e:
+    if "unsupported operand type" in str(e):
+        threw = True
+assert threw
+
+C.__iadd__ = incValue
+o += 1
+assert o.value == 2
+
 print('ok')

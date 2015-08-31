@@ -805,28 +805,26 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     Stack<Value> update(popStack());
     Stack<Value> value(popStack());
 
+    Stack<Value> type(value.type());
     Stack<Value> method;
+    bool isCallableDescriptor;
     Stack<Value> result;
-    pushStack(value);
-    pushStack(update);
-    if (value.maybeGetAttr(Name::augAssignMethod[instr->op], method)) {
-        if (!call(method, 2, result)) {
-            raiseException(result);
-            return;
-        }
-        pushStack(result);
-    } else if (value.maybeGetAttr(Name::binMethod[instr->op], method)) {
-        if (!call(method, 2, result)) {
-            raiseException(result);
-            return;
-        }
-        pushStack(result);
-    } else {
-        popStack(2);
+
+    if (!getMethodAttr(type, Name::augAssignMethod[instr->op], method,
+                       isCallableDescriptor) &&
+        !getMethodAttr(type, Name::binMethod[instr->op], method,
+                       isCallableDescriptor))
+    {
         string message = "unsupported operand type(s) for augmented assignment";
         pushStack(gc.create<TypeError>(message));
         raiseException();
+        return;
     }
+
+    if (isCallableDescriptor)
+        pushStack(value);
+    pushStack(update);
+    startCall(method, isCallableDescriptor ? 2 : 1);
 }
 
 INLINE_INSTRS void
