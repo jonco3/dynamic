@@ -1,33 +1,22 @@
 # output: ok
 
-a, b, c, d, e, f = 1000, 1000, 1000, 1000, 1000, 1000
-g, h, i, j, k, l = 2, 1000, 1000, 1000, 1000, 1000
+v = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+r = [11, 8, 30, 2.5, 2, 4, 10000000, 20, 2, 2, 14, 15]
 
-a += 1
-b -= 2
-c *= 3
-d /= 4
-e //= 5
-f %= 6
-g **= 7
-h <<= 8
-i >>= 9
-j &= 10
-k ^= 11
-l |= 12
+v[0] += 1
+v[1] -= 2
+v[2] *= 3
+v[3] /= 4
+v[4] //= 5
+v[5] %= 6
+v[6] **= 7
+v[7] <<= 1
+v[8] >>= 2
+v[9] &= 3
+v[10] ^= 4
+v[11] |= 5
 
-assert a == 1001
-assert b == 998
-assert c == 3000
-assert d == 250
-assert e == 200
-assert f == 4
-assert g == 128
-assert h == 256000
-assert i == 1
-assert j == 8
-assert k == 995
-assert l == 1004
+assert v == r
 
 class Wrapped:
     def __init__(self, initial):
@@ -69,33 +58,21 @@ class Wrapped:
         self.value ^= other
         return self
 
-a, b, c, d, e, f = Wrapped(1000), Wrapped(1000), Wrapped(1000), Wrapped(1000), Wrapped(1000), Wrapped(1000)
-g, h, i, j, k, l = Wrapped(2), Wrapped(1000), Wrapped(1000), Wrapped(1000), Wrapped(1000), Wrapped(1000)
+v = list(map(Wrapped, [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]))
 
-a += 1
-b -= 2
-c *= 3
-d /= 4
-e //= 5
-f %= 6
-g **= 7
-h <<= 8
-i >>= 9
-j &= 10
-k ^= 11
-l |= 12
+v[0] += 1
+v[1] -= 2
+v[2] *= 3
+v[3] /= 4
+v[4] //= 5
+v[5] %= 6
+v[6] **= 7
+v[7] <<= 1
+v[8] >>= 2
+v[9] &= 3
+v[10] ^= 4
+v[11] |= 5
 
-assert a.value == 1001
-assert b.value == 998
-assert c.value == 3000
-assert d.value == 250
-assert e.value == 200
-assert f.value == 4
-assert g.value == 128
-assert h.value == 256000
-assert i.value == 1
-assert j.value == 8
-assert k.value == 995
-assert l.value == 1004
+assert list(map(lambda x: x.value, v)) == r
 
 print('ok')

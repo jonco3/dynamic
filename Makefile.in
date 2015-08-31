@@ -96,7 +96,7 @@ unittest: unittests # gcapitest
 
 .PHONY: pythontest
 pythontest: dynamic unittest
-	$(RUN-TESTS) --command "./dynamic -l $(srcdir)/lib" --dir $(srcdir)/test/tests --dir $(srcdir)/bench/tests
+	$(RUN-TESTS) --command "./dynamic -l $(srcdir)/lib" --dir $(srcdir)/test/tests --dir $(srcdir)/bench/tests --verbose
 
 .PHONY: test
 test: pythontest
