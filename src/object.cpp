@@ -312,14 +312,20 @@ void Object::traceChildren(Tracer& t)
                                         NativeFunc newFunc, unsigned maxArgs,
                                         Traced<Class*> base)
 {
-    Stack<Class*> cls(gc.create<Class>(name, base));
+    Stack<Class*> cls(gc.create<Class>(name, base, InitialLayout, true));
     initNativeMethod(cls, "__new__", newFunc, 1, maxArgs);
     return cls;
 }
 
 
-Class::Class(string name, Traced<Class*> base, Traced<Layout*> initialLayout) :
-  Object(ObjectClass, initialLayout), name_(name), base_(base)
+Class::Class(string name,
+             Traced<Class*> base,
+             Traced<Layout*> initialLayout,
+             bool final)
+  : Object(ObjectClass, initialLayout),
+    name_(name),
+    base_(base),
+    final_(final)
 {
     // base is null for Object when we are initializing.
     assert(!Class::ObjectClass || base);

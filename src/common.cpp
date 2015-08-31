@@ -53,6 +53,7 @@ void init2(const string& libDir)
 void final()
 {
     // todo
+    finalBuiltins();
     gc.shutdown();
     shutdownNames();
 }

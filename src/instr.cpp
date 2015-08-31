@@ -138,6 +138,14 @@ Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
 {
     Stack<Value> value(peekStack(1));
     Stack<Object*> obj(popStack().toObject());
+    if (obj->isInstanceOf<Class>() &&
+        obj->as<Class>()->isFinal() &&
+        builtinsInitialised)
+    {
+        raiseTypeError("can't set attributes of built-in/extension type");
+        return;
+    }
+
     Stack<Value> result;
     if (!setAttr(obj, instr->ident, value, result))
         raiseException(result);

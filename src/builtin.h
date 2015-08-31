@@ -11,6 +11,9 @@ extern GlobalRoot<Object*> Builtin;
 extern GlobalRoot<Class*> SequenceIterator;
 extern GlobalRoot<Function*> IterableToList;
 
+extern bool builtinsInitialised;
+
 extern void initBuiltins(const string& libDir);
+extern void finalBuiltins();
 
 #endif

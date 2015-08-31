@@ -36,6 +36,10 @@ struct Object : public Cell
         return class_ == T::ObjectClass;
     }
 
+    template <typename T> bool isInstanceOf() const {
+        return isInstanceOf(T::ObjectClass);
+    }
+
     template <typename T> const T* as() const {
         assert(isInstanceOf(T::ObjectClass));
         return static_cast<const T*>(this);
@@ -124,10 +128,11 @@ struct Class : public Object
     // Be careful using this because instances created from python will be
     // allocated as Object.
     Class(string name, Traced<Class*> base = Object::ObjectClass,
-          Traced<Layout*> initialLayout = InitialLayout);
+          Traced<Layout*> initialLayout = InitialLayout, bool final = false);
 
     Object* base() const { return base_; }
     const string& name() const { return name_; }
+    bool isFinal() const { return final_; }
 
     bool isDerivedFrom(Class* base) const;
 
@@ -138,6 +143,7 @@ struct Class : public Object
   private:
     string name_;
     Object* base_;
+    bool final_;
 
     // Only for use during initialization
     void init(Traced<Object*> base);
@@ -157,7 +163,7 @@ extern bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
 template <typename T>
 /* static */ inline Class* Class::createNative(string name, Traced<Class*> base)
 {
-    Stack<Class*> cls(gc.create<Class>(name, base));
+    Stack<Class*> cls(gc.create<Class>(name, base, InitialLayout, true));
     NativeFunc func =
         [] (TracedVector<Value> args, MutableTraced<Value> resultOut) -> bool
         {

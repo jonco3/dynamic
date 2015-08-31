@@ -149,4 +149,10 @@ F.__contains__ = Callable()
 
 assert 0 in f
 
+# Class attributes are modifiable after class defintion
+class G: pass
+G.foo = 1
+assert G.foo == 1
+del G.foo
+
 print("ok")

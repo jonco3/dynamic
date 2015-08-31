@@ -66,4 +66,21 @@ assert(divmod(5, 1.5) == (3.0, 0.5))
 assert(divmod(1, -1) == (-1, 0))
 assert(divmod(-1, 1) == (-1, 0))
 
+# Builtin classes are not modifiable
+builtinClasses = [ bool, dict, Exception, tuple, list, int, float]
+
+def checkException(thunk, exceptionType, message):
+    try:
+        thunk()
+    except Exception as e:
+        if isinstance(e, exceptionType) and message in str(e):
+            return True
+    return False
+
+def addAttr(c):
+    c.foo = 1
+
+for c in builtinClasses:
+    assert checkException(lambda: addAttr(c), TypeError, "can't set attributes")
+
 print('ok')
