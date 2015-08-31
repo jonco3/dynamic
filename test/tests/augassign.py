@@ -168,4 +168,19 @@ C.__iadd__ = incValue
 o += 1
 assert o.value == 2
 
+def decValue(self, other):
+    self.value -= other
+    return self
+
+class NonDataDescriptor:
+    def __get__(self, instance, owner):
+        def f(other):
+            o.value -= other
+            return o
+        return f
+
+C.__iadd__ = NonDataDescriptor()
+o += 1
+assert o.value == 1
+
 print('ok')
