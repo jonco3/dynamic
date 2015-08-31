@@ -1,4 +1,9 @@
-# output: 832040
+# args: 10
+# output: 55
+# bench-args: 30
+# bench-output: 832040
+
+import sys
 
 def fib(n):
     if n == 0:
@@ -8,4 +13,4 @@ def fib(n):
     else:
         return fib(n-1) + fib(n-2)
 
-print(fib(30))
+print(fib(int(sys.argv[1])))

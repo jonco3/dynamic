@@ -32,7 +32,7 @@ using namespace std;
     instr(DelAttr)                                                           \
     instr(GetMethod)                                                         \
     instr(GetMethodFallback)                                                 \
-    instr(GetMethodInt)                                                      \
+    instr(GetMethodBuiltin)                                                  \
     instr(Call)                                                              \
     instr(CallMethod)                                                        \
     instr(CreateEnv)                                                         \
@@ -279,16 +279,18 @@ define_ident_instr(DelAttr);
 define_ident_instr(GetMethod);
 define_ident_instr(GetMethodFallback);
 
-struct InstrGetMethodInt : public IdentInstrBase
+struct InstrGetMethodBuiltin : public IdentInstrBase
 {
-    define_instr_members(GetMethodInt);
-    InstrGetMethodInt(Name name, Traced<Value> result)
-      : IdentInstrBase(name), result_(result) {}
+    define_instr_members(GetMethodBuiltin);
+    InstrGetMethodBuiltin(Name name, Traced<Class*> cls, Traced<Value> result)
+      : IdentInstrBase(name), class_(cls), result_(result) {}
 
-     virtual void traceChildren(Tracer& t) override {
+    virtual void traceChildren(Tracer& t) override {
+        gc.trace(t, &class_);
         gc.trace(t, &result_);
     }
 
+    Class* class_;
     Value result_;
 };
 

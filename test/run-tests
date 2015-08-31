@@ -31,8 +31,10 @@ def runTest(filename, command):
     global runCount, passCount
     runCount += 1
 
-    command = command.split() + [filename]
-    expect = []
+    testArgs = []
+    testExpect = []
+    benchArgs = []
+    benchExpect = []
 
     with open(filename) as f:
         while True:
@@ -43,18 +45,26 @@ def runTest(filename, command):
 
             key, value = match.groups()
             if key == 'output':
-                expect.append(value)
+                testExpect.append(value)
+            elif key == 'bench-output':
+                benchExpect.append(value)
             elif key == 'args':
-                if not args.benchmark:
-                    command.extend(value.split())
+                testArgs = value.split()
             elif key == 'bench-args':
-                if args.benchmark:
-                    command.extend(value.split())
+                benchArgs = value.split()
             else:
                 return 'BAD', 'Error parsing header option: ' + key
 
-    if not expect:
+    if args.benchmark:
+        if benchArgs:
+            testArgs = benchArgs
+        if benchExpect:
+            testExpect = benchExpect
+
+    if not testExpect:
         return 'BAD', 'No expected output header'
+
+    command = command.split() + [filename] + testArgs
 
     ok = True
     startTime = time.perf_counter()
@@ -72,9 +82,9 @@ def runTest(filename, command):
 
     if not args.benchmark:
         output = output.strip()
-        if output != "\n".join(expect):
+        if output != "\n".join(testExpect):
             message = ('    Output did not match expected:\n' +
-                       '      Expected: ' + '|'.join(expect) + '\n' +
+                       '      Expected: ' + '|'.join(testExpect) + '\n' +
                        '      Actual:   ' + output.replace('\n', '|'))
             return 'FAIL', message
 

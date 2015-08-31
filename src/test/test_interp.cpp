@@ -232,8 +232,8 @@ testcase(interp)
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_GetMethod,
-                     Instr_GetMethodInt,
-                     Instr_GetMethodFallback,
+                     Instr_GetMethodBuiltin,
+                     Instr_GetMethodBuiltin,
                      Instr_GetMethodFallback);
 
     testReplacements("def foo(x, y):\n"

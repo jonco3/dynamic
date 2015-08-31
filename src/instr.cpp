@@ -202,9 +202,11 @@ Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
     if (!getMethod(instr->ident))
         return;
 
-    if (value.isInt()) {
+    if (value.type()->isFinal()) {
+        // Builtin classes cannot be changed, so we can cache the lookup.
+        Stack<Class*> cls(value.type());
         Stack<Value> result(peekStack(2));
-        replaceInstr(instr, gc.create<InstrGetMethodInt>(instr->ident, result));
+        replaceInstr(instr, gc.create<InstrGetMethodBuiltin>(instr->ident, cls, result));
     } else {
         replaceInstr(instr, gc.create<InstrGetMethodFallback>(instr->ident));
     }
@@ -217,12 +219,12 @@ Interpreter::executeInstr_GetMethodFallback(Traced<InstrGetMethodFallback*> inst
 }
 
 INLINE_INSTRS void
-Interpreter::executeInstr_GetMethodInt(Traced<InstrGetMethodInt*> instr)
+Interpreter::executeInstr_GetMethodBuiltin(Traced<InstrGetMethodBuiltin*> instr)
 {
     {
         AutoAssertNoGC nogc;
         Value value = peekStack(0);
-        if (value.isInt()) {
+        if (value.type() == instr->class_) {
             popStack();
             pushStack(instr->result_, Boolean::True, value);
             return;
