@@ -8,26 +8,30 @@ import sys
 import time
 
 parser = argparse.ArgumentParser(description='Run tests.')
+parser.add_argument('--verbose', action='store_true',
+                    help = 'Print failure information')
 parser.add_argument('--benchmark', action='store_true',
                     help = 'Output time take to run tests')
-parser.add_argument('command', metavar='CMD',
-                    help='python interpreter command')
-parser.add_argument('dirs', metavar='TEST_DIR', nargs='+',
+parser.add_argument('--dir', metavar='TEST_DIR', action='append', dest='dirs',
                     help='directory containing tests to run')
+parser.add_argument('--command', metavar='CMD', action='append', dest='commands',
+                    help='python interpreter command')
 args = parser.parse_args()
 
-testDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
-benchDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
+if not args.commands:
+    sys.exit("No commands to test")
+
+if not args.dirs:
+    sys.exit("No test directories")
 
 runCount = 0
 passCount = 0
 
-def runTest(dirname, name, benchmark):
+def runTest(filename, command):
     global runCount, passCount
     runCount += 1
-    filename = os.path.join(dirname, name)
 
-    command = args.command.split() + [filename]
+    command = command.split() + [filename]
     expect = []
 
     with open(filename) as f:
@@ -41,10 +45,10 @@ def runTest(dirname, name, benchmark):
             if key == 'output':
                 expect.append(value)
             elif key == 'args':
-                if not benchmark:
+                if not args.benchmark:
                     command.extend(value.split())
             elif key == 'bench-args':
-                if benchmark:
+                if args.benchmark:
                     command.extend(value.split())
             else:
                 return 'BAD', 'Error parsing header option: ' + key
@@ -78,22 +82,35 @@ def runTest(dirname, name, benchmark):
     return 'PASS', endTime - startTime
 
 def formatTime(secs):
-    return "%8.2f" % (secs * 1000)
+    return "%18.2f  " % (secs * 1000)
+
+def formatResult(result):
+    return "%-20s" % result
 
 def runTestDir(dirname, names):
     for name in names:
         if name.endswith('.py'):
-            result, extra = runTest(dirname, name, args.benchmark)
-            header = '  %-20s ' % name
-            if result != 'PASS':
-                print(header + ' ' + result)
-                print(extra)
-            elif args.benchmark:
-                print(header + '       ' + formatTime(extra))
-            else:
-                print(header)
+            filename = os.path.join(dirname, name)
+            results = list(map(lambda c: runTest(filename, c), args.commands))
+            line = '  %-20s ' % name
+            for result, extra in results:
+                if result != 'PASS':
+                    line += formatResult(result)
+                elif args.benchmark:
+                    line += formatTime(extra)
+                else:
+                    line += formatResult("ok")
+            print(line)
 
-print("Running tests...")
+            if args.verbose:
+                for result, extra in results:
+                    if result != 'PASS':
+                        print(extra)
+
+line = 'Running tests:         '
+line += "".join(map(lambda c: formatResult(c.split()[0]), args.commands))
+print(line)
+
 for testDir in args.dirs:
     for dirpath, dirnames, filenames in os.walk(testDir):
         runTestDir(dirpath, filenames)

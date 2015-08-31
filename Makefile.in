@@ -62,7 +62,6 @@ DEPS = $(ALLOBJS:.o=.d)
 
 WRAPPER = python $(srcdir)/test/debug-wrapper
 RUN-TESTS = python3 $(srcdir)/test/run-tests
-TESTDIRS = $(srcdir)/test/tests $(srcdir)/bench/tests
 
 .PHONY: all
 all: dynamic
@@ -97,7 +96,7 @@ unittest: unittests # gcapitest
 
 .PHONY: pythontest
 pythontest: dynamic unittest
-	$(RUN-TESTS) "./dynamic -l $(srcdir)/lib" $(TESTDIRS) 
+	$(RUN-TESTS) --command "./dynamic -l $(srcdir)/lib" --dir $(srcdir)/test/tests --dir $(srcdir)/bench/tests
 
 .PHONY: test
 test: pythontest
