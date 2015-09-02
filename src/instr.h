@@ -72,6 +72,7 @@ using namespace std;
     instr(BinaryOpInt_And)                                                   \
     instr(BinaryOpInt_LeftShift)                                             \
     instr(BinaryOpInt_RightShift)                                            \
+    instr(BinaryOpBuiltin)                                                   \
     instr(CompareOp)                                                         \
     instr(CompareOpFallback)                                                 \
     instr(CompareOpInt_LT)                                                   \
@@ -103,6 +104,8 @@ enum InstrType
 #undef instr_enum
     InstrTypeCount
 };
+
+extern const char* instrName(InstrType type);
 
 struct Branch;
 
@@ -374,7 +377,7 @@ struct InstrLambda : public Instr
     bool takesRest() const { return info_->takesRest_; }
     bool isGenerator() const { return info_->isGenerator_; }
 
-    virtual void traceChildren(Tracer& t) override {
+    void traceChildren(Tracer& t) override {
         gc.trace(t, &info_);
     }
 
@@ -463,6 +466,23 @@ struct InstrBinaryOpInt : public BinaryOpInstr
     instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Plus + Op));
     instr_name("BinaryOpInt");
     InstrBinaryOpInt() : BinaryOpInstr(Op) {}
+};
+
+struct InstrBinaryOpBuiltin : public BinaryOpInstr
+{
+    define_instr_members(BinaryOpBuiltin);
+    InstrBinaryOpBuiltin(BinaryOp op, Traced<Class*> left, Traced<Class*> right,
+                         Traced<Value> method);
+    Class* left() { return left_; }
+    Class* right() { return right_; }
+    Value method() { return method_; }
+
+    void traceChildren(Tracer& t) override;
+
+  private:
+    Class* left_;
+    Class* right_;
+    Value method_;
 };
 
 #define typedef_binary_op_int(name, token, method, rmethod, imethod)          \

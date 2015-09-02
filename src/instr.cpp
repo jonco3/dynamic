@@ -11,6 +11,21 @@
 
 #define INLINE_INSTRS /*inline*/
 
+const char* instrName(InstrType type)
+{
+    static const char* names[InstrTypeCount] = {
+#define instr_name(name)                                                      \
+        #name,
+
+    for_each_inline_instr(instr_name)
+    for_each_outofline_instr(instr_name)
+#undef instr_enum
+    };
+
+    assert(type < InstrTypeCount);
+    return names[type];
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_Const(Traced<InstrConst*> instr)
 {
@@ -579,46 +594,10 @@ Interpreter::executeInstr_IteratorNext(Traced<InstrIteratorNext*> instr)
         raiseException();
 }
 
-void BinaryOpInstr::print(ostream& s) const
-{
-    s << name() << " " << BinaryOpNames[op];
-}
-
-INLINE_INSTRS void
-Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
-{
-    Value right = peekStack(0);
-    Value left = peekStack(1);
-    Instr* replacement;
-    if (left.isInt32() && right.isInt32()) {
-        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replacement = instr->specializeForInt();
-    } else {
-        replacement = gc.create<InstrBinaryOpFallback>(instr->op);
-    }
-    replaceInstrAndRestart(instr, replacement);
-}
-
-Instr* InstrBinaryOp::specializeForInt()
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name, token, method, rmethod, imethod)                   \
-      case Binary##name:                                                      \
-          return gc.create<InstrBinaryOpInt<Binary##name>>();
-
-    for_each_binary_op(create_instr)
-#undef create_instr
-      default:
-        assert(false);
-        exit(1);
-    }
-}
-
 bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
-                                    Traced<Value> left, Traced<Value> right)
+                                    Traced<Value> left, Traced<Value> right,
+                                    MutableTraced<Value> method)
 {
-    Stack<Value> method;
     if (!obj.maybeGetAttr(name, method))
         return false;
 
@@ -638,8 +617,8 @@ bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
     return true;
 }
 
-INLINE_INSTRS void
-Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
+bool
+Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -653,25 +632,83 @@ Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
 
     Stack<Class*> ltype(left.type());
     Stack<Class*> rtype(right.type());
-    BinaryOp op = instr->op;
     const Name* names = Name::binMethod;
     const Name* rnames = Name::binMethodReflected;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        if (maybeCallBinaryOp(right, rnames[op], right, left))
-            return;
-        if (maybeCallBinaryOp(left, names[op], left, right))
-            return;
+        if (maybeCallBinaryOp(right, rnames[op], right, left, method))
+            return true;
+        if (maybeCallBinaryOp(left, names[op], left, right, method))
+            return true;
     } else {
-        if (maybeCallBinaryOp(left, names[op], left, right))
-            return;
-        if (maybeCallBinaryOp(right, rnames[op], right, left))
-            return;
+        if (maybeCallBinaryOp(left, names[op], left, right, method))
+            return true;
+        if (maybeCallBinaryOp(right, rnames[op], right, left, method))
+            return true;
     }
 
     pushStack(gc.create<TypeError>(
                          "unsupported operand type(s) for binary operation"));
     raiseException();
+    return false;
+}
+
+void BinaryOpInstr::print(ostream& s) const
+{
+    s << name() << " " << BinaryOpNames[op];
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
+{
+    Value right = peekStack(0);
+    Value left = peekStack(1);
+
+    // If both arguments are integers, inline the operation and restart.
+    if (left.isInt32() && right.isInt32()) {
+        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
+        replaceInstrAndRestart(instr, instr->specializeForInt());
+        return;
+    }
+
+    // Find the method to call and execute it.  If successful and both arguments
+    // are instances of builtin classes, cache the method.
+    Stack<Value> method;
+    if (executeBinaryOp(instr->op, method) &&
+        left.type()->isFinal() && right.type()->isFinal())
+    {
+        Stack<Class*> leftClass(left.type());
+        Stack<Class*> rightClass(right.type());
+        replaceInstr(instr, gc.create<InstrBinaryOpBuiltin>(
+                         instr->op, leftClass, rightClass, method));
+        return;
+    }
+
+    // Replace with fallback instruction.
+    replaceInstr(instr, gc.create<InstrBinaryOpFallback>(instr->op));
+}
+
+Instr* InstrBinaryOp::specializeForInt()
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name, token, method, rmethod, imethod)                   \
+      case Binary##name:                                                      \
+          return gc.create<InstrBinaryOpInt<Binary##name>>();
+
+    for_each_binary_op(create_instr)
+#undef create_instr
+      default:
+        assert(false);
+        exit(1);
+    }
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
+{
+    Stack<Value> method;
+    executeBinaryOp(instr->op, method);
 }
 
 template <BinaryOp Op>
@@ -697,6 +734,39 @@ void Interpreter::executeInstr_BinaryOpInt_##name(                            \
 }
 for_each_binary_op(define_execute_binary_op_int)
 #undef define_execute_binary_op_int
+
+InstrBinaryOpBuiltin::InstrBinaryOpBuiltin(BinaryOp op,
+                                           Traced<Class*> left,
+                                           Traced<Class*> right,
+                                           Traced<Value> method)
+  : BinaryOpInstr(op),
+    left_(left),
+    right_(right),
+    method_(method)
+{}
+
+void InstrBinaryOpBuiltin::traceChildren(Tracer& t)
+{
+    gc.trace(t, &left_);
+    gc.trace(t, &right_);
+    gc.trace(t, &method_);
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_BinaryOpBuiltin(Traced<InstrBinaryOpBuiltin*> instr)
+{
+    Value right = peekStack(0);
+    Value left = peekStack(1);
+
+    if (left.type() != instr->left() || right.type() != instr->right()) {
+        replaceInstrAndRestart(
+            instr, gc.create<InstrBinaryOpFallback>(instr->op));
+        return;
+    }
+
+    Stack<Value> method(instr->method());
+    startCall(method, 2);
+}
 
 void CompareOpInstr::print(ostream& s) const
 {
@@ -749,14 +819,15 @@ Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> inst
     CompareOp op = instr->op;
     const Name* names = Name::compareMethod;
     const Name* rnames = Name::compareMethodReflected;
-    if (maybeCallBinaryOp(left, names[op], left, right))
+    Stack<Value> method;
+    if (maybeCallBinaryOp(left, names[op], left, right, method))
         return;
     if (!rnames[op].isNull() &&
-        maybeCallBinaryOp(right, rnames[op], right, left)) {
+        maybeCallBinaryOp(right, rnames[op], right, left, method)) {
         return;
     }
     if (op == CompareNE &&
-        maybeCallBinaryOp(left, names[CompareEQ], left, right))
+        maybeCallBinaryOp(left, names[CompareEQ], left, right, method))
     {
         if (!isHandlingException()) {
             Stack<Value> result(popStack());

@@ -64,7 +64,7 @@ void testReplacement(const string& input,
     testTrue(ok);
     testEqual(repr(result.get()), expected);
 
-    testEqual(instrp->data->type(), replacement);
+    testEqual(instrName(instrp->data->type()), instrName(replacement));
 }
 
 void testReplacements(const string& defs,
@@ -242,7 +242,7 @@ testcase(interp)
                      "foo('a', 'b')", "'ab'",
                      Instr_BinaryOp,
                      Instr_BinaryOpInt_Plus,
-                     Instr_BinaryOpFallback,
+                     Instr_BinaryOpBuiltin,
                      Instr_BinaryOpFallback);
 
     testExpectingException = true;

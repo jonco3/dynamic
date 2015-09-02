@@ -287,7 +287,9 @@ struct Interpreter
 
     bool getMethod(Name ident);
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
-                           Traced<Value> left, Traced<Value> right);
+                           Traced<Value> left, Traced<Value> right,
+                           MutableTraced<Value> methodOut);
+    bool executeBinaryOp(BinaryOp op, MutableTraced<Value> methodOut);
 };
 
 extern Interpreter interp;
