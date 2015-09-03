@@ -245,6 +245,16 @@ testcase(interp)
                      Instr_BinaryOpBuiltin,
                      Instr_BinaryOpFallback);
 
+    testReplacements("def foo(x, y):\n"
+                     "  x += y\n"
+                     "  return x",
+                     "foo(1, 2)", "3",
+                     "foo('a', 'b')", "'ab'",
+                     Instr_AugAssignUpdate,
+                     Instr_AugAssignUpdateBuiltin,
+                     Instr_AugAssignUpdateBuiltin,
+                     Instr_AugAssignUpdateFallback);
+
     testExpectingException = true;
     testInterp("x = None\n"
                "def foo():\n"

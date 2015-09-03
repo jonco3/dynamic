@@ -661,8 +661,8 @@ void BinaryOpInstr::print(ostream& s) const
 INLINE_INSTRS void
 Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
-    Value right = peekStack(0);
-    Value left = peekStack(1);
+    Stack<Value> right(peekStack(0));
+    Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
     if (left.isInt32() && right.isInt32()) {
@@ -875,32 +875,104 @@ void Interpreter::executeInstr_CompareOpInt_##name(                            \
 for_each_compare_op(define_execute_compare_op_int)
 #undef define_execute_compare_op_int
 
-INLINE_INSTRS void
-Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
+bool
+Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
+                                    bool& isCallableDescriptor)
 {
     Stack<Value> update(popStack());
     Stack<Value> value(popStack());
 
     Stack<Value> type(value.type());
-    Stack<Value> method;
-    bool isCallableDescriptor;
-    Stack<Value> result;
-
-    if (!getMethodAttr(type, Name::augAssignMethod[instr->op], method,
+    if (!getMethodAttr(type, Name::augAssignMethod[op], method,
                        isCallableDescriptor) &&
-        !getMethodAttr(type, Name::binMethod[instr->op], method,
+        !getMethodAttr(type, Name::binMethod[op], method,
                        isCallableDescriptor))
     {
         string message = "unsupported operand type(s) for augmented assignment";
         pushStack(gc.create<TypeError>(message));
         raiseException();
-        return;
+        return false;
     }
 
     if (isCallableDescriptor)
         pushStack(value);
     pushStack(update);
-    startCall(method, isCallableDescriptor ? 2 : 1);
+    Stack<Value> result;
+    bool ok = call(method, isCallableDescriptor ? 2 : 1, result);
+    pushStack(result);
+    if (!ok)
+        raiseException();
+
+    return true;
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
+{
+    Stack<Value> right(peekStack(0));
+    Stack<Value> left(peekStack(1));
+
+    // Find the method to call and execute it.
+    Stack<Value> method;
+    bool isCallableDescriptor;
+    if (!executeAugAssignUpdate(instr->op, method, isCallableDescriptor))
+        return;
+
+    // If successful and both arguments are instances of builtin classes, cache
+    // the method.
+    if (left.type()->isFinal() && right.type()->isFinal())
+    {
+        assert(isCallableDescriptor);
+        Stack<Class*> leftClass(left.type());
+        Stack<Class*> rightClass(right.type());
+        replaceInstr(instr, gc.create<InstrAugAssignUpdateBuiltin>(
+                         instr->op, leftClass, rightClass, method));
+        return;
+    }
+
+    // Otherwise replace with fallback instruction.
+    replaceInstr(instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_AugAssignUpdateFallback(Traced<InstrAugAssignUpdateFallback*> instr)
+{
+    Stack<Value> method;
+    bool isCallableDescriptor;
+    executeAugAssignUpdate(instr->op, method, isCallableDescriptor);
+}
+
+InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,
+                                                         Traced<Class*> left,
+                                                         Traced<Class*> right,
+                                                         Traced<Value> method)
+  : BinaryOpInstr(op),
+    left_(left),
+    right_(right),
+    method_(method)
+{}
+
+void InstrAugAssignUpdateBuiltin::traceChildren(Tracer& t)
+{
+    gc.trace(t, &left_);
+    gc.trace(t, &right_);
+    gc.trace(t, &method_);
+}
+
+INLINE_INSTRS void
+Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<InstrAugAssignUpdateBuiltin*> instr)
+{
+    Value right = peekStack(0);
+    Value left = peekStack(1);
+
+    if (left.type() != instr->left() || right.type() != instr->right()) {
+        replaceInstrAndRestart(
+            instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+        return;
+    }
+
+    Stack<Value> method(instr->method());
+    startCall(method, 2);
 }
 
 INLINE_INSTRS void

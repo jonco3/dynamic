@@ -82,6 +82,8 @@ using namespace std;
     instr(CompareOpInt_EQ)                                                   \
     instr(CompareOpInt_NE)                                                   \
     instr(AugAssignUpdate)                                                   \
+    instr(AugAssignUpdateFallback)                                           \
+    instr(AugAssignUpdateBuiltin)                                            \
     instr(StartGenerator)                                                    \
     instr(ResumeGenerator)                                                   \
     instr(LeaveGenerator)                                                    \
@@ -529,6 +531,30 @@ struct InstrAugAssignUpdate : public BinaryOpInstr
 {
     define_instr_members(AugAssignUpdate);
     InstrAugAssignUpdate(BinaryOp op) : BinaryOpInstr(op) {}
+};
+
+struct InstrAugAssignUpdateFallback : public BinaryOpInstr
+{
+    define_instr_members(AugAssignUpdateFallback);
+    InstrAugAssignUpdateFallback(BinaryOp op) : BinaryOpInstr(op) {}
+};
+
+struct InstrAugAssignUpdateBuiltin : public BinaryOpInstr
+{
+    define_instr_members(AugAssignUpdateBuiltin);
+    InstrAugAssignUpdateBuiltin(BinaryOp op,
+                                Traced<Class*> left, Traced<Class*> right,
+                                Traced<Value> method);
+    Class* left() { return left_; }
+    Class* right() { return right_; }
+    Value method() { return method_; }
+
+    void traceChildren(Tracer& t) override;
+
+  private:
+    Class* left_;
+    Class* right_;
+    Value method_;
 };
 
 define_simple_instr(StartGenerator);

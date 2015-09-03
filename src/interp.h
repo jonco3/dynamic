@@ -290,6 +290,8 @@ struct Interpreter
                            Traced<Value> left, Traced<Value> right,
                            MutableTraced<Value> methodOut);
     bool executeBinaryOp(BinaryOp op, MutableTraced<Value> methodOut);
+    bool executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
+                                bool& isCallableDescriptor);
 };
 
 extern Interpreter interp;

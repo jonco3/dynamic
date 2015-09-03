@@ -145,6 +145,24 @@ inline bool Value::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 }
 
 template <typename W>
+inline bool WrapperMixins<W, Value>::isObject() const
+{
+    return get()->isObject();
+}
+
+template <typename W>
+inline bool WrapperMixins<W, Value>::isInt32() const
+{
+    return get()->isInt32();
+}
+
+template <typename W>
+inline bool WrapperMixins<W, Value>::isDouble() const
+{
+    return get()->isDouble();
+}
+
+template <typename W>
 inline bool WrapperMixins<W, Value>::isInt() const
 {
     return get()->isInt();
@@ -166,12 +184,6 @@ template <typename W>
 inline double WrapperMixins<W, Value>::toFloat() const
 {
     return get()->toFloat();
-}
-
-template <typename W>
-inline bool WrapperMixins<W, Value>::isObject() const
-{
-    return get()->isObject();
 }
 
 template <typename W>

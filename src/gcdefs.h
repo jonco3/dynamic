@@ -32,9 +32,11 @@ struct GCTraits<Frame>
 template <typename W>
 struct WrapperMixins<W, Value>
 {
+    inline bool isObject() const;
+    inline bool isInt32() const;
+    inline bool isDouble() const;
     inline bool isInt() const;
     inline bool isFloat() const;
-    inline bool isObject() const;
     inline int64_t toInt() const;
     inline double toFloat() const;
     inline Object *asObject() const;
