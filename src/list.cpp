@@ -215,7 +215,7 @@ bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
         resultOut = elements_[i];
         return true;
     } else if (index.isInstanceOf(Slice::ObjectClass)) {
-        Stack<Slice*> slice(index.toObject()->as<Slice>());
+        Stack<Slice*> slice(index.as<Slice>());
         int32_t start, stop, step;
         slice->indices(len(), start, stop, step);
         if (step == 0) {
@@ -321,17 +321,17 @@ void Tuple::print(ostream& s) const
 }
 
 static bool list_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    List* list = args[0].toObject()->as<List>();
+    List* list = args[0].as<List>();
     return list->setitem(args[1], args[2], resultOut);
 }
 
 static bool list_delitem(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    List* list = args[0].toObject()->as<List>();
+    List* list = args[0].as<List>();
     return list->delitem(args[1], resultOut);
 }
 
 static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    List* list = args[0].toObject()->as<List>();
+    List* list = args[0].as<List>();
     return list->append(args[1], resultOut);
 }
 
@@ -430,13 +430,13 @@ bool List::append(Traced<Value> element, MutableTraced<Value> resultOut)
 
 static bool listIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    ListIter* i = args[0].toObject()->as<ListIter>();
+    ListIter* i = args[0].as<ListIter>();
     return i->iter(resultOut);
 }
 
 static bool listIter_next(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    ListIter* i = args[0].toObject()->as<ListIter>();
+    ListIter* i = args[0].as<ListIter>();
     return i->next(resultOut);
 }
 

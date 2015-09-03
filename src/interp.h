@@ -262,9 +262,12 @@ struct Interpreter
         CallFinished
     };
 
-    bool checkArguments(Traced<Callable*> callable,
-                        const TracedVector<Value>& args,
-                        MutableTraced<Value> resultOut);
+    bool raiseArgumentError(Traced<Callable*> callable,
+                            unsigned count,
+                            MutableTraced<Value> resultOut);
+    inline bool checkArguments(Traced<Callable*> callable,
+                               const TracedVector<Value>& args,
+                               MutableTraced<Value> resultOut);
     unsigned mungeArguments(Traced<Function*> function, unsigned argCount);
     bool call(Traced<Value> callable, TracedVector<Value> args,
               MutableTraced<Value> resultOut);

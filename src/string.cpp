@@ -16,8 +16,8 @@ static bool stringEQ(const string& a, const string& b) { return a == b; }
 static bool stringNE(const string& a, const string& b) { return a != b; }
 
 static bool str_add(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    const string& a = args[0].toObject()->as<String>()->value();
-    const string& b = args[1].toObject()->as<String>()->value();
+    const string& a = args[0].as<String>()->value();
+    const string& b = args[1].as<String>()->value();
     resultOut = String::get(a + b);
     return true;
 }
@@ -56,21 +56,21 @@ static bool stringCompareOp(TracedVector<Value> args, MutableTraced<Value> resul
 }
 
 static bool str_hash(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    const string& a = args[0].toObject()->as<String>()->value();
+    const string& a = args[0].as<String>()->value();
     // todo: should probably use python hash algorithm for this.
     resultOut = Integer::get(std::hash<string>()(a));
     return true;
 }
 
 static bool str_contains(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    const string& a = args[0].toObject()->as<String>()->value();
-    const string& b = args[1].toObject()->as<String>()->value();
+    const string& a = args[0].as<String>()->value();
+    const string& b = args[1].as<String>()->value();
     resultOut = Boolean::get(a.find(b) != string::npos);
     return true;
 }
 
 static bool str_print(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    const string& a = args[0].toObject()->as<String>()->value();
+    const string& a = args[0].as<String>()->value();
     cout << a << endl;
     resultOut = None;
     return true;

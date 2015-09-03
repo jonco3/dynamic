@@ -120,7 +120,7 @@ inline bool Value::is() const
 template <typename T>
 inline T* Value::as() const
 {
-    Object* obj = toObject();
+    Object* obj = asObject();
     return obj->as<T>();
 }
 

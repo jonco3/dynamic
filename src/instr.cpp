@@ -511,7 +511,7 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> in
         return;
     }
 
-    Stack<Tuple*> tuple(bases.toObject()->as<Tuple>());
+    Stack<Tuple*> tuple(bases.as<Tuple>());
     Stack<Class*> base(Object::ObjectClass);
     if (tuple->len() > 1) {
         pushStack(gc.create<NotImplementedError>(
@@ -525,7 +525,7 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> in
             raiseException();
             return;
         }
-        base = value.toObject()->as<Class>();
+        base = value.as<Class>();
     }
 
     Class* cls = gc.create<Class>(instr->ident, base, layout);

@@ -20,7 +20,7 @@ GlobalRoot<Class*> GeneratorIter::ObjectClass;
 
 static bool generatorIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    GeneratorIter* i = args[0].toObject()->as<GeneratorIter>();
+    GeneratorIter* i = args[0].as<GeneratorIter>();
     return i->iter(resultOut);
 }
 

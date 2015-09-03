@@ -14,43 +14,43 @@ GlobalRoot<Class*> Dict::ObjectClass;
 
 static bool dict_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->len(resultOut);
 }
 
 static bool dict_contains(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->contains(args[1], resultOut);
 }
 
 static bool dict_getitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->getitem(args[1], resultOut);
 }
 
 static bool dict_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->setitem(args[1], args[2], resultOut);
 }
 
 static bool dict_delitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->delitem(args[1], resultOut);
 }
 
 static bool dict_keys(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->keys(resultOut);
 }
 
 static bool dict_values(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    Dict* dict = args[0].toObject()->as<Dict>();
+    Dict* dict = args[0].as<Dict>();
     return dict->values(resultOut);
 }
 

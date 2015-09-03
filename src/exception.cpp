@@ -83,7 +83,7 @@ string Exception::className() const
 string Exception::message() const
 {
     Stack<Value> value(getAttr("message"));
-    return value.get().toObject()->as<String>()->value();
+    return value.get().as<String>()->value();
 }
 
 string Exception::fullMessage() const

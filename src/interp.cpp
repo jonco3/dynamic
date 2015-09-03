@@ -372,7 +372,7 @@ bool Interpreter::handleException()
 #endif
 
     assert(value.isInstanceOf(Exception::ObjectClass));
-    Stack<Exception*> exception(value.toObject()->as<Exception>());
+    Stack<Exception*> exception(value.as<Exception>());
     if (!exception->hasPos() && instrp)
         exception->setPos(currentPos());
     if (startExceptionHandler(exception))
@@ -582,24 +582,31 @@ void Interpreter::startCall(Traced<Value> targetValue, unsigned argCount)
     }
 }
 
-bool Interpreter::checkArguments(Traced<Callable*> callable,
-                                 const TracedVector<Value>& args,
-                                 MutableTraced<Value> resultOut)
+bool Interpreter::raiseArgumentError(Traced<Callable*> callable,
+                                     unsigned count,
+                                     MutableTraced<Value> resultOut)
+{
+    ostringstream s;
+    s << callable->name() << "() takes " << dec;
+    if (callable->minArgs() != callable->maxArgs())
+        s << "at least ";
+    s << callable->minArgs();
+    s << " positional arguments but " << count;
+    if (count == 1)
+        s << " was given";
+    else
+        s << " were given";
+    return raiseTypeError(s.str(), resultOut);
+}
+
+inline bool Interpreter::checkArguments(Traced<Callable*> callable,
+                                        const TracedVector<Value>& args,
+                                        MutableTraced<Value> resultOut)
 {
     unsigned count = args.size();
-    if (count < callable->minArgs() || count > callable->maxArgs()) {
-        ostringstream s;
-        s << callable->name() << "() takes " << dec;
-        if (callable->minArgs() != callable->maxArgs())
-            s << "at least ";
-        s << callable->minArgs();
-        s << " positional arguments but " << args.size();
-        if (args.size() == 1)
-            s << " was given";
-        else
-            s << " were given";
-        return raiseTypeError(s.str(), resultOut);
-    }
+    if (count < callable->minArgs() || count > callable->maxArgs())
+        return raiseArgumentError(callable, count, resultOut);
+
     return true;
 }
 

@@ -39,7 +39,7 @@ static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resul
 static bool builtin_isinstance(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     // todo: support tuples etc for classInfo
-    Stack<Class*> cls(args[1].toObject()->as<Class>());
+    Stack<Class*> cls(args[1].as<Class>());
     resultOut = Boolean::get(args[0].toObject()->isInstanceOf(cls));
     return true;
 }
