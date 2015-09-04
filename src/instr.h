@@ -60,9 +60,9 @@ using namespace std;
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
     instr(BinaryOpFallback)                                                  \
-    instr(BinaryOpInt_Add)                                                  \
-    instr(BinaryOpInt_Sub)                                                 \
-    instr(BinaryOpInt_Multiply)                                              \
+    instr(BinaryOpInt_Add)                                                   \
+    instr(BinaryOpInt_Sub)                                                   \
+    instr(BinaryOpInt_Mul)                                                   \
     instr(BinaryOpInt_TrueDiv)                                               \
     instr(BinaryOpInt_FloorDiv)                                              \
     instr(BinaryOpInt_Modulo)                                                \

@@ -4,7 +4,7 @@
 #define for_each_binary_op(op)                                                \
     op(Add,        "+",  "__add__",      "__radd__",      "__iadd__")         \
     op(Sub,        "-",  "__sub__",      "__rsub__",      "__isub__")         \
-    op(Multiply,   "*",  "__mul__",      "__rmul__",      "__imul__")         \
+    op(Mul,        "*",  "__mul__",      "__rmul__",      "__imul__")         \
     op(TrueDiv,    "/",  "__truediv__",  "__rtruediv__",  "__itruediv__")     \
     op(FloorDiv,   "//", "__floordiv__", "__rfloordiv__", "__ifloordiv__")    \
     op(Modulo,     "%" , "__mod__",      "__rmod__",      "__imod__")         \

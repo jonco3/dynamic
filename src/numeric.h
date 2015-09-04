@@ -65,7 +65,7 @@ template <> inline Value Integer::binaryOp<BinarySub>(int64_t a, int64_t b)
     return Integer::get(a - b);
 }
 
-template <> inline Value Integer::binaryOp<BinaryMultiply>(int64_t a, int64_t b)
+template <> inline Value Integer::binaryOp<BinaryMul>(int64_t a, int64_t b)
 {
     return Integer::get(a * b);
 }
