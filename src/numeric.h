@@ -51,6 +51,12 @@ struct Float : public Object
     double value() const { return value_; }
     void print(ostream& s) const override;
 
+    template <BinaryOp Op>
+    static inline Value binaryOp(double a, double b);
+
+    template <CompareOp Op>
+    static inline Value compareOp(double a, double b);
+
   private:
     const double value_;
 };
@@ -141,6 +147,71 @@ template <> inline Value Integer::compareOp<CompareEQ>(int64_t a, int64_t b)
 }
 
 template <> inline Value Integer::compareOp<CompareNE>(int64_t a, int64_t b)
+{
+    return Boolean::get(a != b);
+}
+
+template <> inline Value Float::binaryOp<BinaryAdd>(double a, double b)
+{
+    return Float::get(a + b);
+}
+
+template <> inline Value Float::binaryOp<BinarySub>(double a, double b)
+{
+    return Float::get(a - b);
+}
+
+template <> inline Value Float::binaryOp<BinaryMul>(double a, double b)
+{
+    return Float::get(a * b);
+}
+
+template <> inline Value Float::binaryOp<BinaryTrueDiv>(double a, double b)
+{
+    return Float::get(a / b);
+}
+
+template <> inline Value Float::binaryOp<BinaryFloorDiv>(double a, double b)
+{
+    return Float::get(floor(a / b));
+}
+
+template <> inline Value Float::binaryOp<BinaryModulo>(double a, double b)
+{
+    return Float::get(fmod(a, b));
+}
+
+template <> inline Value Float::binaryOp<BinaryPower>(double a, double b)
+{
+    return Float::get(pow(a, b));
+}
+
+template <> inline Value Float::compareOp<CompareLT>(double a, double b)
+{
+    return Boolean::get(a < b);
+}
+
+template <> inline Value Float::compareOp<CompareLE>(double a, double b)
+{
+    return Boolean::get(a <= b);
+}
+
+template <> inline Value Float::compareOp<CompareGT>(double a, double b)
+{
+    return Boolean::get(a > b);
+}
+
+template <> inline Value Float::compareOp<CompareGE>(double a, double b)
+{
+    return Boolean::get(a >= b);
+}
+
+template <> inline Value Float::compareOp<CompareEQ>(double a, double b)
+{
+    return Boolean::get(a == b);
+}
+
+template <> inline Value Float::compareOp<CompareNE>(double a, double b)
 {
     return Boolean::get(a != b);
 }

@@ -70,6 +70,10 @@ using namespace std;
     instr(BinaryOpInt_Sub)                                                   \
     instr(BinaryOpInt_Mul)                                                   \
     instr(BinaryOpInt_TrueDiv)                                               \
+    instr(BinaryOpFloat_Add)                                                 \
+    instr(BinaryOpFloat_Sub)                                                 \
+    instr(BinaryOpFloat_Mul)                                                 \
+    instr(BinaryOpFloat_TrueDiv)                                             \
     instr(BinaryOpBuiltin)                                                   \
     instr(CompareOp)                                                         \
     instr(CompareOpFallback)                                                 \
@@ -79,12 +83,22 @@ using namespace std;
     instr(CompareOpInt_GE)                                                   \
     instr(CompareOpInt_EQ)                                                   \
     instr(CompareOpInt_NE)                                                   \
+    instr(CompareOpFloat_LT)                                                 \
+    instr(CompareOpFloat_LE)                                                 \
+    instr(CompareOpFloat_GT)                                                 \
+    instr(CompareOpFloat_GE)                                                 \
+    instr(CompareOpFloat_EQ)                                                 \
+    instr(CompareOpFloat_NE)                                                 \
     instr(AugAssignUpdate)                                                   \
     instr(AugAssignUpdateFallback)                                           \
     instr(AugAssignUpdateInt_Add)                                            \
     instr(AugAssignUpdateInt_Sub)                                            \
     instr(AugAssignUpdateInt_Mul)                                            \
     instr(AugAssignUpdateInt_TrueDiv)                                        \
+    instr(AugAssignUpdateFloat_Add)                                          \
+    instr(AugAssignUpdateFloat_Sub)                                          \
+    instr(AugAssignUpdateFloat_Mul)                                          \
+    instr(AugAssignUpdateFloat_TrueDiv)                                      \
     instr(AugAssignUpdateBuiltin)                                            \
     instr(StartGenerator)                                                    \
     instr(ResumeGenerator)                                                   \
@@ -476,6 +490,19 @@ struct InstrBinaryOpInt : public BinaryOpInstr
     for_each_binary_op_to_inline(typedef_binary_op_int)
 #undef typedef_binary_op_int
 
+template <BinaryOp Op>
+struct InstrBinaryOpFloat : public BinaryOpInstr
+{
+    instr_type(static_cast<InstrType>(Instr_BinaryOpFloat_Add + Op));
+    instr_name("BinaryOpFloat");
+    InstrBinaryOpFloat() : BinaryOpInstr(Op) {}
+};
+
+#define typedef_binary_op_float(name)                                         \
+    typedef InstrBinaryOpFloat<Binary##name> InstrBinaryOpFloat_##name;
+    for_each_binary_op_to_inline(typedef_binary_op_float)
+#undef typedef_binary_op_float
+
 struct InstrBinaryOpBuiltin : public BinaryOpInstr
 {
     define_instr_members(BinaryOpBuiltin);
@@ -527,6 +554,19 @@ struct InstrCompareOpInt : public CompareOpInstr
     for_each_compare_op(typedef_compare_op_int)
 #undef typedef_compare_op_int
 
+template <CompareOp Op>
+struct InstrCompareOpFloat : public CompareOpInstr
+{
+    instr_type(static_cast<InstrType>(Instr_CompareOpFloat_LT + Op));
+    instr_name("CompareOpFloat");
+    InstrCompareOpFloat() : CompareOpInstr(Op) {}
+};
+
+#define typedef_compare_op_float(name, token, method, rmethod)                \
+    typedef InstrCompareOpFloat<Compare##name> InstrCompareOpFloat_##name;
+    for_each_compare_op(typedef_compare_op_float)
+#undef typedef_compare_op_float
+
 struct InstrAugAssignUpdate : public BinaryOpInstr
 {
     define_instr_members(AugAssignUpdate);
@@ -552,6 +592,20 @@ struct InstrAugAssignUpdateInt : public BinaryOpInstr
         InstrAugAssignUpdateInt_##name;
     for_each_binary_op_to_inline(typedef_binary_op_int)
 #undef typedef_binary_op_int
+
+template <BinaryOp Op>
+struct InstrAugAssignUpdateFloat : public BinaryOpInstr
+{
+    instr_type(static_cast<InstrType>(Instr_AugAssignUpdateFloat_Add + Op));
+    instr_name("AugAssignUpdateFloat");
+    InstrAugAssignUpdateFloat() : BinaryOpInstr(Op) {}
+};
+
+#define typedef_binary_op_float(name)                                         \
+    typedef InstrAugAssignUpdateFloat<Binary##name>                           \
+        InstrAugAssignUpdateFloat_##name;
+    for_each_binary_op_to_inline(typedef_binary_op_float)
+#undef typedef_binary_op_float
 
 struct InstrAugAssignUpdateBuiltin : public BinaryOpInstr
 {

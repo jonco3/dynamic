@@ -246,6 +246,24 @@ testcase(interp)
                      Instr_BinaryOpFallback);
 
     testReplacements("def foo(x, y):\n"
+                     "  return x - y",
+                     "foo(2.75, 0.5)", "2.25",
+                     "foo(5, 1)", "4",
+                     Instr_BinaryOp,
+                     Instr_BinaryOpFloat_Sub,
+                     Instr_BinaryOpInt_Sub,
+                     Instr_BinaryOpFallback);
+
+    testReplacements("def foo(x, y):\n"
+                     "  return x > y",
+                     "foo(2.75, 0.5)", "True",
+                     "foo(1, 2)", "False",
+                     Instr_CompareOp,
+                     Instr_CompareOpFloat_GT,
+                     Instr_CompareOpInt_GT,
+                     Instr_CompareOpFallback);
+
+    testReplacements("def foo(x, y):\n"
                      "  x += y\n"
                      "  return x",
                      "foo(1, 2)", "3",
@@ -253,6 +271,16 @@ testcase(interp)
                      Instr_AugAssignUpdate,
                      Instr_AugAssignUpdateInt_Add,
                      Instr_AugAssignUpdateBuiltin,
+                     Instr_AugAssignUpdateFallback);
+
+    testReplacements("def foo(x, y):\n"
+                     "  x *= y\n"
+                     "  return x",
+                     "foo(2.0, 1.25)", "2.5",
+                     "foo(2, 2)", "4",
+                     Instr_AugAssignUpdate,
+                     Instr_AugAssignUpdateFloat_Mul,
+                     Instr_AugAssignUpdateInt_Mul,
                      Instr_AugAssignUpdateFallback);
 
     testExpectingException = true;

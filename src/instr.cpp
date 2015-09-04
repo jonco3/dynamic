@@ -679,6 +679,21 @@ static Instr* InlineInstrForIntBinaryOp(BinaryOp op)
     }
 }
 
+static Instr* InlineInstrForFloatBinaryOp(BinaryOp op)
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name)                                                    \
+      case Binary##name:                                                      \
+          return gc.create<InstrBinaryOpFloat<Binary##name>>();
+    for_each_binary_op_to_inline(create_instr)
+#undef create_instr
+      default:
+        crash("Unexpected binary op");
+        return nullptr;
+    }
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
@@ -689,6 +704,13 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replaceInstrAndRestart(instr, InlineInstrForIntBinaryOp(instr->op));
+        return;
+    }
+
+    // If both arguments are doubles, inline the operation and restart.
+    if (ShouldInlineBinaryOp(instr->op) && left.isDouble() && right.isDouble()) {
+        assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
+        replaceInstrAndRestart(instr, InlineInstrForFloatBinaryOp(instr->op));
         return;
     }
 
@@ -741,6 +763,32 @@ Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr)
     }
 for_each_binary_op_to_inline(define_execute_binary_op_int)
 #undef define_execute_binary_op_int
+
+template <BinaryOp Op>
+inline void
+Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat<Op>*> instr)
+{
+    assert(ShouldInlineBinaryOp(instr->op));
+
+    if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
+        replaceInstrAndRestart(
+            instr, gc.create<InstrBinaryOpFallback>(instr->op));
+        return;
+    }
+
+    double b = popStack().asDouble();
+    double a = popStack().asDouble();
+    pushStack(Float::binaryOp<Op>(a, b));
+}
+
+#define define_execute_binary_op_float(name)                                   \
+    void Interpreter::executeInstr_BinaryOpFloat_##name(                       \
+        Traced<InstrBinaryOpFloat_##name*> instr)                              \
+    {                                                                          \
+        executeBinaryOpFloat<Binary##name>(instr);                             \
+    }
+for_each_binary_op_to_inline(define_execute_binary_op_float)
+#undef define_execute_binary_op_float
 
 InstrBinaryOpBuiltin::InstrBinaryOpBuiltin(BinaryOp op,
                                            Traced<Class*> left,
@@ -795,6 +843,21 @@ static Instr* InlineInstrForIntCompareOp(CompareOp op)
     }
 }
 
+static Instr* InlineInstrForFloatCompareOp(CompareOp op)
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name, token, method, rmethod)                            \
+      case Compare##name:                                                     \
+          return gc.create<InstrCompareOpFloat<Compare##name>>();
+    for_each_compare_op(create_instr)
+#undef create_instr
+      default:
+        crash("unexpected compare op");
+        return nullptr;
+    }
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
 {
@@ -804,6 +867,9 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
         replacement = InlineInstrForIntCompareOp(instr->op);
+    } else if (left.isDouble() && right.isDouble()) {
+        assert(Float::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
+        replacement = InlineInstrForFloatCompareOp(instr->op);
     } else {
         replacement = gc.create<InstrCompareOpFallback>(instr->op);
     }
@@ -882,6 +948,30 @@ void Interpreter::executeInstr_CompareOpInt_##name(                            \
 for_each_compare_op(define_execute_compare_op_int)
 #undef define_execute_compare_op_int
 
+template <CompareOp Op>
+inline void
+Interpreter::executeCompareOpFloat(Traced<InstrCompareOpFloat<Op>*> instr)
+{
+    if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
+        replaceInstrAndRestart(
+            instr, gc.create<InstrCompareOpFallback>(instr->op));
+        return;
+    }
+
+    double b = popStack().asDouble();
+    double a = popStack().asDouble();
+    pushStack(Float::compareOp<Op>(a, b));
+}
+
+#define define_execute_compare_op_float(name, token, method, rmethod)          \
+void Interpreter::executeInstr_CompareOpFloat_##name(                          \
+    Traced<InstrCompareOpFloat_##name*> instr)                                 \
+{                                                                              \
+    executeCompareOpFloat<Compare##name>(instr);                               \
+}
+for_each_compare_op(define_execute_compare_op_float)
+#undef define_execute_compare_op_float
+
 bool
 Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
                                     bool& isCallableDescriptor)
@@ -928,6 +1018,21 @@ static Instr* InlineInstrForIntAugAssignOp(BinaryOp op)
     }
 }
 
+static Instr* InlineInstrForFloatAugAssignOp(BinaryOp op)
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name)                                                    \
+      case Binary##name:                                                      \
+          return gc.create<InstrAugAssignUpdateFloat<Binary##name>>();
+    for_each_binary_op_to_inline(create_instr)
+#undef create_instr
+      default:
+        crash("Unexpected binary op");
+        return nullptr;
+    }
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
 {
@@ -938,6 +1043,13 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replaceInstrAndRestart(instr, InlineInstrForIntAugAssignOp(instr->op));
+        return;
+    }
+
+    // If both arguments are doubles, inline the operation and restart.
+    if (ShouldInlineBinaryOp(instr->op) && left.isDouble() && right.isDouble()) {
+        assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
+        replaceInstrAndRestart(instr, InlineInstrForFloatAugAssignOp(instr->op));
         return;
     }
 
@@ -996,6 +1108,32 @@ Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> inst
     }
 for_each_binary_op_to_inline(define_execute_aug_assign_op_int)
 #undef define_execute_aug_assign_op_int
+
+template <BinaryOp Op>
+inline void
+Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat<Op>*> instr)
+{
+    assert(ShouldInlineBinaryOp(instr->op));
+
+    if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
+        replaceInstrAndRestart(
+            instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+        return;
+    }
+
+    double b = popStack().asDouble();
+    double a = popStack().asDouble();
+    pushStack(Float::binaryOp<Op>(a, b));
+}
+
+#define define_execute_aug_assign_op_float(name)                              \
+    void Interpreter::executeInstr_AugAssignUpdateFloat_##name(               \
+        Traced<InstrAugAssignUpdateFloat_##name*> instr)                      \
+    {                                                                         \
+        executeAugAssignUpdateFloat<Binary##name>(instr);                     \
+    }
+for_each_binary_op_to_inline(define_execute_aug_assign_op_float)
+#undef define_execute_aug_assign_op_float
 
 InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,
                                                          Traced<Class*> left,

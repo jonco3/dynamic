@@ -160,28 +160,6 @@ static double floatHash(double a)
     return p.i;
 }
 
-typedef double (FloatBinaryOp)(double, double);
-static double floatAdd(double a, double b) { return a + b; }
-static double floatSub(double a, double b) { return a - b; }
-static double floatMul(double a, double b) { return a * b; }
-static double floatTrueDiv(double a, double b) { return a / b; }
-static double floatFloorDiv(double a, double b) { return floor(a / b); }
-static double floatMod(double a, double b) { return fmod(a, b); }
-static double floatPow(double a, double b) { return pow(a, b); }
-
-typedef bool (FloatCompareOp)(double, double);
-static bool floatLT(double a, double b) { return a < b; }
-static bool floatLE(double a, double b) { return a <= b; }
-static bool floatGT(double a, double b) { return a > b; }
-static bool floatGE(double a, double b) { return a >= b; }
-static bool floatEQ(double a, double b) { return a == b; }
-static bool floatNE(double a, double b) { return a != b; }
-
-static double floatValue(Traced<Value> value)
-{
-    return value.toFloat();
-}
-
 static bool floatValue(Traced<Value> value, double& out)
 {
     if (value.isFloat())
@@ -213,12 +191,13 @@ static bool floatUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOu
         return true;
     }
 
-    resultOut = Float::get(op(floatValue(args[0])));
+    resultOut = Float::get(op(a));
     return true;
 }
 
-template <FloatBinaryOp op>
-static bool floatBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+template <BinaryOp Op>
+static bool
+floatBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -232,12 +211,13 @@ static bool floatBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultO
         return true;
     }
 
-    resultOut = Float::get(op(a, b));
+    resultOut = Float::binaryOp<Op>(a, b);
     return true;
 }
 
-template <FloatBinaryOp op>
-static bool floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+template <BinaryOp Op>
+static bool
+floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -251,11 +231,11 @@ static bool floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> result
         return true;
     }
 
-    resultOut = Float::get(op(b, a));
+    resultOut = Float::binaryOp<Op>(b, a);
     return true;
 }
 
-template <FloatCompareOp op>
+template <CompareOp Op>
 static bool floatCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     double a;
@@ -270,7 +250,7 @@ static bool floatCompareOp(TracedVector<Value> args, MutableTraced<Value> result
         return true;
     }
 
-    resultOut = Boolean::get(op(a, b));
+    resultOut = Float::compareOp<Op>(a, b);
     return true;
 }
 
@@ -323,26 +303,26 @@ void Float::init()
     initNativeMethod(cls, "__pos__", floatUnaryOp<floatPos>, 1);
     initNativeMethod(cls, "__neg__", floatUnaryOp<floatNeg>, 1);
     initNativeMethod(cls, "__hash__", floatUnaryOp<floatHash>, 1);
-    initNativeMethod(cls, "__add__", floatBinaryOp<floatAdd>, 2);
-    initNativeMethod(cls, "__sub__", floatBinaryOp<floatSub>, 2);
-    initNativeMethod(cls, "__mul__", floatBinaryOp<floatMul>, 2);
-    initNativeMethod(cls, "__truediv__", floatBinaryOp<floatTrueDiv>, 2);
-    initNativeMethod(cls, "__floordiv__", floatBinaryOp<floatFloorDiv>, 2);
-    initNativeMethod(cls, "__mod__", floatBinaryOp<floatMod>, 2);
-    initNativeMethod(cls, "__pow__", floatBinaryOp<floatPow>, 2);
-    initNativeMethod(cls, "__radd__", floatRBinaryOp<floatAdd>, 2);
-    initNativeMethod(cls, "__rsub__", floatRBinaryOp<floatSub>, 2);
-    initNativeMethod(cls, "__rmul__", floatRBinaryOp<floatMul>, 2);
-    initNativeMethod(cls, "__rtruediv__", floatRBinaryOp<floatTrueDiv>, 2);
-    initNativeMethod(cls, "__rfloordiv__", floatRBinaryOp<floatFloorDiv>, 2);
-    initNativeMethod(cls, "__rmod__", floatRBinaryOp<floatMod>, 2);
-    initNativeMethod(cls, "__rpow__", floatRBinaryOp<floatPow>, 2);
-    initNativeMethod(cls, "__lt__", floatCompareOp<floatLT>, 2);
-    initNativeMethod(cls, "__le__", floatCompareOp<floatLE>, 2);
-    initNativeMethod(cls, "__gt__", floatCompareOp<floatGT>, 2);
-    initNativeMethod(cls, "__ge__", floatCompareOp<floatGE>, 2);
-    initNativeMethod(cls, "__eq__", floatCompareOp<floatEQ>, 2);
-    initNativeMethod(cls, "__ne__", floatCompareOp<floatNE>, 2);
+    initNativeMethod(cls, "__add__", floatBinaryOp<BinaryAdd>, 2);
+    initNativeMethod(cls, "__sub__", floatBinaryOp<BinarySub>, 2);
+    initNativeMethod(cls, "__mul__", floatBinaryOp<BinaryMul>, 2);
+    initNativeMethod(cls, "__truediv__", floatBinaryOp<BinaryTrueDiv>, 2);
+    initNativeMethod(cls, "__floordiv__", floatBinaryOp<BinaryFloorDiv>, 2);
+    initNativeMethod(cls, "__mod__", floatBinaryOp<BinaryModulo>, 2);
+    initNativeMethod(cls, "__pow__", floatBinaryOp<BinaryPower>, 2);
+    initNativeMethod(cls, "__radd__", floatRBinaryOp<BinaryAdd>, 2);
+    initNativeMethod(cls, "__rsub__", floatRBinaryOp<BinarySub>, 2);
+    initNativeMethod(cls, "__rmul__", floatRBinaryOp<BinaryMul>, 2);
+    initNativeMethod(cls, "__rtruediv__", floatRBinaryOp<BinaryTrueDiv>, 2);
+    initNativeMethod(cls, "__rfloordiv__", floatRBinaryOp<BinaryFloorDiv>, 2);
+    initNativeMethod(cls, "__rmod__", floatRBinaryOp<BinaryModulo>, 2);
+    initNativeMethod(cls, "__rpow__", floatRBinaryOp<BinaryPower>, 2);
+    initNativeMethod(cls, "__lt__", floatCompareOp<CompareLT>, 2);
+    initNativeMethod(cls, "__le__", floatCompareOp<CompareLE>, 2);
+    initNativeMethod(cls, "__gt__", floatCompareOp<CompareGT>, 2);
+    initNativeMethod(cls, "__ge__", floatCompareOp<CompareGE>, 2);
+    initNativeMethod(cls, "__eq__", floatCompareOp<CompareEQ>, 2);
+    initNativeMethod(cls, "__ne__", floatCompareOp<CompareNE>, 2);
     ObjectClass.init(cls);
 }
 

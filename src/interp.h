@@ -285,11 +285,20 @@ struct Interpreter
     template <BinaryOp Op>
     void executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr);
 
+    template <BinaryOp Op>
+    void executeBinaryOpFloat(Traced<InstrBinaryOpFloat<Op>*> instr);
+
     template <CompareOp Op>
     void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr);
 
+    template <CompareOp Op>
+    void executeCompareOpFloat(Traced<InstrCompareOpFloat<Op>*> instr);
+
     template <BinaryOp Op>
     void executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> instr);
+
+    template <BinaryOp Op>
+    void executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat<Op>*> instr);
 
     bool getMethod(Name ident);
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
