@@ -9,6 +9,8 @@ using namespace std;
 
 extern bool debugMode;
 
+extern void crash(const char* message);
+
 extern void init1();
 extern void init2(const string& libDir);
 extern void final();

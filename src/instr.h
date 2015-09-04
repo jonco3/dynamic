@@ -451,7 +451,6 @@ struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(BinaryOp);
     InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
-    Instr* specializeForInt();
 };
 
 struct InstrBinaryOpFallback : public BinaryOpInstr
@@ -503,7 +502,6 @@ struct InstrCompareOp : public CompareOpInstr
 {
     define_instr_members(CompareOp);
     InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
-    Instr* specializeForInt();
 };
 
 struct InstrCompareOpFallback : public CompareOpInstr

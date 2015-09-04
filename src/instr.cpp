@@ -1,6 +1,7 @@
 #include "instr.h"
 
 #include "builtin.h"
+#include "common.h"
 #include "dict.h"
 #include "exception.h"
 #include "generator.h"
@@ -663,6 +664,21 @@ bool ShouldInlineBinaryOp(BinaryOp op) {
     return op <= BinaryTrueDiv;
 }
 
+static Instr* InlineInstrForIntBinaryOp(BinaryOp op)
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name)                                                    \
+      case Binary##name:                                                      \
+          return gc.create<InstrBinaryOpInt<Binary##name>>();
+    for_each_binary_op_to_inline(create_instr)
+#undef create_instr
+      default:
+        crash("Unexpected binary op");
+        return nullptr;
+    }
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
@@ -674,7 +690,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
         left.isInt32() && right.isInt32())
     {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, instr->specializeForInt());
+        replaceInstrAndRestart(instr, InlineInstrForIntBinaryOp(instr->op));
         return;
     }
 
@@ -693,22 +709,6 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 
     // Replace with fallback instruction.
     replaceInstr(instr, gc.create<InstrBinaryOpFallback>(instr->op));
-}
-
-Instr* InstrBinaryOp::specializeForInt()
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name)                                                    \
-      case Binary##name:                                                      \
-          return gc.create<InstrBinaryOpInt<Binary##name>>();
-
-    for_each_binary_op_to_inline(create_instr)
-#undef create_instr
-      default:
-        assert(false);
-        exit(1);
-    }
 }
 
 INLINE_INSTRS void
@@ -782,6 +782,21 @@ void CompareOpInstr::print(ostream& s) const
     s << name() << " " << CompareOpNames[op];
 }
 
+static Instr* InlineInstrForIntCompareOp(CompareOp op)
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name, token, method, rmethod)                            \
+      case Compare##name:                                                     \
+          return gc.create<InstrCompareOpInt<Compare##name>>();
+    for_each_compare_op(create_instr)
+#undef create_instr
+      default:
+        crash("unexpected compare op");
+        return nullptr;
+    }
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
 {
@@ -790,28 +805,13 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
     Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        replacement = instr->specializeForInt();
+        replacement = InlineInstrForIntCompareOp(instr->op);
     } else {
         replacement = gc.create<InstrCompareOpFallback>(instr->op);
     }
     replaceInstrAndRestart(instr, replacement);
 }
 
-Instr* InstrCompareOp::specializeForInt()
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name, token, method, rmethod)                            \
-      case Compare##name:                                                     \
-          return gc.create<InstrCompareOpInt<Compare##name>>();
-
-    for_each_compare_op(create_instr)
-#undef create_instr
-      default:
-        assert(false);
-        exit(1);
-    }
-}
 
 INLINE_INSTRS void
 Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> instr)
