@@ -36,10 +36,10 @@ testcase(parser)
     parser.addBinaryOp(Token_Add, 10, Assoc_Left, [] (Token _, int l, int r) {
         return l + r;
     });
-    parser.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {
+    parser.addBinaryOp(Token_Sub, 10, Assoc_Left, [] (Token _, int l, int r) {
         return l - r;
     });
-    parser.addUnaryOp(Token_Minus, [] (Token _, int r) {
+    parser.addUnaryOp(Token_Sub, [] (Token _, int r) {
         return -r;
     });
 

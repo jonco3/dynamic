@@ -54,7 +54,7 @@ using namespace std;
     token(Try)                                                                \
                                                                               \
     token(Add)                                                               \
-    token(Minus)                                                              \
+    token(Sub)                                                              \
     token(Times)                                                              \
     token(Power)                                                              \
     token(TrueDiv)                                                            \
@@ -86,7 +86,7 @@ using namespace std;
     token(Assign)                                                             \
     token(Semicolon)                                                          \
     token(AssignAdd)                                                         \
-    token(AssignMinus)                                                        \
+    token(AssignSub)                                                        \
     token(AssignTimes)                                                        \
     token(AssignTrueDiv)                                                      \
     token(AssignFloorDiv)                                                     \

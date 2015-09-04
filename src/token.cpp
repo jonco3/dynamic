@@ -53,7 +53,7 @@ static const Keyword keywordList[] = {
 
 static const Keyword operatorList[] = {
     { "+",  Token_Add },
-    { "-",  Token_Minus },
+    { "-",  Token_Sub },
     { "*",  Token_Times },
     { "**", Token_Power },
     { "/",  Token_TrueDiv },
@@ -86,7 +86,7 @@ static const Keyword operatorList[] = {
     { "=",  Token_Assign },
     { ";",  Token_Semicolon },
     { "+=",  Token_AssignAdd },
-    { "-=",  Token_AssignMinus },
+    { "-=",  Token_AssignSub },
     { "*=",  Token_AssignTimes },
     { "/=",  Token_AssignTrueDiv },
     { "//=",  Token_AssignFloorDiv },

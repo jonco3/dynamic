@@ -61,7 +61,7 @@ using namespace std;
     instr(BinaryOp)                                                          \
     instr(BinaryOpFallback)                                                  \
     instr(BinaryOpInt_Add)                                                  \
-    instr(BinaryOpInt_Minus)                                                 \
+    instr(BinaryOpInt_Sub)                                                 \
     instr(BinaryOpInt_Multiply)                                              \
     instr(BinaryOpInt_TrueDiv)                                               \
     instr(BinaryOpInt_FloorDiv)                                              \

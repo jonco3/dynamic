@@ -63,7 +63,7 @@ SyntaxParser::SyntaxParser()
 
     // todo: check the precedence of these works as expected
     createNodeForUnary<SyntaxPos>(Token_Add);
-    createNodeForUnary<SyntaxNeg>(Token_Minus);
+    createNodeForUnary<SyntaxNeg>(Token_Sub);
     createNodeForUnary<SyntaxNot>(Token_Not, 0);
     createNodeForUnary<SyntaxInvert>(Token_BitNot);
 
@@ -154,7 +154,7 @@ SyntaxParser::SyntaxParser()
     // Arithermetic binary operators
 
     createNodeForBinary<SyntaxBinaryOp>(Token_Add, 170, Assoc_Left, BinaryAdd);
-    createNodeForBinary<SyntaxBinaryOp>(Token_Minus, 170, Assoc_Left, BinaryMinus);
+    createNodeForBinary<SyntaxBinaryOp>(Token_Sub, 170, Assoc_Left, BinarySub);
     createNodeForBinary<SyntaxBinaryOp>(Token_Times, 180, Assoc_Left, BinaryMultiply);
     createNodeForBinary<SyntaxBinaryOp>(Token_TrueDiv, 180, Assoc_Left, BinaryTrueDiv);
     createNodeForBinary<SyntaxBinaryOp>(Token_FloorDiv, 180, Assoc_Left, BinaryFloorDiv);
@@ -232,7 +232,7 @@ bool SyntaxParser::maybeExprToken()
     return t == Token_Identifier ||
         t == Token_Integer || t == Token_Float || t == Token_String ||
         t == Token_Bra || t == Token_SBra || t == Token_CBra ||
-        t == Token_Minus || t == Token_Add || t == Token_BitNot ||
+        t == Token_Sub || t == Token_Add || t == Token_BitNot ||
         t == Token_Not || t == Token_Lambda || t == Token_Yield ||
         t == Token_Backtick;
 }
@@ -457,8 +457,8 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         return make_unique<SyntaxAssign>(token, move(target), parseAssignSource());
     } else if (opt(Token_AssignAdd)) {
         return parseAugAssign(token, move(expr), BinaryAdd);
-    } else if (opt(Token_AssignMinus)) {
-        return parseAugAssign(token, move(expr), BinaryMinus);
+    } else if (opt(Token_AssignSub)) {
+        return parseAugAssign(token, move(expr), BinarySub);
     } else if (opt(Token_AssignTimes)) {
         return parseAugAssign(token, move(expr), BinaryMultiply);
     } else if (opt(Token_AssignTrueDiv)) {

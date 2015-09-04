@@ -3,7 +3,7 @@
 
 #define for_each_binary_op(op)                                                \
     op(Add,        "+",  "__add__",      "__radd__",      "__iadd__")         \
-    op(Minus,      "-",  "__sub__",      "__rsub__",      "__isub__")         \
+    op(Sub,        "-",  "__sub__",      "__rsub__",      "__isub__")         \
     op(Multiply,   "*",  "__mul__",      "__rmul__",      "__imul__")         \
     op(TrueDiv,    "/",  "__truediv__",  "__rtruediv__",  "__itruediv__")     \
     op(FloorDiv,   "//", "__floordiv__", "__rfloordiv__", "__ifloordiv__")    \

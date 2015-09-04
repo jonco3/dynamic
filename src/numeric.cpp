@@ -118,7 +118,7 @@ void Integer::init()
     initNativeMethod(cls, "__lshift__", intBinaryOp<BinaryLeftShift>, 2);
     initNativeMethod(cls, "__rshift__", intBinaryOp<BinaryRightShift>, 2);
     initNativeMethod(cls, "__add__", intBinaryOp<BinaryAdd>, 2);
-    initNativeMethod(cls, "__sub__", intBinaryOp<BinaryMinus>, 2);
+    initNativeMethod(cls, "__sub__", intBinaryOp<BinarySub>, 2);
     initNativeMethod(cls, "__mul__", intBinaryOp<BinaryMultiply>, 2);
     initNativeMethod(cls, "__truediv__", intBinaryOp<BinaryTrueDiv>, 2);
     initNativeMethod(cls, "__floordiv__", intBinaryOp<BinaryFloorDiv>, 2);
