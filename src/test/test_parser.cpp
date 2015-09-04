@@ -33,7 +33,7 @@ testcase(parser)
     parser.addWord(Token_Integer, [] (Token token) {
         return atoi(token.text.c_str());  // todo: what's the c++ way to do this?
     });
-    parser.addBinaryOp(Token_Plus, 10, Assoc_Left, [] (Token _, int l, int r) {
+    parser.addBinaryOp(Token_Add, 10, Assoc_Left, [] (Token _, int l, int r) {
         return l + r;
     });
     parser.addBinaryOp(Token_Minus, 10, Assoc_Left, [] (Token _, int l, int r) {

@@ -60,7 +60,7 @@ using namespace std;
     instr(IteratorNext)                                                      \
     instr(BinaryOp)                                                          \
     instr(BinaryOpFallback)                                                  \
-    instr(BinaryOpInt_Plus)                                                  \
+    instr(BinaryOpInt_Add)                                                  \
     instr(BinaryOpInt_Minus)                                                 \
     instr(BinaryOpInt_Multiply)                                              \
     instr(BinaryOpInt_TrueDiv)                                               \
@@ -465,7 +465,7 @@ struct InstrBinaryOpFallback : public BinaryOpInstr
 template <BinaryOp Op>
 struct InstrBinaryOpInt : public BinaryOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Plus + Op));
+    instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Add + Op));
     instr_name("BinaryOpInt");
     InstrBinaryOpInt() : BinaryOpInstr(Op) {}
 };

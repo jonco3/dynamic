@@ -2,7 +2,7 @@
 #define __SPECIALS_H__
 
 #define for_each_binary_op(op)                                                \
-    op(Plus,       "+",  "__add__",      "__radd__",      "__iadd__")         \
+    op(Add,        "+",  "__add__",      "__radd__",      "__iadd__")         \
     op(Minus,      "-",  "__sub__",      "__rsub__",      "__isub__")         \
     op(Multiply,   "*",  "__mul__",      "__rmul__",      "__imul__")         \
     op(TrueDiv,    "/",  "__truediv__",  "__rtruediv__",  "__itruediv__")     \

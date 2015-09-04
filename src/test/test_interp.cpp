@@ -241,7 +241,7 @@ testcase(interp)
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_BinaryOp,
-                     Instr_BinaryOpInt_Plus,
+                     Instr_BinaryOpInt_Add,
                      Instr_BinaryOpBuiltin,
                      Instr_BinaryOpFallback);
 

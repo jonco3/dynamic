@@ -55,7 +55,7 @@ struct Float : public Object
     const double value_;
 };
 
-template <> inline Value Integer::binaryOp<BinaryPlus>(int64_t a, int64_t b)
+template <> inline Value Integer::binaryOp<BinaryAdd>(int64_t a, int64_t b)
 {
     return Integer::get(a + b);
 }

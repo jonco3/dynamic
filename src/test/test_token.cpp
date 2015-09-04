@@ -26,7 +26,7 @@ testcase(tokenizer)
 
     tz.start("+");
     t = tz.nextToken();
-    testEqual(t.type, Token_Plus);
+    testEqual(t.type, Token_Add);
     testEqual(t.text, "+");
     testEqual(tz.nextToken().type, Token_EOF);
 
@@ -88,7 +88,7 @@ testcase(tokenizer)
     testEqual(t.text, "1");
     testEqual(t.pos.column, 0u);
     t = tz.nextToken();
-    testEqual(t.type, Token_Plus);
+    testEqual(t.type, Token_Add);
     testEqual(t.pos.column, 1u);
     t = tz.nextToken();
     testEqual(t.type, Token_Integer);
@@ -290,7 +290,7 @@ testcase(tokenizer)
     testEqual(tz.nextToken().type, Token_Integer);
     testEqual(tz.nextToken().type, Token_Comma);
     testEqual(tz.nextToken().type, Token_Float);
-    testEqual(tz.nextToken().type, Token_Plus);
+    testEqual(tz.nextToken().type, Token_Add);
     testEqual(tz.nextToken().type, Token_Integer);
     testEqual(tz.nextToken().type, Token_Ket);
     testEqual(tz.nextToken().type, Token_EOF);

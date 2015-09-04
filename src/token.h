@@ -53,7 +53,7 @@ using namespace std;
     token(Lambda)                                                             \
     token(Try)                                                                \
                                                                               \
-    token(Plus)                                                               \
+    token(Add)                                                               \
     token(Minus)                                                              \
     token(Times)                                                              \
     token(Power)                                                              \
@@ -85,7 +85,7 @@ using namespace std;
     token(Backtick)                                                           \
     token(Assign)                                                             \
     token(Semicolon)                                                          \
-    token(AssignPlus)                                                         \
+    token(AssignAdd)                                                         \
     token(AssignMinus)                                                        \
     token(AssignTimes)                                                        \
     token(AssignTrueDiv)                                                      \
