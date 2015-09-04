@@ -12,6 +12,12 @@
 
 using namespace std;
 
+#define for_each_binary_op_to_inline(op)                                     \
+    op(Add)                                                                  \
+    op(Sub)                                                                  \
+    op(Mul)                                                                  \
+    op(TrueDiv)
+
 #define for_each_inline_instr(instr)                                         \
     instr(Abort)                                                             \
     instr(Return)
@@ -64,14 +70,6 @@ using namespace std;
     instr(BinaryOpInt_Sub)                                                   \
     instr(BinaryOpInt_Mul)                                                   \
     instr(BinaryOpInt_TrueDiv)                                               \
-    instr(BinaryOpInt_FloorDiv)                                              \
-    instr(BinaryOpInt_Modulo)                                                \
-    instr(BinaryOpInt_Power)                                                 \
-    instr(BinaryOpInt_Or)                                                    \
-    instr(BinaryOpInt_Xor)                                                   \
-    instr(BinaryOpInt_And)                                                   \
-    instr(BinaryOpInt_LeftShift)                                             \
-    instr(BinaryOpInt_RightShift)                                            \
     instr(BinaryOpBuiltin)                                                   \
     instr(CompareOp)                                                         \
     instr(CompareOpFallback)                                                 \
@@ -470,6 +468,11 @@ struct InstrBinaryOpInt : public BinaryOpInstr
     InstrBinaryOpInt() : BinaryOpInstr(Op) {}
 };
 
+#define typedef_binary_op_int(name)                                           \
+    typedef InstrBinaryOpInt<Binary##name> InstrBinaryOpInt_##name;
+    for_each_binary_op_to_inline(typedef_binary_op_int)
+#undef typedef_binary_op_int
+
 struct InstrBinaryOpBuiltin : public BinaryOpInstr
 {
     define_instr_members(BinaryOpBuiltin);
@@ -486,11 +489,6 @@ struct InstrBinaryOpBuiltin : public BinaryOpInstr
     Class* right_;
     Value method_;
 };
-
-#define typedef_binary_op_int(name, token, method, rmethod, imethod)          \
-    typedef InstrBinaryOpInt<Binary##name> InstrBinaryOpInt_##name;
-    for_each_binary_op(typedef_binary_op_int)
-#undef typedef_binary_op_int
 
 struct CompareOpInstr : public Instr
 {

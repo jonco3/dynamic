@@ -658,6 +658,11 @@ void BinaryOpInstr::print(ostream& s) const
     s << name() << " " << BinaryOpNames[op];
 }
 
+bool ShouldInlineBinaryOp(BinaryOp op) {
+    // Must match for_each_binary_op_to_inline macro in instr.h
+    return op <= BinaryTrueDiv;
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
@@ -665,7 +670,9 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
-    if (left.isInt32() && right.isInt32()) {
+    if (ShouldInlineBinaryOp(instr->op) &&
+        left.isInt32() && right.isInt32())
+    {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replaceInstrAndRestart(instr, instr->specializeForInt());
         return;
@@ -692,11 +699,11 @@ Instr* InstrBinaryOp::specializeForInt()
 {
     // todo: could use static table
     switch (op) {
-#define create_instr(name, token, method, rmethod, imethod)                   \
+#define create_instr(name)                                                    \
       case Binary##name:                                                      \
           return gc.create<InstrBinaryOpInt<Binary##name>>();
 
-    for_each_binary_op(create_instr)
+    for_each_binary_op_to_inline(create_instr)
 #undef create_instr
       default:
         assert(false);
@@ -715,6 +722,8 @@ template <BinaryOp Op>
 inline void
 Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr)
 {
+    assert(ShouldInlineBinaryOp(instr->op));
+
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
             instr, gc.create<InstrBinaryOpFallback>(instr->op));
@@ -726,13 +735,13 @@ Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr)
     pushStack(Integer::binaryOp<Op>(a, b));
 }
 
-#define define_execute_binary_op_int(name, token, method, rmethod, imethod)   \
-void Interpreter::executeInstr_BinaryOpInt_##name(                            \
-    Traced<InstrBinaryOpInt_##name*> instr)                                    \
-{                                                                             \
-    executeBinaryOpInt<Binary##name>(instr);                                   \
-}
-for_each_binary_op(define_execute_binary_op_int)
+#define define_execute_binary_op_int(name)                                    \
+    void Interpreter::executeInstr_BinaryOpInt_##name(                        \
+        Traced<InstrBinaryOpInt_##name*> instr)                               \
+    {                                                                         \
+        executeBinaryOpInt<Binary##name>(instr);                              \
+    }
+for_each_binary_op_to_inline(define_execute_binary_op_int)
 #undef define_execute_binary_op_int
 
 InstrBinaryOpBuiltin::InstrBinaryOpBuiltin(BinaryOp op,
