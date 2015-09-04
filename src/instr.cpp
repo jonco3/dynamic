@@ -686,9 +686,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
-    if (ShouldInlineBinaryOp(instr->op) &&
-        left.isInt32() && right.isInt32())
-    {
+    if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replaceInstrAndRestart(instr, InlineInstrForIntBinaryOp(instr->op));
         return;
@@ -915,11 +913,33 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
     return true;
 }
 
+static Instr* InlineInstrForIntAugAssignOp(BinaryOp op)
+{
+    // todo: could use static table
+    switch (op) {
+#define create_instr(name)                                                    \
+      case Binary##name:                                                      \
+          return gc.create<InstrAugAssignUpdateInt<Binary##name>>();
+    for_each_binary_op_to_inline(create_instr)
+#undef create_instr
+      default:
+        crash("Unexpected binary op");
+        return nullptr;
+    }
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
 {
     Stack<Value> right(peekStack(0));
     Stack<Value> left(peekStack(1));
+
+    // If both arguments are integers, inline the operation and restart.
+    if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
+        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
+        replaceInstrAndRestart(instr, InlineInstrForIntAugAssignOp(instr->op));
+        return;
+    }
 
     // Find the method to call and execute it.
     Stack<Value> method;
@@ -950,6 +970,32 @@ Interpreter::executeInstr_AugAssignUpdateFallback(Traced<InstrAugAssignUpdateFal
     bool isCallableDescriptor;
     executeAugAssignUpdate(instr->op, method, isCallableDescriptor);
 }
+
+template <BinaryOp Op>
+inline void
+Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> instr)
+{
+    assert(ShouldInlineBinaryOp(instr->op));
+
+    if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
+        replaceInstrAndRestart(
+            instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+        return;
+    }
+
+    int32_t b = popStack().asInt32();
+    int32_t a = popStack().asInt32();
+    pushStack(Integer::binaryOp<Op>(a, b));
+}
+
+#define define_execute_aug_assign_op_int(name)                                \
+    void Interpreter::executeInstr_AugAssignUpdateInt_##name(                 \
+        Traced<InstrAugAssignUpdateInt_##name*> instr)                        \
+    {                                                                         \
+        executeAugAssignUpdateInt<Binary##name>(instr);                       \
+    }
+for_each_binary_op_to_inline(define_execute_aug_assign_op_int)
+#undef define_execute_aug_assign_op_int
 
 InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,
                                                          Traced<Class*> left,

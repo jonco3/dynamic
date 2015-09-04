@@ -81,6 +81,10 @@ using namespace std;
     instr(CompareOpInt_NE)                                                   \
     instr(AugAssignUpdate)                                                   \
     instr(AugAssignUpdateFallback)                                           \
+    instr(AugAssignUpdateInt_Add)                                            \
+    instr(AugAssignUpdateInt_Sub)                                            \
+    instr(AugAssignUpdateInt_Mul)                                            \
+    instr(AugAssignUpdateInt_TrueDiv)                                        \
     instr(AugAssignUpdateBuiltin)                                            \
     instr(StartGenerator)                                                    \
     instr(ResumeGenerator)                                                   \
@@ -534,6 +538,20 @@ struct InstrAugAssignUpdateFallback : public BinaryOpInstr
     define_instr_members(AugAssignUpdateFallback);
     InstrAugAssignUpdateFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
+
+template <BinaryOp Op>
+struct InstrAugAssignUpdateInt : public BinaryOpInstr
+{
+    instr_type(static_cast<InstrType>(Instr_AugAssignUpdateInt_Add + Op));
+    instr_name("AugAssignUpdateInt");
+    InstrAugAssignUpdateInt() : BinaryOpInstr(Op) {}
+};
+
+#define typedef_binary_op_int(name)                                           \
+    typedef InstrAugAssignUpdateInt<Binary##name>                             \
+        InstrAugAssignUpdateInt_##name;
+    for_each_binary_op_to_inline(typedef_binary_op_int)
+#undef typedef_binary_op_int
 
 struct InstrAugAssignUpdateBuiltin : public BinaryOpInstr
 {

@@ -288,6 +288,9 @@ struct Interpreter
     template <CompareOp Op>
     void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr);
 
+    template <BinaryOp Op>
+    void executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> instr);
+
     bool getMethod(Name ident);
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
                            Traced<Value> left, Traced<Value> right,

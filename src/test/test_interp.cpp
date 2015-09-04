@@ -251,7 +251,7 @@ testcase(interp)
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_AugAssignUpdate,
-                     Instr_AugAssignUpdateBuiltin,
+                     Instr_AugAssignUpdateInt_Add,
                      Instr_AugAssignUpdateBuiltin,
                      Instr_AugAssignUpdateFallback);
 
