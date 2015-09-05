@@ -129,12 +129,7 @@ struct Branch;
 
 struct Instr : public Cell
 {
-    template <typename T> bool is() const { return type() == T::Type; }
-
-    template <typename T> T* as() {
-        assert(is<T>());
-        return static_cast<T*>(this);
-    }
+    bool is(InstrType t) const { return type() == t; }
 
     virtual ~Instr() {}
     virtual InstrType type() const = 0;
