@@ -19,104 +19,104 @@ using namespace std;
     op(TrueDiv)
 
 #define for_each_inline_instr(instr)                                         \
-    instr(Abort)                                                             \
-    instr(Return)
+    instr(Abort, InstrAbort)                                                 \
+    instr(Return, InstrReturn)
 
 #define for_each_outofline_instr(instr)                                      \
-    instr(Const)                                                             \
-    instr(GetStackLocal)                                                     \
-    instr(SetStackLocal)                                                     \
-    instr(DelStackLocal)                                                     \
-    instr(GetLexical)                                                        \
-    instr(SetLexical)                                                        \
-    instr(DelLexical)                                                        \
-    instr(GetGlobal)                                                         \
-    instr(SetGlobal)                                                         \
-    instr(DelGlobal)                                                         \
-    instr(GetAttr)                                                           \
-    instr(SetAttr)                                                           \
-    instr(DelAttr)                                                           \
-    instr(GetMethod)                                                         \
-    instr(GetMethodFallback)                                                 \
-    instr(GetMethodBuiltin)                                                  \
-    instr(Call)                                                              \
-    instr(CallMethod)                                                        \
-    instr(CreateEnv)                                                         \
-    instr(InitStackLocals)                                                   \
-    instr(In)                                                                \
-    instr(Is)                                                                \
-    instr(Not)                                                               \
-    instr(BranchAlways)                                                      \
-    instr(BranchIfTrue)                                                      \
-    instr(BranchIfFalse)                                                     \
-    instr(Or)                                                                \
-    instr(And)                                                               \
-    instr(Lambda)                                                            \
-    instr(Dup)                                                               \
-    instr(Pop)                                                               \
-    instr(Swap)                                                              \
-    instr(Tuple)                                                             \
-    instr(List)                                                              \
-    instr(Dict)                                                              \
-    instr(Slice)                                                             \
-    instr(AssertionFailed)                                                   \
-    instr(MakeClassFromFrame)                                                \
-    instr(Raise)                                                             \
-    instr(GetIterator)                                                       \
-    instr(IteratorNext)                                                      \
-    instr(BinaryOp)                                                          \
-    instr(BinaryOpFallback)                                                  \
-    instr(BinaryOpInt_Add)                                                   \
-    instr(BinaryOpInt_Sub)                                                   \
-    instr(BinaryOpInt_Mul)                                                   \
-    instr(BinaryOpInt_TrueDiv)                                               \
-    instr(BinaryOpFloat_Add)                                                 \
-    instr(BinaryOpFloat_Sub)                                                 \
-    instr(BinaryOpFloat_Mul)                                                 \
-    instr(BinaryOpFloat_TrueDiv)                                             \
-    instr(BinaryOpBuiltin)                                                   \
-    instr(CompareOp)                                                         \
-    instr(CompareOpFallback)                                                 \
-    instr(CompareOpInt_LT)                                                   \
-    instr(CompareOpInt_LE)                                                   \
-    instr(CompareOpInt_GT)                                                   \
-    instr(CompareOpInt_GE)                                                   \
-    instr(CompareOpInt_EQ)                                                   \
-    instr(CompareOpInt_NE)                                                   \
-    instr(CompareOpFloat_LT)                                                 \
-    instr(CompareOpFloat_LE)                                                 \
-    instr(CompareOpFloat_GT)                                                 \
-    instr(CompareOpFloat_GE)                                                 \
-    instr(CompareOpFloat_EQ)                                                 \
-    instr(CompareOpFloat_NE)                                                 \
-    instr(AugAssignUpdate)                                                   \
-    instr(AugAssignUpdateFallback)                                           \
-    instr(AugAssignUpdateInt_Add)                                            \
-    instr(AugAssignUpdateInt_Sub)                                            \
-    instr(AugAssignUpdateInt_Mul)                                            \
-    instr(AugAssignUpdateInt_TrueDiv)                                        \
-    instr(AugAssignUpdateFloat_Add)                                          \
-    instr(AugAssignUpdateFloat_Sub)                                          \
-    instr(AugAssignUpdateFloat_Mul)                                          \
-    instr(AugAssignUpdateFloat_TrueDiv)                                      \
-    instr(AugAssignUpdateBuiltin)                                            \
-    instr(StartGenerator)                                                    \
-    instr(ResumeGenerator)                                                   \
-    instr(LeaveGenerator)                                                    \
-    instr(SuspendGenerator)                                                  \
-    instr(EnterCatchRegion)                                                  \
-    instr(LeaveCatchRegion)                                                  \
-    instr(MatchCurrentException)                                             \
-    instr(HandleCurrentException)                                            \
-    instr(EnterFinallyRegion)                                                \
-    instr(LeaveFinallyRegion)                                                \
-    instr(FinishExceptionHandler)                                            \
-    instr(LoopControlJump)                                                   \
-    instr(AssertStackDepth)
+    instr(Const, InstrConst)                                                 \
+    instr(GetStackLocal, InstrGetStackLocal)                                 \
+    instr(SetStackLocal, InstrSetStackLocal)                                 \
+    instr(DelStackLocal, InstrDelStackLocal)                                 \
+    instr(GetLexical, InstrGetLexical)                                       \
+    instr(SetLexical, InstrSetLexical)                                       \
+    instr(DelLexical, InstrDelLexical)                                       \
+    instr(GetGlobal, InstrGetGlobal)                                         \
+    instr(SetGlobal, InstrSetGlobal)                                         \
+    instr(DelGlobal, InstrDelGlobal)                                         \
+    instr(GetAttr, InstrGetAttr)                                             \
+    instr(SetAttr, InstrSetAttr)                                             \
+    instr(DelAttr, InstrDelAttr)                                             \
+    instr(GetMethod, InstrGetMethod)                                         \
+    instr(GetMethodFallback, InstrGetMethodFallback)                         \
+    instr(GetMethodBuiltin, InstrGetMethodBuiltin)                           \
+    instr(Call, InstrCall)                                                   \
+    instr(CallMethod, InstrCallMethod)                                       \
+    instr(CreateEnv, InstrCreateEnv)                                         \
+    instr(InitStackLocals, InstrInitStackLocals)                             \
+    instr(In, InstrIn)                                                       \
+    instr(Is, InstrIs)                                                       \
+    instr(Not, InstrNot)                                                     \
+    instr(BranchAlways, InstrBranchAlways)                                   \
+    instr(BranchIfTrue, InstrBranchIfTrue)                                   \
+    instr(BranchIfFalse, InstrBranchIfFalse)                                 \
+    instr(Or, InstrOr)                                                       \
+    instr(And, InstrAnd)                                                     \
+    instr(Lambda, InstrLambda)                                               \
+    instr(Dup, InstrDup)                                                     \
+    instr(Pop, InstrPop)                                                     \
+    instr(Swap, InstrSwap)                                                   \
+    instr(Tuple, InstrTuple)                                                 \
+    instr(List, InstrList)                                                   \
+    instr(Dict, InstrDict)                                                   \
+    instr(Slice, InstrSlice)                                                 \
+    instr(AssertionFailed, InstrAssertionFailed)                             \
+    instr(MakeClassFromFrame, InstrMakeClassFromFrame)                       \
+    instr(Raise, InstrRaise)                                                 \
+    instr(GetIterator, InstrGetIterator)                                     \
+    instr(IteratorNext, InstrIteratorNext)                                   \
+    instr(BinaryOp, InstrBinaryOp)                                           \
+    instr(BinaryOpFallback, InstrBinaryOpFallback)                           \
+    instr(BinaryOpInt_Add, InstrBinaryOpInt)                                 \
+    instr(BinaryOpInt_Sub, InstrBinaryOpInt)                                 \
+    instr(BinaryOpInt_Mul, InstrBinaryOpInt)                                 \
+    instr(BinaryOpInt_TrueDiv, InstrBinaryOpInt)                             \
+    instr(BinaryOpFloat_Add, InstrBinaryOpFloat_Add)                         \
+    instr(BinaryOpFloat_Sub, InstrBinaryOpFloat_Sub)                         \
+    instr(BinaryOpFloat_Mul, InstrBinaryOpFloat_Mul)                         \
+    instr(BinaryOpFloat_TrueDiv, InstrBinaryOpFloat_TrueDiv)                 \
+    instr(BinaryOpBuiltin, InstrBinaryOpBuiltin)                             \
+    instr(CompareOp, InstrCompareOp)                                         \
+    instr(CompareOpFallback, InstrCompareOpFallback)                         \
+    instr(CompareOpInt_LT, InstrCompareOpInt_LT)                             \
+    instr(CompareOpInt_LE, InstrCompareOpInt_LE)                             \
+    instr(CompareOpInt_GT, InstrCompareOpInt_GT)                             \
+    instr(CompareOpInt_GE, InstrCompareOpInt_GE)                             \
+    instr(CompareOpInt_EQ, InstrCompareOpInt_EQ)                             \
+    instr(CompareOpInt_NE, InstrCompareOpInt_NE)                             \
+    instr(CompareOpFloat_LT, InstrCompareOpFloat_LT)                         \
+    instr(CompareOpFloat_LE, InstrCompareOpFloat_LE)                         \
+    instr(CompareOpFloat_GT, InstrCompareOpFloat_GT)                         \
+    instr(CompareOpFloat_GE, InstrCompareOpFloat_GE)                         \
+    instr(CompareOpFloat_EQ, InstrCompareOpFloat_EQ)                         \
+    instr(CompareOpFloat_NE, InstrCompareOpFloat_NE)                         \
+    instr(AugAssignUpdate, InstrAugAssignUpdate)                             \
+    instr(AugAssignUpdateFallback, InstrAugAssignUpdateFallback)             \
+    instr(AugAssignUpdateInt_Add, InstrAugAssignUpdateInt_Add)               \
+    instr(AugAssignUpdateInt_Sub, InstrAugAssignUpdateInt_Sub)               \
+    instr(AugAssignUpdateInt_Mul, InstrAugAssignUpdateInt_Mul)               \
+    instr(AugAssignUpdateInt_TrueDiv, InstrAugAssignUpdateInt_TrueDiv)       \
+    instr(AugAssignUpdateFloat_Add, InstrAugAssignUpdateFloat_Add)           \
+    instr(AugAssignUpdateFloat_Sub, InstrAugAssignUpdateFloat_Sub)           \
+    instr(AugAssignUpdateFloat_Mul, InstrAugAssignUpdateFloat_Mul)           \
+    instr(AugAssignUpdateFloat_TrueDiv, InstrAugAssignUpdateFloat_TrueDiv)   \
+    instr(AugAssignUpdateBuiltin, InstrAugAssignUpdateBuiltin)               \
+    instr(StartGenerator, InstrStartGenerator)                               \
+    instr(ResumeGenerator, InstrResumeGenerator)                             \
+    instr(LeaveGenerator, InstrLeaveGenerator)                               \
+    instr(SuspendGenerator, InstrSuspendGenerator)                           \
+    instr(EnterCatchRegion, InstrEnterCatchRegion)                           \
+    instr(LeaveCatchRegion, InstrLeaveCatchRegion)                           \
+    instr(MatchCurrentException, InstrMatchCurrentException)                 \
+    instr(HandleCurrentException, InstrHandleCurrentException)               \
+    instr(EnterFinallyRegion, InstrEnterFinallyRegion)                       \
+    instr(LeaveFinallyRegion, InstrLeaveFinallyRegion)                       \
+    instr(FinishExceptionHandler, InstrFinishExceptionHandler)               \
+    instr(LoopControlJump, InstrLoopControlJump)                             \
+    instr(AssertStackDepth, InstrAssertStackDepth)
 
 enum InstrType
 {
-#define instr_enum(name) Instr_##name,
+#define instr_enum(name, cls) Instr_##name,
     for_each_inline_instr(instr_enum)
     for_each_outofline_instr(instr_enum)
 #undef instr_enum
@@ -127,6 +127,8 @@ extern const char* instrName(InstrType type);
 
 struct Branch;
 
+// Base class for instruction data.  By default each instruction type has its
+// own class.
 struct Instr : public Cell
 {
     bool is(InstrType t) const { return type() == t; }
@@ -139,6 +141,17 @@ struct Instr : public Cell
 
     const char* name() const { return instrName(type()); }
     virtual void print(ostream& s) const { s << name(); }
+};
+
+// Base class for instruction data that can be used by more than one instruction
+// type.
+struct SharedInstrBase : public Instr
+{
+    SharedInstrBase(InstrType type) : type_(type) {}
+    InstrType type() const override { return type_; }
+
+  private:
+    const InstrType type_;
 };
 
 #define instr_type(it)                                                        \
@@ -453,6 +466,19 @@ struct BinaryOpInstr : public Instr
     const BinaryOp op;
 };
 
+struct SharedBinaryOpInstr : public SharedInstrBase
+{
+    SharedBinaryOpInstr(unsigned type, BinaryOp op)
+      : SharedInstrBase(InstrType(type)), op(op)
+    {
+        assert(type < InstrTypeCount);
+    }
+
+    virtual void print(ostream& s) const;
+
+    const BinaryOp op;
+};
+
 struct InstrBinaryOp : public BinaryOpInstr
 {
     define_instr_members(BinaryOp);
@@ -465,17 +491,12 @@ struct InstrBinaryOpFallback : public BinaryOpInstr
     InstrBinaryOpFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
-template <BinaryOp Op>
-struct InstrBinaryOpInt : public BinaryOpInstr
+struct InstrBinaryOpInt : public SharedBinaryOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Add + Op));
-    InstrBinaryOpInt() : BinaryOpInstr(Op) {}
+    InstrBinaryOpInt(BinaryOp op)
+      : SharedBinaryOpInstr(Instr_BinaryOpInt_Add + op, op)
+    {}
 };
-
-#define typedef_binary_op_int(name)                                           \
-    typedef InstrBinaryOpInt<Binary##name> InstrBinaryOpInt_##name;
-    for_each_binary_op_to_inline(typedef_binary_op_int)
-#undef typedef_binary_op_int
 
 template <BinaryOp Op>
 struct InstrBinaryOpFloat : public BinaryOpInstr

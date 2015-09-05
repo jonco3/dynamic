@@ -15,7 +15,7 @@
 const char* instrName(InstrType type)
 {
     static const char* names[InstrTypeCount] = {
-#define instr_name(name)                                                      \
+#define instr_name(name, cls)                                                 \
         #name,
 
     for_each_inline_instr(instr_name)
@@ -659,24 +659,14 @@ void BinaryOpInstr::print(ostream& s) const
     s << name() << " " << BinaryOpNames[op];
 }
 
+void SharedBinaryOpInstr::print(ostream& s) const
+{
+    s << name() << " " << BinaryOpNames[op];
+}
+
 bool ShouldInlineBinaryOp(BinaryOp op) {
     // Must match for_each_binary_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
-}
-
-static Instr* InlineInstrForIntBinaryOp(BinaryOp op)
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name)                                                    \
-      case Binary##name:                                                      \
-          return gc.create<InstrBinaryOpInt<Binary##name>>();
-    for_each_binary_op_to_inline(create_instr)
-#undef create_instr
-      default:
-        crash("Unexpected binary op");
-        return nullptr;
-    }
 }
 
 static Instr* InlineInstrForFloatBinaryOp(BinaryOp op)
@@ -703,7 +693,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     // If both arguments are integers, inline the operation and restart.
     if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, InlineInstrForIntBinaryOp(instr->op));
+        replaceInstrAndRestart(instr, gc.create<InstrBinaryOpInt>(instr->op));
         return;
     }
 
@@ -740,7 +730,7 @@ Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr)
+Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr)
 {
     assert(ShouldInlineBinaryOp(instr->op));
 
@@ -757,7 +747,7 @@ Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr)
 
 #define define_execute_binary_op_int(name)                                    \
     void Interpreter::executeInstr_BinaryOpInt_##name(                        \
-        Traced<InstrBinaryOpInt_##name*> instr)                               \
+        Traced<InstrBinaryOpInt*> instr)                                      \
     {                                                                         \
         executeBinaryOpInt<Binary##name>(instr);                              \
     }
@@ -1279,7 +1269,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 {
     static const void* dispatchTable[] =
     {
-#define dispatch_table_entry(it)                                              \
+#define dispatch_table_entry(it, cls)                                         \
         &&instr_##it,
     for_each_inline_instr(dispatch_table_entry)
     for_each_outofline_instr(dispatch_table_entry)
@@ -1314,10 +1304,10 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
         dispatch();
     }
 
-#define handle_instr(it)                                                      \
+#define handle_instr(it, cls)                                                 \
     instr_##it: {                                                             \
-        Instr##it** ip = reinterpret_cast<Instr##it**>(&thunk->data);         \
-        executeInstr_##it(Traced<Instr##it*>::fromTracedLocation(ip));        \
+        cls** ip = reinterpret_cast<cls**>(&thunk->data);                     \
+        executeInstr_##it(Traced<cls*>::fromTracedLocation(ip));              \
         assert(instrp);                                                       \
         dispatch();                                                           \
     }

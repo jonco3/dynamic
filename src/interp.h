@@ -277,13 +277,13 @@ struct Interpreter
     CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
 
     // Instruction implementations
-#define declare_instr_method(name)                                            \
-    void executeInstr_##name(Traced<Instr##name*> self);
+#define declare_instr_method(name, cls)                                       \
+    void executeInstr_##name(Traced<cls*> self);
     for_each_outofline_instr(declare_instr_method)
 #undef declare_instr_method
 
     template <BinaryOp Op>
-    void executeBinaryOpInt(Traced<InstrBinaryOpInt<Op>*> instr);
+    void executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr);
 
     template <BinaryOp Op>
     void executeBinaryOpFloat(Traced<InstrBinaryOpFloat<Op>*> instr);
