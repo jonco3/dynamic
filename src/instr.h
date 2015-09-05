@@ -133,25 +133,19 @@ struct Instr : public Cell
 
     virtual ~Instr() {}
     virtual InstrType type() const = 0;
-    virtual string name() const = 0;
 
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
-    virtual void print(ostream& s) const {
-        s << name();
-    }
+    const char* name() const { return instrName(type()); }
+    virtual void print(ostream& s) const { s << name(); }
 };
 
 #define instr_type(it)                                                        \
     InstrType type() const override { return it; }
 
-#define instr_name(nameStr)                                                   \
-    virtual string name() const { return nameStr; }
-
 #define define_instr_members(it)                                              \
-    instr_type(Instr_##it);                                                   \
-    instr_name(#it)
+    instr_type(Instr_##it);
 
 #define define_simple_instr(it)                                               \
     struct Instr##it : public Instr                                           \
@@ -475,7 +469,6 @@ template <BinaryOp Op>
 struct InstrBinaryOpInt : public BinaryOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_BinaryOpInt_Add + Op));
-    instr_name("BinaryOpInt");
     InstrBinaryOpInt() : BinaryOpInstr(Op) {}
 };
 
@@ -488,7 +481,6 @@ template <BinaryOp Op>
 struct InstrBinaryOpFloat : public BinaryOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_BinaryOpFloat_Add + Op));
-    instr_name("BinaryOpFloat");
     InstrBinaryOpFloat() : BinaryOpInstr(Op) {}
 };
 
@@ -539,7 +531,6 @@ template <CompareOp Op>
 struct InstrCompareOpInt : public CompareOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_CompareOpInt_LT + Op));
-    instr_name("CompareOpInt");
     InstrCompareOpInt() : CompareOpInstr(Op) {}
 };
 
@@ -552,7 +543,6 @@ template <CompareOp Op>
 struct InstrCompareOpFloat : public CompareOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_CompareOpFloat_LT + Op));
-    instr_name("CompareOpFloat");
     InstrCompareOpFloat() : CompareOpInstr(Op) {}
 };
 
@@ -577,7 +567,6 @@ template <BinaryOp Op>
 struct InstrAugAssignUpdateInt : public BinaryOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_AugAssignUpdateInt_Add + Op));
-    instr_name("AugAssignUpdateInt");
     InstrAugAssignUpdateInt() : BinaryOpInstr(Op) {}
 };
 
@@ -591,7 +580,6 @@ template <BinaryOp Op>
 struct InstrAugAssignUpdateFloat : public BinaryOpInstr
 {
     instr_type(static_cast<InstrType>(Instr_AugAssignUpdateFloat_Add + Op));
-    instr_name("AugAssignUpdateFloat");
     InstrAugAssignUpdateFloat() : BinaryOpInstr(Op) {}
 };
 
@@ -671,7 +659,6 @@ struct InstrAssertStackDepth : public Instr
 };
 
 #undef instr_type
-#undef instr_name
 #undef define_instr_members
 #undef define_simple_instr
 #undef define_branch_instr
