@@ -144,8 +144,7 @@ struct Instr : public Cell
 };
 
 #define instr_type(it)                                                        \
-    static const InstrType Type = it;                                         \
-    virtual InstrType type() const { return Type; }
+    InstrType type() const override { return it; }
 
 #define instr_name(nameStr)                                                   \
     virtual string name() const { return nameStr; }
