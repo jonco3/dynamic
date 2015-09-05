@@ -669,21 +669,6 @@ bool ShouldInlineBinaryOp(BinaryOp op) {
     return op <= BinaryTrueDiv;
 }
 
-static Instr* InlineInstrForFloatBinaryOp(BinaryOp op)
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name)                                                    \
-      case Binary##name:                                                      \
-          return gc.create<InstrBinaryOpFloat<Binary##name>>();
-    for_each_binary_op_to_inline(create_instr)
-#undef create_instr
-      default:
-        crash("Unexpected binary op");
-        return nullptr;
-    }
-}
-
 INLINE_INSTRS void
 Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
@@ -700,7 +685,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     // If both arguments are doubles, inline the operation and restart.
     if (ShouldInlineBinaryOp(instr->op) && left.isDouble() && right.isDouble()) {
         assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, InlineInstrForFloatBinaryOp(instr->op));
+        replaceInstrAndRestart(instr, gc.create<InstrBinaryOpFloat>(instr->op));
         return;
     }
 
@@ -756,7 +741,7 @@ for_each_binary_op_to_inline(define_execute_binary_op_int)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat<Op>*> instr)
+Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr)
 {
     assert(ShouldInlineBinaryOp(instr->op));
 
@@ -773,7 +758,7 @@ Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat<Op>*> instr)
 
 #define define_execute_binary_op_float(name)                                   \
     void Interpreter::executeInstr_BinaryOpFloat_##name(                       \
-        Traced<InstrBinaryOpFloat_##name*> instr)                              \
+        Traced<InstrBinaryOpFloat*> instr)                                     \
     {                                                                          \
         executeBinaryOpFloat<Binary##name>(instr);                             \
     }

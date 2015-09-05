@@ -286,7 +286,7 @@ struct Interpreter
     void executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr);
 
     template <BinaryOp Op>
-    void executeBinaryOpFloat(Traced<InstrBinaryOpFloat<Op>*> instr);
+    void executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr);
 
     template <CompareOp Op>
     void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr);

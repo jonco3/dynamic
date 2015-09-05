@@ -70,10 +70,10 @@ using namespace std;
     instr(BinaryOpInt_Sub, InstrBinaryOpInt)                                 \
     instr(BinaryOpInt_Mul, InstrBinaryOpInt)                                 \
     instr(BinaryOpInt_TrueDiv, InstrBinaryOpInt)                             \
-    instr(BinaryOpFloat_Add, InstrBinaryOpFloat_Add)                         \
-    instr(BinaryOpFloat_Sub, InstrBinaryOpFloat_Sub)                         \
-    instr(BinaryOpFloat_Mul, InstrBinaryOpFloat_Mul)                         \
-    instr(BinaryOpFloat_TrueDiv, InstrBinaryOpFloat_TrueDiv)                 \
+    instr(BinaryOpFloat_Add, InstrBinaryOpFloat)                             \
+    instr(BinaryOpFloat_Sub, InstrBinaryOpFloat)                             \
+    instr(BinaryOpFloat_Mul, InstrBinaryOpFloat)                             \
+    instr(BinaryOpFloat_TrueDiv, InstrBinaryOpFloat)                         \
     instr(BinaryOpBuiltin, InstrBinaryOpBuiltin)                             \
     instr(CompareOp, InstrCompareOp)                                         \
     instr(CompareOpFallback, InstrCompareOpFallback)                         \
@@ -498,17 +498,11 @@ struct InstrBinaryOpInt : public SharedBinaryOpInstr
     {}
 };
 
-template <BinaryOp Op>
-struct InstrBinaryOpFloat : public BinaryOpInstr
+struct InstrBinaryOpFloat : public SharedBinaryOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_BinaryOpFloat_Add + Op));
-    InstrBinaryOpFloat() : BinaryOpInstr(Op) {}
+    InstrBinaryOpFloat(BinaryOp op)
+      : SharedBinaryOpInstr(Instr_BinaryOpFloat_Add + op, op) {}
 };
-
-#define typedef_binary_op_float(name)                                         \
-    typedef InstrBinaryOpFloat<Binary##name> InstrBinaryOpFloat_##name;
-    for_each_binary_op_to_inline(typedef_binary_op_float)
-#undef typedef_binary_op_float
 
 struct InstrBinaryOpBuiltin : public BinaryOpInstr
 {
