@@ -953,60 +953,31 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
     return true;
 }
 
-static Instr* InlineInstrForIntAugAssignOp(BinaryOp op)
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name)                                                    \
-      case Binary##name:                                                      \
-          return gc.create<InstrAugAssignUpdateInt<Binary##name>>();
-    for_each_binary_op_to_inline(create_instr)
-#undef create_instr
-      default:
-        crash("Unexpected binary op");
-        return nullptr;
-    }
-}
-
-static Instr* InlineInstrForFloatAugAssignOp(BinaryOp op)
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name)                                                    \
-      case Binary##name:                                                      \
-          return gc.create<InstrAugAssignUpdateFloat<Binary##name>>();
-    for_each_binary_op_to_inline(create_instr)
-#undef create_instr
-      default:
-        crash("Unexpected binary op");
-        return nullptr;
-    }
-}
-
 INLINE_INSTRS void
 Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
 {
+    const BinaryOp op = instr->op;
     Stack<Value> right(peekStack(0));
     Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
     if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
-        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, InlineInstrForIntAugAssignOp(instr->op));
+        assert(Integer::ObjectClass->hasAttr(Name::binMethod[op]));
+        replaceInstrAndRestart(instr, gc.create<InstrAugAssignUpdateInt>(op));
         return;
     }
 
     // If both arguments are doubles, inline the operation and restart.
-    if (ShouldInlineBinaryOp(instr->op) && left.isDouble() && right.isDouble()) {
-        assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, InlineInstrForFloatAugAssignOp(instr->op));
+    if (ShouldInlineBinaryOp(op) && left.isDouble() && right.isDouble()) {
+        assert(Float::ObjectClass->hasAttr(Name::binMethod[op]));
+        replaceInstrAndRestart(instr, gc.create<InstrAugAssignUpdateFloat>(op));
         return;
     }
 
     // Find the method to call and execute it.
     Stack<Value> method;
     bool isCallableDescriptor;
-    if (!executeAugAssignUpdate(instr->op, method, isCallableDescriptor))
+    if (!executeAugAssignUpdate(op, method, isCallableDescriptor))
         return;
 
     // If successful and both arguments are instances of builtin classes, cache
@@ -1017,12 +988,12 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
         Stack<Class*> leftClass(left.type());
         Stack<Class*> rightClass(right.type());
         replaceInstr(instr, gc.create<InstrAugAssignUpdateBuiltin>(
-                         instr->op, leftClass, rightClass, method));
+                         op, leftClass, rightClass, method));
         return;
     }
 
     // Otherwise replace with fallback instruction.
-    replaceInstr(instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+    replaceInstr(instr, gc.create<InstrAugAssignUpdateFallback>(op));
 }
 
 INLINE_INSTRS void
@@ -1035,7 +1006,7 @@ Interpreter::executeInstr_AugAssignUpdateFallback(Traced<InstrAugAssignUpdateFal
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> instr)
+Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr)
 {
     assert(ShouldInlineBinaryOp(instr->op));
 
@@ -1052,7 +1023,7 @@ Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> inst
 
 #define define_execute_aug_assign_op_int(name)                                \
     void Interpreter::executeInstr_AugAssignUpdateInt_##name(                 \
-        Traced<InstrAugAssignUpdateInt_##name*> instr)                        \
+        Traced<InstrAugAssignUpdateInt*> instr)                               \
     {                                                                         \
         executeAugAssignUpdateInt<Binary##name>(instr);                       \
     }
@@ -1061,7 +1032,7 @@ for_each_binary_op_to_inline(define_execute_aug_assign_op_int)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat<Op>*> instr)
+Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> instr)
 {
     assert(ShouldInlineBinaryOp(instr->op));
 
@@ -1078,7 +1049,7 @@ Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat<Op>*> 
 
 #define define_execute_aug_assign_op_float(name)                              \
     void Interpreter::executeInstr_AugAssignUpdateFloat_##name(               \
-        Traced<InstrAugAssignUpdateFloat_##name*> instr)                      \
+        Traced<InstrAugAssignUpdateFloat*> instr)                             \
     {                                                                         \
         executeAugAssignUpdateFloat<Binary##name>(instr);                     \
     }

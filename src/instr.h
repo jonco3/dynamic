@@ -93,14 +93,14 @@ struct Interpreter;
     instr(CompareOpFloat_NE, InstrCompareOpFloat)                            \
     instr(AugAssignUpdate, InstrAugAssignUpdate)                             \
     instr(AugAssignUpdateFallback, InstrAugAssignUpdateFallback)             \
-    instr(AugAssignUpdateInt_Add, InstrAugAssignUpdateInt_Add)               \
-    instr(AugAssignUpdateInt_Sub, InstrAugAssignUpdateInt_Sub)               \
-    instr(AugAssignUpdateInt_Mul, InstrAugAssignUpdateInt_Mul)               \
-    instr(AugAssignUpdateInt_TrueDiv, InstrAugAssignUpdateInt_TrueDiv)       \
-    instr(AugAssignUpdateFloat_Add, InstrAugAssignUpdateFloat_Add)           \
-    instr(AugAssignUpdateFloat_Sub, InstrAugAssignUpdateFloat_Sub)           \
-    instr(AugAssignUpdateFloat_Mul, InstrAugAssignUpdateFloat_Mul)           \
-    instr(AugAssignUpdateFloat_TrueDiv, InstrAugAssignUpdateFloat_TrueDiv)   \
+    instr(AugAssignUpdateInt_Add, InstrAugAssignUpdateInt)                   \
+    instr(AugAssignUpdateInt_Sub, InstrAugAssignUpdateInt)                   \
+    instr(AugAssignUpdateInt_Mul, InstrAugAssignUpdateInt)                   \
+    instr(AugAssignUpdateInt_TrueDiv, InstrAugAssignUpdateInt)               \
+    instr(AugAssignUpdateFloat_Add, InstrAugAssignUpdateFloat)               \
+    instr(AugAssignUpdateFloat_Sub, InstrAugAssignUpdateFloat)               \
+    instr(AugAssignUpdateFloat_Mul, InstrAugAssignUpdateFloat)               \
+    instr(AugAssignUpdateFloat_TrueDiv, InstrAugAssignUpdateFloat)           \
     instr(AugAssignUpdateBuiltin, InstrAugAssignUpdateBuiltin)               \
     instr(StartGenerator, InstrStartGenerator)                               \
     instr(ResumeGenerator, InstrResumeGenerator)                             \
@@ -580,31 +580,17 @@ struct InstrAugAssignUpdateFallback : public BinaryOpInstr
     InstrAugAssignUpdateFallback(BinaryOp op) : BinaryOpInstr(op) {}
 };
 
-template <BinaryOp Op>
-struct InstrAugAssignUpdateInt : public BinaryOpInstr
+struct InstrAugAssignUpdateInt : public SharedBinaryOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_AugAssignUpdateInt_Add + Op));
-    InstrAugAssignUpdateInt() : BinaryOpInstr(Op) {}
+    InstrAugAssignUpdateInt(BinaryOp op)
+      : SharedBinaryOpInstr(Instr_AugAssignUpdateInt_Add + op, op) {}
 };
 
-#define typedef_binary_op_int(name)                                           \
-    typedef InstrAugAssignUpdateInt<Binary##name>                             \
-        InstrAugAssignUpdateInt_##name;
-    for_each_binary_op_to_inline(typedef_binary_op_int)
-#undef typedef_binary_op_int
-
-template <BinaryOp Op>
-struct InstrAugAssignUpdateFloat : public BinaryOpInstr
+struct InstrAugAssignUpdateFloat : public SharedBinaryOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_AugAssignUpdateFloat_Add + Op));
-    InstrAugAssignUpdateFloat() : BinaryOpInstr(Op) {}
+    InstrAugAssignUpdateFloat(BinaryOp op)
+      : SharedBinaryOpInstr(Instr_AugAssignUpdateFloat_Add + op, op) {}
 };
-
-#define typedef_binary_op_float(name)                                         \
-    typedef InstrAugAssignUpdateFloat<Binary##name>                           \
-        InstrAugAssignUpdateFloat_##name;
-    for_each_binary_op_to_inline(typedef_binary_op_float)
-#undef typedef_binary_op_float
 
 struct InstrAugAssignUpdateBuiltin : public BinaryOpInstr
 {
