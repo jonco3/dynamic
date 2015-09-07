@@ -1,5 +1,6 @@
 #include "callable.h"
 
+#include "block.h"
 #include "exception.h"
 #include "frame.h"
 #include "object.h"
@@ -57,6 +58,11 @@ FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
 {
     assert(!takesRest || argCount() > 0);
     assert(argCount() == block->argCount());
+}
+
+void FunctionInfo::traceChildren(Tracer& t)
+{
+    gc.trace(t, &block_);
 }
 
 Function::Function(Name name,

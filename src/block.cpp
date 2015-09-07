@@ -52,6 +52,7 @@ void Block::print(ostream& s) const {
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
         if (i != instrs_.begin())
             s << ", ";
+        s << instrName(i->type);
         i->data->print(s);
     }
 }

@@ -5,6 +5,7 @@
 #include "callable.h"
 
 struct ExceptionHandler;
+struct Interpreter;
 
 struct GeneratorIter : public Object
 {

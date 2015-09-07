@@ -656,12 +656,12 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
 
 void BinaryOpInstr::print(ostream& s) const
 {
-    s << name() << " " << BinaryOpNames[op];
+    s << " " << BinaryOpNames[op];
 }
 
 void SharedBinaryOpInstr::print(ostream& s) const
 {
-    s << name() << " " << BinaryOpNames[op];
+    s << " " << BinaryOpNames[op];
 }
 
 bool ShouldInlineBinaryOp(BinaryOp op) {
@@ -800,7 +800,7 @@ Interpreter::executeInstr_BinaryOpBuiltin(Traced<InstrBinaryOpBuiltin*> instr)
 
 void CompareOpInstr::print(ostream& s) const
 {
-    s << name() << " " << CompareOpNames[op];
+    s << " " << CompareOpNames[op];
 }
 
 static Instr* InlineInstrForIntCompareOp(CompareOp op)

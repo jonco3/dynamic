@@ -12,6 +12,8 @@
 
 using namespace std;
 
+struct Interpreter;
+
 #define for_each_binary_op_to_inline(op)                                     \
     op(Add)                                                                  \
     op(Sub)                                                                  \
@@ -139,8 +141,7 @@ struct Instr : public Cell
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
-    const char* name() const { return instrName(type()); }
-    virtual void print(ostream& s) const { s << name(); }
+    virtual void print(ostream& s) const {}
 };
 
 // Base class for instruction data that can be used by more than one instruction
@@ -171,7 +172,7 @@ struct IdentInstrBase : public Instr
     IdentInstrBase(Name ident) : ident(ident) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << ident;
+        s << " " << ident;
     }
 
     // todo: move to Interpreter
@@ -193,7 +194,7 @@ struct IdentAndSlotInstrBase : public Instr
       : ident(ident), slot(slot) {}
 
     void print(ostream& s) const override {
-        s << name() << " " << ident << " " << slot;
+        s << " " << ident << " " << slot;
     }
 
     // todo: move to Interpreter
@@ -218,7 +219,7 @@ struct FrameAndIdentInstrBase : public Instr
       : frameIndex(frameIndex), ident(ident) {}
 
     void print(ostream& s) const override {
-        s << name() << " " << frameIndex << " " << ident;
+        s << " " << frameIndex << " " << ident;
     }
 
     const unsigned frameIndex;
@@ -270,7 +271,7 @@ struct InstrConst : public Instr
     explicit InstrConst(Traced<Value> v) : value_(v) {}
 
     void print(ostream& s) const override {
-        s << name() << " " << value_;
+        s << " " << value_;
     }
 
     Value value() { return value_; }
@@ -322,7 +323,7 @@ struct InstrCall : public Instr
     InstrCall(unsigned count) : count(count) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << count;
+        s << " " << count;
     }
 
     const unsigned count;
@@ -351,7 +352,7 @@ struct Branch : public Instr
     }
 
     virtual void print(ostream& s) const {
-        s << name() << " " << offset_;
+        s << " " << offset_;
     }
 
     int offset_;
@@ -401,9 +402,9 @@ struct InstrLambda : public Instr
     }
 
     virtual void print(ostream& s) const {
-        s << name();
-        for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i)
+        for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i) {
             s << " " << *i;
+        }
     }
 
   private:
@@ -417,7 +418,7 @@ struct InstrDup : public Instr
     InstrDup(unsigned index = 0) : index(index) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << index;
+        s << " " << index;
     }
 
     const unsigned index;
@@ -653,7 +654,7 @@ struct InstrLoopControlJump : public Instr
     }
 
     virtual void print(ostream& s) const {
-        s << name() << " " << finallyCount_ << " " << target_;
+        s << " " << finallyCount_ << " " << target_;
     }
 
   private:
@@ -667,7 +668,7 @@ struct InstrAssertStackDepth : public Instr
     InstrAssertStackDepth(unsigned expected) : expected(expected) {}
 
     virtual void print(ostream& s) const {
-        s << name() << " " << expected;
+        s << " " << expected;
     }
 
     const unsigned expected;

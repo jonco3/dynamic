@@ -2,6 +2,7 @@
 #define __BLOCK_H__
 
 #include "gcdefs.h"
+#include "instr.h"
 #include "token.h"
 
 #include <cassert>
@@ -11,7 +12,6 @@
 using namespace std;
 
 struct Input;
-struct Instr;
 struct Interpreter;
 struct Layout;
 struct Object;
@@ -29,7 +29,7 @@ using InstrFunc = bool (*)(Traced<T*> self, Interpreter& interp);
 
 struct InstrThunk
 {
-    unsigned type;
+    InstrType type;
     Instr* data;
 };
 

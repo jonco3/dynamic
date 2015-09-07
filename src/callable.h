@@ -2,13 +2,13 @@
 #define __CALLABLE_H__
 
 #include "object.h"
-#include "block.h"
 
 #include <memory>
 #include <vector>
 
 using namespace std;
 
+struct Block;
 struct Env;
 
 struct Callable : public Object
@@ -46,9 +46,7 @@ struct FunctionInfo : public Cell
                  unsigned defaultCount = 0, bool takesRest = false,
                  bool isGenerator = false);
 
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &block_);
-    }
+    void traceChildren(Tracer& t) override;
 
     size_t argCount() const { return params_.size(); }
 
