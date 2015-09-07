@@ -79,18 +79,18 @@ struct Interpreter;
     instr(BinaryOpBuiltin, InstrBinaryOpBuiltin)                             \
     instr(CompareOp, InstrCompareOp)                                         \
     instr(CompareOpFallback, InstrCompareOpFallback)                         \
-    instr(CompareOpInt_LT, InstrCompareOpInt_LT)                             \
-    instr(CompareOpInt_LE, InstrCompareOpInt_LE)                             \
-    instr(CompareOpInt_GT, InstrCompareOpInt_GT)                             \
-    instr(CompareOpInt_GE, InstrCompareOpInt_GE)                             \
-    instr(CompareOpInt_EQ, InstrCompareOpInt_EQ)                             \
-    instr(CompareOpInt_NE, InstrCompareOpInt_NE)                             \
-    instr(CompareOpFloat_LT, InstrCompareOpFloat_LT)                         \
-    instr(CompareOpFloat_LE, InstrCompareOpFloat_LE)                         \
-    instr(CompareOpFloat_GT, InstrCompareOpFloat_GT)                         \
-    instr(CompareOpFloat_GE, InstrCompareOpFloat_GE)                         \
-    instr(CompareOpFloat_EQ, InstrCompareOpFloat_EQ)                         \
-    instr(CompareOpFloat_NE, InstrCompareOpFloat_NE)                         \
+    instr(CompareOpInt_LT, InstrCompareOpInt)                                \
+    instr(CompareOpInt_LE, InstrCompareOpInt)                                \
+    instr(CompareOpInt_GT, InstrCompareOpInt)                                \
+    instr(CompareOpInt_GE, InstrCompareOpInt)                                \
+    instr(CompareOpInt_EQ, InstrCompareOpInt)                                \
+    instr(CompareOpInt_NE, InstrCompareOpInt)                                \
+    instr(CompareOpFloat_LT, InstrCompareOpFloat)                            \
+    instr(CompareOpFloat_LE, InstrCompareOpFloat)                            \
+    instr(CompareOpFloat_GT, InstrCompareOpFloat)                            \
+    instr(CompareOpFloat_GE, InstrCompareOpFloat)                            \
+    instr(CompareOpFloat_EQ, InstrCompareOpFloat)                            \
+    instr(CompareOpFloat_NE, InstrCompareOpFloat)                            \
     instr(AugAssignUpdate, InstrAugAssignUpdate)                             \
     instr(AugAssignUpdateFallback, InstrAugAssignUpdateFallback)             \
     instr(AugAssignUpdateInt_Add, InstrAugAssignUpdateInt_Add)               \
@@ -531,6 +531,19 @@ struct CompareOpInstr : public Instr
     const CompareOp op;
 };
 
+struct SharedCompareOpInstr : public SharedInstrBase
+{
+    SharedCompareOpInstr(unsigned type, CompareOp op)
+      : SharedInstrBase(InstrType(type)), op(op)
+    {
+        assert(type < InstrTypeCount);
+    }
+
+    virtual void print(ostream& s) const;
+
+    const CompareOp op;
+};
+
 struct InstrCompareOp : public CompareOpInstr
 {
     define_instr_members(CompareOp);
@@ -543,29 +556,17 @@ struct InstrCompareOpFallback : public CompareOpInstr
     InstrCompareOpFallback(CompareOp op) : CompareOpInstr(op) {}
 };
 
-template <CompareOp Op>
-struct InstrCompareOpInt : public CompareOpInstr
+struct InstrCompareOpInt : public SharedCompareOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_CompareOpInt_LT + Op));
-    InstrCompareOpInt() : CompareOpInstr(Op) {}
+    InstrCompareOpInt(CompareOp op)
+      : SharedCompareOpInstr(Instr_CompareOpInt_LT + op, op) {}
 };
 
-#define typedef_compare_op_int(name, token, method, rmethod)                  \
-    typedef InstrCompareOpInt<Compare##name> InstrCompareOpInt_##name;
-    for_each_compare_op(typedef_compare_op_int)
-#undef typedef_compare_op_int
-
-template <CompareOp Op>
-struct InstrCompareOpFloat : public CompareOpInstr
+struct InstrCompareOpFloat : public SharedCompareOpInstr
 {
-    instr_type(static_cast<InstrType>(Instr_CompareOpFloat_LT + Op));
-    InstrCompareOpFloat() : CompareOpInstr(Op) {}
+    InstrCompareOpFloat(CompareOp op)
+      : SharedCompareOpInstr(Instr_CompareOpFloat_LT + op, op) {}
 };
-
-#define typedef_compare_op_float(name, token, method, rmethod)                \
-    typedef InstrCompareOpFloat<Compare##name> InstrCompareOpFloat_##name;
-    for_each_compare_op(typedef_compare_op_float)
-#undef typedef_compare_op_float
 
 struct InstrAugAssignUpdate : public BinaryOpInstr
 {

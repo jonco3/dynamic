@@ -803,34 +803,9 @@ void CompareOpInstr::print(ostream& s) const
     s << " " << CompareOpNames[op];
 }
 
-static Instr* InlineInstrForIntCompareOp(CompareOp op)
+void SharedCompareOpInstr::print(ostream& s) const
 {
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name, token, method, rmethod)                            \
-      case Compare##name:                                                     \
-          return gc.create<InstrCompareOpInt<Compare##name>>();
-    for_each_compare_op(create_instr)
-#undef create_instr
-      default:
-        crash("unexpected compare op");
-        return nullptr;
-    }
-}
-
-static Instr* InlineInstrForFloatCompareOp(CompareOp op)
-{
-    // todo: could use static table
-    switch (op) {
-#define create_instr(name, token, method, rmethod)                            \
-      case Compare##name:                                                     \
-          return gc.create<InstrCompareOpFloat<Compare##name>>();
-    for_each_compare_op(create_instr)
-#undef create_instr
-      default:
-        crash("unexpected compare op");
-        return nullptr;
-    }
+    s << " " << CompareOpNames[op];
 }
 
 INLINE_INSTRS void
@@ -841,10 +816,10 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
     Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        replacement = InlineInstrForIntCompareOp(instr->op);
+        replacement = gc.create<InstrCompareOpInt>(instr->op);
     } else if (left.isDouble() && right.isDouble()) {
         assert(Float::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        replacement = InlineInstrForFloatCompareOp(instr->op);
+        replacement = gc.create<InstrCompareOpFloat>(instr->op);
     } else {
         replacement = gc.create<InstrCompareOpFallback>(instr->op);
     }
@@ -901,7 +876,7 @@ Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> inst
 
 template <CompareOp Op>
 inline void
-Interpreter::executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr)
+Interpreter::executeCompareOpInt(Traced<InstrCompareOpInt*> instr)
 {
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
@@ -916,16 +891,16 @@ Interpreter::executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr)
 
 #define define_execute_compare_op_int(name, token, method, rmethod)            \
 void Interpreter::executeInstr_CompareOpInt_##name(                            \
-    Traced<InstrCompareOpInt_##name*> instr)                                    \
+    Traced<InstrCompareOpInt*> instr)                                          \
 {                                                                              \
-    executeCompareOpInt<Compare##name>(instr);                                  \
+    executeCompareOpInt<Compare##name>(instr);                                 \
 }
 for_each_compare_op(define_execute_compare_op_int)
 #undef define_execute_compare_op_int
 
 template <CompareOp Op>
 inline void
-Interpreter::executeCompareOpFloat(Traced<InstrCompareOpFloat<Op>*> instr)
+Interpreter::executeCompareOpFloat(Traced<InstrCompareOpFloat*> instr)
 {
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
         replaceInstrAndRestart(
@@ -940,7 +915,7 @@ Interpreter::executeCompareOpFloat(Traced<InstrCompareOpFloat<Op>*> instr)
 
 #define define_execute_compare_op_float(name, token, method, rmethod)          \
 void Interpreter::executeInstr_CompareOpFloat_##name(                          \
-    Traced<InstrCompareOpFloat_##name*> instr)                                 \
+    Traced<InstrCompareOpFloat*> instr)                                        \
 {                                                                              \
     executeCompareOpFloat<Compare##name>(instr);                               \
 }

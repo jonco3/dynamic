@@ -289,10 +289,10 @@ struct Interpreter
     void executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpInt(Traced<InstrCompareOpInt<Op>*> instr);
+    void executeCompareOpInt(Traced<InstrCompareOpInt*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpFloat(Traced<InstrCompareOpFloat<Op>*> instr);
+    void executeCompareOpFloat(Traced<InstrCompareOpFloat*> instr);
 
     template <BinaryOp Op>
     void executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt<Op>*> instr);
