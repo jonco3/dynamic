@@ -30,11 +30,13 @@ Frame::Frame()
     exceptionHandlers_(nullptr)
 {}
 
-Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block, unsigned stackPos)
+Frame::Frame(InstrThunk* returnPoint, Traced<Block*> block, unsigned stackPos,
+             unsigned extraPopCount)
   : block_(block),
     env_(nullptr),
     returnPoint_(returnPoint),
     stackPos_(stackPos),
+    extraPopCount_(extraPopCount),
     exceptionHandlers_(nullptr)
 {}
 

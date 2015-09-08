@@ -68,7 +68,7 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 
     assert(stackPos() == 0);
     assert(frames.empty());
-    pushFrame(block, 0);
+    pushFrame(block, 0, 0);
 #ifdef DEBUG
     unsigned initialPos = stackPos();
 #endif
@@ -76,38 +76,6 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
     assert(stackPos() == initialPos);
     stack.resize(0);
     return ok;
-}
-
-
-void Interpreter::removeStackEntries(unsigned offsetFromTop, unsigned count)
-{
-#ifdef LOG_EXECUTION
-    if (logExecution) {
-        logStart(1);
-        cout << "removeStackEntries " << offsetFromTop << " " << count << endl;
-    }
-#endif
-
-    assert(stackPos() >= count + offsetFromTop);
-    size_t initialPos = stackPos();
-
-    // todo: could memmove here
-    unsigned end = initialPos - count;
-    unsigned begin = end - offsetFromTop;
-    for (unsigned i = begin; i != end; i++) {
-        assert(i + count < stackPos());
-#ifdef LOG_EXECUTION
-        if (logExecution) {
-            logStart(2);
-            Value value = stack[i + count];
-            cout << "@" << dec << i << " := " << value << endl;
-        }
-#endif
-        stack[i] = stack[i + count];
-    }
-    for (unsigned i = end; i != stackPos_; i++)
-        stack[i] = Value(None);
-    stackPos_ -= count;
 }
 
 void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
@@ -188,10 +156,11 @@ void Interpreter::logInstr(Instr* instr)
 }
 #endif
 
-void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos)
+void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
+                            unsigned extraPopCount)
 {
     assert(stackPos() >= stackStartPos);
-    frames.emplace_back(instrp, block, stackStartPos);
+    frames.emplace_back(instrp, block, stackStartPos, extraPopCount);
     instrp = block->startInstr();
 
     unsigned newStackSize = stackStartPos + block->maxStackDepth();
@@ -225,8 +194,9 @@ void Interpreter::popFrame()
 #endif
 
     // Update stack pos but don't resize backing vector on frame pop.
-    assert(frame->stackPos() <= stackPos());
-    stackPos_ = frame->stackPos();  // todo: log removed values
+    unsigned pos = frame->stackPos() - frame->extraPopCount();
+    assert(pos <= stackPos());
+    stackPos_ = pos;  // todo: log removed values
 
     instrp = frame->returnPoint();
     frames.pop_back();
@@ -296,7 +266,7 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
                                   vector<Value>& savedStack,
                                   MutableTraced<ExceptionHandler*> savedHandlers)
 {
-    pushFrame(block, stackPos());
+    pushFrame(block, stackPos(), 0);
     setFrameEnv(env);
     getFrame()->setHandlers(savedHandlers);
     instrp += ipOffset;
@@ -358,7 +328,7 @@ void Interpreter::raiseException(Traced<Value> exception)
 void Interpreter::raiseException()
 {
     if (!handleException())
-        pushFrame(AbortTrampoline, stackPos() - 1);
+        pushFrame(AbortTrampoline, stackPos() - 1, 0);
 }
 
 bool Interpreter::handleException()
@@ -557,7 +527,7 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
     // interpreter loop knows to exit rather than resume the the previous frame.
     AutoSetAndRestoreValue<InstrThunk*> saveInstrp(instrp, nullptr);
 
-    CallStatus status = setupCall(targetValue, argCount, resultOut);
+    CallStatus status = setupCall(targetValue, argCount, 0, resultOut);
     if (status != CallStarted) {
         popStack(argCount);
         return status == CallFinished;
@@ -571,12 +541,14 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
     return ok;
 }
 
-void Interpreter::startCall(Traced<Value> targetValue, unsigned argCount)
+void Interpreter::startCall(Traced<Value> targetValue,
+                            unsigned argCount, unsigned extraPopCount)
 {
     Stack<Value> result;
-    CallStatus status = setupCall(targetValue, argCount, result);
+    CallStatus status = setupCall(targetValue, argCount, extraPopCount, result);
     if (status != CallStarted) {
         popStack(argCount);
+        popStack(extraPopCount);
         pushStack(result);
         if (status == CallError)
             raiseException();
@@ -634,13 +606,14 @@ unsigned Interpreter::mungeArguments(Traced<Function*> function,
 
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                unsigned argCount,
+                                               unsigned extraPopCount,
                                                MutableTraced<Value> resultOut)
 {
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
         cout << "setupCall @" << dec << stackPos() << " " << targetValue.get();
-        cout<< " " << argCount << endl;
+        cout << " " << argCount << " " << extraPopCount << endl;
     }
 #endif
 
@@ -660,7 +633,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Block*> block(function->block());
         argCount = mungeArguments(function, argCount);
         assert(argCount == function->argCount());
-        pushFrame(block, stackPos() - argCount);
+        pushFrame(block, stackPos() - argCount, extraPopCount);
         Stack<Env*> parentEnv(function->env());
         pushStack(parentEnv);
         return CallStarted;
@@ -694,7 +667,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Method*> method(target->as<Method>());
         Stack<Value> callable(method->callable());
         insertStackEntry(argCount, method->object());
-        return setupCall(callable, argCount + 1, resultOut);
+        return setupCall(callable, argCount + 1, extraPopCount, resultOut);
     } else {
         Stack<Value> callHook;
         if (!getAttr(targetValue, Name::__call__, callHook)) {
@@ -702,7 +675,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 "object is not callable:" + repr(target), resultOut);
         }
 
-        return setupCall(callHook, argCount, resultOut);
+        return setupCall(callHook, argCount, extraPopCount, resultOut);
     }
 }
 

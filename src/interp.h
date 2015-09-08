@@ -130,9 +130,6 @@ struct Interpreter
         logStackSwap();
     }
 
-    // Remove count stack entries located offsetFromTop entries from the top.
-    void removeStackEntries(unsigned offsetFromTop, unsigned count);
-
     void insertStackEntry(unsigned offsetFromTop, Value value);
 
     Value getStackLocal(unsigned offset) {
@@ -171,7 +168,8 @@ struct Interpreter
     bool call(Traced<Value> callable, unsigned argCount,
               MutableTraced<Value> resultOut);
 
-    void startCall(Traced<Value> callable, unsigned argCount);
+    void startCall(Traced<Value> callable,
+                   unsigned argCount, unsigned extraPopCount = 0);
 
     void popFrame();
 
@@ -247,7 +245,8 @@ struct Interpreter
         return frames.size() - 1;
     }
 
-    void pushFrame(Traced<Block*> block, unsigned stackStartPos);
+    void pushFrame(Traced<Block*> block, unsigned stackStartPos,
+                   unsigned extraPopCount);
     unsigned currentOffset();
     TokenPos currentPos();
 
@@ -272,7 +271,7 @@ struct Interpreter
     bool call(Traced<Value> callable, TracedVector<Value> args,
               MutableTraced<Value> resultOut);
     CallStatus setupCall(Traced<Value> target,
-                         unsigned argCount,
+                         unsigned argCount, unsigned extraPopCount,
                          MutableTraced<Value> resultOut);
     CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
 

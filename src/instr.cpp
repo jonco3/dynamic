@@ -185,8 +185,7 @@ INLINE_INSTRS void
 Interpreter::executeInstr_Call(Traced<InstrCall*> instr)
 {
     Stack<Value> target(peekStack(instr->count));
-    removeStackEntries(instr->count, 1);
-    startCall(target, instr->count);
+    startCall(target, instr->count, 1);
 }
 
 /*
@@ -261,8 +260,7 @@ Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
     bool extraArg = peekStack(instr->count + 1).as<Boolean>()->value();
     Stack<Value> target(peekStack(instr->count + 2));
     unsigned argCount = instr->count + (extraArg ? 1 : 0);
-    removeStackEntries(argCount, extraArg ? 2 : 3);
-    return startCall(target, argCount);
+    return startCall(target, argCount, extraArg ? 2 : 3);
 }
 
 INLINE_INSTRS void

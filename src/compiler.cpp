@@ -531,12 +531,14 @@ struct ByteCompiler : public SyntaxVisitor
             emit<InstrGetMethod>(Name::__setitem__);
             incStackDepth(3);
             compile(s.right);
+            incStackDepth(1);
             // todo: there may be a better way than this stack manipulation
             emit<InstrDup>(4);
+            incStackDepth(1);
             emit<InstrCallMethod>(2);
             emit<InstrSwap>();
             emit<InstrPop>();
-            decStackDepth(4);
+            decStackDepth(6);
             break;
           }
 
