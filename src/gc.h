@@ -74,13 +74,15 @@ struct GC
     void maybeCollect();
 
     vector<Cell*>::iterator sweepCells(vector<Cell*>& cells);
+    void freeOldFreeCells(vector<Cell*>& cells);
     void destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
-                      size_t size);
+                      vector<Cell*>& freeCells, size_t size);
 
     int8_t currentEpoch;
     int8_t prevEpoch;
     size_t cellCount;
     vector<vector<Cell*>> cells;
+    vector<vector<Cell*>> freeCells;
     RootBase* rootList;
     StackBase* stackList;
     bool isSweeping;

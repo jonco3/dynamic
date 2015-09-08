@@ -120,7 +120,6 @@ void Cell::destroyCell(Cell* cell, size_t size)
 #ifdef DEBUG
     memset(reinterpret_cast<uint8_t*>(cell), 0xff, size);
 #endif
-    free(cell);
 }
 
 struct Marker : public Tracer
@@ -157,6 +156,7 @@ GC::GC()
     prevEpoch(2),
     cellCount(0),
     cells(sizeClassCount),
+    freeCells(sizeClassCount),
     isSweeping(false),
 #ifdef DEBUG
     isAllocating(false),
@@ -169,13 +169,23 @@ Cell* GC::allocCell(SizeClass sc)
 {
     assert(sc < sizeClassCount);
     assert(sc < cells.size());
+    assert(sc < freeCells.size());
     size_t allocSize = sizeFromClass(sc);
     assert(allocSize >= sizeof(Cell));
+
+    Cell* cell;
+    if (!freeCells[sc].empty()) {
+        cell = freeCells[sc].back();
+        freeCells[sc].pop_back();
+    } else {
+        cell = static_cast<Cell*>(malloc(allocSize));
+    }
 
     // Pre-initialize memory to zero so that if we trigger GC by allocating in a
     // constructor then any pointers in the partially constructed object will be
     // in a valid state.
-    Cell* cell = static_cast<Cell*>(calloc(1, allocSize));
+    memset(static_cast<void*>(cell), 0, allocSize);
+
     cells[sc].push_back(cell);
     cellCount++;
     return cell;
@@ -197,12 +207,22 @@ vector<Cell*>::iterator GC::sweepCells(vector<Cell*>& cells)
     return dying;
 }
 
-void GC::destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
-                      size_t size)
+void GC::freeOldFreeCells(vector<Cell*>& cells)
 {
-    for_each(dying, cells.end(), [=]  (Cell* cell) {
-        Cell::destroyCell(cell, size);
+    for_each(cells.begin(), cells.end(), []  (Cell* cell) {
+        free(cell);
     });
+    cells.clear();
+}
+
+void GC::destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
+                      vector<Cell*>& freeCells, size_t size)
+{
+    for (auto i = dying; i != cells.end(); i++) {
+        Cell* cell = *i;
+        Cell::destroyCell(cell, size);
+        freeCells.push_back(cell);
+    }
     size_t count = cells.end() - dying;
     assert(gc.cellCount >= count);
     gc.cellCount -= count;
@@ -241,7 +261,9 @@ void GC::collect()
     for (SizeClass sc = 0; sc < sizeClassCount; sc++)
         dying[sc] = sweepCells(cells[sc]);
     for (SizeClass sc = 0; sc < sizeClassCount; sc++)
-        destroyCells(cells[sc], dying[sc], sizeFromClass(sc));
+        freeOldFreeCells(freeCells[sc]);
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++)
+        destroyCells(cells[sc], dying[sc], freeCells[sc], sizeFromClass(sc));
     isSweeping = false;
 
     // Schedule next collection
