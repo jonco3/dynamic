@@ -182,7 +182,8 @@ void Interpreter::logInstr(Instr* instr)
 {
     if (logExecution) {
         logStart();
-        cout << *instr << " at line " << dec << currentPos().line << endl;
+        cout << instrName(instr->type()) << *instr;
+        cout << " at line " << dec << currentPos().line << endl;
     }
 }
 #endif
