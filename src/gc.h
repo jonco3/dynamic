@@ -68,7 +68,7 @@ struct GC
     static inline SizeClass sizeClass(size_t size);
     static inline size_t sizeFromClass(SizeClass sc);
 
-    void registerCell(Cell* cell, SizeClass sc);
+    Cell* allocCell(SizeClass sc);
 
     bool isDying(const Cell* cell);
     void maybeCollect();
@@ -802,13 +802,7 @@ T* GC::create(Args&&... args) {
     maybeCollect();
 
     SizeClass sc = sizeClass(sizeof(T));
-    size_t allocSize = sizeFromClass(sc);
-    assert(allocSize >= sizeof(T));
-
-    // Pre-initialize memory to zero so that if we trigger GC by allocating in a
-    // constructor then any pointers in the partially constructed object will be
-    // in a valid state.
-    void* data = calloc(1, allocSize);
+    void* data = allocCell(sc);
 
     AllocRoot<T*> t(static_cast<T*>(data));
     assert(static_cast<Cell*>(t.get()) == data);
@@ -818,7 +812,6 @@ T* GC::create(Args&&... args) {
 #endif
     new (t.get()) T(std::forward<Args>(args)...);
     assert(!isAllocating);
-    registerCell(t, sc);
     return t;
 }
 

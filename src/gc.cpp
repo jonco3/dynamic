@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 
+GC gc;
+
 #ifdef DEBUG
 
 bool logGC = false;
@@ -35,31 +37,6 @@ static inline void log(const char* s, void *p, void *p2) {}
 static inline void log(const char* s, size_t i, int j) {}
 
 #endif
-
-GC gc;
-
-GC::GC()
-  : minCollectAt(100),
-    scheduleFactorPercent(200),
-    currentEpoch(1),
-    prevEpoch(2),
-    cellCount(0),
-    cells(sizeClassCount),
-    isSweeping(false),
-#ifdef DEBUG
-    isAllocating(false),
-    unsafeCount(0),
-#endif
-    collectAt(minCollectAt)
-{}
-
-void GC::registerCell(Cell* cell, SizeClass sc)
-{
-    assert(!cells.empty());
-    assert(sc < sizeClassCount);
-    cells[sc].push_back(cell);
-    cellCount++;
-}
 
 Cell::Cell()
 {
@@ -168,9 +145,41 @@ struct Marker : public Tracer
     vector<Cell*> stack_;
 };
 
+GC::GC()
+  :
 #ifdef DEBUG
-
+    minCollectAt(10000),
+#else
+    minCollectAt(100),
 #endif
+    scheduleFactorPercent(200),
+    currentEpoch(1),
+    prevEpoch(2),
+    cellCount(0),
+    cells(sizeClassCount),
+    isSweeping(false),
+#ifdef DEBUG
+    isAllocating(false),
+    unsafeCount(0),
+#endif
+    collectAt(minCollectAt)
+{}
+
+Cell* GC::allocCell(SizeClass sc)
+{
+    assert(sc < sizeClassCount);
+    assert(sc < cells.size());
+    size_t allocSize = sizeFromClass(sc);
+    assert(allocSize >= sizeof(Cell));
+
+    // Pre-initialize memory to zero so that if we trigger GC by allocating in a
+    // constructor then any pointers in the partially constructed object will be
+    // in a valid state.
+    Cell* cell = static_cast<Cell*>(calloc(1, allocSize));
+    cells[sc].push_back(cell);
+    cellCount++;
+    return cell;
+}
 
 void GC::maybeCollect()
 {
