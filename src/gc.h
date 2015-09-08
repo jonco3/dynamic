@@ -796,6 +796,13 @@ size_t GC::sizeFromClass(SizeClass sc)
     return 1u << (sc - smallSizeClassCount + sizeLargeThresholdShift);
 }
 
+inline void GC::maybeCollect()
+{
+    assert(unsafeCount == 0);
+    if (cellCount >= collectAt)
+        collect();
+}
+
 template <typename T, typename... Args>
 T* GC::create(Args&&... args) {
     static_assert(is_base_of<Cell, T>::value,

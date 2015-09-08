@@ -191,13 +191,6 @@ Cell* GC::allocCell(SizeClass sc)
     return cell;
 }
 
-void GC::maybeCollect()
-{
-    assert(unsafeCount == 0);
-    if (cellCount >= collectAt)
-        collect();
-}
-
 vector<Cell*>::iterator GC::sweepCells(vector<Cell*>& cells)
 {
     auto dying = partition(cells.begin(), cells.end(), [] (Cell* cell) {
