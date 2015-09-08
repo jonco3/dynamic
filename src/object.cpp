@@ -43,41 +43,30 @@ Object* Object::create()
 }
 
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
-  : layout_(layout)
+  : layout_(layout), slots_(layout_->slotCount(), UninitializedSlot.get())
 {
     if (cls != Class::ObjectClass)
         assert(base == cls);
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
     if (Class::ObjectClass)
-        initAttrs(cls);
+        class_ = cls;
 }
 
 Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
-  : layout_(layout)
+  : layout_(layout), slots_(layout_->slotCount(), UninitializedSlot.get())
 {
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
     if (Class::ObjectClass)
-        initAttrs(cls);
+        class_ = cls;
 }
 
 void Object::init(Traced<Class*> cls)
 {
     assert(cls);
-    initAttrs(cls);
-}
-
-void Object::initAttrs(Traced<Class*> cls)
-{
-    assert(layout_);
+    assert(!class_);
     class_ = cls;
-    if (layout_ == Layout::Empty)
-        return;
-
-    slots_.resize(layout_->slotCount());
-    for (unsigned i = 0; i < layout_->slotCount(); ++i)
-        slots_[i] = UninitializedSlot;
 }
 
 void Object::extend(Traced<Layout*> layout)
