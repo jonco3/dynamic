@@ -536,6 +536,66 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> in
     pushStack(cls);
 }
 
+/* static */ INLINE_INSTRS void
+Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
+{
+    Stack<Value> seq(popStack());
+    Stack<Value> lenFunc;
+    if (!seq.maybeGetAttr(Name::__len__, lenFunc)) {
+        raiseTypeError("Argument is not iterable");
+        return;
+    }
+
+    Stack<Value> getitemFunc;
+    if (!seq.maybeGetAttr(Name::__getitem__, getitemFunc)) {
+        raiseTypeError("Argument is not iterable");
+        return;
+    }
+
+    Stack<Value> result;
+    pushStack(seq);
+    if (!call(lenFunc, 1, result)) {
+        pushStack(result);
+        raiseException();
+        return;
+    }
+
+    if (!result.isInt()) {
+        raiseTypeError("__len__ didn't return an integer");
+        return;
+    }
+
+    int32_t len = result.toInt();
+    if (len < 0) {
+        pushStack(gc.create<ValueError>("__len__ returned negative value"));
+        raiseException();
+        return;
+    }
+    size_t size = len;
+    if (size < instr->count) {
+        pushStack(gc.create<ValueError>("too few values to unpack"));
+        raiseException();
+        return;
+    }
+    if (size > instr->count) {
+        pushStack(gc.create<ValueError>("too many values to unpack"));
+        raiseException();
+        return;
+    }
+
+    for (unsigned i = instr->count; i != 0; i--) {
+        pushStack(seq, Integer::get(i - 1));
+        bool ok = call(getitemFunc, 2, result);
+        pushStack(result);
+        if (!ok) {
+            raiseException();
+            return;
+        }
+    }
+
+    return;
+}
+
 INLINE_INSTRS void
 Interpreter::executeInstr_Raise(Traced<InstrRaise*> instr)
 {

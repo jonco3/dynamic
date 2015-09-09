@@ -63,6 +63,7 @@ struct Interpreter;
     instr(Slice, InstrSlice)                                                 \
     instr(AssertionFailed, InstrAssertionFailed)                             \
     instr(MakeClassFromFrame, InstrMakeClassFromFrame)                       \
+    instr(Destructure, InstrDestructure)                                     \
     instr(Raise, InstrRaise)                                                 \
     instr(GetIterator, InstrGetIterator)                                     \
     instr(IteratorNext, InstrIteratorNext)                                   \
@@ -453,6 +454,13 @@ define_simple_instr(Slice);
 define_simple_instr(AssertionFailed);
 
 define_ident_instr(MakeClassFromFrame);
+
+struct InstrDestructure : public Instr
+{
+    define_instr_members(Destructure);
+    InstrDestructure(unsigned count) : count(count) {}
+    const unsigned count;
+};
 
 define_simple_instr(Raise);
 define_simple_instr(GetIterator);

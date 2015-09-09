@@ -555,62 +555,18 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxTargetList& s) {
-        // todo: we can probably optimise this depending on the syntax used.
-        // e.g. a, b = 1, 2 can be desugared into a = 1; b = 2
         assert(inTarget());
         const auto& targets = s.targets;
         if (contextStack.back() == Context::Assign) {
-            // Get length
-            // todo: we don't necessarily have a __len__ method to call.
-            emit<InstrDup>();
-            emit<InstrGetMethod>(Name::__len__);
-            emit<InstrCallMethod>(0);
-
-            // Check length
-            Stack<Value> size(Integer::get(targets.size()));
-            emit<InstrConst>(size);
-            emit<InstrCompareOp>(CompareEQ);
-            unsigned okBranch = emit<InstrBranchIfTrue>();
-            emit<InstrConst>(ValueError::ObjectClass);
-            Stack<Value> message(
-                String::get("wrong number of values to unpack"));
-            emit<InstrConst>(message);
-            emit<InstrCall>(1);
-            emit<InstrRaise>();
-            block->branchHere(okBranch);
-
-            // Get iterator
-            emit<InstrGetMethod>(Name::__iter__);
-            emit<InstrCallMethod>(0);
-            emit<InstrGetMethod>("__next__");
-            // Leave the iterator and next method on the stack, and allow room
-            // for the extracted value.
-            incStackDepth(4);
-
-            for (unsigned i = 0; i < targets.size(); i++) {
-                emit<InstrIteratorNext>();
-                unsigned okBranch = emit<InstrBranchIfTrue>();
-                emit<InstrConst>(None);
-                emit<InstrAssertionFailed>();
-                block->branchHere(okBranch);
-                compile(targets[i]);
-                if (i != targets.size() - 1)
-                    emit<InstrPop>();
-            }
-
-            // Pop iterator
-            emit<InstrPop>();
-            emit<InstrPop>();
-            emit<InstrPop>();
-            decStackDepth(4);
-        } else {
-            for (unsigned i = 0; i < targets.size(); i++) {
-                compile(targets[i]);
-                if (i != targets.size() - 1)
-                    emit<InstrPop>();
-            }
+            emit<InstrDestructure>(targets.size());
+            incStackDepth(targets.size());
         }
-
+        for (unsigned i = 0; i < targets.size(); i++) {
+            compile(targets[i]);
+            emit<InstrPop>();
+            decStackDepth();
+        }
+        emit<InstrConst>(None);
     }
 
     virtual void visit(const SyntaxSlice& s) {
@@ -741,8 +697,6 @@ struct ByteCompiler : public SyntaxVisitor
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
         vector<unsigned> oldBreakInstrs = move(breakInstrs);
         breakInstrs.clear();
-        // todo: can we use AutoSetAndRestore for the above?
-
         emit<InstrIteratorNext>();
         unsigned exitBranch = emit<InstrBranchIfFalse>();
 
