@@ -36,6 +36,7 @@ using namespace std;
     name(__delitem__)                                                         \
     name(__getitem__)                                                         \
     name(__iter__)                                                            \
+    name(__next__)                                                            \
     name(__str__)
 
 struct Name

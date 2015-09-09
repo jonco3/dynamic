@@ -163,6 +163,7 @@ struct Interpreter
     void raiseAttrError(Traced<Value> value, Name ident);
     void raiseNameError(Name ident);
     void raiseTypeError(string message);
+    void raiseValueError(string message);
     void raiseNotImplementedError();
 
     bool call(Traced<Value> callable, unsigned argCount,
@@ -306,6 +307,7 @@ struct Interpreter
     bool executeBinaryOp(BinaryOp op, MutableTraced<Value> methodOut);
     bool executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
                                 bool& isCallableDescriptor);
+    bool getIterator(MutableTraced<Value> resultOut);
 };
 
 extern Interpreter interp;

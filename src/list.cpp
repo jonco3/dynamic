@@ -443,8 +443,8 @@ static bool listIter_next(TracedVector<Value> args, MutableTraced<Value> resultO
 void ListIter::init()
 {
     ObjectClass.init(Class::createNative("listiterator", nullptr));
-    initNativeMethod(ObjectClass, "__iter__", listIter_iter, 1);
-    initNativeMethod(ObjectClass, "__next__", listIter_next, 1);
+    initNativeMethod(ObjectClass, Name::__iter__, listIter_iter, 1);
+    initNativeMethod(ObjectClass, Name::__next__, listIter_next, 1);
 }
 
 ListIter::ListIter(Traced<ListBase*> list)

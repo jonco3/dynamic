@@ -557,14 +557,20 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxTargetList& s) {
         assert(inTarget());
         const auto& targets = s.targets;
-        if (contextStack.back() == Context::Assign) {
+        assert(contextStack.back() == Context::Assign ||
+               contextStack.back() == Context::Delete);
+        bool isAssign = contextStack.back() == Context::Assign;
+        if (isAssign) {
             emit<InstrDestructure>(targets.size());
             incStackDepth(targets.size());
         }
-        for (unsigned i = 0; i < targets.size(); i++) {
-            compile(targets[i]);
+        // Reverse order here becuase destructure reverses the order when
+        // pushing onto the stack.
+        for (unsigned i = targets.size(); i != 0; i--) {
+            compile(targets[i - 1]);
             emit<InstrPop>();
-            decStackDepth();
+            if (isAssign)
+                decStackDepth();
         }
         emit<InstrConst>(None);
     }
@@ -690,7 +696,7 @@ struct ByteCompiler : public SyntaxVisitor
         // 1. Get iterator
         compile(s.exprs);
         emit<InstrGetIterator>();
-        emit<InstrGetMethod>("__next__");
+        emit<InstrGetMethod>(Name::__next__);
         incStackDepth(3); // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop heap)

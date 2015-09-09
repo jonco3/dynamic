@@ -504,6 +504,12 @@ void Interpreter::raiseTypeError(string message)
     raiseException();
 }
 
+void Interpreter::raiseValueError(string message)
+{
+    pushStack(gc.create<ValueError>(message));
+    raiseException();
+}
+
 void Interpreter::raiseNotImplementedError()
 {
     pushStack(gc.create<NotImplementedError>("Not implemented"));

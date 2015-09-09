@@ -319,6 +319,7 @@ Interpreter::executeInstr_In(Traced<InstrIn*> instr)
         return;
     }
 
+    // todo: invert the condition
     if (isCallableDescriptor)
         pushStack(container);
     pushStack(value);
@@ -536,64 +537,64 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> in
     pushStack(cls);
 }
 
+/* static */ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
+{
+    Stack<Value> target(popStack());
+    Stack<Value> method;
+    bool isCallableDescriptor;
+
+    // Call __iter__ method to get iterator if it's present.
+    if (getSpecialMethodAttr(target, Name::__iter__, method,
+                             isCallableDescriptor))
+    {
+        if (isCallableDescriptor)
+            pushStack(target);
+        return call(method, isCallableDescriptor ? 1 : 0, resultOut);
+    }
+
+    // Otherwise create a SequenceIterator wrapping the target iterable.
+    if (!getMethodAttr(target, Name::__getitem__, method, isCallableDescriptor))
+    {
+        resultOut = gc.create<TypeError>("Object not iterable");
+        return false;
+    }
+
+    pushStack(target);
+    return call(SequenceIterator, 1, resultOut);
+}
+
 /* static */ INLINE_INSTRS void
 Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
 {
-    Stack<Value> seq(popStack());
-    Stack<Value> lenFunc;
-    if (!seq.maybeGetAttr(Name::__len__, lenFunc)) {
-        raiseTypeError("Argument is not iterable");
-        return;
-    }
-
-    Stack<Value> getitemFunc;
-    if (!seq.maybeGetAttr(Name::__getitem__, getitemFunc)) {
-        raiseTypeError("Argument is not iterable");
-        return;
-    }
-
     Stack<Value> result;
-    pushStack(seq);
-    if (!call(lenFunc, 1, result)) {
-        pushStack(result);
-        raiseException();
-        return;
-    }
+    if (!getIterator(result))
+        return raiseException(result);
 
-    if (!result.isInt()) {
-        raiseTypeError("__len__ didn't return an integer");
-        return;
-    }
+    Stack<Value> iterator(result);
+    Stack<Value> type(iterator.type());
+    Stack<Value> nextMethod;
+    bool isCallableDescriptor;
+    if (!getMethodAttr(type, Name::__next__, nextMethod, isCallableDescriptor))
+        return raiseTypeError(string("Argument is not iterable: ") +
+                              type.as<Class>()->name());
 
-    int32_t len = result.toInt();
-    if (len < 0) {
-        pushStack(gc.create<ValueError>("__len__ returned negative value"));
-        raiseException();
-        return;
-    }
-    size_t size = len;
-    if (size < instr->count) {
-        pushStack(gc.create<ValueError>("too few values to unpack"));
-        raiseException();
-        return;
-    }
-    if (size > instr->count) {
-        pushStack(gc.create<ValueError>("too many values to unpack"));
-        raiseException();
-        return;
-    }
-
-    for (unsigned i = instr->count; i != 0; i--) {
-        pushStack(seq, Integer::get(i - 1));
-        bool ok = call(getitemFunc, 2, result);
-        pushStack(result);
-        if (!ok) {
-            raiseException();
-            return;
+    for (size_t count = 0; count < instr->count; count++) {
+        if (isCallableDescriptor)
+            pushStack(iterator);
+        if (!call(nextMethod, isCallableDescriptor ? 1 : 0, result)) {
+            if (result.is<StopIteration>())
+                return raiseValueError("too few values to unpack");
+            return raiseException(result);
         }
+        pushStack(result);
     }
 
-    return;
+    if (isCallableDescriptor)
+        pushStack(iterator);
+    if (call(nextMethod, isCallableDescriptor ? 1 : 0, result))
+        return raiseValueError("too many values to unpack");
+    if (!result.is<StopIteration>())
+        return raiseException(result);
 }
 
 INLINE_INSTRS void
@@ -606,28 +607,11 @@ Interpreter::executeInstr_Raise(Traced<InstrRaise*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
 {
-    Stack<Value> target(popStack());
-    Stack<Value> method;
-    bool isCallableDescriptor;
     Stack<Value> result;
+    if (!getIterator(result))
+        return raiseException(result);
 
-    // Call __iter__ method to get iterator if it's present.
-    if (getMethodAttr(target, Name::__iter__, method, isCallableDescriptor)) {
-        if (isCallableDescriptor)
-            pushStack(target);
-        startCall(method, isCallableDescriptor ? 1 : 0);
-        return;
-    }
-
-    // Otherwise create a SequenceIterator wrapping the target iterable.
-    if (!getMethodAttr(target, Name::__getitem__, method, isCallableDescriptor))
-    {
-        raiseTypeError("Object not iterable");
-        return;
-    }
-
-    pushStack(target);
-    startCall(SequenceIterator, 1);
+    pushStack(result);
 }
 
 INLINE_INSTRS void

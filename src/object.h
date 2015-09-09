@@ -181,6 +181,9 @@ extern bool getAttr(Traced<Value> value, Name name,
 extern bool getMethodAttr(Traced<Value> value, Name name,
                           MutableTraced<Value> resultOut,
                           bool& isCallableDescriptor);
+extern bool getSpecialMethodAttr(Traced<Value> value, Name name,
+                                 MutableTraced<Value> resultOut,
+                                 bool& isCallableDescriptor);
 extern bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
                     MutableTraced<Value> resultOut);
 extern bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value>

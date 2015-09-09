@@ -39,9 +39,9 @@ void GeneratorIter::init()
     static vector<Name> params = { "self" };
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
-    Stack<Value> value(gc.create<Function>("__next__", info, EmptyValueArray,
+    Stack<Value> value(gc.create<Function>(Name::__next__, info, EmptyValueArray,
                                            env));
-    ObjectClass->setAttr("__next__", value);
+    ObjectClass->setAttr(Name::__next__, value);
 }
 
 GeneratorIter::GeneratorIter(Traced<Block*> block,

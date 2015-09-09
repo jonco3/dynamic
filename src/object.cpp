@@ -607,6 +607,19 @@ bool getMethodAttr(Traced<Value> value, Name name,
 }
 
 /*
+ * Get a special method.  For reason python looks at the class but not at the
+ * object for these.
+ */
+bool getSpecialMethodAttr(Traced<Value> value, Name name,
+                          MutableTraced<Value> resultOut,
+                          bool& isCallableDescriptor)
+{
+    assert(name.get().size() > 2 && name.get().substr(0, 2) == "__");
+    Stack<Value> type(value.type());
+    return getMethodAttr(type, name, resultOut, isCallableDescriptor);
+}
+
+/*
  *  Now, the steps Python follows when setting a user-defined attribute
  *  (objectname.attrname = something):
  *
