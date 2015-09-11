@@ -112,7 +112,7 @@ struct Interpreter
     }
 
     // Return the value at position |offset| counting from zero.
-    Value peekStack(unsigned offset) {
+    Value peekStack(unsigned offset = 0) {
         assert(stackPos() >= offset + 1);
         return stack[stackPos_ - offset - 1];
     }

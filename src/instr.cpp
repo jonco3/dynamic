@@ -53,7 +53,7 @@ INLINE_INSTRS void
 Interpreter::executeInstr_SetStackLocal(Traced<InstrSetStackLocal*> instr)
 {
     AutoAssertNoGC nogc;
-    Value value = peekStack(0);
+    Value value = peekStack();
     assert(value != Value(UninitializedSlot));
     setStackLocal(instr->slot, value);
 }
@@ -89,7 +89,7 @@ Interpreter::executeInstr_GetLexical(Traced<InstrGetLexical*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_SetLexical(Traced<InstrSetLexical*> instr)
 {
-    Stack<Value> value(peekStack(0));
+    Stack<Value> value(peekStack());
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
     env->setAttr(instr->ident, value);
 }
@@ -127,7 +127,7 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 INLINE_INSTRS void
 Interpreter::executeInstr_SetGlobal(Traced<InstrSetGlobal*> instr)
 {
-    Stack<Value> value(peekStack(0));
+    Stack<Value> value(peekStack());
     instr->global()->setAttr(instr->ident, value);
 }
 
@@ -218,7 +218,7 @@ bool Interpreter::getMethod(Name ident)
 INLINE_INSTRS void
 Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
 {
-    Stack<Value> value(peekStack(0));
+    Stack<Value> value(peekStack());
     if (!getMethod(instr->ident))
         return;
 
@@ -243,7 +243,7 @@ Interpreter::executeInstr_GetMethodBuiltin(Traced<InstrGetMethodBuiltin*> instr)
 {
     {
         AutoAssertNoGC nogc;
-        Value value = peekStack(0);
+        Value value = peekStack();
         if (value.type() == instr->class_) {
             popStack();
             pushStack(instr->result_, Boolean::True, value);
@@ -378,7 +378,7 @@ Interpreter::executeInstr_Or(Traced<InstrOr*> instr)
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     assert(instr->offset_);
-    Object *x = peekStack(0).toObject();
+    Object *x = peekStack().toObject();
     if (x->isTrue()) {
         branch(instr->offset_);
         return;
@@ -394,7 +394,7 @@ Interpreter::executeInstr_And(Traced<InstrAnd*> instr)
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     assert(instr->offset_);
-    Object *x = peekStack(0).toObject();
+    Object *x = peekStack().toObject();
     if (!x->isTrue()) {
         branch(instr->offset_);
         return;
@@ -620,7 +620,7 @@ Interpreter::executeInstr_IteratorNext(Traced<InstrIteratorNext*> instr)
     // The stack is already set up with next method and target on top
     Stack<Value> target(peekStack(2));
     Stack<Value> result;
-    pushStack(peekStack(0));
+    pushStack(peekStack());
     bool ok = call(target, 1, result);
     if (!ok) {
         Stack<Object*> exc(result.toObject());
