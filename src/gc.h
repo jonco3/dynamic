@@ -177,19 +177,20 @@ void GC::trace(Tracer& t, T* ptr) {
     GCTraits<T>::trace(t, ptr);
 }
 
-// Base class for wrapper classes containing GC pointers.
-//
 // Provides usage count in debug builds so we can assert references don't live
 // longer than their referent.
-struct PointerBase
+struct UseCountBase
 {
 #ifdef DEBUG
-    PointerBase() : useCount_(0) {}
+    UseCountBase() : useCount_(0) {}
 
-    ~PointerBase() {
+    ~UseCountBase() {
         assert(!hasUses());
     }
+#endif
 
+  protected:
+#ifdef DEBUG
     bool hasUses() {
         return useCount_ != 0;
     }
@@ -214,7 +215,45 @@ struct PointerBase
 #endif
 };
 
-struct RootBase : public PointerBase
+#define define_comparisions                                                    \
+    bool operator==(T other) { return ptr_ == other; }                         \
+    bool operator!=(T other) { return ptr_ != other; }
+
+#define define_immutable_accessors                                             \
+    operator T () const { return ptr_; }                                       \
+    T operator->() const { return ptr_; }                                      \
+    const T& get() const { return ptr_; }                                      \
+
+#define define_mutable_accessors                                               \
+    operator T& () { return ptr_; }                                            \
+    T& get() { return ptr_; }
+
+// Base class for wrapper classes a single GC pointer.
+template <typename T>
+struct PointerBase : public UseCountBase
+{
+    PointerBase(T ptr = GCTraits<T>::nullValue()) : ptr_(ptr) {}
+
+    template <typename S>
+    PointerBase(const S& init) : ptr_(init) {}
+
+    define_comparisions;
+    define_immutable_accessors;
+    define_mutable_accessors;
+
+  protected:
+    T ptr_;
+};
+
+// Base class for wrapper classes a vector of GC pointers.
+template <typename T>
+struct VectorBase : public UseCountBase, protected vector<T>
+{
+    VectorBase() {}
+    VectorBase(size_t count) : vector<T>(count) {}
+};
+
+struct RootBase
 {
     RootBase() : next_(nullptr), prev_(nullptr) {}
 
@@ -282,19 +321,6 @@ struct StackBase
     StackBase* next_;
 };
 
-#define define_comparisions                                                    \
-    bool operator==(T other) { return ptr_ == other; }                         \
-    bool operator!=(T other) { return ptr_ != other; }
-
-#define define_immutable_accessors                                             \
-    operator T () const { return ptr_; }                                       \
-    T operator->() const { return ptr_; }                                      \
-    const T& get() const { return ptr_; }                                      \
-
-#define define_mutable_accessors                                               \
-    operator T& () { return ptr_; }                                            \
-    T& get() { return ptr_; }
-
 template <typename W, typename T>
 struct WrapperMixins {};
 
@@ -306,13 +332,16 @@ struct Traced;
 // Intended for globals, it has deferred initialization and can cannot be
 // reassigned.
 template <typename T>
-struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
+struct GlobalRoot
+  : public WrapperMixins<GlobalRoot<T>, T>,
+    public PointerBase<T>,
+    protected RootBase
 {
-    GlobalRoot() : ptr_(GCTraits<T>::nullValue()) {}
+    GlobalRoot() {}
     GlobalRoot(const GlobalRoot& other) = delete;
 
     ~GlobalRoot() {
-        if (GCTraits<T>::isNonNull(ptr_))
+        if (GCTraits<T>::isNonNull(this->ptr_))
             remove();
     }
 
@@ -320,33 +349,28 @@ struct GlobalRoot : public WrapperMixins<GlobalRoot<T>, T>, protected RootBase
         maybeCheckValid(T, ptr);
         if (GCTraits<T>::isNonNull(ptr))
             insert();
-        ptr_ = ptr;
+        this->ptr_ = ptr;
     }
 
     virtual void clear() override {
-        ptr_ = GCTraits<T>::nullValue();
+        this->ptr_ = GCTraits<T>::nullValue();
     }
-
-    define_comparisions;
-    define_immutable_accessors;
-    define_mutable_accessors;
 
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &ptr_);
+        gc.trace(t, &this->ptr_);
     }
-
-  private:
-    T ptr_;
 };
 
 // Roots a cell as long as it is alive.
 template <typename T>
-struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
+struct Root
+  : public WrapperMixins<Root<T>, T>,
+    public PointerBase<T>,
+    protected RootBase
 {
     Root() {
-        ptr_ = GCTraits<T>::nullValue();
         insert();
     }
 
@@ -366,25 +390,21 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     }
 
     template <typename S>
-    explicit Root(const S& other) : ptr_(other) {
+    explicit Root(const S& other) : PointerBase<T>(other) {
         insert();
     }
 
     ~Root() { remove(); }
 
-    define_comparisions;
-    define_immutable_accessors;
-    define_mutable_accessors;
-
     template <typename S>
     Root& operator=(const S& ptr) {
-        ptr_ = ptr;
-        maybeCheckValid(T, ptr_);
+        this->ptr_ = ptr;
+        maybeCheckValid(T, this->ptr_);
         return *this;
     }
 
     Root& operator=(const Root& other) {
-        *this = other.ptr_;
+        *this = other.get();
         return *this;
     }
 
@@ -394,23 +414,22 @@ struct Root : public WrapperMixins<Root<T>, T>, protected RootBase
     }
 
     virtual void clear() override {
-        ptr_ = GCTraits<T>::nullValue();
+        this->ptr_ = GCTraits<T>::nullValue();
     }
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &ptr_);
+        gc.trace(t, &this->ptr_);
     }
-
-  private:
-    T ptr_;
 };
 
 // Roots a cell as long as it is alive, for stack use.
 template <typename T>
-struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
+struct Stack
+  : public WrapperMixins<Stack<T>, T>,
+    public PointerBase<T>,
+    protected StackBase
 {
     Stack() {
-        ptr_ = GCTraits<T>::nullValue();
         insert();
     }
 
@@ -420,7 +439,7 @@ struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
     }
 
     Stack(const Stack& other) {
-        *this = other.ptr_;
+        *this = other.get();
         insert();
     }
 
@@ -430,25 +449,21 @@ struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
     }
 
     template <typename S>
-    explicit Stack(const S& other) : ptr_(other) {
+    explicit Stack(const S& other) : PointerBase<T>(other) {
         insert();
     }
 
     ~Stack() { remove(); }
 
-    define_comparisions;
-    define_immutable_accessors;
-    define_mutable_accessors;
-
     template <typename S>
     Stack& operator=(const S& ptr) {
-        ptr_ = ptr;
-        maybeCheckValid(T, ptr_);
+        this->ptr_ = ptr;
+        maybeCheckValid(T, this->ptr_);
         return *this;
     }
 
     Stack& operator=(const Stack& other) {
-        *this = other.ptr_;
+        *this = other.get();
         return *this;
     }
 
@@ -458,15 +473,12 @@ struct Stack : public WrapperMixins<Stack<T>, T>, protected StackBase
     }
 
     virtual void clear() override {
-        ptr_ = GCTraits<T>::nullValue();
+        this->ptr_ = GCTraits<T>::nullValue();
     }
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &ptr_);
+        gc.trace(t, &this->ptr_);
     }
-
-  private:
-    T ptr_;
 };
 
 template <typename T>
@@ -596,24 +608,25 @@ template <typename T>
 struct TracedVector;
 
 template <typename T>
-struct RootVector : private vector<T>, protected RootBase
+struct RootVector : public VectorBase<T>, protected RootBase
 {
-    typedef vector<T> VectorBase;
+    typedef VectorBase<T> Base;
 
-    using VectorBase::back;
-    using VectorBase::empty;
-    using VectorBase::size;
-    using VectorBase::begin;
-    using VectorBase::end;
-    using VectorBase::pop_back;
-    using VectorBase::emplace_back;
+    using Base::back;
+    using Base::empty;
+    using Base::size;
+    using Base::begin;
+    using Base::end;
+    using Base::pop_back;
+    using Base::emplace_back;
 
     RootVector() {
         RootBase::insert();
     }
 
     RootVector(size_t initialSize)
-    : vector<T>(initialSize) {
+      : VectorBase<T>(initialSize)
+    {
         RootBase::insert();
     }
 
@@ -624,7 +637,7 @@ struct RootVector : private vector<T>, protected RootBase
     }
 
     virtual void clear() override {
-        VectorBase::resize(0);
+        Base::resize(0);
     }
 
     Traced<T> ref(unsigned index) {
@@ -633,12 +646,12 @@ struct RootVector : private vector<T>, protected RootBase
     }
 
     void resize(size_t size) {
-        VectorBase::resize(size);
+        Base::resize(size);
     }
 
     void push_back(T element) {
         maybeCheckValid(T, element);
-        VectorBase::push_back(element);
+        Base::push_back(element);
     }
 
     T& operator[](size_t index) {
@@ -655,33 +668,27 @@ struct RootVector : private vector<T>, protected RootBase
         return element;
     }
 
-    typename VectorBase::iterator erase(typename VectorBase::iterator first,
-                                        typename VectorBase::iterator last)
-    {
-        assert(!hasUses());
-        return VectorBase::erase(first, last);
+    typename Base::iterator erase(typename Base::iterator first,
+                                  typename Base::iterator last) {
+        assert(!this->hasUses());
+        return Base::erase(first, last);
     }
 
-    typename VectorBase::iterator insert(typename VectorBase::iterator pos,
-                                         const T& val)
-    {
-        assert(!hasUses());
-        return VectorBase::insert(pos, val);
+    typename Base::iterator insert(typename Base::iterator pos, const T& val) {
+        assert(!this->hasUses());
+        return Base::insert(pos, val);
     }
 
-    void insert(typename VectorBase::iterator pos, size_t count, const T& value)
-    {
-        assert(!hasUses());
-        VectorBase::insert(pos, count, value);
+    void insert(typename Base::iterator pos, size_t count, const T& value) {
+        assert(!this->hasUses());
+        Base::insert(pos, count, value);
     }
 
     template <typename I>
-    typename VectorBase::iterator insert(typename VectorBase::iterator pos,
-                                         I&& first, I&& last)
-    {
-        assert(!hasUses());
-        return VectorBase::insert(pos,
-                                  std::forward<I>(first), std::forward<I>(last));
+    typename Base::iterator insert(typename Base::iterator pos,
+                                   I&& first, I&& last) {
+        assert(!this->hasUses());
+        return Base::insert(pos, std::forward<I>(first), std::forward<I>(last));
     }
 
     void trace(Tracer& t) override {
@@ -746,7 +753,7 @@ struct TracedVector
 
 template <typename T>
 RootVector<T>::RootVector(const TracedVector<T>& v)
-  : vector<T>(v.size())
+  : VectorBase<T>(v.size())
 {
     RootBase::insert();
     for (size_t i = 0; i < v.size(); i++)
