@@ -52,7 +52,7 @@ struct WrapperMixins<W, Value>
     inline bool isInstanceOf(Traced<Class*> cls) const;
 
   private:
-    const Value* get() const {
+    const Value* extract() const {
         return &static_cast<const W*>(this)->get();
     }
 };
@@ -65,19 +65,19 @@ struct WrapperMixins<W, T*>
                       "T must derive from object for this conversion");
         // Since Traced<T> is immutable and all Objects are Values, we can
         // safely cast a Stack<Object*> to a Traced<Value>.
-        const Value* ptr = reinterpret_cast<Value const*>(get());
+        const Value* ptr = reinterpret_cast<Value const*>(extract());
         return Traced<Value>::fromTracedLocation(ptr);
     }
 
     operator Traced<Object*> () const {
         static_assert(is_base_of<Object, T>::value,
                       "T must derive from object for this conversion");
-        Object* const * ptr = reinterpret_cast<Object* const *>(get());
+        Object* const * ptr = reinterpret_cast<Object* const *>(extract());
         return Traced<Object*>::fromTracedLocation(ptr);
     }
 
   private:
-    T* const * get() const {
+    T* const * extract() const {
         return &static_cast<W const *>(this)->get();
     }
 };
