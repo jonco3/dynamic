@@ -177,20 +177,46 @@ void GC::trace(Tracer& t, T* ptr) {
     GCTraits<T>::trace(t, ptr);
 }
 
-struct RootBase
+// Base class for wrapper classes containing GC pointers.
+//
+// Provides usage count in debug builds so we can assert references don't live
+// longer than their referent.
+struct PointerBase
 {
-    RootBase()
-      : next_(nullptr), prev_(nullptr) {
 #ifdef DEBUG
-          useCount_ = 0;
+    PointerBase() : useCount_(0) {}
+
+    ~PointerBase() {
+        assert(!hasUses());
+    }
+
+    bool hasUses() {
+        return useCount_ != 0;
+    }
+#endif
+
+    void addUse() {
+#ifdef DEBUG
+        useCount_++;
 #endif
     }
 
+    void removeUse() {
 #ifdef DEBUG
-    ~RootBase() {
-        assert(useCount_ == 0);
-    }
+        assert(useCount_ > 0);
+        useCount_--;
 #endif
+    }
+
+  private:
+#ifdef DEBUG
+    unsigned useCount_;
+#endif
+};
+
+struct RootBase : public PointerBase
+{
+    RootBase() : next_(nullptr), prev_(nullptr) {}
 
     virtual void trace(Tracer& t) = 0;
     virtual void clear() = 0;
@@ -222,34 +248,9 @@ struct RootBase
         return next_;
     }
 
-    // addUse() and removeUse() are used to assert that the lifetimes of
-    // pointers to the root don't outlive the root itself.
-
-    void addUse() {
-#ifdef DEBUG
-        useCount_++;
-#endif
-    }
-
-    void removeUse() {
-#ifdef DEBUG
-        assert(useCount_ > 0);
-        useCount_--;
-#endif
-    }
-
-#ifdef DEBUG
-    bool hasUses() {
-        return useCount_ != 0;
-    }
-#endif
-
   private:
     RootBase* next_;
     RootBase* prev_;
-#ifdef DEBUG
-    unsigned useCount_;
-#endif
 };
 
 struct StackBase
