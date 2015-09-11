@@ -10,8 +10,6 @@
 #include "list.h"
 #include "utils.h"
 
-#define INLINE_INSTRS /*inline*/
-
 const char* instrName(InstrType type)
 {
     static const char* names[InstrTypeCount] = {
@@ -27,13 +25,13 @@ const char* instrName(InstrType type)
     return names[type];
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Const(Traced<InstrConst*> instr)
 {
     pushStack(instr->value());
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetStackLocal(Traced<InstrGetStackLocal*> instr)
 {
     // Name was present when compiled, but may have been deleted.
@@ -49,7 +47,7 @@ Interpreter::executeInstr_GetStackLocal(Traced<InstrGetStackLocal*> instr)
     raiseNameError(instr->ident);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_SetStackLocal(Traced<InstrSetStackLocal*> instr)
 {
     AutoAssertNoGC nogc;
@@ -58,7 +56,7 @@ Interpreter::executeInstr_SetStackLocal(Traced<InstrSetStackLocal*> instr)
     setStackLocal(instr->slot, value);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_DelStackLocal(Traced<InstrDelStackLocal*> instr)
 {
     // Delete by setting slot value to UninitializedSlot.
@@ -73,7 +71,7 @@ Interpreter::executeInstr_DelStackLocal(Traced<InstrDelStackLocal*> instr)
     raiseNameError(instr->ident);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetLexical(Traced<InstrGetLexical*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
@@ -86,7 +84,7 @@ Interpreter::executeInstr_GetLexical(Traced<InstrGetLexical*> instr)
     pushStack(value);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_SetLexical(Traced<InstrSetLexical*> instr)
 {
     Stack<Value> value(peekStack());
@@ -94,7 +92,7 @@ Interpreter::executeInstr_SetLexical(Traced<InstrSetLexical*> instr)
     env->setAttr(instr->ident, value);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_DelLexical(Traced<InstrDelLexical*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
@@ -102,7 +100,7 @@ Interpreter::executeInstr_DelLexical(Traced<InstrDelLexical*> instr)
         raiseNameError(instr->ident);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 {
     Stack<Value> value;
@@ -124,21 +122,21 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
     raiseNameError(instr->ident);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_SetGlobal(Traced<InstrSetGlobal*> instr)
 {
     Stack<Value> value(peekStack());
     instr->global()->setAttr(instr->ident, value);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_DelGlobal(Traced<InstrDelGlobal*> instr)
 {
     if (!instr->global()->maybeDelOwnAttr(instr->ident))
         raiseNameError(instr->ident);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetAttr(Traced<InstrGetAttr*> instr)
 {
     Stack<Value> value(popStack());
@@ -149,7 +147,7 @@ Interpreter::executeInstr_GetAttr(Traced<InstrGetAttr*> instr)
         raiseException();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
 {
     Stack<Value> value(peekStack(1));
@@ -172,7 +170,7 @@ Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
         raiseException(result);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_DelAttr(Traced<InstrDelAttr*> instr)
 {
     Stack<Object*> obj(popStack().toObject());
@@ -181,7 +179,7 @@ Interpreter::executeInstr_DelAttr(Traced<InstrDelAttr*> instr)
         raiseException(result);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Call(Traced<InstrCall*> instr)
 {
     Stack<Value> target(peekStack(instr->count));
@@ -215,7 +213,7 @@ bool Interpreter::getMethod(Name ident)
     return true;
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
 {
     Stack<Value> value(peekStack());
@@ -232,13 +230,13 @@ Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
     }
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetMethodFallback(Traced<InstrGetMethodFallback*> instr)
 {
     getMethod(instr->ident);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetMethodBuiltin(Traced<InstrGetMethodBuiltin*> instr)
 {
     {
@@ -254,7 +252,7 @@ Interpreter::executeInstr_GetMethodBuiltin(Traced<InstrGetMethodBuiltin*> instr)
     replaceInstrAndRestart(instr, gc.create<InstrGetMethodFallback>(instr->ident));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
 {
     bool extraArg = peekStack(instr->count + 1).as<Boolean>()->value();
@@ -263,7 +261,7 @@ Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
     return startCall(target, argCount, extraArg ? 2 : 3);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_CreateEnv(Traced<InstrCreateEnv*> instr)
 {
     Frame* frame = getFrame();
@@ -284,7 +282,7 @@ Interpreter::executeInstr_CreateEnv(Traced<InstrCreateEnv*> instr)
     setFrameEnv(callEnv);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_InitStackLocals(Traced<InstrInitStackLocals*> instr)
 {
     AutoAssertNoGC nogc;
@@ -299,7 +297,7 @@ Interpreter::executeInstr_InitStackLocals(Traced<InstrInitStackLocals*> instr)
     fillStack(block->stackLocalCount(), UninitializedSlot);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_In(Traced<InstrIn*> instr)
 {
     // todo: implement this
@@ -326,7 +324,7 @@ Interpreter::executeInstr_In(Traced<InstrIn*> instr)
     startCall(contains, isCallableDescriptor ? 2 : 1);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Is(Traced<InstrIs*> instr)
 {
     Value b = popStack();
@@ -335,7 +333,7 @@ Interpreter::executeInstr_Is(Traced<InstrIs*> instr)
     pushStack(Boolean::get(result));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Not(Traced<InstrNot*> instr)
 {
     // the following values are interpreted as false: False, None, numeric zero
@@ -346,14 +344,14 @@ Interpreter::executeInstr_Not(Traced<InstrNot*> instr)
     pushStack(Boolean::get(!obj->isTrue()));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_BranchAlways(Traced<InstrBranchAlways*> instr)
 {
     assert(instr->offset_);
     branch(instr->offset_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_BranchIfTrue(Traced<InstrBranchIfTrue*> instr)
 {
     assert(instr->offset_);
@@ -362,7 +360,7 @@ Interpreter::executeInstr_BranchIfTrue(Traced<InstrBranchIfTrue*> instr)
         branch(instr->offset_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_BranchIfFalse(Traced<InstrBranchIfFalse*> instr)
 {
     assert(instr->offset_);
@@ -371,7 +369,7 @@ Interpreter::executeInstr_BranchIfFalse(Traced<InstrBranchIfFalse*> instr)
         branch(instr->offset_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Or(Traced<InstrOr*> instr)
 {
     // The expression |x or y| first evaluates x; if x is true, its value is
@@ -387,7 +385,7 @@ Interpreter::executeInstr_Or(Traced<InstrOr*> instr)
     popStack();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_And(Traced<InstrAnd*> instr)
 {
     // The expression |x and y| first evaluates x; if x is false, its value is
@@ -411,7 +409,7 @@ InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
                                   isGenerator))
 {}
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Lambda(Traced<InstrLambda*> instr)
 {
     Stack<FunctionInfo*> info(instr->functionInfo());
@@ -425,25 +423,25 @@ Interpreter::executeInstr_Lambda(Traced<InstrLambda*> instr)
     pushStack(Value(obj));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Dup(Traced<InstrDup*> instr)
 {
     pushStack(peekStack(instr->index));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Pop(Traced<InstrPop*> instr)
 {
     popStack();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Swap(Traced<InstrSwap*> instr)
 {
     swapStack();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Tuple(Traced<InstrTuple*> instr)
 {
     Tuple* tuple = Tuple::get(stackSlice(instr->size));
@@ -451,7 +449,7 @@ Interpreter::executeInstr_Tuple(Traced<InstrTuple*> instr)
     pushStack(tuple);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_List(Traced<InstrList*> instr)
 {
     List* list = gc.create<List>(stackSlice(instr->size));
@@ -459,7 +457,7 @@ Interpreter::executeInstr_List(Traced<InstrList*> instr)
     pushStack(list);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Dict(Traced<InstrDict*> instr)
 {
     Dict* dict = gc.create<Dict>(stackSlice(instr->size * 2));
@@ -467,7 +465,7 @@ Interpreter::executeInstr_Dict(Traced<InstrDict*> instr)
     pushStack(dict);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Slice(Traced<InstrSlice*> instr)
 {
     Slice* slice = gc.create<Slice>(stackSlice(3));
@@ -475,7 +473,7 @@ Interpreter::executeInstr_Slice(Traced<InstrSlice*> instr)
     pushStack(slice);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_AssertionFailed(Traced<InstrAssertionFailed*> instr)
 {
     Object* obj = popStack().toObject();
@@ -485,7 +483,7 @@ Interpreter::executeInstr_AssertionFailed(Traced<InstrAssertionFailed*> instr)
     raiseException();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> instr)
 {
     Stack<Env*> env(this->env());
@@ -563,7 +561,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
     return call(SequenceIterator, 1, resultOut);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
 {
     Stack<Value> result;
@@ -597,14 +595,14 @@ Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
         return raiseException(result);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_Raise(Traced<InstrRaise*> instr)
 {
     // todo: exceptions must be old-style classes or derived from BaseException
     raiseException();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
 {
     Stack<Value> result;
@@ -614,7 +612,7 @@ Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
     pushStack(result);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_IteratorNext(Traced<InstrIteratorNext*> instr)
 {
     // The stack is already set up with next method and target on top
@@ -711,7 +709,7 @@ bool ShouldInlineBinaryOp(BinaryOp op) {
     return op <= BinaryTrueDiv;
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 {
     Stack<Value> right(peekStack(0));
@@ -748,7 +746,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     replaceInstr(instr, gc.create<InstrBinaryOpFallback>(instr->op));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
 {
     Stack<Value> method;
@@ -824,7 +822,7 @@ void InstrBinaryOpBuiltin::traceChildren(Tracer& t)
     gc.trace(t, &method_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_BinaryOpBuiltin(Traced<InstrBinaryOpBuiltin*> instr)
 {
     Value right = peekStack(0);
@@ -850,7 +848,7 @@ void SharedCompareOpInstr::print(ostream& s) const
     s << " " << CompareOpNames[op];
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
 {
     Value right = peekStack(0);
@@ -869,7 +867,7 @@ Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
 }
 
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> instr)
 {
     Stack<Value> right(popStack());
@@ -995,7 +993,7 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
     return true;
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
 {
     const BinaryOp op = instr->op;
@@ -1038,7 +1036,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     replaceInstr(instr, gc.create<InstrAugAssignUpdateFallback>(op));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_AugAssignUpdateFallback(Traced<InstrAugAssignUpdateFallback*> instr)
 {
     Stack<Value> method;
@@ -1115,7 +1113,7 @@ void InstrAugAssignUpdateBuiltin::traceChildren(Tracer& t)
     gc.trace(t, &method_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<InstrAugAssignUpdateBuiltin*> instr)
 {
     Value right = peekStack(0);
@@ -1131,7 +1129,7 @@ Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<InstrAugAssignUpdateBuil
     startCall(method, 2);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_StartGenerator(Traced<InstrStartGenerator*> instr)
 {
     Frame* frame = getFrame();
@@ -1144,7 +1142,7 @@ Interpreter::executeInstr_StartGenerator(Traced<InstrStartGenerator*> instr)
     gen->suspend(*this, value);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_ResumeGenerator(Traced<InstrResumeGenerator*> instr)
 {
     // todo: get slot 0
@@ -1153,14 +1151,14 @@ Interpreter::executeInstr_ResumeGenerator(Traced<InstrResumeGenerator*> instr)
     gen->resume(*this);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_LeaveGenerator(Traced<InstrLeaveGenerator*> instr)
 {
     Stack<GeneratorIter*> gen(getGeneratorIter());
     gen->leave(*this);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_SuspendGenerator(Traced<InstrSuspendGenerator*> instr)
 {
     Stack<Value> value(popStack());
@@ -1168,19 +1166,19 @@ Interpreter::executeInstr_SuspendGenerator(Traced<InstrSuspendGenerator*> instr)
     gen->suspend(*this, value);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_EnterCatchRegion(Traced<InstrEnterCatchRegion*> instr)
 {
     pushExceptionHandler(ExceptionHandler::CatchHandler, instr->offset_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_LeaveCatchRegion(Traced<InstrLeaveCatchRegion*> instr)
 {
     popExceptionHandler(ExceptionHandler::CatchHandler);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_MatchCurrentException(Traced<InstrMatchCurrentException*> instr)
 {
     Stack<Object*> obj(popStack().toObject());
@@ -1193,37 +1191,37 @@ Interpreter::executeInstr_MatchCurrentException(Traced<InstrMatchCurrentExceptio
     pushStack(Boolean::get(match));
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_HandleCurrentException(Traced<InstrHandleCurrentException*> instr)
 {
     finishHandlingException();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_EnterFinallyRegion(Traced<InstrEnterFinallyRegion*> instr)
 {
     pushExceptionHandler(ExceptionHandler::FinallyHandler, instr->offset_);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_LeaveFinallyRegion(Traced<InstrLeaveFinallyRegion*> instr)
 {
     popExceptionHandler(ExceptionHandler::FinallyHandler);
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_FinishExceptionHandler(Traced<InstrFinishExceptionHandler*> instr)
 {
     return maybeContinueHandlingException();
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_LoopControlJump(Traced<InstrLoopControlJump*> instr)
 {
     loopControlJump(instr->finallyCount(), instr->target());
 }
 
-INLINE_INSTRS void
+void
 Interpreter::executeInstr_AssertStackDepth(Traced<InstrAssertStackDepth*> instr)
 {
 #ifdef DEBUG
