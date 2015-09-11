@@ -537,7 +537,7 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> in
     pushStack(cls);
 }
 
-/* static */ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
+bool Interpreter::getIterator(MutableTraced<Value> resultOut)
 {
     Stack<Value> target(popStack());
     Stack<Value> method;
@@ -563,7 +563,7 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> in
     return call(SequenceIterator, 1, resultOut);
 }
 
-/* static */ INLINE_INSTRS void
+INLINE_INSTRS void
 Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
 {
     Stack<Value> result;
