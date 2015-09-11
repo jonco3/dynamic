@@ -563,10 +563,7 @@ static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueIn
     interp.pushStack(desc);
     interp.pushStack(isClass ? None : value);
     interp.pushStack(isClass ? value.get() : value.type());
-    Stack<Value> result;
-    bool ok = interp.call(func, 3, result);
-    valueInOut = result;
-    return ok; // todo: drive MutableTraced through interpreter interface
+    return interp.call(func, 3, valueInOut);
 }
 
 bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
@@ -662,10 +659,7 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
     interp.pushStack(desc);
     interp.pushStack(obj);
     interp.pushStack(value);
-    Stack<Value> result;
-    bool ok = interp.call(func, 3, result);
-    resultOut = result;
-    return ok; // todo: drive MutableTraced through interpreter interface
+    return interp.call(func, 3, resultOut);
 }
 
 bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
@@ -682,9 +676,6 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
     Stack<Value> func(desc->getAttr(Name::__delete__));
     interp.pushStack(desc);
     interp.pushStack(obj);
-    Stack<Value> result;
-    bool ok = interp.call(func, 2, result);
-    resultOut = result;
-    return ok; // todo: drive MutableTraced through interpreter interface
+    return interp.call(func, 2, resultOut);
 }
 
