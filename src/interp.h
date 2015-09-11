@@ -308,6 +308,7 @@ struct Interpreter
     bool executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
                                 bool& isCallableDescriptor);
     bool getIterator(MutableTraced<Value> resultOut);
+    void executeDestructureFallback(unsigned expected);
 };
 
 extern Interpreter interp;

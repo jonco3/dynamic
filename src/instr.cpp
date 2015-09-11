@@ -562,7 +562,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
 }
 
 void
-Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
+Interpreter::executeDestructureFallback(unsigned expected)
 {
     Stack<Value> result;
     if (!getIterator(result))
@@ -576,7 +576,7 @@ Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
         return raiseTypeError(string("Argument is not iterable: ") +
                               type.as<Class>()->name());
 
-    for (size_t count = 0; count < instr->count; count++) {
+    for (size_t count = 0; count < expected; count++) {
         if (isCallableDescriptor)
             pushStack(iterator);
         if (!call(nextMethod, isCallableDescriptor ? 1 : 0, result)) {
@@ -593,6 +593,58 @@ Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
         return raiseValueError("too many values to unpack");
     if (!result.is<StopIteration>())
         return raiseException(result);
+}
+
+static bool IterableIsBuiltinList(Traced<Value> value)
+{
+    return value.is<List>() || value.is<Tuple>();
+}
+
+void
+Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
+{
+    Stack<Value> iterable(peekStack());
+    Instr* replacement;
+    if (IterableIsBuiltinList(iterable)) {
+        replacement =
+            gc.create<InstrDestructure>(instr->count, Instr_DestructureList);
+    } else {
+        replacement =
+            gc.create<InstrDestructure>(instr->count, Instr_DestructureFallback);
+    }
+
+    replaceInstrAndRestart(instr, replacement);
+}
+
+void
+Interpreter::executeInstr_DestructureFallback(Traced<InstrDestructure*> instr)
+{
+    executeDestructureFallback(instr->count);
+}
+
+void
+Interpreter::executeInstr_DestructureList(Traced<InstrDestructure*> instr)
+{
+    Stack<Value> iterable(peekStack());
+    if (!IterableIsBuiltinList(iterable)) {
+        Instr* replacement =
+            gc.create<InstrDestructure>(instr->count, Instr_DestructureFallback);
+        replaceInstrAndRestart(instr, replacement);
+        return;
+    }
+
+    popStack();
+    ListBase* list = static_cast<ListBase*>(iterable.toObject());
+
+    unsigned count = list->len();
+    if (count < instr->count)
+        return raiseValueError("too few values to unpack");
+
+    if (count > instr->count)
+        return raiseValueError("too many values to unpack");
+
+    for (unsigned i = 0; i < count; i++)
+        pushStack(list->getitem(i));
 }
 
 void
