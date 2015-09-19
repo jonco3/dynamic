@@ -327,12 +327,7 @@ struct VectorBase : public UseCountBase, protected vector<T>
 
 struct RootBase
 {
-    RootBase() : next_(nullptr), prev_(nullptr) {}
-
-    virtual void trace(Tracer& t) = 0;
-    virtual void clear() = 0;
-
-    void insertRoot() {
+    RootBase() : next_(nullptr), prev_(nullptr) {
         assert(!next_ && !prev_);
         next_ = gc.rootList;
         prev_ = nullptr;
@@ -341,7 +336,7 @@ struct RootBase
         gc.rootList = this;
     }
 
-    void removeRoot() {
+    ~RootBase() {
         assert(gc.rootList == this || prev_);
         if (next_)
             next_->prev_ = prev_;
@@ -355,6 +350,9 @@ struct RootBase
 #endif
     }
 
+    virtual void trace(Tracer& t) = 0;
+    virtual void clear() = 0;
+
     RootBase* nextRoot() {
         return next_;
     }
@@ -366,24 +364,22 @@ struct RootBase
 
 struct StackBase
 {
-    StackBase() : next_(nullptr) {}
-
-    virtual void trace(Tracer& t) = 0;
-    virtual void clear() = 0;
-
-    void insertRoot() {
+    StackBase() : next_(nullptr) {
         assert(!next_);
         next_ = gc.stackList;
         gc.stackList = this;
     }
 
-    void removeRoot() {
+    ~StackBase() {
         assert(gc.stackList == this);
         gc.stackList = next_;
 #ifdef DEBUG
         next_ = nullptr;
 #endif
     }
+
+    virtual void trace(Tracer& t) = 0;
+    virtual void clear() = 0;
 
     StackBase* nextRoot() {
         return next_;
@@ -412,15 +408,8 @@ struct GlobalRoot
     GlobalRoot() {}
     GlobalRoot(const GlobalRoot& other) = delete;
 
-    ~GlobalRoot() {
-        if (GCTraits<T>::isNonNull(this->ptr_))
-            removeRoot();
-    }
-
     void init(T ptr) {
         maybeCheckValid(T, ptr);
-        if (GCTraits<T>::isNonNull(ptr))
-            insertRoot();
         this->ptr_ = ptr;
     }
 
@@ -442,23 +431,16 @@ struct Root
     public PointerBase<T>,
     protected RootBase
 {
-    Root() {
-        insertRoot();
-    }
+    Root() {}
 
     Root(const Root& other)
       : PointerBase<T>(other.ptr_)
-    {
-        insertRoot();
-    }
+    {}
 
     template <typename S>
     explicit Root(const S& other)
-      : PointerBase<T>(other) {
-        insertRoot();
-    }
-
-    ~Root() { removeRoot(); }
+      : PointerBase<T>(other)
+    {}
 
     Root& operator=(const Root& other) {
         maybeCheckValid(T, other.get());
@@ -489,24 +471,16 @@ struct Stack
     public PointerBase<T>,
     protected StackBase
 {
-    Stack() {
-        insertRoot();
-    }
+    Stack() {}
 
     Stack(const Stack& other)
       : PointerBase<T>(other.get())
-    {
-        insertRoot();
-    }
+    {}
 
     template <typename S>
     explicit Stack(const S& other)
       : PointerBase<T>(other)
-    {
-        insertRoot();
-    }
-
-    ~Stack() { removeRoot(); }
+    {}
 
     Stack& operator=(const Stack& other) {
         maybeCheckValid(T, other.get());
@@ -701,21 +675,13 @@ struct RootVector : public VectorBase<T>, protected RootBase
 {
     typedef VectorBase<T> Base;
 
-    RootVector() {
-        insertRoot();
-    }
+    RootVector() {}
 
     RootVector(size_t initialSize)
       : VectorBase<T>(initialSize)
-    {
-        insertRoot();
-    }
+    {}
 
     RootVector(const TracedVector<T>& v);
-
-    ~RootVector() {
-        removeRoot();
-    }
 
     virtual void clear() override {
         Base::resize(0);
@@ -784,7 +750,6 @@ template <typename T>
 RootVector<T>::RootVector(const TracedVector<T>& v)
   : VectorBase<T>(v.size())
 {
-    insertRoot();
     for (size_t i = 0; i < v.size(); i++)
         (*this)[i] = v[i];
 }
@@ -795,10 +760,7 @@ struct AllocRoot : protected RootBase
 {
     explicit AllocRoot(T ptr) {
         ptr_ = ptr;
-        insertRoot();
     }
-
-    ~AllocRoot() { removeRoot(); }
 
     define_comparisions;
     define_immutable_accessors;
