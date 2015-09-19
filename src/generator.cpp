@@ -80,10 +80,8 @@ void GeneratorIter::resume(Interpreter& interp)
     log("GeneratorIter::resume", this, state_);
     switch (state_) {
       case Suspended: {
-        Stack<Env*> env(env_); // todo: Heap<T>
-        Stack<Block*> block(block_);
-        Stack<ExceptionHandler*> ehs(exceptionHandlers_);
-        interp.resumeGenerator(block, env, ipOffset_, savedStack_, ehs);
+        interp.resumeGenerator(block_, env_, ipOffset_, savedStack_,
+                               exceptionHandlers_);
         if (state_ == Suspended)
             interp.pushStack(None);
         state_ = Running;

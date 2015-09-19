@@ -22,6 +22,7 @@ struct Cell;
 struct Marker;
 struct RootBase;
 struct StackBase;
+template <typename T> struct Heap;
 
 // A visitor that visits edges in the object graph.
 struct Tracer
@@ -45,6 +46,9 @@ struct GC
 
     template <typename T>
     inline void trace(Tracer& t, T* ptr);
+
+    template <typename T>
+    inline void trace(Tracer& t, Heap<T>* ptr);
 
   private:
     static const int8_t epochCount = 2;
@@ -175,6 +179,11 @@ struct GCTraits<T*>
 template <typename T>
 void GC::trace(Tracer& t, T* ptr) {
     GCTraits<T>::trace(t, ptr);
+}
+
+template <typename T>
+void GC::trace(Tracer& t, Heap<T>* ptr) {
+    GCTraits<T>::trace(t, &ptr->get());
 }
 
 // Provides usage count in debug builds so we can assert references don't live
@@ -458,6 +467,36 @@ struct Stack
     }
 };
 
+// Wraps a heap based pointer, which must be traced by its owning class'
+// traceChildren() method.
+template <typename T>
+struct Heap
+  : public WrapperMixins<Heap<T>, T>,
+    public PointerBase<T>
+{
+    Heap(const Heap& other)
+      : PointerBase<T>(other.get())
+    {}
+
+    template <typename S>
+    explicit Heap(const S& other)
+      : PointerBase<T>(other)
+    {}
+
+    Heap& operator=(const Heap& other) {
+        maybeCheckValid(T, other.get());
+        this->ptr_ = other.get();
+        return *this;
+    }
+
+    template <typename S>
+    Heap& operator=(const S& ptr) {
+        this->ptr_ = ptr;
+        maybeCheckValid(T, this->ptr_);
+        return *this;
+    }
+};
+
 template <typename T>
 struct MutableTraced;
 
@@ -466,9 +505,10 @@ template <typename T>
 struct Traced : public WrapperMixins<Traced<T>, T>
 {
     Traced(const Traced<T>& other) : ptr_(other.ptr_) {}
+    Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
     Traced(Root<T>& root) : ptr_(root.get()) {}
     Traced(Stack<T>& root) : ptr_(root.get()) {}
-    Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
+    Traced(Heap<T>& ptr) : ptr_(ptr.get()) {}
 
     template <typename S>
     Traced(Root<S>& other)
@@ -515,9 +555,10 @@ template <typename T>
 struct MutableTraced : public WrapperMixins<Traced<T>, T>
 {
     MutableTraced(const MutableTraced<T>& other) : ptr_(other.ptr_) {}
+    MutableTraced(GlobalRoot<T>& root) : ptr_(root.get()) {}
     MutableTraced(Root<T>& root) : ptr_(root.get()) {}
     MutableTraced(Stack<T>& root) : ptr_(root.get()) {}
-    MutableTraced(GlobalRoot<T>& root) : ptr_(root.get()) {}
+    MutableTraced(Heap<T>& ptr) : ptr_(ptr.get()) {}
 
     template <typename S>
     MutableTraced(Root<S>& other)

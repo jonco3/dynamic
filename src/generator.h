@@ -33,9 +33,9 @@ struct GeneratorIter : public Object
 
     // todo: does it make sense to embed a Frame here?
     State state_;
-    Block* block_;
-    Env* env_;
-    ExceptionHandler* exceptionHandlers_;
+    Heap<Block*> block_;
+    Heap<Env*> env_;
+    Heap<ExceptionHandler*> exceptionHandlers_;
     size_t ipOffset_;
     unsigned argCount_;
     vector<Value> savedStack_;
