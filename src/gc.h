@@ -374,42 +374,30 @@ struct Root
         insert();
     }
 
-    explicit Root(T ptr) {
-        *this = ptr;
-        insert();
-    }
-
-    Root(const Root& other) {
-        *this = other.ptr_;
-        insert();
-    }
-
-    Root(const GlobalRoot<T>& other) {
-        *this = other.get();
+    Root(const Root& other)
+      : PointerBase<T>(other.ptr_)
+    {
         insert();
     }
 
     template <typename S>
-    explicit Root(const S& other) : PointerBase<T>(other) {
+    explicit Root(const S& other)
+      : PointerBase<T>(other) {
         insert();
     }
 
     ~Root() { remove(); }
 
+    Root& operator=(const Root& other) {
+        maybeCheckValid(T, other.get());
+        this->ptr_ = other.get();
+        return *this;
+    }
+
     template <typename S>
     Root& operator=(const S& ptr) {
         this->ptr_ = ptr;
         maybeCheckValid(T, this->ptr_);
-        return *this;
-    }
-
-    Root& operator=(const Root& other) {
-        *this = other.get();
-        return *this;
-    }
-
-    Root& operator=(const GlobalRoot<T>& other) {
-        *this = other.get();
         return *this;
     }
 
@@ -433,42 +421,31 @@ struct Stack
         insert();
     }
 
-    explicit Stack(T ptr) {
-        *this = ptr;
-        insert();
-    }
-
-    Stack(const Stack& other) {
-        *this = other.get();
-        insert();
-    }
-
-    Stack(const GlobalRoot<T>& other) {
-        *this = other.get();
+    Stack(const Stack& other)
+      : PointerBase<T>(other.get())
+    {
         insert();
     }
 
     template <typename S>
-    explicit Stack(const S& other) : PointerBase<T>(other) {
+    explicit Stack(const S& other)
+      : PointerBase<T>(other)
+    {
         insert();
     }
 
     ~Stack() { remove(); }
 
+    Stack& operator=(const Stack& other) {
+        maybeCheckValid(T, other.get());
+        this->ptr_ = other.get();
+        return *this;
+    }
+
     template <typename S>
     Stack& operator=(const S& ptr) {
         this->ptr_ = ptr;
         maybeCheckValid(T, this->ptr_);
-        return *this;
-    }
-
-    Stack& operator=(const Stack& other) {
-        *this = other.get();
-        return *this;
-    }
-
-    Stack& operator=(const GlobalRoot<T>& other) {
-        *this = other.get();
         return *this;
     }
 

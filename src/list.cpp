@@ -487,7 +487,7 @@ void Slice::init()
     static const Name StopAttr = "stop";
     static const Name StepAttr = "step";
 
-    Stack<Layout*> layout = Object::InitialLayout;
+    Stack<Layout*> layout(Object::InitialLayout);
     layout = layout->addName(StartAttr);
     layout = layout->addName(StopAttr);
     layout = layout->addName(StepAttr);
