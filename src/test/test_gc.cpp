@@ -7,8 +7,7 @@
 struct TestCell : public Cell
 {
     virtual void traceChildren(Tracer& t) {
-        for (auto i = children_.begin(); i != children_.end(); ++i)
-            gc.trace(t, &(*i));
+        gc.traceVector(t, &children_);
     }
 
     void print(ostream& s) const override {

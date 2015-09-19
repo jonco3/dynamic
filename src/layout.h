@@ -42,7 +42,7 @@ struct Layout : public Cell
     void sweep() override;
 
   private:
-    Layout* parent_;
+    Heap<Layout*> parent_;
     int slot_;
     Name name_;
     unordered_map<Name, Layout*> children_;

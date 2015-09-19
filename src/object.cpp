@@ -293,8 +293,7 @@ void Object::traceChildren(Tracer& t)
 {
     gc.trace(t, &class_);
     gc.trace(t, &layout_);
-    for (auto i = slots_.begin(); i != slots_.end(); ++i)
-        gc.trace(t, &*i);
+    gc.traceVector(t, &slots_);
 }
 
 /* static */ Class* Class::createNative(string name,

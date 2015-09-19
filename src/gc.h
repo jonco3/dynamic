@@ -45,10 +45,14 @@ struct GC
     void collect();
 
     template <typename T>
-    inline void trace(Tracer& t, T* ptr);
+    inline void traceUnbarriered(Tracer& t, T* ptr);
 
     template <typename T>
     inline void trace(Tracer& t, Heap<T>* ptr);
+
+    // todo: replace this with HeapVector<T>
+    template <typename T>
+    inline void traceVector(Tracer& t, vector<T>* ptrs);
 
   private:
     static const int8_t epochCount = 2;
@@ -177,13 +181,19 @@ struct GCTraits<T*>
 #endif
 
 template <typename T>
-void GC::trace(Tracer& t, T* ptr) {
+void GC::traceUnbarriered(Tracer& t, T* ptr) {
     GCTraits<T>::trace(t, ptr);
 }
 
 template <typename T>
 void GC::trace(Tracer& t, Heap<T>* ptr) {
     GCTraits<T>::trace(t, &ptr->get());
+}
+
+template <typename T>
+void GC::traceVector(Tracer& t, vector<T>* ptrs) {
+    for (auto i: *ptrs)
+        GCTraits<T>::trace(t, &i);
 }
 
 // Provides usage count in debug builds so we can assert references don't live
@@ -368,7 +378,7 @@ struct GlobalRoot
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &this->ptr_);
+        gc.traceUnbarriered(t, &this->ptr_);
     }
 };
 
@@ -415,7 +425,7 @@ struct Root
     }
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &this->ptr_);
+        gc.traceUnbarriered(t, &this->ptr_);
     }
 };
 
@@ -463,7 +473,7 @@ struct Stack
     }
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &this->ptr_);
+        gc.traceUnbarriered(t, &this->ptr_);
     }
 };
 
@@ -474,6 +484,15 @@ struct Heap
   : public WrapperMixins<Heap<T>, T>,
     public PointerBase<T>
 {
+    Heap()
+      : PointerBase<T>()
+    {
+#ifndef DEBUG
+        static_assert(sizeof(Heap<T>) == sizeof(T),
+                      "Heap<T> should be the same size as T");
+#endif
+    }
+
     Heap(const Heap& other)
       : PointerBase<T>(other.get())
     {}
@@ -612,6 +631,11 @@ struct MutableTraced : public WrapperMixins<Traced<T>, T>
         return *this;
     }
 
+    MutableTraced& operator=(const Heap<T> other) {
+        ptr_ = other.get();
+        return *this;
+    }
+
     static MutableTraced<T> fromTracedLocation(T* traced) {
         return MutableTraced(traced);
     }
@@ -711,7 +735,7 @@ struct RootVector : public VectorBase<T>, protected RootBase
 
     void trace(Tracer& t) override {
         for (auto i = this->begin(); i != this->end(); ++i)
-            gc.trace(t, &*i);
+            gc.traceUnbarriered(t, &*i);
     }
 
     template <typename S> friend struct TracedVector;
@@ -795,7 +819,7 @@ struct AllocRoot : protected RootBase
     virtual void clear() override {}
 
     virtual void trace(Tracer& t) {
-        gc.trace(t, &ptr_);
+        gc.traceUnbarriered(t, &ptr_);
     }
 
   private:

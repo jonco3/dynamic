@@ -64,8 +64,7 @@ void GeneratorIter::traceChildren(Tracer& t)
     gc.trace(t, &block_);
     gc.trace(t, &env_);
     gc.trace(t, &exceptionHandlers_);
-    for (auto i = savedStack_.begin(); i != savedStack_.end(); i++)
-        gc.trace(t, &*i);
+    gc.traceVector(t, &savedStack_);
 }
 
 bool GeneratorIter::iter(MutableTraced<Value> resultOut)

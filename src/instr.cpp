@@ -1329,7 +1329,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
 #define handle_instr(it, cls)                                                 \
     instr_##it: {                                                             \
-        cls** ip = reinterpret_cast<cls**>(&thunk->data);                     \
+        cls** ip = reinterpret_cast<cls**>(&thunk->data.get());               \
         executeInstr_##it(Traced<cls*>::fromTracedLocation(ip));              \
         assert(instrp);                                                       \
         dispatch();                                                           \

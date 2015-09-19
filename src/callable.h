@@ -51,7 +51,7 @@ struct FunctionInfo : public Cell
     size_t argCount() const { return params_.size(); }
 
     vector<Name> params_;
-    Block* block_;
+    Heap<Block*> block_;
     unsigned defaultCount_;
     bool takesRest_;
     bool isGenerator_;
@@ -95,9 +95,9 @@ struct Function : public Callable
     void traceChildren(Tracer& t) override;
 
   private:
-    FunctionInfo* info_;
+    Heap<FunctionInfo*> info_;
     vector<Value> defaults_;
-    Env* env_;
+    Heap<Env*> env_;
 };
 
 struct Method : public Object
@@ -112,8 +112,8 @@ struct Method : public Object
     Object* object() { return object_; }
 
   private:
-    Callable* callable_;
-    Object* object_;
+    Heap<Callable*> callable_;
+    Heap<Object*> object_;
 };
 
 extern void initCallable();

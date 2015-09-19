@@ -98,8 +98,8 @@ struct Object : public Cell
     int findOwnAttr(Name name) const;
 
   private:
-    Class* class_;
-    Layout* layout_;
+    Heap<Class*> class_;
+    Heap<Layout*> layout_;
     vector<Value> slots_;
 
     friend void initObject();
@@ -140,7 +140,7 @@ struct Class : public Object
 
   private:
     string name_;
-    Object* base_;
+    Heap<Object*> base_;
     bool final_;
 
     // Only for use during initialization

@@ -25,7 +25,7 @@ unsigned Block::append(Traced<Instr*> data)
 {
     assert(data);
     unsigned index = nextIndex();
-    instrs_.push_back(InstrThunk {data->type(), data.get()});
+    instrs_.emplace_back(data);
     return index;
 }
 

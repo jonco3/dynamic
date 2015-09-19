@@ -253,7 +253,7 @@ struct GlobalInstrBase : public IdentInstrBase
     }
 
   private:
-    Object* global_;
+    Heap<Object*> global_;
 };
 
 #define define_global_instr(name)                                             \
@@ -284,7 +284,7 @@ struct InstrConst : public Instr
     }
 
   private:
-    Value value_;
+    Heap<Value> value_;
 };
 
 define_ident_and_slot_instr(GetStackLocal);
@@ -316,8 +316,8 @@ struct InstrGetMethodBuiltin : public IdentInstrBase
         gc.trace(t, &result_);
     }
 
-    Class* class_;
-    Value result_;
+    Heap<Class*> class_;
+    Heap<Value> result_;
 };
 
 struct InstrCall : public Instr
@@ -412,7 +412,7 @@ struct InstrLambda : public Instr
 
   private:
     Name funcName_;
-    FunctionInfo *info_;
+    Heap<FunctionInfo*> info_;
 };
 
 struct InstrDup : public Instr
@@ -531,9 +531,9 @@ struct InstrBinaryOpBuiltin : public BinaryOpInstr
     void traceChildren(Tracer& t) override;
 
   private:
-    Class* left_;
-    Class* right_;
-    Value method_;
+    Heap<Class*> left_;
+    Heap<Class*> right_;
+    Heap<Value> method_;
 };
 
 struct CompareOpInstr : public Instr
@@ -619,9 +619,9 @@ struct InstrAugAssignUpdateBuiltin : public BinaryOpInstr
     void traceChildren(Tracer& t) override;
 
   private:
-    Class* left_;
-    Class* right_;
-    Value method_;
+    Heap<Class*> left_;
+    Heap<Class*> right_;
+    Heap<Value> method_;
 };
 
 define_simple_instr(StartGenerator);

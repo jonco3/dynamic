@@ -84,8 +84,7 @@ void Function::traceChildren(Tracer& t)
 {
     Callable::traceChildren(t);
     gc.trace(t, &info_);
-    for (auto i: defaults_)
-        gc.trace(t, &i);
+    gc.traceVector(t, &defaults_);
     gc.trace(t, &env_);
 }
 

@@ -93,7 +93,7 @@ void Dict::traceChildren(Tracer& t)
 #ifdef DEBUG
         Value prior = key;
 #endif
-        gc.trace(t, &key);
+        gc.traceUnbarriered(t, &key);
         assert(key == prior);
         gc.trace(t, &i->second);
     }

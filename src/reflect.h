@@ -36,7 +36,7 @@ struct CodeObject : public Object
     void traceChildren(Tracer& t) override;
 
   private:
-    Block* block_;
+    Heap<Block*> block_;
 };
 
 extern void initReflect();

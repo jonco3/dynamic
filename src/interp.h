@@ -45,7 +45,7 @@ struct ExceptionHandler : public Cell
     void traceChildren(Tracer& t) override;
 
   protected:
-    ExceptionHandler* next_;
+    Heap<ExceptionHandler*> next_;
     const Type type_;
     unsigned stackPos_;
     unsigned offset_;

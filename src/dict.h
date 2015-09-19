@@ -35,7 +35,7 @@ struct Dict : public Object
         bool operator()(Value a, Value b) const;
     };
 
-    unordered_map<Value, Value, ValueHash, ValuesEqual> entries_;
+    unordered_map<Value, Heap<Value>, ValueHash, ValuesEqual> entries_;
 };
 
 #endif

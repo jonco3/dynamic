@@ -25,7 +25,7 @@ struct ListIter : public Object
     bool next(MutableTraced<Value> resultOut);
 
   private:
-    ListBase* list_;
+    Heap<ListBase*> list_;
     int index_;
 };
 
@@ -156,8 +156,7 @@ ListBase::ListBase(Traced<Class*> cls, size_t size)
 
 void ListBase::traceChildren(Tracer& t)
 {
-    for (unsigned i = 0; i < elements_.size(); ++i)
-        gc.trace(t, &elements_[i]);
+    gc.traceVector(t, &elements_);
 }
 
 bool ListBase::len(MutableTraced<Value> resultOut)

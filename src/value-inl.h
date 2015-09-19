@@ -18,7 +18,7 @@ inline void GCTraits<Value>::trace(Tracer& t, Value* v)
 {
     if (v->isObject()) {
         Object* o = v->asObject();
-        gc.trace(t, &o);
+        gc.traceUnbarriered(t, &o);
         *v = o;
     }
 }

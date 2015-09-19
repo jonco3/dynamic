@@ -29,8 +29,14 @@ using InstrFunc = bool (*)(Traced<T*> self, Interpreter& interp);
 
 struct InstrThunk
 {
+    InstrThunk(Traced<Instr*> instr)
+      : type(instr->type()), data(instr)
+    {
+        assert(data);
+    }
+
     InstrType type;
-    Instr* data;
+    Heap<Instr*> data;
 };
 
 struct Block : public Cell
@@ -77,7 +83,7 @@ struct Block : public Cell
     InstrThunk* findInstr(unsigned type);
 
   private:
-    Layout* layout_;
+    Heap<Layout*> layout_;
     unsigned argCount_;
     unsigned maxStackDepth_;
     bool createEnv_;

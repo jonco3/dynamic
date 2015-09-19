@@ -22,7 +22,7 @@ struct Env : public Object
     virtual void traceChildren(Tracer& t) override;
 
   private:
-    Env* parent_;
+    Heap<Env*> parent_;
 };
 
 // Activation frame.
@@ -53,12 +53,12 @@ struct Frame
     void traceChildren(Tracer& t);
 
   private:
-    Block* block_;
-    Env* env_;
+    Heap<Block*> block_;
+    Heap<Env*> env_;
     InstrThunk* returnPoint_;
     unsigned stackPos_;
     unsigned extraPopCount_;
-    ExceptionHandler* exceptionHandlers_;
+    Heap<ExceptionHandler*> exceptionHandlers_;
 };
 
 #endif
