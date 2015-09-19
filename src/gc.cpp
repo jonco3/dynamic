@@ -238,9 +238,9 @@ void GC::collect()
     // Mark roots
     log("- marking roots");
     Marker marker;
-    for (RootBase* r = rootList; r; r = r->next())
+    for (RootBase* r = rootList; r; r = r->nextRoot())
         r->trace(marker);
-    for (StackBase* r = stackList; r; r = r->next())
+    for (StackBase* r = stackList; r; r = r->nextRoot())
         r->trace(marker);
 
     // Mark
@@ -269,9 +269,9 @@ void GC::collect()
 
 void GC::shutdown()
 {
-    for (RootBase* r = rootList; r; r = r->next())
+    for (RootBase* r = rootList; r; r = r->nextRoot())
         r->clear();
-    for (StackBase* r = stackList; r; r = r->next())
+    for (StackBase* r = stackList; r; r = r->nextRoot())
         r->clear();
     collect();
     assert(cellCount == 0);

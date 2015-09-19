@@ -270,6 +270,59 @@ struct VectorBase : public UseCountBase, protected vector<T>
 {
     VectorBase() {}
     VectorBase(size_t count) : vector<T>(count) {}
+
+    typedef vector<T> Base;
+
+    using Base::back;
+    using Base::empty;
+    using Base::size;
+    using Base::begin;
+    using Base::end;
+    using Base::pop_back;
+    using Base::emplace_back;
+    using Base::resize;
+
+    void push_back(T element) {
+        maybeCheckValid(T, element);
+        Base::push_back(element);
+    }
+
+    T& operator[](size_t index) {
+        assert(index < this->size());
+        T& element = *(this->begin() + index);
+        maybeCheckValid(T, element);
+        return element;
+    }
+
+    const T& operator[](size_t index) const {
+        assert(index < this->size());
+        const T& element = *(this->begin() + index);
+        maybeCheckValid(T, element);
+        return element;
+    }
+
+    typename Base::iterator erase(typename Base::iterator first,
+                                  typename Base::iterator last) {
+        assert(!this->hasUses());
+        return Base::erase(first, last);
+    }
+
+    typename Base::iterator insert(typename Base::iterator pos, const T& val) {
+        assert(!this->hasUses());
+        return Base::insert(pos, val);
+    }
+
+    void insert(typename Base::iterator pos, size_t count, const T& value) {
+        assert(!this->hasUses());
+        Base::insert(pos, count, value);
+    }
+
+    template <typename I>
+    typename Base::iterator insert(typename Base::iterator pos,
+                                   I&& first, I&& last) {
+        assert(!this->hasUses());
+        return Base::insert(pos, std::forward<I>(first), std::forward<I>(last));
+    }
 };
 
 struct RootBase
@@ -279,7 +332,7 @@ struct RootBase
     virtual void trace(Tracer& t) = 0;
     virtual void clear() = 0;
 
-    void insert() {
+    void insertRoot() {
         assert(!next_ && !prev_);
         next_ = gc.rootList;
         prev_ = nullptr;
@@ -288,7 +341,7 @@ struct RootBase
         gc.rootList = this;
     }
 
-    void remove() {
+    void removeRoot() {
         assert(gc.rootList == this || prev_);
         if (next_)
             next_->prev_ = prev_;
@@ -302,7 +355,7 @@ struct RootBase
 #endif
     }
 
-    RootBase* next() {
+    RootBase* nextRoot() {
         return next_;
     }
 
@@ -318,13 +371,13 @@ struct StackBase
     virtual void trace(Tracer& t) = 0;
     virtual void clear() = 0;
 
-    void insert() {
+    void insertRoot() {
         assert(!next_);
         next_ = gc.stackList;
         gc.stackList = this;
     }
 
-    void remove() {
+    void removeRoot() {
         assert(gc.stackList == this);
         gc.stackList = next_;
 #ifdef DEBUG
@@ -332,7 +385,7 @@ struct StackBase
 #endif
     }
 
-    StackBase* next() {
+    StackBase* nextRoot() {
         return next_;
     }
 
@@ -361,13 +414,13 @@ struct GlobalRoot
 
     ~GlobalRoot() {
         if (GCTraits<T>::isNonNull(this->ptr_))
-            remove();
+            removeRoot();
     }
 
     void init(T ptr) {
         maybeCheckValid(T, ptr);
         if (GCTraits<T>::isNonNull(ptr))
-            insert();
+            insertRoot();
         this->ptr_ = ptr;
     }
 
@@ -390,22 +443,22 @@ struct Root
     protected RootBase
 {
     Root() {
-        insert();
+        insertRoot();
     }
 
     Root(const Root& other)
       : PointerBase<T>(other.ptr_)
     {
-        insert();
+        insertRoot();
     }
 
     template <typename S>
     explicit Root(const S& other)
       : PointerBase<T>(other) {
-        insert();
+        insertRoot();
     }
 
-    ~Root() { remove(); }
+    ~Root() { removeRoot(); }
 
     Root& operator=(const Root& other) {
         maybeCheckValid(T, other.get());
@@ -437,23 +490,23 @@ struct Stack
     protected StackBase
 {
     Stack() {
-        insert();
+        insertRoot();
     }
 
     Stack(const Stack& other)
       : PointerBase<T>(other.get())
     {
-        insert();
+        insertRoot();
     }
 
     template <typename S>
     explicit Stack(const S& other)
       : PointerBase<T>(other)
     {
-        insert();
+        insertRoot();
     }
 
-    ~Stack() { remove(); }
+    ~Stack() { removeRoot(); }
 
     Stack& operator=(const Stack& other) {
         maybeCheckValid(T, other.get());
@@ -648,75 +701,24 @@ struct RootVector : public VectorBase<T>, protected RootBase
 {
     typedef VectorBase<T> Base;
 
-    using Base::back;
-    using Base::empty;
-    using Base::size;
-    using Base::begin;
-    using Base::end;
-    using Base::pop_back;
-    using Base::emplace_back;
-    using Base::resize;
-
     RootVector() {
-        RootBase::insert();
+        insertRoot();
     }
 
     RootVector(size_t initialSize)
       : VectorBase<T>(initialSize)
     {
-        RootBase::insert();
+        insertRoot();
     }
 
     RootVector(const TracedVector<T>& v);
 
     ~RootVector() {
-        RootBase::remove();
+        removeRoot();
     }
 
     virtual void clear() override {
         Base::resize(0);
-    }
-
-    void push_back(T element) {
-        maybeCheckValid(T, element);
-        Base::push_back(element);
-    }
-
-    T& operator[](size_t index) {
-        assert(index < size());
-        T& element = *(this->begin() + index);
-        maybeCheckValid(T, element);
-        return element;
-    }
-
-    const T& operator[](size_t index) const {
-        assert(index < size());
-        const T& element = *(this->begin() + index);
-        maybeCheckValid(T, element);
-        return element;
-    }
-
-    typename Base::iterator erase(typename Base::iterator first,
-                                  typename Base::iterator last) {
-        assert(!this->hasUses());
-        return Base::erase(first, last);
-    }
-
-    typename Base::iterator insert(typename Base::iterator pos, const T& val) {
-        assert(!this->hasUses());
-        return Base::insert(pos, val);
-    }
-
-    void insert(typename Base::iterator pos, size_t count, const T& value) {
-        assert(!this->hasUses());
-        Base::insert(pos, count, value);
-    }
-
-    template <typename I>
-    typename Base::iterator insert(typename Base::iterator pos,
-                                   I&& first, I&& last) {
-        assert(!this->hasUses());
-        return Base::insert(pos, std::forward<I>(first), std::forward<I>(last));
     }
 
     void trace(Tracer& t) override {
@@ -782,7 +784,7 @@ template <typename T>
 RootVector<T>::RootVector(const TracedVector<T>& v)
   : VectorBase<T>(v.size())
 {
-    RootBase::insert();
+    insertRoot();
     for (size_t i = 0; i < v.size(); i++)
         (*this)[i] = v[i];
 }
@@ -793,10 +795,10 @@ struct AllocRoot : protected RootBase
 {
     explicit AllocRoot(T ptr) {
         ptr_ = ptr;
-        insert();
+        insertRoot();
     }
 
-    ~AllocRoot() { remove(); }
+    ~AllocRoot() { removeRoot(); }
 
     define_comparisions;
     define_immutable_accessors;
