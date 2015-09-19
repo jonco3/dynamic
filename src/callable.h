@@ -75,11 +75,11 @@ struct Function : public Callable
     Env* env() const { return env_; }
     bool takesRest() const { return info_->takesRest_; }
     bool isGenerator() const { return info_->isGenerator_; }
-    Traced<Value> paramDefault(unsigned i) {
+    Value paramDefault(unsigned i) {
         assert(i < info_->argCount());
         i -= maxNormalArgs() - defaults_.size();
         assert(i < defaults_.size());
-        return Traced<Value>::fromTracedLocation(&defaults_[i]);
+        return defaults_[i];
     }
     size_t argCount() const {
         return info_->argCount();

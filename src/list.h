@@ -16,8 +16,8 @@ struct ListBase : public Object
     void traceChildren(Tracer& t) override;
 
     int32_t len() { return (int32_t)elements_.size(); }
-    Traced<Value> getitem(size_t index) {
-        return Traced<Value>::fromTracedLocation(&elements_.at(index));
+    Value getitem(size_t index) {
+        return elements_.at(index);
     }
 
     bool operator==(const ListBase& other);

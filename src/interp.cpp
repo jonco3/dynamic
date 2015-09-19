@@ -593,8 +593,11 @@ unsigned Interpreter::mungeArguments(Traced<Function*> function,
                                      unsigned argCount)
 {
     // Fill in default values for missing arguments
-    while (argCount < function->maxNormalArgs())
-        pushStack(function->paramDefault(argCount++));
+    Stack<Value> value;
+    while (argCount < function->maxNormalArgs()) {
+        value = function->paramDefault(argCount++);
+        pushStack(value);
+    }
 
     // Add rest argument tuple if necessary
     assert(argCount >= function->maxNormalArgs());
