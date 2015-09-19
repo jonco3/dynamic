@@ -636,13 +636,7 @@ struct MutableTraced : public WrapperMixins<Traced<T>, T>
         return *this;
     }
 
-    static MutableTraced<T> fromTracedLocation(T* traced) {
-        return MutableTraced(traced);
-    }
-
   private:
-    MutableTraced(const T* traced) : ptr_(*traced) {}
-
     T& ptr_;
 };
 
@@ -661,6 +655,7 @@ struct RootVector : public VectorBase<T>, protected RootBase
     using Base::end;
     using Base::pop_back;
     using Base::emplace_back;
+    using Base::resize;
 
     RootVector() {
         RootBase::insert();
@@ -680,15 +675,6 @@ struct RootVector : public VectorBase<T>, protected RootBase
 
     virtual void clear() override {
         Base::resize(0);
-    }
-
-    Traced<T> ref(unsigned index) {
-        assert(index < this->size());
-        return Traced<T>::fromTracedLocation(&(*this)[index]);
-    }
-
-    void resize(size_t size) {
-        Base::resize(size);
     }
 
     void push_back(T element) {
@@ -734,8 +720,7 @@ struct RootVector : public VectorBase<T>, protected RootBase
     }
 
     void trace(Tracer& t) override {
-        for (auto i = this->begin(); i != this->end(); ++i)
-            gc.traceUnbarriered(t, &*i);
+        gc.traceVector(t, this);
     }
 
     template <typename S> friend struct TracedVector;
