@@ -23,6 +23,8 @@ struct Marker;
 struct RootBase;
 struct StackBase;
 template <typename T> struct Heap;
+template <typename T> struct HeapVector;
+template <typename T> struct VectorBase;
 
 // A visitor that visits edges in the object graph.
 struct Tracer
@@ -48,11 +50,13 @@ struct GC
     inline void traceUnbarriered(Tracer& t, T* ptr);
 
     template <typename T>
+    inline void traceVectorUnbarriered(Tracer& t, VectorBase<T>* ptr);
+
+    template <typename T>
     inline void trace(Tracer& t, Heap<T>* ptr);
 
-    // todo: replace this with HeapVector<T>
     template <typename T>
-    inline void traceVector(Tracer& t, vector<T>* ptrs);
+    inline void traceVector(Tracer& t, HeapVector<T>* ptrs);
 
   private:
     static const int8_t epochCount = 2;
@@ -186,15 +190,24 @@ void GC::traceUnbarriered(Tracer& t, T* ptr) {
 }
 
 template <typename T>
+void GC::traceVectorUnbarriered(Tracer& t, VectorBase<T>* ptrs) {
+    for (auto i: *ptrs)
+        GCTraits<T>::trace(t, &i);
+}
+
+template <typename T>
 void GC::trace(Tracer& t, Heap<T>* ptr) {
     GCTraits<T>::trace(t, &ptr->get());
 }
 
 template <typename T>
-void GC::traceVector(Tracer& t, vector<T>* ptrs) {
+void GC::traceVector(Tracer& t, HeapVector<T>* ptrs) {
     for (auto i: *ptrs)
         GCTraits<T>::trace(t, &i);
 }
+
+template <typename T>
+struct TracedVector;
 
 // Provides usage count in debug builds so we can assert references don't live
 // longer than their referent.
@@ -227,6 +240,9 @@ struct UseCountBase
         useCount_--;
 #endif
     }
+
+    template <typename T>
+    friend struct TracedVector;
 
   private:
 #ifdef DEBUG
@@ -269,7 +285,8 @@ template <typename T>
 struct VectorBase : public UseCountBase, protected vector<T>
 {
     VectorBase() {}
-    VectorBase(size_t count) : vector<T>(count) {}
+    VectorBase(size_t count) : vector<T>(count, GCTraits<T>::nullValue()) {}
+    VectorBase(size_t count, T fill) : vector<T>(count, fill) {}
 
     typedef vector<T> Base;
 
@@ -281,6 +298,7 @@ struct VectorBase : public UseCountBase, protected vector<T>
     using Base::pop_back;
     using Base::emplace_back;
     using Base::resize;
+    using Base::at;
 
     void push_back(T element) {
         maybeCheckValid(T, element);
@@ -299,6 +317,11 @@ struct VectorBase : public UseCountBase, protected vector<T>
         const T& element = *(this->begin() + index);
         maybeCheckValid(T, element);
         return element;
+    }
+
+    typename Base::iterator erase(typename Base::iterator position) {
+        assert(!this->hasUses());
+        return Base::erase(position);
     }
 
     typename Base::iterator erase(typename Base::iterator first,
@@ -668,9 +691,6 @@ struct MutableTraced : public WrapperMixins<Traced<T>, T>
 };
 
 template <typename T>
-struct TracedVector;
-
-template <typename T>
 struct RootVector : public VectorBase<T>, protected RootBase
 {
     typedef VectorBase<T> Base;
@@ -688,43 +708,57 @@ struct RootVector : public VectorBase<T>, protected RootBase
     }
 
     void trace(Tracer& t) override {
-        gc.traceVector(t, this);
+        gc.traceVectorUnbarriered(t, this);
     }
 
     template <typename S> friend struct TracedVector;
 };
 
 template <typename T>
+struct HeapVector
+  : public WrapperMixins<Heap<T>, T>,
+    public VectorBase<T>
+{
+    HeapVector() {}
+    HeapVector(size_t count) : VectorBase<T>(count) {}
+    HeapVector(size_t count, T fill) : VectorBase<T>(count, fill) {}
+
+    HeapVector(const TracedVector<T>& other);
+};
+
+template <typename T>
 struct TracedVector
 {
-    TracedVector(RootVector<T>& source)
-      : root_(source), offset_(0), size_(source.size())
+    typedef vector<T> Base;
+
+    TracedVector(VectorBase<T>& source)
+      : vector_(source), offset_(0), size_(source.size())
     {
-        root_.addUse();
+        vector_.addUse();
     }
 
-    TracedVector(RootVector<T>& source, size_t offset, size_t size)
-      : root_(source), offset_(offset), size_(size)
+    TracedVector(VectorBase<T>& source, size_t offset, size_t size)
+      : vector_(source), offset_(offset), size_(size)
     {
         assert(offset + size <= source.size());
-        root_.addUse();
+        vector_.addUse();
     }
 
     TracedVector(const TracedVector<T>& source, size_t offset, size_t size)
-      : root_(source.root_), offset_(source.offset_ + offset), size_(size)
+      : vector_(source.vector_), offset_(source.offset_ + offset), size_(size)
     {
         assert(offset + size <= source.size());
-        root_.addUse();
+        vector_.addUse();
     }
 
     TracedVector(const TracedVector& other)
-      : root_(other.root_), offset_(other.offset_), size_(other.size_)
+      : vector_(other.vector_), offset_(other.offset_), size_(other.size_)
     {
-        root_.addUse();
+        vector_.addUse();
     }
 
     ~TracedVector() {
-        root_.removeUse();
+        vector_.removeUse();
     }
 
     size_t size() const {
@@ -733,13 +767,19 @@ struct TracedVector
 
     Traced<T> operator[](unsigned index) const {
         assert(index < size_);
-        return Traced<T>::fromTracedLocation(&root_[index + offset_]);
+        return Traced<T>::fromTracedLocation(&vector_[index + offset_]);
     }
 
-    // todo: implement c++ iterators
+    typename Base::iterator begin() {
+        return vector_.begin() + offset_;
+    }
+
+    typename Base::iterator end() {
+        return begin() + size_;
+    }
 
   private:
-    RootVector<T>& root_;
+    VectorBase<T>& vector_;
     size_t offset_;
     size_t size_;
 
@@ -750,30 +790,19 @@ template <typename T>
 RootVector<T>::RootVector(const TracedVector<T>& v)
   : VectorBase<T>(v.size())
 {
+    // todo: use proper STLness for this
     for (size_t i = 0; i < v.size(); i++)
         (*this)[i] = v[i];
 }
 
-// Root used in allocation that doesn't check its (uninitialised) pointer.
 template <typename T>
-struct AllocRoot : protected RootBase
+HeapVector<T>::HeapVector(const TracedVector<T>& v)
+  : VectorBase<T>(v.size())
 {
-    explicit AllocRoot(T ptr) {
-        ptr_ = ptr;
-    }
-
-    define_comparisions;
-    define_immutable_accessors;
-
-    virtual void clear() override {}
-
-    void trace(Tracer& t) override {
-        gc.traceUnbarriered(t, &ptr_);
-    }
-
-  private:
-    T ptr_;
-};
+    // todo: use proper STLness for this
+    for (size_t i = 0; i < v.size(); i++)
+        (*this)[i] = v[i];
+}
 
 GC::SizeClass GC::sizeClass(size_t size)
 {
@@ -812,7 +841,7 @@ T* GC::create(Args&&... args) {
     SizeClass sc = sizeClass(sizeof(T));
     void* data = allocCell(sc);
 
-    AllocRoot<T*> t(static_cast<T*>(data));
+    Stack<T*> t(static_cast<T*>(data));
     assert(static_cast<Cell*>(t.get()) == data);
     assert(!isAllocating);
 #ifdef DEBUG

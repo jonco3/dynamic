@@ -263,8 +263,8 @@ GeneratorIter* Interpreter::getGeneratorIter()
 void Interpreter::resumeGenerator(Traced<Block*> block,
                                   Traced<Env*> env,
                                   unsigned ipOffset,
-                                  vector<Value>& savedStack,
-                                  MutableTraced<ExceptionHandler*> savedHandlers)
+                                  TracedVector<Value> savedStack,
+                                  Traced<ExceptionHandler*> savedHandlers)
 {
     pushFrame(block, stackPos(), 0);
     setFrameEnv(env);
@@ -273,12 +273,13 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
     // todo: can copy this in one go
     for (auto i = savedStack.begin(); i != savedStack.end(); i++)
         pushStack(*i);
-    savedStack.resize(0);
-    savedHandlers = nullptr;
 }
 
-unsigned Interpreter::suspendGenerator(vector<Value>& savedStack,
-                                       MutableTraced<ExceptionHandler*> savedHandlers)
+// todo: this should take a MutableTracedVector, but it's not worth defining it
+// for this single use.
+unsigned
+Interpreter::suspendGenerator(HeapVector<Value>& savedStack,
+                              MutableTraced<ExceptionHandler*> savedHandlers)
 {
     Frame* frame = getFrame();
     assert(frame->stackPos() <= stackPos());

@@ -23,10 +23,10 @@ struct ListBase : public Object
     bool operator==(const ListBase& other);
     bool operator!=(const ListBase& other) { return !(*this == other); }
 
-    const vector<Value>& elements() const { return elements_; }
+    const HeapVector<Value>& elements() const { return elements_; }
 
   protected:
-    vector<Value> elements_;
+    HeapVector<Value> elements_;
     friend struct ListIter;
 
     ListBase(Traced<Class*> cls, const TracedVector<Value>& values);

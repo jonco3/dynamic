@@ -100,7 +100,7 @@ struct Object : public Cell
   private:
     Heap<Class*> class_;
     Heap<Layout*> layout_;
-    vector<Value> slots_;
+    HeapVector<Value> slots_;
 
     friend void initObject();
 };

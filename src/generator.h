@@ -38,7 +38,7 @@ struct GeneratorIter : public Object
     Heap<ExceptionHandler*> exceptionHandlers_;
     size_t ipOffset_;
     unsigned argCount_;
-    vector<Value> savedStack_;
+    HeapVector<Value> savedStack_;
 };
 
 #endif

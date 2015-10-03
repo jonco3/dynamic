@@ -201,9 +201,9 @@ struct Interpreter
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
                          unsigned ipOffset,
-                         vector<Value>& savedStack,
-                         MutableTraced<ExceptionHandler*> savedHandlers);
-    unsigned suspendGenerator(vector<Value>& savedStack,
+                         TracedVector<Value> savedStack,
+                         Traced<ExceptionHandler*> savedHandlers);
+    unsigned suspendGenerator(HeapVector<Value>& savedStack,
                               MutableTraced<ExceptionHandler*> savedHandlers);
 
     void loopControlJump(unsigned finallyCount, unsigned target);

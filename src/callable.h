@@ -96,7 +96,7 @@ struct Function : public Callable
 
   private:
     Heap<FunctionInfo*> info_;
-    vector<Value> defaults_;
+    HeapVector<Value> defaults_;
     Heap<Env*> env_;
 };
 

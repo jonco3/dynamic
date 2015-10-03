@@ -81,6 +81,8 @@ void GeneratorIter::resume(Interpreter& interp)
       case Suspended: {
         interp.resumeGenerator(block_, env_, ipOffset_, savedStack_,
                                exceptionHandlers_);
+        savedStack_.resize(0);
+        exceptionHandlers_ = nullptr;
         if (state_ == Suspended)
             interp.pushStack(None);
         state_ = Running;

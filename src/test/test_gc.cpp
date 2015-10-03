@@ -19,7 +19,7 @@ struct TestCell : public Cell
     }
 
   private:
-    vector<TestCell*> children_;
+    HeapVector<TestCell*> children_;
 };
 
 testcase(gc)

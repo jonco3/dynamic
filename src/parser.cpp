@@ -5,6 +5,8 @@
 #include "test.h"
 #include "utils.h"
 
+#include "value-inl.h"
+
 ParseError::ParseError(const Token& token, string message) :
   runtime_error(message), pos(token.pos)
 {
