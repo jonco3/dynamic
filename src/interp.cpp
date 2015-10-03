@@ -20,7 +20,7 @@ bool logExecution = false;
 
 GlobalRoot<Block*> Interpreter::AbortTrampoline;
 
-Interpreter interp;
+GlobalRoot<Interpreter*> interp;
 
 ExceptionHandler::ExceptionHandler(Type type, unsigned stackPos, unsigned offset)
   : next_(nullptr), type_(type), stackPos_(stackPos), offset_(offset)
@@ -55,6 +55,20 @@ void Interpreter::init()
     AbortTrampoline.init(gc.create<Block>(Env::InitialLayout, 1, false));
     AbortTrampoline->append<InstrAbort>();
     AbortTrampoline->setMaxStackDepth(1);
+
+    interp.init(gc.create<Interpreter>());
+}
+
+void Interpreter::traceChildren(Tracer& t)
+{
+    // Clear the unused portion of the stack to avoid holding onto garbage.
+    for (size_t i = stackPos_; i < stack.size(); i++)
+        stack[i] = None;
+
+    gc.traceVector(t, &frames);
+    gc.traceVector(t, &stack);
+    gc.trace(t, &currentException_);
+    gc.trace(t, &deferredReturnValue_);
 }
 
 bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)

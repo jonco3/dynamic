@@ -139,7 +139,7 @@ for_each_exception_class(set_exception_attr)
     Stack<Block*> block;
     CompileModule(Input(text, filename), Builtin, block);
     Stack<Value> result;
-    if (!interp.exec(block, result)) {
+    if (!interp->exec(block, result)) {
         printException(result);
         exit(1);
     }

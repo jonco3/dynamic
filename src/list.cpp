@@ -88,8 +88,8 @@ static bool listBase_new(TracedVector<Value> args, MutableTraced<Value> resultOu
     }
 
     Stack<Value> result;
-    interp.pushStack(arg);
-    if (!interp.call(IterableToList, 1, result)) {
+    interp->pushStack(arg);
+    if (!interp->call(IterableToList, 1, result)) {
         resultOut = result;
         return false;
     }

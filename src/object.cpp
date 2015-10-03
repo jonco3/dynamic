@@ -559,10 +559,10 @@ static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueIn
     Stack<Object*> desc(valueInOut.asObject());
     Stack<Value> func(desc->getAttr(Name::__get__));
     bool isClass = value.is<Class>();
-    interp.pushStack(desc);
-    interp.pushStack(isClass ? None : value);
-    interp.pushStack(isClass ? value.get() : value.type());
-    return interp.call(func, 3, valueInOut);
+    interp->pushStack(desc);
+    interp->pushStack(isClass ? None : value);
+    interp->pushStack(isClass ? value.get() : value.type());
+    return interp->call(func, 3, valueInOut);
 }
 
 bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
@@ -655,10 +655,10 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
 
     Stack<Object*> desc(descValue.asObject());
     Stack<Value> func(desc->getAttr(Name::__set__));
-    interp.pushStack(desc);
-    interp.pushStack(obj);
-    interp.pushStack(value);
-    return interp.call(func, 3, resultOut);
+    interp->pushStack(desc);
+    interp->pushStack(obj);
+    interp->pushStack(value);
+    return interp->call(func, 3, resultOut);
 }
 
 bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
@@ -673,8 +673,8 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
 
     Stack<Object*> desc(descValue.asObject());
     Stack<Value> func(desc->getAttr(Name::__delete__));
-    interp.pushStack(desc);
-    interp.pushStack(obj);
-    return interp.call(func, 2, resultOut);
+    interp->pushStack(desc);
+    interp->pushStack(obj);
+    return interp->call(func, 2, resultOut);
 }
 

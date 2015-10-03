@@ -14,7 +14,7 @@ void testInterp(const string& input, const string& expected)
     Stack<Block*> block;
     CompileModule(input, None, block);
     Stack<Value> result;
-    bool ok = interp.exec(block, result);
+    bool ok = interp->exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -27,7 +27,7 @@ void testException(const string& input, const string& expected)
     CompileModule(input, None, block);
     Stack<Value> result;
     testExpectingException = true;
-    bool ok = interp.exec(block, result);
+    bool ok = interp->exec(block, result);
     testExpectingException = false;
     if (ok) {
         cerr << "Expected exception but got: " << result << endl;
@@ -60,7 +60,7 @@ void testReplacement(const string& input,
     assert(instrp);
 
     Stack<Value> result;
-    bool ok = interp.exec(block, result);
+    bool ok = interp->exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);

@@ -51,7 +51,7 @@ struct ExceptionHandler : public Cell
     unsigned offset_;
 };
 
-struct Interpreter
+struct Interpreter : public Cell
 {
     Interpreter();
     static void init();
@@ -230,16 +230,18 @@ struct Interpreter
     static GlobalRoot<Block*> AbortTrampoline;
 
     InstrThunk *instrp;
-    RootVector<Frame> frames;
-    RootVector<Value> stack;
+    HeapVector<Frame> frames;
+    HeapVector<Value> stack;
     unsigned stackPos_;
 
     bool inExceptionHandler_;
     JumpKind jumpKind_;
-    Stack<Exception*> currentException_;
-    Stack<Value> deferredReturnValue_;
+    Heap<Exception*> currentException_;
+    Heap<Value> deferredReturnValue_;
     unsigned remainingFinallyCount_;
     unsigned loopControlTarget_;
+
+    void traceChildren(Tracer& t) override;
 
     unsigned frameIndex() {
         assert(!frames.empty());
@@ -311,6 +313,6 @@ struct Interpreter
     void executeDestructureFallback(unsigned expected);
 };
 
-extern Interpreter interp;
+extern GlobalRoot<Interpreter*> interp;
 
 #endif
