@@ -419,7 +419,7 @@ struct GlobalRoot
 
     GlobalRoot& operator=(const GlobalRoot& other) = delete;
 
-    virtual void trace(Tracer& t) {
+    void trace(Tracer& t) override {
         gc.traceUnbarriered(t, &this->ptr_);
     }
 };
@@ -459,7 +459,7 @@ struct Root
         this->ptr_ = GCTraits<T>::nullValue();
     }
 
-    virtual void trace(Tracer& t) {
+    void trace(Tracer& t) override {
         gc.traceUnbarriered(t, &this->ptr_);
     }
 };
@@ -499,7 +499,7 @@ struct Stack
         this->ptr_ = GCTraits<T>::nullValue();
     }
 
-    virtual void trace(Tracer& t) {
+    void trace(Tracer& t) override {
         gc.traceUnbarriered(t, &this->ptr_);
     }
 };
@@ -767,7 +767,7 @@ struct AllocRoot : protected RootBase
 
     virtual void clear() override {}
 
-    virtual void trace(Tracer& t) {
+    void trace(Tracer& t) override {
         gc.traceUnbarriered(t, &ptr_);
     }
 

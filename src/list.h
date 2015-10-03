@@ -50,7 +50,7 @@ struct Tuple : public ListBase
     static Tuple* createUninitialised(size_t size);
     void initElement(size_t index, const Value& value);
 
-    virtual const string& listName() const;
+    const string& listName() const override;
     void print(ostream& s) const override;
 
     Tuple(const TracedVector<Value>& values);
@@ -73,8 +73,8 @@ struct List : public ListBase
     List(size_t size);
     List(Traced<Class*> cls, Traced<ListBase*> init);
 
-    virtual const string& listName() const;
-    virtual void print(ostream& os) const;
+    const string& listName() const override;
+    void print(ostream& os) const override;
 
     bool setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut);
     bool delitem(Traced<Value> index, MutableTraced<Value> resultOut);

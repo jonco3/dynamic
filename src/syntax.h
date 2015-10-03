@@ -84,7 +84,7 @@ struct SyntaxVisitor
 
 struct DefaultSyntaxVisitor : public SyntaxVisitor
 {
-    virtual void setPos(const TokenPos& pos) {}
+    void setPos(const TokenPos& pos) override {}
 #define syntax_visitor(name)                                                  \
     virtual void visit(const Syntax##name&) override {}
     for_each_syntax(syntax_visitor)

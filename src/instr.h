@@ -144,7 +144,7 @@ struct Instr : public Cell
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
-    virtual void print(ostream& s) const {}
+    void print(ostream& s) const override {}
 };
 
 // Base class for instruction data that can be used by more than one instruction
@@ -174,7 +174,7 @@ struct IdentInstrBase : public Instr
 {
     IdentInstrBase(Name ident) : ident(ident) {}
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << " " << ident;
     }
 
@@ -325,7 +325,7 @@ struct InstrCall : public Instr
     define_instr_members(Call);
     InstrCall(unsigned count) : count(count) {}
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << " " << count;
     }
 
@@ -347,14 +347,14 @@ define_simple_instr(Not);
 struct Branch : public Instr
 {
     Branch(int offset = 0) : offset_(offset) {}
-    virtual bool isBranch() const { return true; };
+    bool isBranch() const override { return true; };
 
     void setOffset(int offset) {
         assert(!offset_);
         offset_ = offset;
     }
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << " " << offset_;
     }
 
@@ -404,7 +404,7 @@ struct InstrLambda : public Instr
         gc.trace(t, &info_);
     }
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i) {
             s << " " << *i;
         }
@@ -420,7 +420,7 @@ struct InstrDup : public Instr
     define_instr_members(Dup);
     InstrDup(unsigned index = 0) : index(index) {}
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << " " << index;
     }
 
@@ -476,7 +476,7 @@ struct BinaryOpInstr : public Instr
 {
     BinaryOpInstr(BinaryOp op) : op(op) {}
 
-    virtual void print(ostream& s) const;
+    void print(ostream& s) const override;
 
     const BinaryOp op;
 };
@@ -489,7 +489,7 @@ struct SharedBinaryOpInstr : public SharedInstrBase
         assert(type < InstrTypeCount);
     }
 
-    virtual void print(ostream& s) const;
+    void print(ostream& s) const override;
 
     const BinaryOp op;
 };
@@ -540,7 +540,7 @@ struct CompareOpInstr : public Instr
 {
     CompareOpInstr(CompareOp op) : op(op) {}
 
-    virtual void print(ostream& s) const;
+    void print(ostream& s) const override;
 
     const CompareOp op;
 };
@@ -553,7 +553,7 @@ struct SharedCompareOpInstr : public SharedInstrBase
         assert(type < InstrTypeCount);
     }
 
-    virtual void print(ostream& s) const;
+    void print(ostream& s) const override;
 
     const CompareOp op;
 };
@@ -654,7 +654,7 @@ struct InstrLoopControlJump : public Instr
         target_ = target;
     }
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << " " << finallyCount_ << " " << target_;
     }
 
@@ -668,7 +668,7 @@ struct InstrAssertStackDepth : public Instr
     define_instr_members(AssertStackDepth);
     InstrAssertStackDepth(unsigned expected) : expected(expected) {}
 
-    virtual void print(ostream& s) const {
+    void print(ostream& s) const override {
         s << " " << expected;
     }
 

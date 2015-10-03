@@ -74,7 +74,7 @@ struct Block : public Cell
     }
 
     virtual void traceChildren(Tracer& t) override;
-    virtual void print(ostream& s) const;
+    void print(ostream& s) const override;
 
     void setNextPos(const TokenPos& pos);
     TokenPos getPos(InstrThunk* instrp) const;

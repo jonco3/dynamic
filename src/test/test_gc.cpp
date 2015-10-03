@@ -6,7 +6,7 @@
 
 struct TestCell : public Cell
 {
-    virtual void traceChildren(Tracer& t) {
+    void traceChildren(Tracer& t) override {
         gc.traceVector(t, &children_);
     }
 
