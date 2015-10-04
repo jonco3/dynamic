@@ -32,8 +32,6 @@ struct ByteCompiler : public SyntaxVisitor
         layout(Env::InitialLayout),
         useLexicalEnv(false),
         block(nullptr),
-        isClassBlock(false),
-        isGenerator(false),
         contextStack({Context::None}),
         loopHeadOffset(0),
         stackDepth(0),
@@ -50,6 +48,7 @@ struct ByteCompiler : public SyntaxVisitor
     Block* buildModule(Traced<Object*> globals, const SyntaxBlock* s) {
         assert(globals);
         assert(!parent);
+        kind = Kind::Module;
         topLevel = globals;
         layout = topLevel->layout();
         build(*s, 0);
@@ -63,6 +62,7 @@ struct ByteCompiler : public SyntaxVisitor
                              const Syntax& s)
     {
         assert(parent);
+        kind = Kind::FunctionBody;
         this->parent = parent;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
@@ -80,6 +80,7 @@ struct ByteCompiler : public SyntaxVisitor
     Block* buildLambda(ByteCompiler* parent, const vector<Parameter>& params,
                        const Syntax& s) {
         assert(parent);
+        kind = Kind::Lambda;
         this->parent = parent;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
@@ -92,10 +93,10 @@ struct ByteCompiler : public SyntaxVisitor
 
     Block* buildClass(ByteCompiler* parent, Name id, const Syntax& s) {
         assert(parent);
+        kind = Kind::ClassBlock;
         this->parent = parent;
         topLevel = parent->topLevel;
         layout = layout->addName(Name::__bases__);
-        isClassBlock = true;
         useLexicalEnv = true;
         build(s, 1);
         emit<InstrPop>();
@@ -110,9 +111,9 @@ struct ByteCompiler : public SyntaxVisitor
                           const Syntax& s)
     {
         assert(parent);
+        kind = Kind::Generator;
         this->parent = parent;
         topLevel = parent->topLevel;
-        isGenerator = true;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s, params.size());
@@ -125,6 +126,15 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
   private:
+    enum class Kind {
+        Module,
+        FunctionBody,
+        Lambda,
+        ClassBlock,
+        Generator,
+        ListComp
+    };
+
     enum class Context {
         None,
         Loop,
@@ -133,6 +143,7 @@ struct ByteCompiler : public SyntaxVisitor
         Delete
     };
 
+    Kind kind;
     ByteCompiler* parent;
     Root<Object*> topLevel;
     Root<Layout*> layout;
@@ -140,8 +151,6 @@ struct ByteCompiler : public SyntaxVisitor
     vector<Name> globals;
     bool useLexicalEnv;
     Root<Block*> block;
-    bool isClassBlock;
-    bool isGenerator;
     vector<Context> contextStack;
     unsigned loopHeadOffset;
     vector<unsigned> breakInstrs;
@@ -228,7 +237,7 @@ struct ByteCompiler : public SyntaxVisitor
                 incStackDepth(layout->slotCount());
             }
         }
-        if (isGenerator) {
+        if (kind == Kind::Generator) {
             emit<InstrStartGenerator>();
             emit<InstrPop>();
             incStackDepth(); // InstrStartGenerator leaves iterator on stack
@@ -621,10 +630,10 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxReturn& s) {
-        if (isClassBlock) {
+        if (kind == Kind::ClassBlock) {
             throw ParseError(s.token,
                              "Return statement not allowed in class body");
-        } else if (isGenerator) {
+        } else if (kind == Kind::Generator) {
             if (s.right) {
                 throw ParseError(s.token,
                                  "SyntaxError: 'return' with argument inside generator");
