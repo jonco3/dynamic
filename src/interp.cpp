@@ -476,6 +476,7 @@ void Interpreter::finishHandlingException()
 Env* Interpreter::lexicalEnv(unsigned index)
 {
     Stack<Env*> env(this->env());
+    assert(env);
     for (unsigned i = 0 ; i < index; i++) {
         env = env->parent();
         assert(env);

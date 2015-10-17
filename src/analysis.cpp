@@ -90,10 +90,69 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         addGlobalOrNonLocalNames(s.token, s.names, nonLocals_, globals_);
     }
 
-    // Recurse into local blocks
+    // Recurse into expressions
 
     virtual void visit(const SyntaxBlock& s) {
         for (const auto& i : s.statements)
+            i->accept(*this);
+    }
+
+    virtual void visit(const SyntaxExprList& s) {
+        for (const auto& i : s.elements)
+            i->accept(*this);
+    }
+
+    virtual void visit(const SyntaxList& s) {
+        for (const auto& i : s.elements)
+            i->accept(*this);
+    }
+
+    virtual void visit(const SyntaxDict& s) {
+        for (const auto& i : s.entries) {
+            i.first->accept(*this);
+            i.second->accept(*this);
+        }
+    }
+
+    virtual void visit(const SyntaxOr& s) {
+        s.left->accept(*this);
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxAnd& s) {
+        s.left->accept(*this);
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxNot& s) {
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxPos& s) {
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxNeg& s) {
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxInvert& s) {
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxCompareOp& s) {
+        s.left->accept(*this);
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxBinaryOp& s) {
+        s.left->accept(*this);
+        s.right->accept(*this);
+    }
+
+    virtual void visit(const SyntaxCall& s) {
+        s.left->accept(*this);
+        for (const auto& i : s.right)
             i->accept(*this);
     }
 
@@ -140,6 +199,10 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
             s.elseSuite->accept(*this);
         if (s.finallySuite)
             s.finallySuite->accept(*this);
+    }
+
+    virtual void visit(const SyntaxListComp& s) {
+        hasNestedFuctions_ = true;
     }
 
     virtual void visit(const SyntaxCompIterand& s) {

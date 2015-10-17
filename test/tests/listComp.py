@@ -14,5 +14,6 @@ a = 1
 assert([a for y in (1, 2, 3)] == [1, 1, 1])
 
 assert([(lambda x: x * 2)(y) for y in (1, 2, 3)] == [2, 4, 6])
+assert([(lambda x: y * 2)(y) for y in (1, 2, 3)] == [2, 4, 6])
 
 print('ok')

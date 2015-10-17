@@ -75,6 +75,8 @@ void
 Interpreter::executeInstr_GetLexical(Traced<InstrGetLexical*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
+    assert(env);
+
     Stack<Value> value;
     // Name was present when compiled, but may have been deleted.
     if (!env->maybeGetAttr(instr->ident, value)) {
@@ -89,6 +91,8 @@ Interpreter::executeInstr_SetLexical(Traced<InstrSetLexical*> instr)
 {
     Stack<Value> value(peekStack());
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
+    assert(env);
+
     env->setAttr(instr->ident, value);
 }
 
@@ -96,6 +100,8 @@ void
 Interpreter::executeInstr_DelLexical(Traced<InstrDelLexical*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
+    assert(env);
+
     if (!env->maybeDelOwnAttr(instr->ident))
         raiseNameError(instr->ident);
 }

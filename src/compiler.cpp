@@ -468,8 +468,7 @@ struct ByteCompiler : public SyntaxVisitor
                 frameOut = frame;
                 return true;
             }
-            if (bc->useLexicalEnv)
-                ++frame;
+            ++frame;
             bc = bc->parent;
         }
         return false;
@@ -974,12 +973,21 @@ struct ByteCompiler : public SyntaxVisitor
     void compileListComp(const Syntax& s) {
         // Set up results variable to hold the array
 #ifdef DEBUG
-        int slot;
-        assert(lookupLocal(Name::listCompResult, slot));
-        assert(slot == 0);
+        if (useLexicalEnv) {
+            unsigned frame;
+            assert(lookupLexical(Name::listCompResult, frame));
+            assert(frame == 0);
+        } else {
+            int slot;
+            assert(lookupLocal(Name::listCompResult, slot));
+            assert(slot == 0);
+        }
 #endif
         emit<InstrList>(0);
-        emit<InstrSetStackLocal>(Name::listCompResult, 0);
+        if (useLexicalEnv)
+            emit<InstrSetLexical>(0, Name::listCompResult);
+        else
+            emit<InstrSetStackLocal>(Name::listCompResult, 0);
         incStackDepth();
 
         // Compile expression to generate results
@@ -987,13 +995,19 @@ struct ByteCompiler : public SyntaxVisitor
 
         // Fetch result
         emit<InstrPop>();
-        emit<InstrGetStackLocal>(Name::listCompResult, 0);
+        if (useLexicalEnv)
+            emit<InstrGetLexical>(0, Name::listCompResult);
+        else
+            emit<InstrGetStackLocal>(Name::listCompResult, 0);
         decStackDepth();
     }
 
     virtual void visit(const SyntaxCompIterand& s) {
         assert(kind == Kind::ListComp);
-        emit<InstrGetStackLocal>(Name::listCompResult, 0);
+        if (useLexicalEnv)
+            emit<InstrGetLexical>(0, Name::listCompResult);
+        else
+            emit<InstrGetStackLocal>(Name::listCompResult, 0);
         incStackDepth();
         compile(*s.expr);
         emit<InstrListAppend>();
