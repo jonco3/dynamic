@@ -685,8 +685,12 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
                                         move(suite));
     } else {
         unique_ptr<Syntax> stmt = parseSimpleStatement();
-        if (!atEnd())
-            matchEither(Token_Newline, Token_Semicolon);
+        if (opt(Token_Semicolon)) {
+            opt(Token_Newline);
+        } else {
+            if (!atEnd())
+                match(Token_Newline);
+        }
         return stmt;
     }
 }
