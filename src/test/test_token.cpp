@@ -41,6 +41,12 @@ testcase(tokenizer)
     testEqual(t.text, "123");
     testEqual(tz.nextToken().type, Token_EOF);
 
+    tz.start("0xCafe9");
+    t = tz.nextToken();
+    testEqual(t.type, Token_Integer);
+    testEqual(t.text, "0xCafe9");
+    testEqual(tz.nextToken().type, Token_EOF);
+
     tz.start(".5"); // fraction
     t = tz.nextToken();
     testEqual(t.type, Token_Float);

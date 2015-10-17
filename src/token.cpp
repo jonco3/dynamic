@@ -213,6 +213,11 @@ bool Tokenizer::isDigit(char c)
     return c >= '0' && c <= '9';
 }
 
+bool Tokenizer::isDigitOrHex(char c)
+{
+    return isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
 bool Tokenizer::isIdentifierStart(char c)
 {
     return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
@@ -294,6 +299,11 @@ Token Tokenizer::nextToken()
     return result;
 }
 
+string Tokenizer::stringFrom(unsigned startIndex)
+{
+    return string(source, startIndex, index - startIndex);
+}
+
 void Tokenizer::queueDedentsToColumn(unsigned column)
 {
     while (column < indentStack.back()) {
@@ -368,6 +378,18 @@ Token Tokenizer::findNextToken()
     // Numeric literals
     bool hasIntPart = false;
     if (isDigit(peekChar())) {
+        if (peekChar() == '0') {
+            nextChar();
+            char c = peekChar();
+            if (c == 'x' || c == 'X') {
+                // Match hexadecimal.
+                do {
+                    nextChar();
+                } while (isDigitOrHex(peekChar()));
+                return {Token_Integer, stringFrom(startIndex), startPos};
+            }
+            ungetChar('0');
+        }
         // todo: floating pointer, prefixes, etc.
         do {
             nextChar();

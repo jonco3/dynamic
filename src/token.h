@@ -162,6 +162,7 @@ private:
     char peekChar();
     char nextChar();
     void ungetChar(char c);
+    string stringFrom(unsigned startIndex);
 
     void skipWhitespace();
     unsigned skipIndentation();
@@ -171,6 +172,7 @@ private:
     bool isWhitespace(char c);
     bool isNewline(char c);
     bool isDigit(char c);
+    bool isDigitOrHex(char c);
     bool isIdentifierStart(char c);
     bool isIdentifierRest(char c);
     bool isOperatorOrDelimiter(char c);

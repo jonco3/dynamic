@@ -136,18 +136,14 @@ for_each_exception_class(set_exception_attr)
 
     string filename = libDir + "/builtin.py";
     string text = readFile(filename);
-    Stack<Block*> block;
-    CompileModule(Input(text, filename), Builtin, block);
-    Stack<Value> result;
-    if (!interp->exec(block, result)) {
-        printException(result);
+    if (!runModule(text, filename, Builtin))
         exit(1);
-    }
 
     Stack<Object*> internals(createTopLevel());
     filename = libDir + "/internal.py";
     text = readFile(filename);
-    runModule(text, filename, internals);
+    if (!runModule(text, filename, internals))
+        exit(1);
 
     value = internals->getAttr("SequenceIterator");
     SequenceIterator.init(value.as<Class>());

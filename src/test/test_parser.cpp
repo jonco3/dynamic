@@ -65,6 +65,9 @@ testcase(parser)
     testTrue(expr.get()->is<SyntaxAssign>());
     testTrue(expr.get()->as<SyntaxAssign>()->left->is<SyntaxName>());
 
+    testParseModule("1", "1");
+    testParseModule("0x10", "16");
+
     testParseModule("1\n2", "1\n2");
     testParseModule("1; 2; 3", "1\n2\n3");
     testParseModule("1; 2; 3;", "1\n2\n3");

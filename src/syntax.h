@@ -229,7 +229,7 @@ struct SyntaxInteger : public Syntax
 
     // todo: this probably doesn't correctly parse all python integers
     SyntaxInteger(const Token& token)
-      : Syntax(token), value(atol(token.text.c_str()))
+      : Syntax(token), value(stol(token.text, nullptr, 0))
     {}
 
     const int64_t value;
