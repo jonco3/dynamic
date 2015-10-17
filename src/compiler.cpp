@@ -979,7 +979,6 @@ struct ByteCompiler : public SyntaxVisitor
         assert(slot == 0);
 #endif
         emit<InstrList>(0);
-        // todo: not safe if the comprehension uses a lambda
         emit<InstrSetStackLocal>(Name::listCompResult, 0);
         incStackDepth();
 
