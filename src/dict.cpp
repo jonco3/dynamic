@@ -176,30 +176,17 @@ bool Dict::values(MutableTraced<Value> resultOut)
     return true;
 }
 
-// Wrap a python error in a C++ exception to propagate it out of STL machinery.
-struct PythonException : public runtime_error
+size_t Dict::ValueHash::operator()(Value vArg) const
 {
-    PythonException(Value result)
-      : runtime_error("python exception"), result_(result)
-    {}
-
-    Value result() const { return result_; }
-
-  private:
-    Value result_;
-    AutoAssertNoGC nogc_;
-};
-
-size_t Dict::ValueHash::operator()(Value v) const
-{
-    Stack<Value> result;
+    Stack<Value> value(vArg);
     Stack<Value> hashFunc;
-    if (!v.maybeGetAttr(Name::__hash__, hashFunc)) {
+    Stack<Value> result;
+    if (!value.maybeGetAttr(Name::__hash__, hashFunc)) {
         result = gc.create<TypeError>("Object has no __hash__ method");
         throw PythonException(result);
     }
 
-    interp->pushStack(v);
+    interp->pushStack(value);
     if (!interp->call(hashFunc, 1, result))
         throw PythonException(result);
 

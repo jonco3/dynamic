@@ -65,4 +65,18 @@ for_each_exception_class(declare_exception_class)
 
 extern GlobalRoot<StopIteration*> StopIterationException;
 
+// Wrap a python error in a C++ exception to propagate it out of STL machinery.
+struct PythonException : public runtime_error
+{
+    PythonException(Value result)
+      : runtime_error("python exception"), result_(result)
+    {}
+
+    Value result() const { return result_; }
+
+  private:
+    Value result_;
+    AutoAssertNoGC nogc_;
+};
+
 #endif

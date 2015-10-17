@@ -98,3 +98,8 @@ def sum(iterable, start = 0):
 
 def divmod(a, b):
     return a // b, a % b
+
+def sorted(l):
+    copy = l[:]
+    copy.sort()
+    return copy

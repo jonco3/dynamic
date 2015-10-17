@@ -79,6 +79,7 @@ struct List : public ListBase
     bool setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut);
     bool delitem(Traced<Value> index, MutableTraced<Value> resultOut);
     bool append(Traced<Value> element, MutableTraced<Value> resultOut);
+    void sort();
 
   private:
 

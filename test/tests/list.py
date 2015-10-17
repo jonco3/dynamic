@@ -48,4 +48,10 @@ assert(() == ())
 assert(() != [])
 assert([] != ())
 
+a = [3, 1, 2]
+assert(sorted(a) == [1, 2, 3])
+assert(a == [3, 1, 2])
+a.sort()
+assert(a == [1, 2, 3])
+
 print('ok')

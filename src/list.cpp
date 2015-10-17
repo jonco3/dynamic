@@ -318,19 +318,32 @@ void Tuple::print(ostream& s) const
     s << ")";
 }
 
-static bool list_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool list_setitem(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
     List* list = args[0].as<List>();
     return list->setitem(args[1], args[2], resultOut);
 }
 
-static bool list_delitem(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool list_delitem(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
     List* list = args[0].as<List>();
     return list->delitem(args[1], resultOut);
 }
 
-static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
     List* list = args[0].as<List>();
     return list->append(args[1], resultOut);
+}
+
+static bool list_sort(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    List* list = args[0].as<List>();
+    list->sort();
+    resultOut = None;
+    return true;
 }
 
 void List::init()
@@ -340,6 +353,7 @@ void List::init()
     initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
     initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
     initNativeMethod(ObjectClass, "append", list_append, 2);
+    initNativeMethod(ObjectClass, "sort", list_sort, 1);
 }
 
 List::List(const TracedVector<Value>& values)
@@ -424,6 +438,30 @@ bool List::append(Traced<Value> element, MutableTraced<Value> resultOut)
     elements_.push_back(element);
     resultOut = None;
     return true;
+}
+
+static bool compareElements(Value aArg, Value bArg)
+{
+    Stack<Value> a(aArg);
+    Stack<Value> b(bArg);
+    Stack<Value> compare;
+    Stack<Value> result;
+    if (!a.maybeGetAttr(Name::compareMethod[CompareLT], compare)) {
+        result = gc.create<TypeError>("Object has no __lt__ method");
+        throw PythonException(result);
+    }
+
+    interp->pushStack(a);
+    interp->pushStack(b);
+    if (!interp->call(compare, 2, result))
+        throw PythonException(result);
+
+    return result.isTrue();
+}
+
+void List::sort()
+{
+    ::sort(elements_.begin(), elements_.end(), compareElements);
 }
 
 static bool listIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
