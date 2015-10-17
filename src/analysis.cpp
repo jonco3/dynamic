@@ -142,6 +142,10 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
             s.finallySuite->accept(*this);
     }
 
+    virtual void visit(const SyntaxCompIterand& s) {
+        s.expr->accept(*this);
+    }
+
   private:
     bool inAssignTarget_;
     Root<Object*> defs_;

@@ -51,6 +51,7 @@ struct Name
     static Name augAssignMethod[CountBinaryOp];
     static Name compareMethod[CountCompareOp];
     static Name compareMethodReflected[CountCompareOp];
+    static Name listCompResult;
 
     Name()
       : string_(nullptr) {}

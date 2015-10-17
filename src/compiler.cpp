@@ -125,6 +125,18 @@ struct ByteCompiler : public SyntaxVisitor
         return block;
     }
 
+    Block* buildListComp(ByteCompiler* parent, const SyntaxListComp& s) {
+        assert(parent);
+        kind = Kind::ListComp;
+        this->parent = parent;
+        topLevel = parent->topLevel;
+        layout = layout->addName(Name::listCompResult);
+        build(*s.expr, 0);
+        emit<InstrReturn>();
+        log(block);
+        return block;
+    }
+
   private:
     enum class Kind {
         Module,
@@ -219,7 +231,7 @@ struct ByteCompiler : public SyntaxVisitor
         assert(!block);
         assert(topLevel);
         assert(stackDepth == 0);
-        assert(!parent || layout->slotCount() == argCount);
+        assert(!parent || kind == Kind::ListComp || layout->slotCount() == argCount);
         bool hasNestedFuctions;
         defs = FindDefinitions(s, layout, globals, hasNestedFuctions);
         useLexicalEnv = useLexicalEnv || hasNestedFuctions;
@@ -245,7 +257,10 @@ struct ByteCompiler : public SyntaxVisitor
 #ifdef DEBUG
         unsigned initialStackDepth = stackDepth;
 #endif
-        compile(s);
+        if (kind == Kind::ListComp)
+            compileListComp(s);
+        else
+            compile(s);
         assert(stackDepth == initialStackDepth);
         block->setMaxStackDepth(maxStackDepth + 1);
     }
@@ -708,7 +723,7 @@ struct ByteCompiler : public SyntaxVisitor
         emit<InstrGetMethod>(Name::__next__);
         incStackDepth(3); // Leave the iterator and next method on the stack
 
-        // 2. Call next on iterator and break if end (loop heap)
+        // 2. Call next on iterator and break if end (loop head)
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
         vector<unsigned> oldBreakInstrs = move(breakInstrs);
         breakInstrs.clear();
@@ -945,6 +960,45 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxFrom& s) {
         // todo: implement from ... import ...
         emit<InstrConst>(None);
+    }
+
+    virtual void visit(const SyntaxListComp& s) {
+        // List comprehensions get their own scope which we implement with a
+        // call to a local function.
+        Stack<Block*> exprBlock(ByteCompiler().buildListComp(this, s));
+        vector<Parameter> params;
+        emitLambda("(list comprehension)", params, exprBlock, false);
+        emit<InstrCall>(0);
+    }
+
+    void compileListComp(const Syntax& s) {
+        // Set up results variable to hold the array
+#ifdef DEBUG
+        int slot;
+        assert(lookupLocal(Name::listCompResult, slot));
+        assert(slot == 0);
+#endif
+        emit<InstrList>(0);
+        // todo: not safe if the comprehension uses a lambda
+        emit<InstrSetStackLocal>(Name::listCompResult, 0);
+        incStackDepth();
+
+        // Compile expression to generate results
+        compile(s);
+
+        // Fetch result
+        emit<InstrPop>();
+        emit<InstrGetStackLocal>(Name::listCompResult, 0);
+        decStackDepth();
+    }
+
+    virtual void visit(const SyntaxCompIterand& s) {
+        assert(kind == Kind::ListComp);
+        emit<InstrGetStackLocal>(Name::listCompResult, 0);
+        incStackDepth();
+        compile(*s.expr);
+        emit<InstrListAppend>();
+        decStackDepth();
     }
 
     virtual void setPos(const TokenPos& pos) {

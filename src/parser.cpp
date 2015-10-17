@@ -7,10 +7,14 @@
 
 #include "value-inl.h"
 
+#include <sstream>
+
 ParseError::ParseError(const Token& token, string message) :
   runtime_error(message), pos(token.pos)
 {
-    maybeAbortTests("ParseError: " + message);
+    ostringstream s;
+    s << "ParseError: " << message << " at " << token.pos;
+    maybeAbortTests(s.str());
 }
 
 /*
@@ -79,46 +83,35 @@ SyntaxParser::SyntaxParser()
         return result;
     });
 
-    addPrefixHandler(Token_SBra, [] (ParserT& parser, Token token) -> unique_ptr<Syntax> {
-        vector<unique_ptr<Syntax>> elems =
-            parser.exprListTrailing(Token_Comma, Token_SKet);
-        return make_unique<SyntaxList>(token, move(elems));
+    addPrefixHandler(Token_SBra, [=] (ParserT& parser, Token token) -> unique_ptr<Syntax> {
+        return parseListDisplay(token);
     });
 
-    addPrefixHandler(Token_CBra, [] (ParserT& parser, Token token) -> unique_ptr<Syntax> {
+    addPrefixHandler(Token_CBra, [=] (ParserT& parser, Token token) -> unique_ptr<Syntax> {
         vector<SyntaxDict::Entry> entries;
-        while (!parser.opt(Token_CKet)) {
-            unique_ptr<Syntax> key = parser.expression();
-            parser.match(Token_Colon);
-            unique_ptr<Syntax> value = parser.expression();
+        while (!opt(Token_CKet)) {
+            unique_ptr<Syntax> key = parseExpr();
+            match(Token_Colon);
+            unique_ptr<Syntax> value = parseExpr();
             entries.emplace_back(move(key), move(value));
-            if (parser.opt(Token_CKet))
+            if (opt(Token_CKet))
                 break;
-            parser.match(Token_Comma);
+            match(Token_Comma);
         }
         return make_unique<SyntaxDict>(token, move(entries));
     });
 
     // Lambda
 
-    addPrefixHandler(Token_Lambda, [] (ParserT& parser, Token token) {
+    addPrefixHandler(Token_Lambda, [=] (ParserT& parser, Token token) {
         vector<Parameter> params;
-        if (!parser.opt(Token_Colon)) {
+        if (!opt(Token_Colon)) {
             // todo: may need to allow bracketed parameters here
             SyntaxParser& sp = static_cast<SyntaxParser&>(parser);
             params = sp.parseParameterList(Token_Colon);
         }
-        unique_ptr<Syntax> expr(parser.expression());
+        unique_ptr<Syntax> expr(parseExpr());
         return make_unique<SyntaxLambda>(token, move(params), move(expr));
-    });
-
-    // Conditional expression
-
-    addInfixHandler(Token_If, 90, [] (ParserT& parser, Token token, unique_ptr<Syntax> cond) {
-        unique_ptr<Syntax> cons(parser.expression());
-        parser.match(Token_Else);
-        unique_ptr<Syntax> alt(parser.expression());
-        return make_unique<SyntaxCond>(token, move(cond), move(cons), move(alt));
     });
 
     // Boolean operators
@@ -165,23 +158,23 @@ SyntaxParser::SyntaxParser()
 
     addInfixHandler(Token_SBra, 200, [=] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
         unique_ptr<Syntax> expr;
-        if (parser.opt(Token_Colon)) {
+        if (opt(Token_Colon)) {
             expr = parseSlice(token, move(expr));
         } else {
-            expr = parser.expression();
-            if (parser.opt(Token_Colon))
+            expr = parseExpr();
+            if (opt(Token_Colon))
                 expr = parseSlice(token, move(expr));
         }
-        parser.match(Token_SKet);
+        match(Token_SKet);
         return make_unique<SyntaxSubscript>(token, move(l), move(expr));
     });
 
-    addInfixHandler(Token_Bra, 200, [] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
+    addInfixHandler(Token_Bra, 200, [=] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
         vector<unique_ptr<Syntax>> args;
-        while (!parser.opt(Token_Ket)) {
+        while (!opt(Token_Ket)) {
             if (!args.empty())
-                parser.match(Token_Comma);
-            args.emplace_back(parser.expression());
+                match(Token_Comma);
+            args.emplace_back(parseExpr());
         }
         return make_unique<SyntaxCall>(token, move(l), move(args));
     });
@@ -205,6 +198,75 @@ SyntaxParser::SyntaxParser()
     });
 }
 
+unique_ptr<Syntax> SyntaxParser::parseListDisplay(Token token)
+{
+    if (opt(Token_SKet))
+        return make_unique<SyntaxList>(token);
+
+    unique_ptr<Syntax> firstExpr = parseExpr();
+
+    Token t2 = currentToken();
+    if (opt(Token_For))
+        return parseListComprehension(t2, move(firstExpr));
+
+    vector<unique_ptr<Syntax>> exprs;
+    exprs.push_back(move(firstExpr));
+    if (opt(Token_SKet))
+        return make_unique<SyntaxList>(token, move(exprs));
+
+    while (!opt(Token_SKet)) {
+        match(Token_Comma);
+        if (opt(Token_SKet))
+            break;
+        exprs.push_back(parseExpr());
+    }
+    return make_unique<SyntaxList>(token, move(exprs));
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseCompFor(Token token, unique_ptr<Syntax> iterand)
+{
+    unique_ptr<SyntaxTarget> targets = parseTargetList();
+    match(Token_In);
+    unique_ptr<Syntax> expr = expression();
+    unique_ptr<Syntax> next = parseNextCompExpr(move(iterand));
+    return make_unique<SyntaxFor>(token, move(targets), move(expr), move(next));
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseCompIf(Token token, unique_ptr<Syntax> iterand)
+{
+    unique_ptr<Syntax> expr = expression();
+    unique_ptr<Syntax> next = parseNextCompExpr(move(iterand));
+    vector<IfBranch> branches;
+    branches.push_back({move(expr), move(next)});
+    return make_unique<SyntaxIf>(token, move(branches));
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseNextCompExpr(unique_ptr<Syntax> iterand)
+{
+    Token token;
+    if (opt(Token_For, token))
+        return parseCompFor(token, move(iterand));
+
+    if (opt(Token_If, token))
+        return parseCompIf(token, move(iterand));
+
+    return iterand;
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseListComprehension(Token token,
+                                     unique_ptr<Syntax> initalExpr)
+{
+    unique_ptr<SyntaxCompIterand> iterand =
+        make_unique<SyntaxCompIterand>(token, move(initalExpr));
+    unique_ptr<Syntax> expr = parseCompFor(token, move(iterand));
+    match(Token_SKet);
+    return make_unique<SyntaxListComp>(token, move(expr));
+}
+
 unique_ptr<Syntax> SyntaxParser::parseSlice(Token token,
                                             unique_ptr<Syntax> lower)
 {
@@ -215,17 +277,16 @@ unique_ptr<Syntax> SyntaxParser::parseSlice(Token token,
     unique_ptr<Syntax> stride;
     if (notFollowedBy(Token_SKet)) {
         if (notFollowedBy(Token_Colon))
-            upper = expression();
+            upper = parseExpr();
         if (opt(Token_Colon)) {
             if (notFollowedBy(Token_SKet)) {
-                stride = expression();
+                stride = parseExpr();
             }
         }
     }
     return make_unique<SyntaxSlice>(token,
                                     move(lower), move(upper), move(stride));
 }
-
 
 bool SyntaxParser::maybeExprToken()
 {
@@ -239,17 +300,34 @@ bool SyntaxParser::maybeExprToken()
         t == Token_Backtick;
 }
 
+unique_ptr<Syntax> SyntaxParser::parseExpr()
+{
+    // Parse 'expression'
+    unique_ptr<Syntax> expr = expression();
+
+    Token token;
+    if (opt(Token_If, token)) {
+        unique_ptr<Syntax> cond = expression();
+        match(Token_Else);
+        unique_ptr<Syntax> alt = parseExpr();
+        return make_unique<SyntaxCond>(token,
+                                       move(expr), move(cond), move(alt));
+    }
+
+    return expr;
+}
+
 unique_ptr<Syntax> SyntaxParser::parseExprOrExprList()
 {
     Token startToken = currentToken();
     vector<unique_ptr<Syntax>> exprs;
-    exprs.emplace_back(expression());
+    exprs.emplace_back(parseExpr());
     bool singleExpr = true;
     while (opt(Token_Comma)) {
         singleExpr = false;
         if (!maybeExprToken())
             break;
-        exprs.emplace_back(expression());
+        exprs.emplace_back(parseExpr());
     }
     if (singleExpr)
         return move(exprs[0]);
@@ -308,7 +386,7 @@ unique_ptr<SyntaxTarget> SyntaxParser::parseTarget()
             unique_ptr<SyntaxName> name(make_unique<SyntaxName>(move(attr)));
             syn = make_unique<SyntaxAttrRef>(token, move(syn), move(name));
         } else if (opt(Token_SBra)) {
-            unique_ptr<Syntax> index(expression());
+            unique_ptr<Syntax> index(parseExpr());
             match(Token_SKet);
             syn = make_unique<SyntaxSubscript>(token, move(syn), move(index));
         } else {
@@ -350,7 +428,7 @@ unique_ptr<Syntax> SyntaxParser::parseAugAssign(Token token, unique_ptr<Syntax> 
                          syntax->name());
     }
 
-    unique_ptr<Syntax> expr(expression());
+    unique_ptr<Syntax> expr(parseExpr());
     return make_unique<SyntaxAugAssign>(token, move(target), move(expr), op);
 }
 
@@ -395,15 +473,15 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
 {
     Token token = currentToken();
     if (opt(Token_Assert)) {
-        unique_ptr<Syntax> cond(expression());
+        unique_ptr<Syntax> cond(parseExpr());
         unique_ptr<Syntax> message;
         if (opt(Token_Comma))
-            message = expression();
+            message = parseExpr();
         return make_unique<SyntaxAssert>(token, move(cond), move(message));
     } else if (opt(Token_Pass)) {
         return make_unique<SyntaxPass>(token);
     } else if (opt(Token_Raise)) {
-        unique_ptr<Syntax> expr(expression());
+        unique_ptr<Syntax> expr(parseExpr());
         if (opt(Token_Comma))
             throw ParseError(token,
                              "Multiple exressions for raise not supported"); // todo
@@ -424,7 +502,7 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         return make_unique<SyntaxNonLocal>(token, move(names));
     } else if (opt(Token_Yield)) {
         isGenerator = true;
-        return make_unique<SyntaxYield>(token, expression());
+        return make_unique<SyntaxYield>(token, parseExpr());
     } else if (opt(Token_Break)) {
         return make_unique<SyntaxBreak>(token);
     } else if (opt(Token_Continue)) {
@@ -504,7 +582,7 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         if (opt(Token_Assign)) {
             if (takesRest)
                 throw ParseError(t, "Rest parameter can't take default");
-            defaultExpr = expression();
+            defaultExpr = parseExpr();
             hadDefault = true;
         } else if (hadDefault && !takesRest) {
             throw ParseError(t, "Non-default parameter following default parameter");
@@ -527,7 +605,7 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
     if (opt(Token_If)) {
         vector<IfBranch> branches;
         do {
-            unique_ptr<Syntax> cond(expression());
+            unique_ptr<Syntax> cond(parseExpr());
             unique_ptr<SyntaxBlock> suite(parseSuite());
             branches.push_back({move(cond), move(suite)});
         } while (opt(Token_Elif));
@@ -536,7 +614,7 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
             elseSuite = parseSuite();
         return make_unique<SyntaxIf>(token, move(branches), move(elseSuite));
     } else if (opt(Token_While)) {
-        unique_ptr<Syntax> cond(expression());
+        unique_ptr<Syntax> cond(parseExpr());
         unique_ptr<SyntaxBlock> suite(parseSuite());
         unique_ptr<SyntaxBlock> elseSuite;
         if (opt(Token_Else))

@@ -1274,6 +1274,16 @@ Interpreter::executeInstr_LoopControlJump(Traced<InstrLoopControlJump*> instr)
 }
 
 void
+Interpreter::executeInstr_ListAppend(Traced<InstrListAppend*> instr)
+{
+    Stack<Value> value(popStack());
+    Stack<Value> list(popStack());
+    Stack<Value> result;
+    list.as<List>()->append(value, result);
+    pushStack(result);
+}
+
+void
 Interpreter::executeInstr_AssertStackDepth(Traced<InstrAssertStackDepth*> instr)
 {
 #ifdef DEBUG

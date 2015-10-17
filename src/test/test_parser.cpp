@@ -115,4 +115,9 @@ testcase(parser)
     testParseException("def f(*x = ()): pass");
 
     testParseModule("(1, .3 + 1)", "(1, 0.3 + 1)");
+
+    testParseModule("[x+1 for x in a]", "[ x + 1 for x in a ]");
+    testParseModule("[x+y for x in a for y in b]", "[ x + y for x in a for y in b ]");
+    testParseModule("[x+1 for x in a if x < 4]", "[ x + 1 for x in a if x < 4 ]");
+    testParseModule("[x**2 for x in range(10)]", "[ x ** 2 for x in range(10) ]");
 }

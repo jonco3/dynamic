@@ -25,6 +25,8 @@ struct SyntaxPrinter : public SyntaxVisitor
 
   private:
     ostream& os_;
+
+    void printListCompTail(const Syntax& expr);
 };
 
 template <typename T>
@@ -143,7 +145,6 @@ void SyntaxPrinter::visit(const SyntaxCompareOp& s) { visitBinary(s); }
 
 void SyntaxPrinter::visit(const SyntaxGlobal& s) { visitNameList(s); }
 void SyntaxPrinter::visit(const SyntaxNonLocal& s) { visitNameList(s); }
-
 
 void SyntaxPrinter::visit(const SyntaxAttrRef& s)
 {
@@ -321,6 +322,49 @@ void SyntaxPrinter::visit(const SyntaxFrom& s)
         first = false;
     }
     os_ << endl;
+}
+
+static const SyntaxCompIterand& GetListCompIterand(const Syntax& expr)
+{
+    if (expr.is<SyntaxFor>())
+        return GetListCompIterand(*expr.as<SyntaxFor>()->suite);
+
+    if (expr.is<SyntaxIf>())
+        return GetListCompIterand(*expr.as<SyntaxIf>()->branches.at(0).suite);
+
+    assert(expr.is<SyntaxCompIterand>());
+    return *expr.as<SyntaxCompIterand>();
+}
+
+void SyntaxPrinter::printListCompTail(const Syntax& expr)
+{
+    if (expr.is<SyntaxFor>()) {
+        const SyntaxFor& s = *expr.as<SyntaxFor>();
+        os_ << " for " << *s.targets << " in " << *s.exprs;
+        printListCompTail(*s.suite);
+        return;
+    }
+
+    if (expr.is<SyntaxIf>()) {
+        const SyntaxIf& s = *expr.as<SyntaxIf>();
+        os_ << " if " << *s.branches.at(0).cond;
+        printListCompTail(*s.branches.at(0).suite);
+        return;
+    }
+
+    assert(expr.is<SyntaxCompIterand>());
+}
+
+void SyntaxPrinter::visit(const SyntaxListComp& s)
+{
+    os_ << "[ " << GetListCompIterand(*s.expr);
+    printListCompTail(*s.expr);
+    os_ << " ]";
+}
+
+void SyntaxPrinter::visit(const SyntaxCompIterand& s)
+{
+    os_ << *s.expr;
 }
 
 ostream& operator<<(ostream& s, const Syntax& syntax) {

@@ -57,7 +57,9 @@ using namespace std;
     syntax(Continue)                                                          \
     syntax(Del)                                                               \
     syntax(Import)                                                            \
-    syntax(From)
+    syntax(From)                                                              \
+    syntax(ListComp)                                                          \
+    syntax(CompIterand)
 
 enum class SyntaxType
 {
@@ -96,6 +98,11 @@ struct Syntax
     Syntax(const Token& token) : token(token) {}
 
     template <typename T> bool is() const { return type() == T::Type; }
+
+    template <typename T> const T* as() const {
+        assert(is<T>());
+        return static_cast<const T*>(this);
+    }
 
     template <typename T> T* as() {
         assert(is<T>());
@@ -276,6 +283,9 @@ struct SyntaxExprList : public Syntax
 struct SyntaxList : public Syntax
 {
     define_syntax_members(List, "list");
+
+    SyntaxList(const Token& token)
+      : Syntax(token) {}
 
     SyntaxList(const Token& token, vector<unique_ptr<Syntax>> elems)
       : Syntax(token), elements(move(elems)) {}
@@ -507,7 +517,7 @@ struct SyntaxDef : public Syntax
 struct IfBranch
 {
     unique_ptr<Syntax> cond;
-    unique_ptr<SyntaxBlock> suite;
+    unique_ptr<Syntax> suite;
 };
 
 struct SyntaxIf : public Syntax
@@ -518,6 +528,10 @@ struct SyntaxIf : public Syntax
              vector<IfBranch> branches,
              unique_ptr<SyntaxBlock> elseSuite)
         : Syntax(token), branches(move(branches)), elseSuite(move(elseSuite))
+    {}
+
+    SyntaxIf(const Token& token, vector<IfBranch> branches)
+        : Syntax(token), branches(move(branches))
     {}
 
     const vector<IfBranch> branches;
@@ -597,10 +611,20 @@ struct SyntaxFor : public Syntax
         elseSuite(move(elseSuite))
     {}
 
+    SyntaxFor(const Token& token,
+              unique_ptr<SyntaxTarget> targets,
+              unique_ptr<Syntax> exprs,
+              unique_ptr<Syntax> suite)
+      : Syntax(token),
+        targets(move(targets)),
+        exprs(move(exprs)),
+        suite(move(suite))
+    {}
+
     const unique_ptr<SyntaxTarget> targets;
     const unique_ptr<Syntax> exprs;
-    const unique_ptr<SyntaxBlock> suite;
-    const unique_ptr<SyntaxBlock> elseSuite;
+    const unique_ptr<Syntax> suite;
+    const unique_ptr<Syntax> elseSuite;
 };
 
 struct NameListSyntax : public Syntax
@@ -714,6 +738,29 @@ struct SyntaxFrom : public Syntax
 
     const Name module;
     const vector<unique_ptr<ImportInfo>> ids;
+};
+
+struct SyntaxListComp : public Syntax
+{
+    define_syntax_members(ListComp, "list comprehension");
+
+    SyntaxListComp(const Token& token,
+                 unique_ptr<Syntax> expr)
+      : Syntax(token), expr(move(expr))
+    {}
+
+    unique_ptr<Syntax> expr;
+};
+
+struct SyntaxCompIterand : public Syntax
+{
+    define_syntax_members(ListComp, "list comprehension iterand");
+
+    SyntaxCompIterand(const Token& token, unique_ptr<Syntax> expr)
+      : Syntax(token), expr(move(expr))
+    {}
+
+    unique_ptr<Syntax> expr;
 };
 
 #undef define_syntax_type

@@ -117,6 +117,7 @@ struct Interpreter;
     instr(LeaveFinallyRegion, InstrLeaveFinallyRegion)                       \
     instr(FinishExceptionHandler, InstrFinishExceptionHandler)               \
     instr(LoopControlJump, InstrLoopControlJump)                             \
+    instr(ListAppend, InstrListAppend)                                       \
     instr(AssertStackDepth, InstrAssertStackDepth)
 
 enum InstrType
@@ -662,6 +663,8 @@ struct InstrLoopControlJump : public Instr
     unsigned finallyCount_;
     unsigned target_;
 };
+
+define_simple_instr(ListAppend);
 
 struct InstrAssertStackDepth : public Instr
 {

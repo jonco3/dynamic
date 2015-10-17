@@ -346,6 +346,7 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
     bool isGenerator;
 
     bool maybeExprToken();
+    unique_ptr<Syntax> parseExpr();
     unique_ptr<Syntax> parseExprOrExprList();
     unique_ptr<Syntax> parseAssignSource();
     unique_ptr<SyntaxBlock> parseBlock();
@@ -356,6 +357,13 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
 
     unique_ptr<SyntaxTarget> parseTarget();
     unique_ptr<SyntaxTarget> parseTargetList();
+
+    unique_ptr<Syntax> parseListDisplay(Token token);
+    unique_ptr<Syntax> parseListComprehension(Token token,
+                                              unique_ptr<Syntax> expr);
+    unique_ptr<Syntax> parseNextCompExpr(unique_ptr<Syntax> iterand);
+    unique_ptr<Syntax> parseCompFor(Token token, unique_ptr<Syntax> iterand);
+    unique_ptr<Syntax> parseCompIf(Token token, unique_ptr<Syntax> iterand);
 
     unique_ptr<Syntax> parseSlice(Token token, unique_ptr<Syntax> upper);
 
