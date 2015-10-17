@@ -1,7 +1,6 @@
 #ifndef __NUMERIC_H__
 #define __NUMERIC_H__
 
-#include "bool.h"
 #include "object.h"
 
 struct Integer : public Object
@@ -21,7 +20,7 @@ struct Integer : public Object
     static Object* getObject(int64_t v);
 
     Integer(int64_t v = 0);
-    Integer(Traced<Class*> cls);
+    Integer(Traced<Class*> cls, int64_t v);
 
     int64_t value() const { return value_; }
     void print(ostream& s) const override;
@@ -34,6 +33,22 @@ struct Integer : public Object
 
   private:
     int64_t value_;
+};
+
+struct Boolean : public Integer
+{
+    static void init();
+
+    static GlobalRoot<Class*> ObjectClass;
+
+    static GlobalRoot<Boolean*> True;
+    static GlobalRoot<Boolean*> False;
+
+    static Boolean* get(bool v) { return v ? True : False; }
+
+    void print(ostream& s) const override;
+
+    Boolean(int64_t value);
 };
 
 struct Float : public Object

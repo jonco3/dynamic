@@ -1,6 +1,5 @@
 #include "list.h"
 
-#include "bool.h"
 #include "builtin.h"
 #include "callable.h"
 #include "exception.h"

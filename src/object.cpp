@@ -1,6 +1,5 @@
 #include "object.h"
 
-#include "bool.h"
 #include "callable.h"
 #include "exception.h"
 #include "interp.h"

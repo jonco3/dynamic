@@ -1,5 +1,5 @@
 #include "analysis.h"
-#include "bool.h"
+#include "numeric.h"
 #include "object.h"
 #include "parser.h"
 #include "utils.h"

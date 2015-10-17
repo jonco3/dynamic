@@ -1,6 +1,5 @@
 #include "common.h"
 
-#include "bool.h"
 #include "builtin.h"
 #include "callable.h"
 #include "compiler.h"
@@ -38,8 +37,8 @@ void init1()
     initObject();
     initCallable();
     Env::init();
-    Boolean::init();
     Integer::init();
+    Boolean::init();
     Float::init();
     String::init();
     Exception::init();

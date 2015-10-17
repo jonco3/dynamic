@@ -1,6 +1,5 @@
 #include "string.h"
 
-#include "bool.h"
 #include "callable.h"
 #include "value-inl.h"
 #include "singletons.h"

@@ -81,12 +81,12 @@ inline bool Value::isInstanceOf(Traced<Class*> cls) const
 
 inline bool Value::isInt() const
 {
-    return isInt32() || (isObject() && asObject()->is<Integer>());
+    return isInt32() || (isObject() && asObject()->isInstanceOf<Integer>());
 }
 
 inline bool Value::isFloat() const
 {
-    return isDouble() || (isObject() && asObject()->is<Float>());
+    return isDouble() || (isObject() && asObject()->isInstanceOf<Float>());
 }
 
 inline int64_t Value::toInt() const

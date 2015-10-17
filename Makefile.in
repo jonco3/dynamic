@@ -33,7 +33,6 @@ SRCS = \
 	src/value.cpp \
 	src/object.cpp \
 	src/singletons.cpp \
-	src/bool.cpp \
 	src/frame.cpp \
 	src/callable.cpp \
 	src/interp.cpp \

@@ -1,4 +1,3 @@
-#include "bool.h"
 #include "builtin.h"
 #include "callable.h"
 #include "common.h"

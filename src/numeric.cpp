@@ -1,6 +1,5 @@
 #include "numeric.h"
 
-#include "bool.h"
 #include "callable.h"
 #include "exception.h"
 #include "singletons.h"
@@ -12,6 +11,10 @@
 
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Class*> Float::ObjectClass;
+GlobalRoot<Class*> Boolean::ObjectClass;
+
+GlobalRoot<Boolean*> Boolean::True;
+GlobalRoot<Boolean*> Boolean::False;
 
 typedef int64_t (IntUnaryOp)(int64_t);
 static int64_t intPos(int64_t a) { return a; }
@@ -132,8 +135,8 @@ Integer::Integer(int64_t v)
   : Object(ObjectClass), value_(v)
 {}
 
-Integer::Integer(Traced<Class*> cls)
-  : Object(cls)
+Integer::Integer(Traced<Class*> cls, int64_t v)
+  : Object(cls), value_(v)
 {}
 
 Object* Integer::getObject(int64_t v)
@@ -143,6 +146,40 @@ Object* Integer::getObject(int64_t v)
 
 void Integer::print(ostream& s) const {
     s << dec << value_;
+}
+
+static bool boolNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+
+    if (args.size() == 1) {
+        resultOut = Boolean::False;
+        return true;
+    }
+
+    // todo: convert argument to bool
+
+    return true;
+}
+
+void Boolean::init()
+{
+    ObjectClass.init(Class::createNative("bool", boolNew, 1,
+                                         Integer::ObjectClass));
+    True.init(gc.create<Boolean>(1));
+    False.init(gc.create<Boolean>(0));
+}
+
+Boolean::Boolean(int64_t value)
+  : Integer(ObjectClass, value)
+{
+    assert(value == 0 || value == 1);
+}
+
+void Boolean::print(ostream& s) const
+{
+    s << (value() == 0 ? "False" : "True");
 }
 
 typedef double (FloatUnaryOp)(double);
