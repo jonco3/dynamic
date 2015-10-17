@@ -794,8 +794,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
         return;
     }
 
-    // Replace with fallback instruction.
-    replaceInstr(instr, gc.create<InstrBinaryOpFallback>(instr->op));
+    // Execution failed, retry this all next time.
 }
 
 void
