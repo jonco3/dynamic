@@ -25,10 +25,12 @@ void Slice::init()
     InitialLayout.init(layout);
 }
 
+#ifdef DEBUG
 static bool IsInt32OrNone(Value value)
 {
     return value == Value(None) || value.isInt();
 }
+#endif
 
 Slice::Slice(TracedVector<Value> args) :
   Object(ObjectClass, InitialLayout)
