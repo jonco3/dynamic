@@ -85,6 +85,10 @@ struct Value
     inline Class* type() const;
     inline bool isInstanceOf(Traced<Class*> cls) const;
 
+    template <typename T> bool isInstanceOf() const {
+        return isInstanceOf(T::ObjectClass);
+    }
+
     template <typename T> inline bool is() const;
     template <typename T> inline T* as() const;
 

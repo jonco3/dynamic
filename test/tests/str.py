@@ -59,4 +59,20 @@ assert(len("abc") == 3)
 assert("abc"[1] == "b")
 assert([x for x in "abc"] == ["a", "b", "c"])
 
+exc = False
+try:
+    a = 1 + "foo"
+except TypeError:
+    exc = True
+assert(exc)
+
+exc = False
+try:
+    a = "foo" + 1
+except TypeError:
+    exc = True
+assert(exc)
+
+assert("foo" + str(1) == "foo1")
+
 print('ok')

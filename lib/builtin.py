@@ -3,11 +3,6 @@
 def len(x):
     return x.__len__()
 
-def str(x):
-    if hasattr(x, "__str__"):
-        return x.__str__()
-    return x.__repr__()
-
 def repr(x):
     return x.__repr__()
 

@@ -37,7 +37,8 @@ using namespace std;
     name(__getitem__)                                                         \
     name(__iter__)                                                            \
     name(__next__)                                                            \
-    name(__str__)
+    name(__str__)                                                             \
+    name(__repr__)
 
 struct Name
 {

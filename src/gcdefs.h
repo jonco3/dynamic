@@ -51,6 +51,10 @@ struct WrapperMixins<W, Value>
     inline bool isTrue() const;
     inline bool isInstanceOf(Traced<Class*> cls) const;
 
+    template <typename T> bool isInstanceOf() const {
+        return isInstanceOf(T::ObjectClass);
+    }
+
   private:
     const Value* extract() const {
         return &static_cast<const W*>(this)->get();

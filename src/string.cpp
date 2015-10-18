@@ -2,6 +2,7 @@
 
 #include "callable.h"
 #include "exception.h"
+#include "interp.h"
 #include "value-inl.h"
 #include "singletons.h"
 #include "slice.h"
@@ -16,10 +17,57 @@ static bool stringGE(const string& a, const string& b) { return a >= b; }
 static bool stringEQ(const string& a, const string& b) { return a == b; }
 static bool stringNE(const string& a, const string& b) { return a != b; }
 
+// todo: use this to replace str() function.
+static bool valueToString(Traced<Value> value, MutableTraced<Value> resultOut)
+{
+    if (value.is<String>()) {
+        resultOut = value;
+        return true;
+    }
+
+    Stack<Value> strFunc;
+    if (!value.maybeGetAttr(Name::__str__, strFunc) &&
+        !value.maybeGetAttr(Name::__repr__, strFunc))
+    {
+        resultOut = gc.create<TypeError>(
+            "Object has no __str__ or __repr__ method");
+        return false;
+    }
+
+    interp->pushStack(value);
+    if (!interp->call(strFunc, 1, resultOut))
+        return false;
+
+    if (!resultOut.is<String>()) {
+        resultOut =
+            gc.create<TypeError>("__str__ method should return a string");
+        return false;
+    }
+
+    return true;
+}
+
+static bool str_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+
+    if (args.size() == 1) {
+        resultOut = String::get("");
+        return true;
+    }
+
+    return valueToString(args[1], resultOut);
+}
+
 static bool str_add(TracedVector<Value> args, MutableTraced<Value> resultOut) {
-    const string& a = args[0].as<String>()->value();
-    const string& b = args[1].as<String>()->value();
-    resultOut = String::get(a + b);
+    if (!args[0].isInstanceOf<String>() || !args[1].isInstanceOf<String>()) {
+        resultOut = NotImplemented;
+        return true;
+    }
+
+    resultOut = String::get(args[0].as<String>()->value() +
+                            args[1].as<String>()->value());
     return true;
 }
 
@@ -95,7 +143,7 @@ GlobalRoot<String*> String::EmptyString;
 
 void String::init()
 {
-    ObjectClass.init(Class::createNative<String>("str"));
+    ObjectClass.init(Class::createNative("str", str_new, 2));
 
     initNativeMethod(ObjectClass, "__len__", str_len, 1);
     initNativeMethod(ObjectClass, "__getitem__", str_getitem, 2);
