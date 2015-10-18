@@ -9,8 +9,13 @@ def repr(x):
 def dump(x):
     x.__dump__()
 
-def print(x):
-    str(x)._print()
+def print(*args):
+    s = ""
+    for x in args:
+        if (len(s) != 0):
+            s += " "
+        s += str(x)
+    s._print()
 
 def type(x):
     return x.__class__
