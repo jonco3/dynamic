@@ -29,17 +29,17 @@ passCount = 0
 
 def runTest(filename, command):
     global runCount, passCount
-    runCount += 1
 
     testArgs = []
     testExpect = []
     benchArgs = []
     benchExpect = []
+    benchOnly = False
 
     with open(filename) as f:
         while True:
             line = f.readline().rstrip()
-            match = re.match('# ([\w-]+): (.*)$', line)
+            match = re.match('# ([\w-]+)(?:: (.*)\s*)?$', line)
             if not match:
                 break
 
@@ -52,6 +52,8 @@ def runTest(filename, command):
                 testArgs = value.split()
             elif key == 'bench-args':
                 benchArgs = value.split()
+            elif key == 'bench-only':
+                benchOnly = True
             else:
                 return 'BAD', 'Error parsing header option: ' + key
 
@@ -60,6 +62,11 @@ def runTest(filename, command):
             testArgs = benchArgs
         if benchExpect:
             testExpect = benchExpect
+    else:
+        if benchOnly:
+            return 'SKIP', 'Test skipped'
+
+    runCount += 1
 
     if not testExpect:
         return 'BAD', 'No expected output header'
@@ -104,7 +111,9 @@ def runTestDir(dirname, names):
             results = list(map(lambda c: runTest(filename, c), args.commands))
             line = '  %-20s ' % name
             for result, extra in results:
-                if result != 'PASS':
+                if result == 'SKIP':
+                    line += formatResult("skipped")
+                elif result != 'PASS':
                     line += formatResult(result)
                 elif args.benchmark:
                     line += formatTime(extra)
@@ -114,7 +123,7 @@ def runTestDir(dirname, names):
 
             if args.verbose:
                 for result, extra in results:
-                    if result != 'PASS':
+                    if result != 'PASS' and result != 'SKIP':
                         print(extra)
 
 line = 'Running tests:         '
