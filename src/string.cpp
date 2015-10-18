@@ -1,8 +1,10 @@
 #include "string.h"
 
 #include "callable.h"
+#include "exception.h"
 #include "value-inl.h"
 #include "singletons.h"
+#include "slice.h"
 
 #include <iostream>
 
@@ -54,6 +56,19 @@ static bool stringCompareOp(TracedVector<Value> args, MutableTraced<Value> resul
     return true;
 }
 
+static bool str_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    const string& s = args[0].as<String>()->value();
+    resultOut = Integer::get(s.size());
+    return true;
+}
+
+static bool str_getitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    Stack<String*> s(args[0].as<String>());
+    return s->getitem(args[1], resultOut);
+}
+
 static bool str_hash(TracedVector<Value> args, MutableTraced<Value> resultOut) {
     const string& a = args[0].as<String>()->value();
     // todo: should probably use python hash algorithm for this.
@@ -82,6 +97,8 @@ void String::init()
 {
     ObjectClass.init(Class::createNative<String>("str"));
 
+    initNativeMethod(ObjectClass, "__len__", str_len, 1);
+    initNativeMethod(ObjectClass, "__getitem__", str_getitem, 2);
     initNativeMethod(ObjectClass, "__add__", str_add, 2);
     initNativeMethod(ObjectClass, "__str__", str_str, 1);
     initNativeMethod(ObjectClass, "__eq__", stringCompareOp<stringEQ>, 2);
@@ -117,4 +134,38 @@ String* String::get(const string& v)
 
 void String::print(ostream& s) const {
     s << "'" << value_ << "'";
+}
+
+bool String::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
+{
+    size_t len = value_.size();
+    if (index.isInt()) {
+        int32_t i = WrapIndex(index.toInt(), len);
+        if (i < 0 || size_t(i) >= len) {
+            resultOut = gc.create<IndexError>("string index out of range");
+            return false;
+        }
+        resultOut = get(string(1, value_[i]));
+        return true;
+    } else if (index.isInstanceOf(Slice::ObjectClass)) {
+        Stack<Slice*> slice(index.as<Slice>());
+        int32_t start, count, step;
+        if (!slice->getIterationData(len, start, count, step, resultOut))
+            return false;
+
+        string result;
+        int32_t src = start;
+        for (size_t i = 0; i < count; i++) {
+            assert(src < len);
+            result += value_[src];
+            src += step;
+        }
+
+        resultOut = String::get(result);
+        return true;
+    } else {
+        resultOut = gc.create<TypeError>(
+            "string indices must be integers or slices");
+        return false;
+    }
 }

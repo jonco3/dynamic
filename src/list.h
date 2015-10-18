@@ -88,29 +88,6 @@ struct List : public ListBase
     }
 };
 
-struct Slice : public Object
-{
-    static void init();
-
-    static GlobalRoot<Class*> ObjectClass;
-    static GlobalRoot<Layout*> InitialLayout;
-
-    Slice(TracedVector<Value> args);
-    Slice(Traced<Class*> cls);
-
-    void indices(int32_t length,
-                 int32_t& startOut, int32_t& stopOut, int32_t& stepOut);
-
-  private:
-    enum {
-        StartSlot,
-        StopSlot,
-        StepSlot
-    };
-
-    int32_t getSlotOrDefault(unsigned slot, int32_t def);
-};
-
 extern void initList();
 
 #endif

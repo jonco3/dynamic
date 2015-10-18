@@ -55,4 +55,8 @@ a = "a"
 a += "b"
 assert a == "ab"
 
+assert(len("abc") == 3)
+assert("abc"[1] == "b")
+assert([x for x in "abc"] == ["a", "b", "c"])
+
 print('ok')

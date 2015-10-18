@@ -15,11 +15,13 @@ struct String : public Object
 
     static String* get(const string& v);
 
+    String(const string& v);
+    String(Traced<Class*> cls);
+
     const string& value() const { return value_; }
     void print(ostream& s) const override;
 
-    String(const string& v);
-    String(Traced<Class*> cls);
+    bool getitem(Traced<Value> index, MutableTraced<Value> resultOut);
 
   private:
     string value_;

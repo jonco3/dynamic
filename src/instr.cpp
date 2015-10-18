@@ -7,6 +7,7 @@
 #include "generator.h"
 #include "interp.h"
 #include "singletons.h"
+#include "slice.h"
 #include "list.h"
 #include "utils.h"
 

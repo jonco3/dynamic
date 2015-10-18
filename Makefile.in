@@ -42,6 +42,7 @@ SRCS = \
 	src/string.cpp \
 	src/syntax.cpp \
 	src/list.cpp \
+	src/slice.cpp \
 	src/dict.cpp \
 	src/builtin.cpp \
 	src/instr.cpp \

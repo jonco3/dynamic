@@ -6,6 +6,7 @@
 #include "interp.h"
 #include "numeric.h"
 #include "singletons.h"
+#include "slice.h"
 
 #include "value-inl.h"
 
@@ -32,15 +33,12 @@ GlobalRoot<Class*> Tuple::ObjectClass;
 GlobalRoot<Tuple*> Tuple::Empty;
 GlobalRoot<Class*> List::ObjectClass;
 GlobalRoot<Class*> ListIter::ObjectClass;
-GlobalRoot<Class*> Slice::ObjectClass;
-GlobalRoot<Layout*> Slice::InitialLayout;
 
 void initList()
 {
     List::init();
     Tuple::init();
     ListIter::init();
-    Slice::init();
 }
 
 #ifdef DEBUG
@@ -173,37 +171,6 @@ bool ListBase::checkIndex(int32_t index, MutableTraced<Value> resultOut)
     return true;
 }
 
-static int32_t WrapIndex(int32_t index, int32_t length)
-{
-    return min(index >= 0 ? index : length + index, length);
-}
-
-static int32_t ClampIndex(int32_t index, int32_t length, bool inclusive)
-{
-    return max(min(index, length - (inclusive ? 1 : 0)), 0);
-}
-
-int32_t Slice::getSlotOrDefault(unsigned slot, int32_t def)
-{
-    Value value = getSlot(slot);
-    if (value == Value(None))
-        return def;
-    return value.toInt();
-}
-
-void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step)
-{
-    // todo: should be a python method
-    start = getSlotOrDefault(StartSlot, 0);
-    stop = getSlotOrDefault(StopSlot, length);
-    step = getSlotOrDefault(StepSlot, 1);
-    if (step == 0)
-        return;
-
-    start = ClampIndex(WrapIndex(start, length), length, true);
-    stop = ClampIndex(WrapIndex(stop, length), length, false);
-}
-
 bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
     if (index.isInt()) {
@@ -214,19 +181,13 @@ bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
         return true;
     } else if (index.isInstanceOf(Slice::ObjectClass)) {
         Stack<Slice*> slice(index.as<Slice>());
-        int32_t start, stop, step;
-        slice->indices(len(), start, stop, step);
-        if (step == 0) {
-            resultOut = gc.create<ValueError>("slice step cannot be zero");
+        int32_t start, count, step;
+        if (!slice->getIterationData(len(), start, count, step, resultOut))
             return false;
-        }
 
-        int32_t step_sgn = step > 0 ? 1 : -1;
-        size_t size = max((stop - start + step - step_sgn) / step, 0);
-
-        Stack<ListBase*> result(createDerived(size));
+        Stack<ListBase*> result(createDerived(count));
         int32_t src = start;
-        for (size_t i = 0; i < size; i++) {
+        for (size_t i = 0; i < count; i++) {
             assert(src < len());
             result->elements_[i] = elements_[src];
             src += step;
@@ -236,7 +197,7 @@ bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
         return true;
     } else {
         resultOut = gc.create<TypeError>(
-            listName() + " indices must be integers");
+            listName() + " indices must be integers or slices");
         return false;
     }
 }
@@ -513,45 +474,4 @@ bool ListIter::next(MutableTraced<Value> resultOut)
     resultOut = list_->elements_[index_];
     index_++;
     return true;
-}
-
-void Slice::init()
-{
-    ObjectClass.init(Class::createNative<Slice>("slice"));
-
-    static const Name StartAttr = "start";
-    static const Name StopAttr = "stop";
-    static const Name StepAttr = "step";
-
-    Stack<Layout*> layout(Object::InitialLayout);
-    layout = layout->addName(StartAttr);
-    layout = layout->addName(StopAttr);
-    layout = layout->addName(StepAttr);
-    assert(layout->lookupName(StartAttr) == StartSlot);
-    assert(layout->lookupName(StopAttr) == StopSlot);
-    assert(layout->lookupName(StepAttr) == StepSlot);
-    InitialLayout.init(layout);
-}
-
-bool IsInt32OrNone(Value value)
-{
-    return value == Value(None) || value.isInt();
-}
-
-Slice::Slice(TracedVector<Value> args) :
-  Object(ObjectClass, InitialLayout)
-{
-    assert(args.size() == 3);
-    assert(IsInt32OrNone(args[0]));
-    assert(IsInt32OrNone(args[1]));
-    assert(IsInt32OrNone(args[2]));
-    setSlot(StartSlot, args[0]);
-    setSlot(StopSlot, args[1]);
-    setSlot(StepSlot, args[2]);
-}
-
-Slice::Slice(Traced<Class*> cls)
-  : Object(cls)
-{
-    assert(cls->isDerivedFrom(ObjectClass));
 }
