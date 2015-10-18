@@ -763,8 +763,13 @@ void SharedBinaryOpInstr::print(ostream& s) const
     s << " " << BinaryOpNames[op];
 }
 
-bool ShouldInlineBinaryOp(BinaryOp op) {
-    // Must match for_each_binary_op_to_inline macro in instr.h
+bool ShouldInlineIntBinaryOp(BinaryOp op) {
+    // Must match for_each_int_binary_op_to_inline macro in instr.h
+    return true;
+}
+
+bool ShouldInlineFloatBinaryOp(BinaryOp op) {
+    // Must match for_each_float_binary_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
 }
 
@@ -775,14 +780,18 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
-    if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
+    if (ShouldInlineIntBinaryOp(instr->op) &&
+        left.isInt32() && right.isInt32())
+    {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replaceInstrAndRestart(instr, gc.create<InstrBinaryOpInt>(instr->op));
         return;
     }
 
     // If both arguments are doubles, inline the operation and restart.
-    if (ShouldInlineBinaryOp(instr->op) && left.isDouble() && right.isDouble()) {
+    if (ShouldInlineFloatBinaryOp(instr->op)
+        && left.isDouble() && right.isDouble())
+    {
         assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
         replaceInstrAndRestart(instr, gc.create<InstrBinaryOpFloat>(instr->op));
         return;
@@ -815,7 +824,7 @@ template <BinaryOp Op>
 inline void
 Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr)
 {
-    assert(ShouldInlineBinaryOp(instr->op));
+    assert(ShouldInlineIntBinaryOp(instr->op));
 
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
@@ -834,14 +843,14 @@ Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr)
     {                                                                         \
         executeBinaryOpInt<Binary##name>(instr);                              \
     }
-for_each_binary_op_to_inline(define_execute_binary_op_int)
+for_each_int_binary_op_to_inline(define_execute_binary_op_int)
 #undef define_execute_binary_op_int
 
 template <BinaryOp Op>
 inline void
 Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr)
 {
-    assert(ShouldInlineBinaryOp(instr->op));
+    assert(ShouldInlineFloatBinaryOp(instr->op));
 
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
         replaceInstrAndRestart(
@@ -860,7 +869,7 @@ Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr)
     {                                                                          \
         executeBinaryOpFloat<Binary##name>(instr);                             \
     }
-for_each_binary_op_to_inline(define_execute_binary_op_float)
+for_each_float_binary_op_to_inline(define_execute_binary_op_float)
 #undef define_execute_binary_op_float
 
 InstrBinaryOpBuiltin::InstrBinaryOpBuiltin(BinaryOp op,
@@ -1059,14 +1068,18 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
-    if (ShouldInlineBinaryOp(instr->op) && left.isInt32() && right.isInt32()) {
+    if (ShouldInlineIntBinaryOp(instr->op) &&
+        left.isInt32() && right.isInt32())
+    {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[op]));
         replaceInstrAndRestart(instr, gc.create<InstrAugAssignUpdateInt>(op));
         return;
     }
 
     // If both arguments are doubles, inline the operation and restart.
-    if (ShouldInlineBinaryOp(op) && left.isDouble() && right.isDouble()) {
+    if (ShouldInlineFloatBinaryOp(op)
+        && left.isDouble() && right.isDouble())
+    {
         assert(Float::ObjectClass->hasAttr(Name::binMethod[op]));
         replaceInstrAndRestart(instr, gc.create<InstrAugAssignUpdateFloat>(op));
         return;
@@ -1106,7 +1119,7 @@ template <BinaryOp Op>
 inline void
 Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr)
 {
-    assert(ShouldInlineBinaryOp(instr->op));
+    assert(ShouldInlineIntBinaryOp(instr->op));
 
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
@@ -1125,14 +1138,14 @@ Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr)
     {                                                                         \
         executeAugAssignUpdateInt<Binary##name>(instr);                       \
     }
-for_each_binary_op_to_inline(define_execute_aug_assign_op_int)
+for_each_int_binary_op_to_inline(define_execute_aug_assign_op_int)
 #undef define_execute_aug_assign_op_int
 
 template <BinaryOp Op>
 inline void
 Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> instr)
 {
-    assert(ShouldInlineBinaryOp(instr->op));
+    assert(ShouldInlineFloatBinaryOp(instr->op));
 
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
         replaceInstrAndRestart(
@@ -1151,7 +1164,7 @@ Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> inst
     {                                                                         \
         executeAugAssignUpdateFloat<Binary##name>(instr);                     \
     }
-for_each_binary_op_to_inline(define_execute_aug_assign_op_float)
+for_each_float_binary_op_to_inline(define_execute_aug_assign_op_float)
 #undef define_execute_aug_assign_op_float
 
 InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,

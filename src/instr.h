@@ -14,7 +14,21 @@ using namespace std;
 
 struct Interpreter;
 
-#define for_each_binary_op_to_inline(op)                                     \
+#define for_each_int_binary_op_to_inline(op)                                 \
+    op(Add)                                                                  \
+    op(Sub)                                                                  \
+    op(Mul)                                                                  \
+    op(TrueDiv)                                                              \
+    op(FloorDiv)                                                             \
+    op(Modulo)                                                               \
+    op(Power)                                                                \
+    op(Or)                                                                   \
+    op(Xor)                                                                  \
+    op(And)                                                                  \
+    op(LeftShift)                                                            \
+    op(RightShift)
+
+#define for_each_float_binary_op_to_inline(op)                               \
     op(Add)                                                                  \
     op(Sub)                                                                  \
     op(Mul)                                                                  \
@@ -75,6 +89,14 @@ struct Interpreter;
     instr(BinaryOpInt_Sub, InstrBinaryOpInt)                                 \
     instr(BinaryOpInt_Mul, InstrBinaryOpInt)                                 \
     instr(BinaryOpInt_TrueDiv, InstrBinaryOpInt)                             \
+    instr(BinaryOpInt_FloorDiv, InstrBinaryOpInt)                            \
+    instr(BinaryOpInt_Modulo, InstrBinaryOpInt)                              \
+    instr(BinaryOpInt_Power, InstrBinaryOpInt)                               \
+    instr(BinaryOpInt_Or, InstrBinaryOpInt)                                  \
+    instr(BinaryOpInt_Xor, InstrBinaryOpInt)                                 \
+    instr(BinaryOpInt_And, InstrBinaryOpInt)                                 \
+    instr(BinaryOpInt_LeftShift, InstrBinaryOpInt)                           \
+    instr(BinaryOpInt_RightShift, InstrBinaryOpInt)                          \
     instr(BinaryOpFloat_Add, InstrBinaryOpFloat)                             \
     instr(BinaryOpFloat_Sub, InstrBinaryOpFloat)                             \
     instr(BinaryOpFloat_Mul, InstrBinaryOpFloat)                             \
@@ -100,6 +122,14 @@ struct Interpreter;
     instr(AugAssignUpdateInt_Sub, InstrAugAssignUpdateInt)                   \
     instr(AugAssignUpdateInt_Mul, InstrAugAssignUpdateInt)                   \
     instr(AugAssignUpdateInt_TrueDiv, InstrAugAssignUpdateInt)               \
+    instr(AugAssignUpdateInt_FloorDiv, InstrAugAssignUpdateInt)              \
+    instr(AugAssignUpdateInt_Modulo, InstrAugAssignUpdateInt)                \
+    instr(AugAssignUpdateInt_Power, InstrAugAssignUpdateInt)                 \
+    instr(AugAssignUpdateInt_Or, InstrAugAssignUpdateInt)                    \
+    instr(AugAssignUpdateInt_Xor, InstrAugAssignUpdateInt)                   \
+    instr(AugAssignUpdateInt_And, InstrAugAssignUpdateInt)                   \
+    instr(AugAssignUpdateInt_LeftShift, InstrAugAssignUpdateInt)             \
+    instr(AugAssignUpdateInt_RightShift, InstrAugAssignUpdateInt)            \
     instr(AugAssignUpdateFloat_Add, InstrAugAssignUpdateFloat)               \
     instr(AugAssignUpdateFloat_Sub, InstrAugAssignUpdateFloat)               \
     instr(AugAssignUpdateFloat_Mul, InstrAugAssignUpdateFloat)               \
