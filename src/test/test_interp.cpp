@@ -333,6 +333,19 @@ testcase(interp)
 
     // todo: add test for GetBuiltinsSlot where we modify __builtins__
 
+    testReplacements("g = 1\n"
+                     "def foo():\n"
+                     "  global g\n"
+                     "  g = 2\n"
+                     "  return 1",
+                     "foo()", "1",
+                     "a = 1; foo()", "1",
+                     Instr_SetGlobal,
+                     Instr_SetGlobalSlot,
+                     Instr_SetGlobalSlot,
+                     Instr_SetGlobal,
+                     Instr_SetGlobalSlot);
+
     testExpectingException = true;
     testInterp("x = None\n"
                "def foo():\n"

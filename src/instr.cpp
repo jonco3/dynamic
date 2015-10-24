@@ -113,7 +113,6 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
     Stack<Value> value;
     Stack<Object*> global(instr->global());
     if (global->maybeGetAttr(instr->ident, value)) {
-        assert(value.toObject());
         pushStack(value);
 
         if (!instr->isFallback()) {
@@ -127,7 +126,6 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
     if (instr->global()->maybeGetAttr(Name::__builtins__, builtins) &&
         builtins.maybeGetAttr(instr->ident, value))
     {
-        assert(value.toObject());
         pushStack(value);
 
         if (!instr->isFallback()) {
@@ -177,12 +175,28 @@ void
 Interpreter::executeInstr_SetGlobal(Traced<InstrSetGlobal*> instr)
 {
     Stack<Value> value(peekStack());
+    Stack<Object*> global(instr->global());
+    if (global->hasAttr(instr->ident) && !instr->isFallback()) {
+        replaceInstr(instr,
+                     gc.create<InstrSetGlobalSlot>(global, instr->ident));
+    }
+
     instr->global()->setAttr(instr->ident, value);
 }
 
 void
 Interpreter::executeInstr_SetGlobalSlot(Traced<InstrSetGlobalSlot*> instr)
 {
+    Stack<Value> value(peekStack());
+    int slot = instr->globalSlot();
+    if (slot != Layout::NotFound) {
+        instr->global()->setSlot(slot, value);
+        return;
+    }
+
+    Stack<Object*> global(instr->global());
+    auto fallback = gc.create<InstrSetGlobal>(global, instr->ident, true);
+    replaceInstrAndRestart(instr, fallback);
 }
 
 void
