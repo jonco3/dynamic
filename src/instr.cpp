@@ -111,9 +111,15 @@ void
 Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 {
     Stack<Value> value;
-    if (instr->global()->maybeGetAttr(instr->ident, value)) {
+    Stack<Object*> global(instr->global());
+    if (global->maybeGetAttr(instr->ident, value)) {
         assert(value.toObject());
         pushStack(value);
+
+        if (!instr->isFallback()) {
+            replaceInstr(instr,
+                         gc.create<InstrGetGlobalSlot>(global, instr->ident));
+        }
         return;
     }
 
@@ -123,6 +129,11 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
     {
         assert(value.toObject());
         pushStack(value);
+
+        if (!instr->isFallback()) {
+            replaceInstr(instr,
+                         gc.create<InstrGetBuiltinsSlot>(global, instr->ident));
+        }
         return;
     }
 
@@ -130,10 +141,48 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 }
 
 void
+Interpreter::executeInstr_GetGlobalSlot(Traced<InstrGetGlobalSlot*> instr)
+{
+    int slot = instr->globalSlot();
+    if (slot != Layout::NotFound) {
+        pushStack(instr->global()->getSlot(slot));
+        return;
+    }
+
+    Stack<Object*> global(instr->global());
+    auto fallback = gc.create<InstrGetGlobal>(global, instr->ident, true);
+    replaceInstrAndRestart(instr, fallback);
+}
+
+void
+Interpreter::executeInstr_GetBuiltinsSlot(Traced<InstrGetBuiltinsSlot*> instr)
+{
+    Stack<Object*> builtins;
+    int slot = instr->globalSlot();
+    if (slot != Layout::NotFound) {
+        builtins = instr->global()->getSlot(slot).toObject();
+        slot = instr->builtinsSlot(builtins);
+        if (slot != Layout::NotFound) {
+            pushStack(builtins->getSlot(slot));
+            return;
+        }
+    }
+
+    Stack<Object*> global(instr->global());
+    auto fallback = gc.create<InstrGetGlobal>(global, instr->ident, true);
+    replaceInstrAndRestart(instr, fallback);
+}
+
+void
 Interpreter::executeInstr_SetGlobal(Traced<InstrSetGlobal*> instr)
 {
     Stack<Value> value(peekStack());
     instr->global()->setAttr(instr->ident, value);
+}
+
+void
+Interpreter::executeInstr_SetGlobalSlot(Traced<InstrSetGlobalSlot*> instr)
+{
 }
 
 void
@@ -157,6 +206,8 @@ Interpreter::executeInstr_GetAttr(Traced<InstrGetAttr*> instr)
 void
 Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
 {
+    // todo: this logic should move into setAttr() so python setattr picks it
+    // up.
     Stack<Value> value(peekStack(1));
     Stack<Object*> obj(popStack().toObject());
     if (builtinsInitialised) {
@@ -167,7 +218,8 @@ Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
                 return;
             }
         } else if (obj->type()->isFinal() && !obj->hasAttr(instr->ident)) {
-            raiseAttrError(value, instr->ident);
+            Stack<Value> v(obj);
+            raiseAttrError(v, instr->ident);
             return;
         }
     }
@@ -180,6 +232,7 @@ Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
 void
 Interpreter::executeInstr_DelAttr(Traced<InstrDelAttr*> instr)
 {
+    // todo: should not be able to delete attributes of builtin types?
     Stack<Object*> obj(popStack().toObject());
     Stack<Value> result;
     if (!delAttr(obj, instr->ident, result))

@@ -47,7 +47,10 @@ struct Interpreter;
     instr(SetLexical, InstrSetLexical)                                       \
     instr(DelLexical, InstrDelLexical)                                       \
     instr(GetGlobal, InstrGetGlobal)                                         \
+    instr(GetGlobalSlot, InstrGetGlobalSlot)                                 \
+    instr(GetBuiltinsSlot, InstrGetBuiltinsSlot)                             \
     instr(SetGlobal, InstrSetGlobal)                                         \
+    instr(SetGlobalSlot, InstrSetGlobalSlot)                                 \
     instr(DelGlobal, InstrDelGlobal)                                         \
     instr(GetAttr, InstrGetAttr)                                             \
     instr(SetAttr, InstrSetAttr)                                             \
@@ -271,13 +274,14 @@ struct FrameAndIdentInstrBase : public Instr
 
 struct GlobalInstrBase : public IdentInstrBase
 {
-    GlobalInstrBase(Traced<Object*> global, Name ident)
-      : IdentInstrBase(ident), global_(global)
+    GlobalInstrBase(Traced<Object*> global, Name ident, bool fallback)
+      : IdentInstrBase(ident), global_(global), fallback_(fallback)
     {
         assert(global);
     }
 
-    Object* global() const { return global_; }
+    const Heap<Object*>& global() const { return global_; }
+    bool isFallback() const { return fallback_; }
 
     virtual void traceChildren(Tracer& t) override {
         gc.trace(t, &global_);
@@ -285,13 +289,108 @@ struct GlobalInstrBase : public IdentInstrBase
 
   private:
     Heap<Object*> global_;
+    bool fallback_;
 };
 
 #define define_global_instr(name)                                             \
     struct Instr##name : public GlobalInstrBase                               \
     {                                                                         \
+        Instr##name(Traced<Object*> global, Name ident,                       \
+                    bool fallback = false)                                    \
+          : GlobalInstrBase(global, ident, fallback)                          \
+        {}                                                                    \
+        define_instr_members(name);                                           \
+    }
+
+struct SlotGuard
+{
+    SlotGuard(Object* object, Name name)
+      : layout_(object->layout()), slot_(object->findOwnAttr(name))
+    {
+        assert(slot_ != Layout::NotFound);
+    }
+
+    void traceChildren(Tracer& t) {
+        gc.trace(t, &layout_);
+    }
+
+    int slot() const {
+        return slot_;
+    }
+
+    int check(Traced<Object*> object) const {
+        return object->layout() == layout_ ? slot_ : Layout::NotFound;
+    }
+
+  private:
+    Heap<Layout*> layout_;
+    int slot_;
+};
+
+struct GlobalSlotInstrBase : public IdentInstrBase
+{
+    GlobalSlotInstrBase(Traced<Object*> global, Name ident)
+      : IdentInstrBase(ident), global_(global), globalSlot_(global, ident)
+    {
+        assert(global);
+    }
+
+    void traceChildren(Tracer& t) override {
+        gc.trace(t, &global_);
+        globalSlot_.traceChildren(t);
+    }
+
+    Object* global() const { return global_; }
+
+    int globalSlot() const {
+        return globalSlot_.check(global_);
+    }
+
+  protected:
+    Heap<Object*> global_;
+    SlotGuard globalSlot_;
+
+    GlobalSlotInstrBase(Traced<Object*> global, Name globalIdent, Name ident)
+      : IdentInstrBase(ident), global_(global), globalSlot_(global, globalIdent)
+    {
+        assert(global);
+    }
+};
+
+struct BuiltinsSlotInstrBase : public GlobalSlotInstrBase
+{
+    BuiltinsSlotInstrBase(Traced<Object*> global, Name ident)
+      : GlobalSlotInstrBase(global, Name::__builtins__, ident),
+        builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
+    {}
+
+    void traceChildren(Tracer& t) override {
+        GlobalSlotInstrBase::traceChildren(t);
+        builtinsSlot_.traceChildren(t);
+    }
+
+    int builtinsSlot(Traced<Object*> builtins) const {
+        return builtinsSlot_.check(builtins);
+    }
+
+  private:
+    SlotGuard builtinsSlot_;
+};
+
+#define define_global_slot_instr(name)                                        \
+    struct Instr##name : public GlobalSlotInstrBase                           \
+    {                                                                         \
         Instr##name(Traced<Object*> global, Name ident)                       \
-          : GlobalInstrBase(global, ident)                                    \
+          : GlobalSlotInstrBase(global, ident)                                \
+        {}                                                                    \
+        define_instr_members(name);                                           \
+    }
+
+#define define_builtins_slot_instr(name)                                      \
+    struct Instr##name : public BuiltinsSlotInstrBase                         \
+    {                                                                         \
+        Instr##name(Traced<Object*> global, Name ident)                       \
+          : BuiltinsSlotInstrBase(global, ident)                              \
         {}                                                                    \
         define_instr_members(name);                                           \
     }
@@ -327,7 +426,12 @@ define_frame_and_ident_instr(SetLexical);
 define_frame_and_ident_instr(DelLexical);
 
 define_global_instr(GetGlobal);
+define_global_slot_instr(GetGlobalSlot);
+define_builtins_slot_instr(GetBuiltinsSlot);
+
 define_global_instr(SetGlobal);
+define_global_slot_instr(SetGlobalSlot);
+
 define_global_instr(DelGlobal);
 
 define_ident_instr(GetAttr);

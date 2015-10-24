@@ -60,7 +60,6 @@ struct Object : public Cell
     Class* type() const { return class_; }
     Layout* layout() const { return layout_; }
 
-
     // Own attribute accessors
     bool hasOwnAttr(Name name) const;
     bool maybeGetOwnAttr(Name name, MutableTraced<Value> valueOut) const;
@@ -75,6 +74,7 @@ struct Object : public Cell
 
     // Slot accessors
     bool hasSlot(int slot) const;
+    int findOwnAttr(Name name) const;
     Value getSlot(int slot) const;
     void setSlot(int slot, Traced<Value> value);
 
@@ -94,8 +94,6 @@ struct Object : public Cell
     void traceChildren(Tracer& t) override;
 
     bool getSlot(Name name, int slot, MutableTraced<Value> valueOut) const;
-
-    int findOwnAttr(Name name) const;
 
   private:
     Heap<Class*> class_;

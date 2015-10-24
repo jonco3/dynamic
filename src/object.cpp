@@ -97,6 +97,7 @@ bool Object::hasSlot(int slot) const
 bool Object::getSlot(Name name, int slot, MutableTraced<Value> valueOut) const
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
+    assert(layout_->lookupName(name) == slot);
     if (slots_[slot] == Value(UninitializedSlot))
         return false;
     valueOut = slots_[slot];
@@ -118,7 +119,11 @@ void Object::setSlot(int slot, Traced<Value> value)
 
 int Object::findOwnAttr(Name name) const
 {
-    return layout_->lookupName(name);
+    int slot = layout_->lookupName(name);
+    if (slot != Layout::NotFound && slots_[slot] == Value(UninitializedSlot))
+        return Layout::NotFound;
+
+    return slot;
 }
 
 bool Object::hasOwnAttr(Name name) const

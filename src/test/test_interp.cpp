@@ -75,16 +75,29 @@ void testReplacements(const string& defs,
                       InstrType initial,
                       InstrType afterCall1,
                       InstrType afterCall2,
-                      InstrType afterBoth)
+                      InstrType afterCall1Then2,
+                      InstrType afterCall2Then1)
 {
     testReplacement(defs + "\n" + call1,
                     result1, initial, afterCall1);
     testReplacement(defs + "\n" + call2,
                     result2, initial, afterCall2);
     testReplacement(defs + "\n" + call1 + "\n" + call2,
-                    result2, initial, afterBoth);
+                    result2, initial, afterCall1Then2);
     testReplacement(defs + "\n" + call2 + "\n" + call1,
-                    result1, initial, afterBoth);
+                    result1, initial, afterCall2Then1);
+}
+
+void testReplacements(const string& defs,
+                      const string& call1, const string& result1,
+                      const string& call2, const string& result2,
+                      InstrType initial,
+                      InstrType afterCall1,
+                      InstrType afterCall2,
+                      InstrType afterBoth)
+{
+    testReplacements(defs, call1, result1, call2, result2,
+                     initial, afterCall1, afterCall2, afterBoth, afterBoth);
 }
 
 testcase(interp)
@@ -284,6 +297,41 @@ testcase(interp)
                      Instr_AugAssignUpdateFloat_Mul,
                      Instr_AugAssignUpdateInt_Mul,
                      Instr_AugAssignUpdateFallback);
+
+    testReplacements("g = 1\n"
+                     "def foo():\n"
+                     "  return g",
+                     "foo()", "1",
+                     "a = 1; foo()", "1",
+                     Instr_GetGlobal,
+                     Instr_GetGlobalSlot,
+                     Instr_GetGlobalSlot,
+                     Instr_GetGlobal,
+                     Instr_GetGlobalSlot);
+
+    testReplacements("g = 1\n"
+                     "f = 0\n"
+                     "def foo():\n"
+                     "  return g",
+                     "foo()", "1",
+                     "del f; foo()", "1",
+                     Instr_GetGlobal,
+                     Instr_GetGlobalSlot,
+                     Instr_GetGlobalSlot,
+                     Instr_GetGlobal,
+                     Instr_GetGlobalSlot);
+
+    testReplacements("def foo():\n"
+                     "  return len([])",
+                     "foo()", "0",
+                     "a = 0; foo()", "0",
+                     Instr_GetGlobal,
+                     Instr_GetBuiltinsSlot,
+                     Instr_GetBuiltinsSlot,
+                     Instr_GetGlobal,
+                     Instr_GetBuiltinsSlot);
+
+    // todo: add test for GetBuiltinsSlot where we modify __builtins__
 
     testExpectingException = true;
     testInterp("x = None\n"
