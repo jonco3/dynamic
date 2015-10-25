@@ -1127,6 +1127,16 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
     return true;
 }
 
+bool ShouldInlineIntAugAssignOp(BinaryOp op) {
+    // Must match for_each_int_aug_assign_op_to_inline macro in instr.h
+    return op <= BinaryTrueDiv;
+}
+
+bool ShouldInlineFloatAugAssignOp(BinaryOp op) {
+    // Must match for_each_float_aug_assign_op_to_inline macro in instr.h
+    return op <= BinaryTrueDiv;
+}
+
 void
 Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
 {
@@ -1135,7 +1145,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     Stack<Value> left(peekStack(1));
 
     // If both arguments are integers, inline the operation and restart.
-    if (ShouldInlineIntBinaryOp(instr->op) &&
+    if (ShouldInlineIntAugAssignOp(instr->op) &&
         left.isInt32() && right.isInt32())
     {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[op]));
@@ -1144,7 +1154,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
     }
 
     // If both arguments are doubles, inline the operation and restart.
-    if (ShouldInlineFloatBinaryOp(op)
+    if (ShouldInlineFloatAugAssignOp(op)
         && left.isDouble() && right.isDouble())
     {
         assert(Float::ObjectClass->hasAttr(Name::binMethod[op]));
@@ -1205,7 +1215,7 @@ Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr)
     {                                                                         \
         executeAugAssignUpdateInt<Binary##name>(instr);                       \
     }
-for_each_int_binary_op_to_inline(define_execute_aug_assign_op_int)
+for_each_int_aug_assign_op_to_inline(define_execute_aug_assign_op_int)
 #undef define_execute_aug_assign_op_int
 
 template <BinaryOp Op>
@@ -1231,7 +1241,7 @@ Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> inst
     {                                                                         \
         executeAugAssignUpdateFloat<Binary##name>(instr);                     \
     }
-for_each_float_binary_op_to_inline(define_execute_aug_assign_op_float)
+for_each_float_aug_assign_op_to_inline(define_execute_aug_assign_op_float)
 #undef define_execute_aug_assign_op_float
 
 InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,

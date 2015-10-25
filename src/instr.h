@@ -14,11 +14,14 @@ using namespace std;
 
 struct Interpreter;
 
-#define for_each_int_binary_op_to_inline(op)                                 \
+#define for_each_simple_binary_op_type(op)                                   \
     op(Add)                                                                  \
     op(Sub)                                                                  \
     op(Mul)                                                                  \
-    op(TrueDiv)                                                              \
+    op(TrueDiv)
+
+#define for_each_binary_op_type(op)                                          \
+    for_each_simple_binary_op_type(op)                                       \
     op(FloorDiv)                                                             \
     op(Modulo)                                                               \
     op(Power)                                                                \
@@ -28,11 +31,17 @@ struct Interpreter;
     op(LeftShift)                                                            \
     op(RightShift)
 
+#define for_each_int_binary_op_to_inline(op)                                 \
+    for_each_binary_op_type(op)
+
 #define for_each_float_binary_op_to_inline(op)                               \
-    op(Add)                                                                  \
-    op(Sub)                                                                  \
-    op(Mul)                                                                  \
-    op(TrueDiv)
+    for_each_simple_binary_op_type(op)
+
+#define for_each_int_aug_assign_op_to_inline(op)                             \
+    for_each_simple_binary_op_type(op)
+
+#define for_each_float_aug_assign_op_to_inline(op)                           \
+    for_each_simple_binary_op_type(op)
 
 #define for_each_inline_instr(instr)                                         \
     instr(Abort, InstrAbort)                                                 \
@@ -125,14 +134,6 @@ struct Interpreter;
     instr(AugAssignUpdateInt_Sub, InstrAugAssignUpdateInt)                   \
     instr(AugAssignUpdateInt_Mul, InstrAugAssignUpdateInt)                   \
     instr(AugAssignUpdateInt_TrueDiv, InstrAugAssignUpdateInt)               \
-    instr(AugAssignUpdateInt_FloorDiv, InstrAugAssignUpdateInt)              \
-    instr(AugAssignUpdateInt_Modulo, InstrAugAssignUpdateInt)                \
-    instr(AugAssignUpdateInt_Power, InstrAugAssignUpdateInt)                 \
-    instr(AugAssignUpdateInt_Or, InstrAugAssignUpdateInt)                    \
-    instr(AugAssignUpdateInt_Xor, InstrAugAssignUpdateInt)                   \
-    instr(AugAssignUpdateInt_And, InstrAugAssignUpdateInt)                   \
-    instr(AugAssignUpdateInt_LeftShift, InstrAugAssignUpdateInt)             \
-    instr(AugAssignUpdateInt_RightShift, InstrAugAssignUpdateInt)            \
     instr(AugAssignUpdateFloat_Add, InstrAugAssignUpdateFloat)               \
     instr(AugAssignUpdateFloat_Sub, InstrAugAssignUpdateFloat)               \
     instr(AugAssignUpdateFloat_Mul, InstrAugAssignUpdateFloat)               \
