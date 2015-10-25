@@ -167,47 +167,36 @@ extern const char* instrName(InstrType type);
 
 struct Branch;
 
-// Base class for instruction data.  By default each instruction type has its
-// own class.
+// Base class for instruction data.
 struct Instr : public Cell
 {
-    bool is(InstrType t) const { return type() == t; }
+    Instr(InstrType type)
+      : type_(type)
+    {
+        assert(type < InstrTypeCount);
+    }
 
-    virtual ~Instr() {}
-    virtual InstrType type() const = 0;
+    InstrType type() const { return type_; }
+    bool is(InstrType t) const { return type() == t; }
 
     virtual bool isBranch() const { return false; };
     inline Branch* asBranch();
 
     void print(ostream& s) const override {}
-};
-
-// Base class for instruction data that can be used by more than one instruction
-// type.
-struct SharedInstrBase : public Instr
-{
-    SharedInstrBase(InstrType type) : type_(type) {}
-    InstrType type() const override { return type_; }
 
   private:
     const InstrType type_;
 };
 
-#define instr_type(it)                                                        \
-    InstrType type() const override { return it; }
-
-#define define_instr_members(it)                                              \
-    instr_type(Instr_##it);
-
 #define define_simple_instr(it)                                               \
     struct Instr##it : public Instr                                           \
     {                                                                         \
-        define_instr_members(it);                                             \
+        Instr##it() : Instr(Instr_##it) {}                                    \
     }
 
 struct IdentInstrBase : public Instr
 {
-    IdentInstrBase(Name ident) : ident(ident) {}
+    IdentInstrBase(InstrType type, Name ident) : Instr(type), ident(ident) {}
 
     void print(ostream& s) const override {
         s << " " << ident;
@@ -222,14 +211,13 @@ struct IdentInstrBase : public Instr
 #define define_ident_instr(name)                                              \
     struct Instr##name : public IdentInstrBase                                \
     {                                                                         \
-        Instr##name(Name ident) : IdentInstrBase(ident) {}                    \
-        define_instr_members(name);                                           \
+        Instr##name(Name ident) : IdentInstrBase(Instr_##name, ident) {}      \
     }
 
 struct IdentAndSlotInstrBase : public Instr
 {
-    IdentAndSlotInstrBase(Name ident, unsigned slot)
-      : ident(ident), slot(slot) {}
+    IdentAndSlotInstrBase(InstrType type, Name ident, unsigned slot)
+      : Instr(type), ident(ident), slot(slot) {}
 
     void print(ostream& s) const override {
         s << " " << ident << " " << slot;
@@ -246,15 +234,14 @@ struct IdentAndSlotInstrBase : public Instr
     struct Instr##name : public IdentAndSlotInstrBase                         \
     {                                                                         \
         Instr##name(Name ident, unsigned slot)                                \
-          : IdentAndSlotInstrBase(ident, slot)                                \
+          : IdentAndSlotInstrBase(Instr_##name, ident, slot)                  \
         {}                                                                    \
-        define_instr_members(name);                                           \
     }
 
 struct FrameAndIdentInstrBase : public Instr
 {
-    FrameAndIdentInstrBase(unsigned frameIndex, Name ident)
-      : frameIndex(frameIndex), ident(ident) {}
+    FrameAndIdentInstrBase(InstrType type, unsigned frameIndex, Name ident)
+      : Instr(type), frameIndex(frameIndex), ident(ident) {}
 
     void print(ostream& s) const override {
         s << " " << frameIndex << " " << ident;
@@ -268,15 +255,15 @@ struct FrameAndIdentInstrBase : public Instr
     struct Instr##name : public FrameAndIdentInstrBase                        \
     {                                                                         \
         Instr##name(unsigned frameIndex, Name ident)                          \
-          : FrameAndIdentInstrBase(frameIndex, ident)                         \
+          : FrameAndIdentInstrBase(Instr_##name, frameIndex, ident)           \
         {}                                                                    \
-        define_instr_members(name);                                           \
     }
 
 struct GlobalInstrBase : public IdentInstrBase
 {
-    GlobalInstrBase(Traced<Object*> global, Name ident, bool fallback)
-      : IdentInstrBase(ident), global_(global), fallback_(fallback)
+    GlobalInstrBase(InstrType type, Traced<Object*> global, Name ident,
+                  bool fallback)
+      : IdentInstrBase(type, ident), global_(global), fallback_(fallback)
     {
         assert(global);
     }
@@ -298,9 +285,8 @@ struct GlobalInstrBase : public IdentInstrBase
     {                                                                         \
         Instr##name(Traced<Object*> global, Name ident,                       \
                     bool fallback = false)                                    \
-          : GlobalInstrBase(global, ident, fallback)                          \
+          : GlobalInstrBase(Instr_##name, global, ident, fallback)            \
         {}                                                                    \
-        define_instr_members(name);                                           \
     }
 
 struct SlotGuard
@@ -330,8 +316,8 @@ struct SlotGuard
 
 struct GlobalSlotInstrBase : public IdentInstrBase
 {
-    GlobalSlotInstrBase(Traced<Object*> global, Name ident)
-      : IdentInstrBase(ident), global_(global), globalSlot_(global, ident)
+    GlobalSlotInstrBase(InstrType type, Traced<Object*> global, Name ident)
+      : IdentInstrBase(type, ident), global_(global), globalSlot_(global, ident)
     {
         assert(global);
     }
@@ -351,17 +337,28 @@ struct GlobalSlotInstrBase : public IdentInstrBase
     Heap<Object*> global_;
     SlotGuard globalSlot_;
 
-    GlobalSlotInstrBase(Traced<Object*> global, Name globalIdent, Name ident)
-      : IdentInstrBase(ident), global_(global), globalSlot_(global, globalIdent)
+    GlobalSlotInstrBase(InstrType type, Traced<Object*> global,
+                        Name globalIdent, Name ident)
+      : IdentInstrBase(type, ident),
+        global_(global),
+        globalSlot_(global, globalIdent)
     {
         assert(global);
     }
 };
 
+#define define_global_slot_instr(name)                                        \
+    struct Instr##name : public GlobalSlotInstrBase                           \
+    {                                                                         \
+        Instr##name(Traced<Object*> global, Name ident)                       \
+          : GlobalSlotInstrBase(Instr_##name, global, ident)                  \
+        {}                                                                    \
+    }
+
 struct BuiltinsSlotInstrBase : public GlobalSlotInstrBase
 {
-    BuiltinsSlotInstrBase(Traced<Object*> global, Name ident)
-      : GlobalSlotInstrBase(global, Name::__builtins__, ident),
+    BuiltinsSlotInstrBase(InstrType type, Traced<Object*> global, Name ident)
+      : GlobalSlotInstrBase(type, global, Name::__builtins__, ident),
         builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
     {}
 
@@ -378,22 +375,12 @@ struct BuiltinsSlotInstrBase : public GlobalSlotInstrBase
     SlotGuard builtinsSlot_;
 };
 
-#define define_global_slot_instr(name)                                        \
-    struct Instr##name : public GlobalSlotInstrBase                           \
-    {                                                                         \
-        Instr##name(Traced<Object*> global, Name ident)                       \
-          : GlobalSlotInstrBase(global, ident)                                \
-        {}                                                                    \
-        define_instr_members(name);                                           \
-    }
-
 #define define_builtins_slot_instr(name)                                      \
     struct Instr##name : public BuiltinsSlotInstrBase                         \
     {                                                                         \
         Instr##name(Traced<Object*> global, Name ident)                       \
-          : BuiltinsSlotInstrBase(global, ident)                              \
+          : BuiltinsSlotInstrBase(Instr_##name, global, ident)               \
         {}                                                                    \
-        define_instr_members(name);                                           \
     }
 
 define_simple_instr(Abort);
@@ -401,8 +388,7 @@ define_simple_instr(Return);
 
 struct InstrConst : public Instr
 {
-    define_instr_members(Const);
-    explicit InstrConst(Traced<Value> v) : value_(v) {}
+    explicit InstrConst(Traced<Value> v) : Instr(Instr_Const), value_(v) {}
 
     void print(ostream& s) const override {
         s << " " << value_;
@@ -443,9 +429,11 @@ define_ident_instr(GetMethodFallback);
 
 struct InstrGetMethodBuiltin : public IdentInstrBase
 {
-    define_instr_members(GetMethodBuiltin);
     InstrGetMethodBuiltin(Name name, Traced<Class*> cls, Traced<Value> result)
-      : IdentInstrBase(name), class_(cls), result_(result) {}
+      : IdentInstrBase(Instr_GetMethodBuiltin, name),
+        class_(cls),
+        result_(result)
+    {}
 
     virtual void traceChildren(Tracer& t) override {
         gc.trace(t, &class_);
@@ -456,10 +444,11 @@ struct InstrGetMethodBuiltin : public IdentInstrBase
     Heap<Value> result_;
 };
 
-struct InstrCall : public Instr
+struct CallInstrBase : public Instr
 {
-    define_instr_members(Call);
-    InstrCall(unsigned count) : count(count) {}
+    CallInstrBase(InstrType type, unsigned count)
+        : Instr(type), count(count)
+    {}
 
     void print(ostream& s) const override {
         s << " " << count;
@@ -468,10 +457,14 @@ struct InstrCall : public Instr
     const unsigned count;
 };
 
-struct InstrCallMethod : public InstrCall
+struct InstrCall : public CallInstrBase
 {
-    define_instr_members(CallMethod);
-    InstrCallMethod(unsigned count) : InstrCall(count) {}
+    InstrCall(unsigned count) : CallInstrBase(Instr_Call, count) {}
+};
+
+struct InstrCallMethod : public CallInstrBase
+{
+    InstrCallMethod(unsigned count) : CallInstrBase(Instr_CallMethod, count) {}
 };
 
 define_simple_instr(CreateEnv);
@@ -482,7 +475,10 @@ define_simple_instr(Not);
 
 struct Branch : public Instr
 {
-    Branch(int offset = 0) : offset_(offset) {}
+    Branch(InstrType type, int offset = 0)
+      : Instr(type), offset_(offset)
+    {}
+
     bool isBranch() const override { return true; };
 
     void setOffset(int offset) {
@@ -503,18 +499,15 @@ inline Branch* Instr::asBranch()
     return static_cast<Branch*>(this);
 }
 
-struct InstrBranchAlways : public Branch
-{
-    define_instr_members(BranchAlways);
-    InstrBranchAlways(int offset = 0) : Branch(offset) {}
-};
-
 #define define_branch_instr(name)                                             \
     struct Instr##name : public Branch                                        \
     {                                                                         \
-        define_instr_members(name);                                           \
+        Instr##name(int offset = 0)                                           \
+          : Branch(Instr_##name, offset)                                      \
+        {}                                                                    \
     }
 
+define_branch_instr(BranchAlways);
 define_branch_instr(BranchIfTrue);
 define_branch_instr(BranchIfFalse);
 define_branch_instr(Or);
@@ -522,8 +515,6 @@ define_branch_instr(And);
 
 struct InstrLambda : public Instr
 {
-    define_instr_members(Lambda);
-
     InstrLambda(Name name, const vector<Name>& paramNames, Traced<Block*> block,
                 unsigned defaultCount = 0, bool takesRest = false,
                 bool isGenerator = false);
@@ -553,8 +544,7 @@ struct InstrLambda : public Instr
 
 struct InstrDup : public Instr
 {
-    define_instr_members(Dup);
-    InstrDup(unsigned index = 0) : index(index) {}
+    InstrDup(unsigned index = 0) : Instr(Instr_Dup), index(index) {}
 
     void print(ostream& s) const override {
         s << " " << index;
@@ -568,22 +558,19 @@ define_simple_instr(Swap);
 
 struct InstrTuple : public Instr
 {
-    define_instr_members(Tuple);
-    InstrTuple(unsigned size) : size(size) {}
+    InstrTuple(unsigned size) : Instr(Instr_Tuple), size(size) {}
     const unsigned size;
 };
 
 struct InstrList : public Instr
 {
-    define_instr_members(List);
-    InstrList(unsigned size) : size(size) {}
+    InstrList(unsigned size) : Instr(Instr_List), size(size) {}
     const unsigned size;
 };
 
 struct InstrDict : public Instr
 {
-    define_instr_members(Dict);
-    InstrDict(unsigned size) : size(size) {}
+    InstrDict(unsigned size) : Instr(Instr_Dict), size(size) {}
     const unsigned size;
 };
 
@@ -593,10 +580,10 @@ define_simple_instr(AssertionFailed);
 
 define_ident_instr(MakeClassFromFrame);
 
-struct InstrDestructure : public SharedInstrBase
+struct InstrDestructure : public Instr
 {
     InstrDestructure(unsigned count, InstrType type = Instr_Destructure)
-        : SharedInstrBase(type), count(count)
+      : Instr(type), count(count)
     {
         assert(type >= Instr_Destructure && type <= Instr_DestructureFallback);
     }
@@ -608,56 +595,46 @@ define_simple_instr(Raise);
 define_simple_instr(GetIterator);
 define_simple_instr(IteratorNext);
 
-struct BinaryOpInstr : public Instr
+struct BinaryOpInstrBase : public Instr
 {
-    BinaryOpInstr(BinaryOp op) : op(op) {}
+    BinaryOpInstrBase(unsigned type, BinaryOp op)
+      : Instr(InstrType(type)), op(op)
+    {}
 
     void print(ostream& s) const override;
 
     const BinaryOp op;
 };
 
-struct SharedBinaryOpInstr : public SharedInstrBase
+struct InstrBinaryOp : public BinaryOpInstrBase
 {
-    SharedBinaryOpInstr(unsigned type, BinaryOp op)
-      : SharedInstrBase(InstrType(type)), op(op)
-    {
-        assert(type < InstrTypeCount);
-    }
-
-    void print(ostream& s) const override;
-
-    const BinaryOp op;
-};
-
-struct InstrBinaryOp : public BinaryOpInstr
-{
-    define_instr_members(BinaryOp);
-    InstrBinaryOp(BinaryOp op) : BinaryOpInstr(op) {}
-};
-
-struct InstrBinaryOpFallback : public BinaryOpInstr
-{
-    define_instr_members(BinaryOpFallback);
-    InstrBinaryOpFallback(BinaryOp op) : BinaryOpInstr(op) {}
-};
-
-struct InstrBinaryOpInt : public SharedBinaryOpInstr
-{
-    InstrBinaryOpInt(BinaryOp op)
-      : SharedBinaryOpInstr(Instr_BinaryOpInt_Add + op, op)
+    InstrBinaryOp(BinaryOp op)
+      : BinaryOpInstrBase(Instr_BinaryOp, op)
     {}
 };
 
-struct InstrBinaryOpFloat : public SharedBinaryOpInstr
+struct InstrBinaryOpFallback : public BinaryOpInstrBase
 {
-    InstrBinaryOpFloat(BinaryOp op)
-      : SharedBinaryOpInstr(Instr_BinaryOpFloat_Add + op, op) {}
+    InstrBinaryOpFallback(BinaryOp op)
+      : BinaryOpInstrBase(Instr_BinaryOpFallback, op)
+    {}
 };
 
-struct InstrBinaryOpBuiltin : public BinaryOpInstr
+struct InstrBinaryOpInt : public BinaryOpInstrBase
 {
-    define_instr_members(BinaryOpBuiltin);
+    InstrBinaryOpInt(BinaryOp op)
+      : BinaryOpInstrBase(Instr_BinaryOpInt_Add + op, op)
+    {}
+};
+
+struct InstrBinaryOpFloat : public BinaryOpInstrBase
+{
+    InstrBinaryOpFloat(BinaryOp op)
+      : BinaryOpInstrBase(Instr_BinaryOpFloat_Add + op, op) {}
+};
+
+struct InstrBinaryOpBuiltin : public BinaryOpInstrBase
+{
     InstrBinaryOpBuiltin(BinaryOp op, Traced<Class*> left, Traced<Class*> right,
                          Traced<Value> method);
     Class* left() { return left_; }
@@ -672,79 +649,71 @@ struct InstrBinaryOpBuiltin : public BinaryOpInstr
     Heap<Value> method_;
 };
 
-struct CompareOpInstr : public Instr
+struct CompareOpInstrBase : public Instr
 {
-    CompareOpInstr(CompareOp op) : op(op) {}
+    CompareOpInstrBase(unsigned type, CompareOp op)
+      : Instr(InstrType(type)), op(op)
+    {}
 
     void print(ostream& s) const override;
 
     const CompareOp op;
 };
 
-struct SharedCompareOpInstr : public SharedInstrBase
+struct InstrCompareOp : public CompareOpInstrBase
 {
-    SharedCompareOpInstr(unsigned type, CompareOp op)
-      : SharedInstrBase(InstrType(type)), op(op)
-    {
-        assert(type < InstrTypeCount);
-    }
-
-    void print(ostream& s) const override;
-
-    const CompareOp op;
+    InstrCompareOp(CompareOp op) : CompareOpInstrBase(Instr_CompareOp, op) {}
 };
 
-struct InstrCompareOp : public CompareOpInstr
+struct InstrCompareOpFallback : public CompareOpInstrBase
 {
-    define_instr_members(CompareOp);
-    InstrCompareOp(CompareOp op) : CompareOpInstr(op) {}
+    InstrCompareOpFallback(CompareOp op)
+      : CompareOpInstrBase(Instr_CompareOpFallback, op)
+    {}
 };
 
-struct InstrCompareOpFallback : public CompareOpInstr
-{
-    define_instr_members(CompareOpFallback);
-    InstrCompareOpFallback(CompareOp op) : CompareOpInstr(op) {}
-};
-
-struct InstrCompareOpInt : public SharedCompareOpInstr
+struct InstrCompareOpInt : public CompareOpInstrBase
 {
     InstrCompareOpInt(CompareOp op)
-      : SharedCompareOpInstr(Instr_CompareOpInt_LT + op, op) {}
+      : CompareOpInstrBase(Instr_CompareOpInt_LT + op, op)
+    {}
 };
 
-struct InstrCompareOpFloat : public SharedCompareOpInstr
+struct InstrCompareOpFloat : public CompareOpInstrBase
 {
     InstrCompareOpFloat(CompareOp op)
-      : SharedCompareOpInstr(Instr_CompareOpFloat_LT + op, op) {}
+      : CompareOpInstrBase(Instr_CompareOpFloat_LT + op, op)
+    {}
 };
 
-struct InstrAugAssignUpdate : public BinaryOpInstr
+struct InstrAugAssignUpdate : public BinaryOpInstrBase
 {
-    define_instr_members(AugAssignUpdate);
-    InstrAugAssignUpdate(BinaryOp op) : BinaryOpInstr(op) {}
+    InstrAugAssignUpdate(BinaryOp op)
+      : BinaryOpInstrBase(Instr_AugAssignUpdate, op)
+    {}
 };
 
-struct InstrAugAssignUpdateFallback : public BinaryOpInstr
+struct InstrAugAssignUpdateFallback : public BinaryOpInstrBase
 {
-    define_instr_members(AugAssignUpdateFallback);
-    InstrAugAssignUpdateFallback(BinaryOp op) : BinaryOpInstr(op) {}
+    InstrAugAssignUpdateFallback(BinaryOp op)
+      : BinaryOpInstrBase(Instr_AugAssignUpdateFallback, op)
+    {}
 };
 
-struct InstrAugAssignUpdateInt : public SharedBinaryOpInstr
+struct InstrAugAssignUpdateInt : public BinaryOpInstrBase
 {
     InstrAugAssignUpdateInt(BinaryOp op)
-      : SharedBinaryOpInstr(Instr_AugAssignUpdateInt_Add + op, op) {}
+      : BinaryOpInstrBase(Instr_AugAssignUpdateInt_Add + op, op) {}
 };
 
-struct InstrAugAssignUpdateFloat : public SharedBinaryOpInstr
+struct InstrAugAssignUpdateFloat : public BinaryOpInstrBase
 {
     InstrAugAssignUpdateFloat(BinaryOp op)
-      : SharedBinaryOpInstr(Instr_AugAssignUpdateFloat_Add + op, op) {}
+      : BinaryOpInstrBase(Instr_AugAssignUpdateFloat_Add + op, op) {}
 };
 
-struct InstrAugAssignUpdateBuiltin : public BinaryOpInstr
+struct InstrAugAssignUpdateBuiltin : public BinaryOpInstrBase
 {
-    define_instr_members(AugAssignUpdateBuiltin);
     InstrAugAssignUpdateBuiltin(BinaryOp op,
                                 Traced<Class*> left, Traced<Class*> right,
                                 Traced<Value> method);
@@ -775,10 +744,10 @@ define_simple_instr(FinishExceptionHandler);
 
 struct InstrLoopControlJump : public Instr
 {
-    define_instr_members(LoopControlJump);
-
     InstrLoopControlJump(unsigned finallyCount, unsigned target = 0)
-      : finallyCount_(finallyCount), target_(target)
+      : Instr(Instr_LoopControlJump),
+        finallyCount_(finallyCount),
+        target_(target)
     {}
 
     unsigned finallyCount() const { return finallyCount_; }
@@ -803,8 +772,9 @@ define_simple_instr(ListAppend);
 
 struct InstrAssertStackDepth : public Instr
 {
-    define_instr_members(AssertStackDepth);
-    InstrAssertStackDepth(unsigned expected) : expected(expected) {}
+    InstrAssertStackDepth(unsigned expected)
+      : Instr(Instr_AssertStackDepth), expected(expected)
+    {}
 
     void print(ostream& s) const override {
         s << " " << expected;
@@ -814,7 +784,6 @@ struct InstrAssertStackDepth : public Instr
 };
 
 #undef instr_type
-#undef define_instr_members
 #undef define_simple_instr
 #undef define_branch_instr
 #undef define_ident_instr

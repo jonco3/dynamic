@@ -478,7 +478,8 @@ Interpreter::executeInstr_And(Traced<InstrAnd*> instr)
 InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
                          Traced<Block*> block, unsigned defaultCount,
                          bool takesRest, bool isGenerator)
-  : funcName_(name),
+  : Instr(Instr_Lambda),
+    funcName_(name),
     info_(gc.create<FunctionInfo>(paramNames, block, defaultCount, takesRest,
                                   isGenerator))
 {}
@@ -820,12 +821,7 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
     return false;
 }
 
-void BinaryOpInstr::print(ostream& s) const
-{
-    s << " " << BinaryOpNames[op];
-}
-
-void SharedBinaryOpInstr::print(ostream& s) const
+void BinaryOpInstrBase::print(ostream& s) const
 {
     s << " " << BinaryOpNames[op];
 }
@@ -943,7 +939,7 @@ InstrBinaryOpBuiltin::InstrBinaryOpBuiltin(BinaryOp op,
                                            Traced<Class*> left,
                                            Traced<Class*> right,
                                            Traced<Value> method)
-  : BinaryOpInstr(op),
+  : BinaryOpInstrBase(Instr_BinaryOpBuiltin, op),
     left_(left),
     right_(right),
     method_(method)
@@ -972,12 +968,7 @@ Interpreter::executeInstr_BinaryOpBuiltin(Traced<InstrBinaryOpBuiltin*> instr)
     startCall(method, 2);
 }
 
-void CompareOpInstr::print(ostream& s) const
-{
-    s << " " << CompareOpNames[op];
-}
-
-void SharedCompareOpInstr::print(ostream& s) const
+void CompareOpInstrBase::print(ostream& s) const
 {
     s << " " << CompareOpNames[op];
 }
@@ -1248,7 +1239,7 @@ InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,
                                                          Traced<Class*> left,
                                                          Traced<Class*> right,
                                                          Traced<Value> method)
-  : BinaryOpInstr(op),
+  : BinaryOpInstrBase(Instr_AugAssignUpdateBuiltin, op),
     left_(left),
     right_(right),
     method_(method)
