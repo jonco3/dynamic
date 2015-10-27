@@ -290,6 +290,7 @@ struct VectorBase : public UseCountBase, protected vector<T>
 
     typedef vector<T> Base;
 
+    using Base::front;
     using Base::back;
     using Base::empty;
     using Base::size;
@@ -621,7 +622,7 @@ struct Traced : public WrapperMixins<Traced<T>, T>
 
 // A mutable handle to a traced location
 template <typename T>
-struct MutableTraced : public WrapperMixins<Traced<T>, T>
+struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
 {
     MutableTraced(const MutableTraced<T>& other) : ptr_(other.ptr_) {}
     MutableTraced(GlobalRoot<T>& root) : ptr_(root.get()) {}
@@ -715,9 +716,7 @@ struct RootVector : public VectorBase<T>, protected RootBase
 };
 
 template <typename T>
-struct HeapVector
-  : public WrapperMixins<Heap<T>, T>,
-    public VectorBase<T>
+struct HeapVector : public VectorBase<T>
 {
     HeapVector() {}
     HeapVector(size_t count) : VectorBase<T>(count) {}
