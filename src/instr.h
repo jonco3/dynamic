@@ -44,115 +44,115 @@ struct Interpreter;
     for_each_simple_binary_op_type(op)
 
 #define for_each_inline_instr(instr)                                         \
-    instr(Abort, InstrAbort)                                                 \
-    instr(Return, InstrReturn)
+    instr(Abort, Instr)                                                      \
+    instr(Return, Instr)
 
 #define for_each_outofline_instr(instr)                                      \
-    instr(Const, InstrConst)                                                 \
-    instr(GetStackLocal, InstrGetStackLocal)                                 \
-    instr(SetStackLocal, InstrSetStackLocal)                                 \
-    instr(DelStackLocal, InstrDelStackLocal)                                 \
-    instr(GetLexical, InstrGetLexical)                                       \
-    instr(SetLexical, InstrSetLexical)                                       \
-    instr(DelLexical, InstrDelLexical)                                       \
-    instr(GetGlobal, InstrGetGlobal)                                         \
-    instr(GetGlobalSlot, InstrGetGlobalSlot)                                 \
-    instr(GetBuiltinsSlot, InstrGetBuiltinsSlot)                             \
-    instr(SetGlobal, InstrSetGlobal)                                         \
-    instr(SetGlobalSlot, InstrSetGlobalSlot)                                 \
-    instr(DelGlobal, InstrDelGlobal)                                         \
-    instr(GetAttr, InstrGetAttr)                                             \
-    instr(SetAttr, InstrSetAttr)                                             \
-    instr(DelAttr, InstrDelAttr)                                             \
-    instr(GetMethod, InstrGetMethod)                                         \
-    instr(GetMethodFallback, InstrGetMethodFallback)                         \
-    instr(GetMethodBuiltin, InstrGetMethodBuiltin)                           \
-    instr(Call, InstrCall)                                                   \
-    instr(CallMethod, InstrCallMethod)                                       \
-    instr(CreateEnv, InstrCreateEnv)                                         \
-    instr(InitStackLocals, InstrInitStackLocals)                             \
-    instr(In, InstrIn)                                                       \
-    instr(Is, InstrIs)                                                       \
-    instr(Not, InstrNot)                                                     \
-    instr(BranchAlways, InstrBranchAlways)                                   \
-    instr(BranchIfTrue, InstrBranchIfTrue)                                   \
-    instr(BranchIfFalse, InstrBranchIfFalse)                                 \
-    instr(Or, InstrOr)                                                       \
-    instr(And, InstrAnd)                                                     \
-    instr(Lambda, InstrLambda)                                               \
-    instr(Dup, InstrDup)                                                     \
-    instr(Pop, InstrPop)                                                     \
-    instr(Swap, InstrSwap)                                                   \
-    instr(Tuple, InstrTuple)                                                 \
-    instr(List, InstrList)                                                   \
-    instr(Dict, InstrDict)                                                   \
-    instr(Slice, InstrSlice)                                                 \
-    instr(AssertionFailed, InstrAssertionFailed)                             \
-    instr(MakeClassFromFrame, InstrMakeClassFromFrame)                       \
-    instr(Destructure, InstrDestructure)                                     \
-    instr(DestructureList, InstrDestructure)                                 \
-    instr(DestructureFallback, InstrDestructure)                             \
-    instr(Raise, InstrRaise)                                                 \
-    instr(GetIterator, InstrGetIterator)                                     \
-    instr(IteratorNext, InstrIteratorNext)                                   \
-    instr(BinaryOp, InstrBinaryOp)                                           \
-    instr(BinaryOpFallback, InstrBinaryOpFallback)                           \
-    instr(BinaryOpInt_Add, InstrBinaryOpInt)                                 \
-    instr(BinaryOpInt_Sub, InstrBinaryOpInt)                                 \
-    instr(BinaryOpInt_Mul, InstrBinaryOpInt)                                 \
-    instr(BinaryOpInt_TrueDiv, InstrBinaryOpInt)                             \
-    instr(BinaryOpInt_FloorDiv, InstrBinaryOpInt)                            \
-    instr(BinaryOpInt_Modulo, InstrBinaryOpInt)                              \
-    instr(BinaryOpInt_Power, InstrBinaryOpInt)                               \
-    instr(BinaryOpInt_Or, InstrBinaryOpInt)                                  \
-    instr(BinaryOpInt_Xor, InstrBinaryOpInt)                                 \
-    instr(BinaryOpInt_And, InstrBinaryOpInt)                                 \
-    instr(BinaryOpInt_LeftShift, InstrBinaryOpInt)                           \
-    instr(BinaryOpInt_RightShift, InstrBinaryOpInt)                          \
-    instr(BinaryOpFloat_Add, InstrBinaryOpFloat)                             \
-    instr(BinaryOpFloat_Sub, InstrBinaryOpFloat)                             \
-    instr(BinaryOpFloat_Mul, InstrBinaryOpFloat)                             \
-    instr(BinaryOpFloat_TrueDiv, InstrBinaryOpFloat)                         \
-    instr(BinaryOpBuiltin, InstrBinaryOpBuiltin)                             \
-    instr(CompareOp, InstrCompareOp)                                         \
-    instr(CompareOpFallback, InstrCompareOpFallback)                         \
-    instr(CompareOpInt_LT, InstrCompareOpInt)                                \
-    instr(CompareOpInt_LE, InstrCompareOpInt)                                \
-    instr(CompareOpInt_GT, InstrCompareOpInt)                                \
-    instr(CompareOpInt_GE, InstrCompareOpInt)                                \
-    instr(CompareOpInt_EQ, InstrCompareOpInt)                                \
-    instr(CompareOpInt_NE, InstrCompareOpInt)                                \
-    instr(CompareOpFloat_LT, InstrCompareOpFloat)                            \
-    instr(CompareOpFloat_LE, InstrCompareOpFloat)                            \
-    instr(CompareOpFloat_GT, InstrCompareOpFloat)                            \
-    instr(CompareOpFloat_GE, InstrCompareOpFloat)                            \
-    instr(CompareOpFloat_EQ, InstrCompareOpFloat)                            \
-    instr(CompareOpFloat_NE, InstrCompareOpFloat)                            \
-    instr(AugAssignUpdate, InstrAugAssignUpdate)                             \
-    instr(AugAssignUpdateFallback, InstrAugAssignUpdateFallback)             \
-    instr(AugAssignUpdateInt_Add, InstrAugAssignUpdateInt)                   \
-    instr(AugAssignUpdateInt_Sub, InstrAugAssignUpdateInt)                   \
-    instr(AugAssignUpdateInt_Mul, InstrAugAssignUpdateInt)                   \
-    instr(AugAssignUpdateInt_TrueDiv, InstrAugAssignUpdateInt)               \
-    instr(AugAssignUpdateFloat_Add, InstrAugAssignUpdateFloat)               \
-    instr(AugAssignUpdateFloat_Sub, InstrAugAssignUpdateFloat)               \
-    instr(AugAssignUpdateFloat_Mul, InstrAugAssignUpdateFloat)               \
-    instr(AugAssignUpdateFloat_TrueDiv, InstrAugAssignUpdateFloat)           \
-    instr(AugAssignUpdateBuiltin, InstrAugAssignUpdateBuiltin)               \
-    instr(StartGenerator, InstrStartGenerator)                               \
-    instr(ResumeGenerator, InstrResumeGenerator)                             \
-    instr(LeaveGenerator, InstrLeaveGenerator)                               \
-    instr(SuspendGenerator, InstrSuspendGenerator)                           \
-    instr(EnterCatchRegion, InstrEnterCatchRegion)                           \
-    instr(LeaveCatchRegion, InstrLeaveCatchRegion)                           \
-    instr(MatchCurrentException, InstrMatchCurrentException)                 \
-    instr(HandleCurrentException, InstrHandleCurrentException)               \
-    instr(EnterFinallyRegion, InstrEnterFinallyRegion)                       \
-    instr(LeaveFinallyRegion, InstrLeaveFinallyRegion)                       \
-    instr(FinishExceptionHandler, InstrFinishExceptionHandler)               \
-    instr(LoopControlJump, InstrLoopControlJump)                             \
-    instr(ListAppend, InstrListAppend)                                       \
-    instr(AssertStackDepth, InstrAssertStackDepth)
+    instr(Const, ValueInstr)                                                 \
+    instr(GetStackLocal, IdentAndSlotInstr)                                  \
+    instr(SetStackLocal, IdentAndSlotInstr)                                  \
+    instr(DelStackLocal, IdentAndSlotInstr)                                  \
+    instr(GetLexical, FrameAndIdentInstr)                                    \
+    instr(SetLexical, FrameAndIdentInstr)                                    \
+    instr(DelLexical, FrameAndIdentInstr)                                    \
+    instr(GetGlobal, GlobalAndIdentInstr)                                    \
+    instr(GetGlobalSlot, GlobalSlotInstr)                                    \
+    instr(GetBuiltinsSlot, BuiltinsSlotInstr)                                \
+    instr(SetGlobal, GlobalAndIdentInstr)                                    \
+    instr(SetGlobalSlot, GlobalSlotInstr)                                    \
+    instr(DelGlobal, GlobalAndIdentInstr)                                    \
+    instr(GetAttr, IdentInstr)                                               \
+    instr(SetAttr, IdentInstr)                                               \
+    instr(DelAttr, IdentInstr)                                               \
+    instr(GetMethod, IdentInstr)                                             \
+    instr(GetMethodFallback, IdentInstr)                                     \
+    instr(GetMethodBuiltin, BuiltinMethodInstr)                              \
+    instr(Call, CallInstr)                                                   \
+    instr(CallMethod, CallInstr)                                             \
+    instr(CreateEnv, Instr)                                                  \
+    instr(InitStackLocals, Instr)                                            \
+    instr(In, Instr)                                                         \
+    instr(Is, Instr)                                                         \
+    instr(Not, Instr)                                                        \
+    instr(BranchAlways, BranchInstr)                                         \
+    instr(BranchIfTrue, BranchInstr)                                         \
+    instr(BranchIfFalse, BranchInstr)                                        \
+    instr(Or, BranchInstr)                                                   \
+    instr(And, BranchInstr)                                                  \
+    instr(Lambda, LambdaInstr)                                               \
+    instr(Dup, IndexInstr)                                                   \
+    instr(Pop, Instr)                                                        \
+    instr(Swap, Instr)                                                       \
+    instr(Tuple, CountInstr)                                                 \
+    instr(List, CountInstr)                                                  \
+    instr(Dict, CountInstr)                                                  \
+    instr(Slice, Instr)                                                      \
+    instr(AssertionFailed, Instr)                                            \
+    instr(MakeClassFromFrame, IdentInstr)                                    \
+    instr(Destructure, CountInstr)                                           \
+    instr(DestructureList, CountInstr)                                       \
+    instr(DestructureFallback, CountInstr)                                   \
+    instr(Raise, Instr)                                                      \
+    instr(GetIterator, Instr)                                                \
+    instr(IteratorNext, Instr)                                               \
+    instr(BinaryOp, BinaryOpInstr)                                           \
+    instr(BinaryOpFallback, BinaryOpInstr)                                   \
+    instr(BinaryOpInt_Add, BinaryOpInstr)                                    \
+    instr(BinaryOpInt_Sub, BinaryOpInstr)                                    \
+    instr(BinaryOpInt_Mul, BinaryOpInstr)                                    \
+    instr(BinaryOpInt_TrueDiv, BinaryOpInstr)                                \
+    instr(BinaryOpInt_FloorDiv, BinaryOpInstr)                               \
+    instr(BinaryOpInt_Modulo, BinaryOpInstr)                                 \
+    instr(BinaryOpInt_Power, BinaryOpInstr)                                  \
+    instr(BinaryOpInt_Or, BinaryOpInstr)                                     \
+    instr(BinaryOpInt_Xor, BinaryOpInstr)                                    \
+    instr(BinaryOpInt_And, BinaryOpInstr)                                    \
+    instr(BinaryOpInt_LeftShift, BinaryOpInstr)                              \
+    instr(BinaryOpInt_RightShift, BinaryOpInstr)                             \
+    instr(BinaryOpFloat_Add, BinaryOpInstr)                                  \
+    instr(BinaryOpFloat_Sub, BinaryOpInstr)                                  \
+    instr(BinaryOpFloat_Mul, BinaryOpInstr)                                  \
+    instr(BinaryOpFloat_TrueDiv, BinaryOpInstr)                              \
+    instr(BinaryOpBuiltin, BuiltinBinaryOpInstr)                             \
+    instr(CompareOp, CompareOpInstr)                                         \
+    instr(CompareOpFallback, CompareOpInstr)                                 \
+    instr(CompareOpInt_LT, CompareOpInstr)                                   \
+    instr(CompareOpInt_LE, CompareOpInstr)                                   \
+    instr(CompareOpInt_GT, CompareOpInstr)                                   \
+    instr(CompareOpInt_GE, CompareOpInstr)                                   \
+    instr(CompareOpInt_EQ, CompareOpInstr)                                   \
+    instr(CompareOpInt_NE, CompareOpInstr)                                   \
+    instr(CompareOpFloat_LT, CompareOpInstr)                                 \
+    instr(CompareOpFloat_LE, CompareOpInstr)                                 \
+    instr(CompareOpFloat_GT, CompareOpInstr)                                 \
+    instr(CompareOpFloat_GE, CompareOpInstr)                                 \
+    instr(CompareOpFloat_EQ, CompareOpInstr)                                 \
+    instr(CompareOpFloat_NE, CompareOpInstr)                                 \
+    instr(AugAssignUpdate, BinaryOpInstr)                                    \
+    instr(AugAssignUpdateFallback, BinaryOpInstr)                            \
+    instr(AugAssignUpdateInt_Add, BinaryOpInstr)                             \
+    instr(AugAssignUpdateInt_Sub, BinaryOpInstr)                             \
+    instr(AugAssignUpdateInt_Mul, BinaryOpInstr)                             \
+    instr(AugAssignUpdateInt_TrueDiv, BinaryOpInstr)                         \
+    instr(AugAssignUpdateFloat_Add, BinaryOpInstr)                           \
+    instr(AugAssignUpdateFloat_Sub, BinaryOpInstr)                           \
+    instr(AugAssignUpdateFloat_Mul, BinaryOpInstr)                           \
+    instr(AugAssignUpdateFloat_TrueDiv, BinaryOpInstr)                       \
+    instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr)                      \
+    instr(StartGenerator, Instr)                                             \
+    instr(ResumeGenerator, Instr)                                            \
+    instr(LeaveGenerator, Instr)                                             \
+    instr(SuspendGenerator, Instr)                                           \
+    instr(EnterCatchRegion, BranchInstr)                                     \
+    instr(LeaveCatchRegion, Instr)                                           \
+    instr(MatchCurrentException, Instr)                                      \
+    instr(HandleCurrentException, Instr)                                     \
+    instr(EnterFinallyRegion, BranchInstr)                                   \
+    instr(LeaveFinallyRegion, Instr)                                         \
+    instr(FinishExceptionHandler, Instr)                                     \
+    instr(LoopControlJump, LoopControlJumpInstr)                             \
+    instr(ListAppend, Instr)                                                 \
+    instr(AssertStackDepth, CountInstr)
 
 enum InstrType
 {
@@ -165,7 +165,7 @@ enum InstrType
 
 extern const char* instrName(InstrType type);
 
-struct Branch;
+struct BranchInstr;
 
 // Base class for instruction data.
 struct Instr : public Cell
@@ -180,7 +180,7 @@ struct Instr : public Cell
     bool is(InstrType t) const { return type() == t; }
 
     virtual bool isBranch() const { return false; };
-    inline Branch* asBranch();
+    inline BranchInstr* asBranch();
 
     void print(ostream& s) const override {}
 
@@ -188,15 +188,9 @@ struct Instr : public Cell
     const InstrType type_;
 };
 
-#define define_simple_instr(it)                                               \
-    struct Instr##it : public Instr                                           \
-    {                                                                         \
-        Instr##it() : Instr(Instr_##it) {}                                    \
-    }
-
-struct IdentInstrBase : public Instr
+struct IdentInstr : public Instr
 {
-    IdentInstrBase(InstrType type, Name ident) : Instr(type), ident(ident) {}
+    IdentInstr(InstrType type, Name ident) : Instr(type), ident(ident) {}
 
     void print(ostream& s) const override {
         s << " " << ident;
@@ -208,16 +202,11 @@ struct IdentInstrBase : public Instr
     const Name ident;
 };
 
-#define define_ident_instr(name)                                              \
-    struct Instr##name : public IdentInstrBase                                \
-    {                                                                         \
-        Instr##name(Name ident) : IdentInstrBase(Instr_##name, ident) {}      \
-    }
-
-struct IdentAndSlotInstrBase : public Instr
+struct IdentAndSlotInstr : public IdentInstr
 {
-    IdentAndSlotInstrBase(InstrType type, Name ident, unsigned slot)
-      : Instr(type), ident(ident), slot(slot) {}
+    IdentAndSlotInstr(InstrType type, Name ident, unsigned slot)
+      : IdentInstr(type, ident), slot(slot)
+    {}
 
     void print(ostream& s) const override {
         s << " " << ident << " " << slot;
@@ -226,44 +215,27 @@ struct IdentAndSlotInstrBase : public Instr
     // todo: move to Interpreter
     bool raiseAttrError(Traced<Value> value, Interpreter& interp);
 
-    const Name ident;
     const unsigned slot;
 };
 
-#define define_ident_and_slot_instr(name)                                     \
-    struct Instr##name : public IdentAndSlotInstrBase                         \
-    {                                                                         \
-        Instr##name(Name ident, unsigned slot)                                \
-          : IdentAndSlotInstrBase(Instr_##name, ident, slot)                  \
-        {}                                                                    \
-    }
-
-struct FrameAndIdentInstrBase : public Instr
+struct FrameAndIdentInstr : public IdentInstr
 {
-    FrameAndIdentInstrBase(InstrType type, unsigned frameIndex, Name ident)
-      : Instr(type), frameIndex(frameIndex), ident(ident) {}
+    FrameAndIdentInstr(InstrType type, unsigned frameIndex, Name ident)
+      : IdentInstr(type, ident), frameIndex(frameIndex)
+    {}
 
     void print(ostream& s) const override {
         s << " " << frameIndex << " " << ident;
     }
 
     const unsigned frameIndex;
-    const Name ident;
 };
 
-#define define_frame_and_ident_instr(name)                                    \
-    struct Instr##name : public FrameAndIdentInstrBase                        \
-    {                                                                         \
-        Instr##name(unsigned frameIndex, Name ident)                          \
-          : FrameAndIdentInstrBase(Instr_##name, frameIndex, ident)           \
-        {}                                                                    \
-    }
-
-struct GlobalInstrBase : public IdentInstrBase
+struct GlobalAndIdentInstr : public IdentInstr
 {
-    GlobalInstrBase(InstrType type, Traced<Object*> global, Name ident,
-                  bool fallback)
-      : IdentInstrBase(type, ident), global_(global), fallback_(fallback)
+    GlobalAndIdentInstr(InstrType type, Traced<Object*> global, Name ident,
+                        bool fallback = false)
+      : IdentInstr(type, ident), global_(global), fallback_(fallback)
     {
         assert(global);
     }
@@ -279,15 +251,6 @@ struct GlobalInstrBase : public IdentInstrBase
     Heap<Object*> global_;
     bool fallback_;
 };
-
-#define define_global_instr(name)                                             \
-    struct Instr##name : public GlobalInstrBase                               \
-    {                                                                         \
-        Instr##name(Traced<Object*> global, Name ident,                       \
-                    bool fallback = false)                                    \
-          : GlobalInstrBase(Instr_##name, global, ident, fallback)            \
-        {}                                                                    \
-    }
 
 struct SlotGuard
 {
@@ -314,10 +277,10 @@ struct SlotGuard
     int slot_;
 };
 
-struct GlobalSlotInstrBase : public IdentInstrBase
+struct GlobalSlotInstr : public IdentInstr
 {
-    GlobalSlotInstrBase(InstrType type, Traced<Object*> global, Name ident)
-      : IdentInstrBase(type, ident), global_(global), globalSlot_(global, ident)
+    GlobalSlotInstr(InstrType type, Traced<Object*> global, Name ident)
+      : IdentInstr(type, ident), global_(global), globalSlot_(global, ident)
     {
         assert(global);
     }
@@ -337,9 +300,9 @@ struct GlobalSlotInstrBase : public IdentInstrBase
     Heap<Object*> global_;
     SlotGuard globalSlot_;
 
-    GlobalSlotInstrBase(InstrType type, Traced<Object*> global,
-                        Name globalIdent, Name ident)
-      : IdentInstrBase(type, ident),
+    GlobalSlotInstr(InstrType type, Traced<Object*> global,
+                       Name globalIdent, Name ident)
+      : IdentInstr(type, ident),
         global_(global),
         globalSlot_(global, globalIdent)
     {
@@ -347,23 +310,15 @@ struct GlobalSlotInstrBase : public IdentInstrBase
     }
 };
 
-#define define_global_slot_instr(name)                                        \
-    struct Instr##name : public GlobalSlotInstrBase                           \
-    {                                                                         \
-        Instr##name(Traced<Object*> global, Name ident)                       \
-          : GlobalSlotInstrBase(Instr_##name, global, ident)                  \
-        {}                                                                    \
-    }
-
-struct BuiltinsSlotInstrBase : public GlobalSlotInstrBase
+struct BuiltinsSlotInstr : public GlobalSlotInstr
 {
-    BuiltinsSlotInstrBase(InstrType type, Traced<Object*> global, Name ident)
-      : GlobalSlotInstrBase(type, global, Name::__builtins__, ident),
+    BuiltinsSlotInstr(InstrType type, Traced<Object*> global, Name ident)
+      : GlobalSlotInstr(type, global, Name::__builtins__, ident),
         builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
     {}
 
     void traceChildren(Tracer& t) override {
-        GlobalSlotInstrBase::traceChildren(t);
+        GlobalSlotInstr::traceChildren(t);
         builtinsSlot_.traceChildren(t);
     }
 
@@ -375,20 +330,35 @@ struct BuiltinsSlotInstrBase : public GlobalSlotInstrBase
     SlotGuard builtinsSlot_;
 };
 
-#define define_builtins_slot_instr(name)                                      \
-    struct Instr##name : public BuiltinsSlotInstrBase                         \
-    {                                                                         \
-        Instr##name(Traced<Object*> global, Name ident)                       \
-          : BuiltinsSlotInstrBase(Instr_##name, global, ident)               \
-        {}                                                                    \
+struct CountInstr : public Instr
+{
+    CountInstr(InstrType type, unsigned count) : Instr(type), count(count) {}
+
+    void print(ostream& s) const override {
+        s << " " << count;
     }
 
-define_simple_instr(Abort);
-define_simple_instr(Return);
+    const unsigned count;
+};
 
-struct InstrConst : public Instr
+struct IndexInstr : public Instr
 {
-    explicit InstrConst(Traced<Value> v) : Instr(Instr_Const), value_(v) {}
+    IndexInstr(InstrType type, unsigned index) : Instr(type), index(index) {}
+
+    void print(ostream& s) const override {
+        s << " " << index;
+    }
+
+    const unsigned index;
+};
+
+struct ValueInstr : public Instr
+{
+    ValueInstr(InstrType type, Traced<Value> v)
+        : Instr(type), value_(v)
+    {
+        assert(type == Instr_Const);
+    }
 
     void print(ostream& s) const override {
         s << " " << value_;
@@ -404,33 +374,11 @@ struct InstrConst : public Instr
     Heap<Value> value_;
 };
 
-define_ident_and_slot_instr(GetStackLocal);
-define_ident_and_slot_instr(SetStackLocal);
-define_ident_and_slot_instr(DelStackLocal);
-
-define_frame_and_ident_instr(GetLexical);
-define_frame_and_ident_instr(SetLexical);
-define_frame_and_ident_instr(DelLexical);
-
-define_global_instr(GetGlobal);
-define_global_slot_instr(GetGlobalSlot);
-define_builtins_slot_instr(GetBuiltinsSlot);
-
-define_global_instr(SetGlobal);
-define_global_slot_instr(SetGlobalSlot);
-
-define_global_instr(DelGlobal);
-
-define_ident_instr(GetAttr);
-define_ident_instr(SetAttr);
-define_ident_instr(DelAttr);
-define_ident_instr(GetMethod);
-define_ident_instr(GetMethodFallback);
-
-struct InstrGetMethodBuiltin : public IdentInstrBase
+struct BuiltinMethodInstr : public IdentInstr
 {
-    InstrGetMethodBuiltin(Name name, Traced<Class*> cls, Traced<Value> result)
-      : IdentInstrBase(Instr_GetMethodBuiltin, name),
+    BuiltinMethodInstr(InstrType type, Name name, Traced<Class*> cls,
+                       Traced<Value> result)
+      : IdentInstr(type, name),
         class_(cls),
         result_(result)
     {}
@@ -444,9 +392,9 @@ struct InstrGetMethodBuiltin : public IdentInstrBase
     Heap<Value> result_;
 };
 
-struct CallInstrBase : public Instr
+struct CallInstr : public Instr
 {
-    CallInstrBase(InstrType type, unsigned count)
+    CallInstr(InstrType type, unsigned count)
         : Instr(type), count(count)
     {}
 
@@ -457,29 +405,15 @@ struct CallInstrBase : public Instr
     const unsigned count;
 };
 
-struct InstrCall : public CallInstrBase
+struct BranchInstr : public Instr
 {
-    InstrCall(unsigned count) : CallInstrBase(Instr_Call, count) {}
-};
-
-struct InstrCallMethod : public CallInstrBase
-{
-    InstrCallMethod(unsigned count) : CallInstrBase(Instr_CallMethod, count) {}
-};
-
-define_simple_instr(CreateEnv);
-define_simple_instr(InitStackLocals);
-define_simple_instr(In);
-define_simple_instr(Is);
-define_simple_instr(Not);
-
-struct Branch : public Instr
-{
-    Branch(InstrType type, int offset = 0)
+    BranchInstr(InstrType type, int offset = 0)
       : Instr(type), offset_(offset)
     {}
 
-    bool isBranch() const override { return true; };
+    bool isBranch() const override {
+        return true;
+    };
 
     void setOffset(int offset) {
         assert(!offset_);
@@ -493,30 +427,20 @@ struct Branch : public Instr
     int offset_;
 };
 
-inline Branch* Instr::asBranch()
+inline BranchInstr* Instr::asBranch()
 {
     assert(isBranch());
-    return static_cast<Branch*>(this);
+    return static_cast<BranchInstr*>(this);
 }
 
-#define define_branch_instr(name)                                             \
-    struct Instr##name : public Branch                                        \
-    {                                                                         \
-        Instr##name(int offset = 0)                                           \
-          : Branch(Instr_##name, offset)                                      \
-        {}                                                                    \
-    }
-
-define_branch_instr(BranchAlways);
-define_branch_instr(BranchIfTrue);
-define_branch_instr(BranchIfFalse);
-define_branch_instr(Or);
-define_branch_instr(And);
-
-struct InstrLambda : public Instr
+struct LambdaInstr : public Instr
 {
-    InstrLambda(Name name, const vector<Name>& paramNames, Traced<Block*> block,
-                unsigned defaultCount = 0, bool takesRest = false,
+    LambdaInstr(InstrType type,
+                Name name,
+                const vector<Name>& paramNames,
+                Traced<Block*> block,
+                unsigned defaultCount = 0,
+                bool takesRest = false,
                 bool isGenerator = false);
 
     Name functionName() const { return funcName_; }
@@ -542,62 +466,9 @@ struct InstrLambda : public Instr
     Heap<FunctionInfo*> info_;
 };
 
-struct InstrDup : public Instr
+struct BinaryOpInstr : public Instr
 {
-    InstrDup(unsigned index = 0) : Instr(Instr_Dup), index(index) {}
-
-    void print(ostream& s) const override {
-        s << " " << index;
-    }
-
-    const unsigned index;
-};
-
-define_simple_instr(Pop);
-define_simple_instr(Swap);
-
-struct InstrTuple : public Instr
-{
-    InstrTuple(unsigned size) : Instr(Instr_Tuple), size(size) {}
-    const unsigned size;
-};
-
-struct InstrList : public Instr
-{
-    InstrList(unsigned size) : Instr(Instr_List), size(size) {}
-    const unsigned size;
-};
-
-struct InstrDict : public Instr
-{
-    InstrDict(unsigned size) : Instr(Instr_Dict), size(size) {}
-    const unsigned size;
-};
-
-define_simple_instr(Slice);
-
-define_simple_instr(AssertionFailed);
-
-define_ident_instr(MakeClassFromFrame);
-
-struct InstrDestructure : public Instr
-{
-    InstrDestructure(unsigned count, InstrType type = Instr_Destructure)
-      : Instr(type), count(count)
-    {
-        assert(type >= Instr_Destructure && type <= Instr_DestructureFallback);
-    }
-
-    const unsigned count;
-};
-
-define_simple_instr(Raise);
-define_simple_instr(GetIterator);
-define_simple_instr(IteratorNext);
-
-struct BinaryOpInstrBase : public Instr
-{
-    BinaryOpInstrBase(unsigned type, BinaryOp op)
+    BinaryOpInstr(unsigned type, BinaryOp op)
       : Instr(InstrType(type)), op(op)
     {}
 
@@ -606,37 +477,10 @@ struct BinaryOpInstrBase : public Instr
     const BinaryOp op;
 };
 
-struct InstrBinaryOp : public BinaryOpInstrBase
+struct BuiltinBinaryOpInstr : public BinaryOpInstr
 {
-    InstrBinaryOp(BinaryOp op)
-      : BinaryOpInstrBase(Instr_BinaryOp, op)
-    {}
-};
-
-struct InstrBinaryOpFallback : public BinaryOpInstrBase
-{
-    InstrBinaryOpFallback(BinaryOp op)
-      : BinaryOpInstrBase(Instr_BinaryOpFallback, op)
-    {}
-};
-
-struct InstrBinaryOpInt : public BinaryOpInstrBase
-{
-    InstrBinaryOpInt(BinaryOp op)
-      : BinaryOpInstrBase(Instr_BinaryOpInt_Add + op, op)
-    {}
-};
-
-struct InstrBinaryOpFloat : public BinaryOpInstrBase
-{
-    InstrBinaryOpFloat(BinaryOp op)
-      : BinaryOpInstrBase(Instr_BinaryOpFloat_Add + op, op) {}
-};
-
-struct InstrBinaryOpBuiltin : public BinaryOpInstrBase
-{
-    InstrBinaryOpBuiltin(BinaryOp op, Traced<Class*> left, Traced<Class*> right,
-                         Traced<Value> method);
+    BuiltinBinaryOpInstr(InstrType type, BinaryOp op, Traced<Class*> left,
+                         Traced<Class*> right, Traced<Value> method);
     Class* left() { return left_; }
     Class* right() { return right_; }
     Value method() { return method_; }
@@ -649,9 +493,9 @@ struct InstrBinaryOpBuiltin : public BinaryOpInstrBase
     Heap<Value> method_;
 };
 
-struct CompareOpInstrBase : public Instr
+struct CompareOpInstr : public Instr
 {
-    CompareOpInstrBase(unsigned type, CompareOp op)
+    CompareOpInstr(unsigned type, CompareOp op)
       : Instr(InstrType(type)), op(op)
     {}
 
@@ -660,95 +504,16 @@ struct CompareOpInstrBase : public Instr
     const CompareOp op;
 };
 
-struct InstrCompareOp : public CompareOpInstrBase
+struct LoopControlJumpInstr : public Instr
 {
-    InstrCompareOp(CompareOp op) : CompareOpInstrBase(Instr_CompareOp, op) {}
-};
-
-struct InstrCompareOpFallback : public CompareOpInstrBase
-{
-    InstrCompareOpFallback(CompareOp op)
-      : CompareOpInstrBase(Instr_CompareOpFallback, op)
-    {}
-};
-
-struct InstrCompareOpInt : public CompareOpInstrBase
-{
-    InstrCompareOpInt(CompareOp op)
-      : CompareOpInstrBase(Instr_CompareOpInt_LT + op, op)
-    {}
-};
-
-struct InstrCompareOpFloat : public CompareOpInstrBase
-{
-    InstrCompareOpFloat(CompareOp op)
-      : CompareOpInstrBase(Instr_CompareOpFloat_LT + op, op)
-    {}
-};
-
-struct InstrAugAssignUpdate : public BinaryOpInstrBase
-{
-    InstrAugAssignUpdate(BinaryOp op)
-      : BinaryOpInstrBase(Instr_AugAssignUpdate, op)
-    {}
-};
-
-struct InstrAugAssignUpdateFallback : public BinaryOpInstrBase
-{
-    InstrAugAssignUpdateFallback(BinaryOp op)
-      : BinaryOpInstrBase(Instr_AugAssignUpdateFallback, op)
-    {}
-};
-
-struct InstrAugAssignUpdateInt : public BinaryOpInstrBase
-{
-    InstrAugAssignUpdateInt(BinaryOp op)
-      : BinaryOpInstrBase(Instr_AugAssignUpdateInt_Add + op, op) {}
-};
-
-struct InstrAugAssignUpdateFloat : public BinaryOpInstrBase
-{
-    InstrAugAssignUpdateFloat(BinaryOp op)
-      : BinaryOpInstrBase(Instr_AugAssignUpdateFloat_Add + op, op) {}
-};
-
-struct InstrAugAssignUpdateBuiltin : public BinaryOpInstrBase
-{
-    InstrAugAssignUpdateBuiltin(BinaryOp op,
-                                Traced<Class*> left, Traced<Class*> right,
-                                Traced<Value> method);
-    Class* left() { return left_; }
-    Class* right() { return right_; }
-    Value method() { return method_; }
-
-    void traceChildren(Tracer& t) override;
-
-  private:
-    Heap<Class*> left_;
-    Heap<Class*> right_;
-    Heap<Value> method_;
-};
-
-define_simple_instr(StartGenerator);
-define_simple_instr(ResumeGenerator);
-define_simple_instr(LeaveGenerator);
-define_simple_instr(SuspendGenerator);
-
-define_branch_instr(EnterCatchRegion);
-define_simple_instr(LeaveCatchRegion);
-define_simple_instr(MatchCurrentException);
-define_simple_instr(HandleCurrentException);
-define_branch_instr(EnterFinallyRegion);
-define_simple_instr(LeaveFinallyRegion);
-define_simple_instr(FinishExceptionHandler);
-
-struct InstrLoopControlJump : public Instr
-{
-    InstrLoopControlJump(unsigned finallyCount, unsigned target = 0)
+    LoopControlJumpInstr(InstrType type, unsigned finallyCount,
+                         unsigned target = 0)
       : Instr(Instr_LoopControlJump),
         finallyCount_(finallyCount),
         target_(target)
-    {}
+    {
+        assert(type == Instr_LoopControlJump);
+    }
 
     unsigned finallyCount() const { return finallyCount_; }
     unsigned target() const { return target_; }
@@ -768,24 +533,22 @@ struct InstrLoopControlJump : public Instr
     unsigned target_;
 };
 
-define_simple_instr(ListAppend);
+template <InstrType type>
+struct InstrFactory
+{};
 
-struct InstrAssertStackDepth : public Instr
-{
-    InstrAssertStackDepth(unsigned expected)
-      : Instr(Instr_AssertStackDepth), expected(expected)
-    {}
+#define define_instr_factory(type, cls)                                       \
+    template <>                                                               \
+    struct InstrFactory<Instr_##type>                                         \
+    {                                                                         \
+        template <typename... Args>                                           \
+        static Instr* get(Args&&... args) {                                   \
+            return gc.create<cls>(Instr_##type, forward<Args>(args)...);      \
+        }                                                                     \
+    };
 
-    void print(ostream& s) const override {
-        s << " " << expected;
-    }
-
-    const unsigned expected;
-};
-
-#undef instr_type
-#undef define_simple_instr
-#undef define_branch_instr
-#undef define_ident_instr
+for_each_inline_instr(define_instr_factory)
+for_each_outofline_instr(define_instr_factory)
+#undef define_instr_factory
 
 #endif

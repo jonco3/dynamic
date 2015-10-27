@@ -55,7 +55,7 @@ void testReplacement(const string& input,
     assert(instrp);
     Instr* instr = instrp->data;
     assert(instr->is(Instr_Lambda));
-    InstrLambda* lambda = static_cast<InstrLambda*>(instr);
+    LambdaInstr* lambda = static_cast<LambdaInstr*>(instr);
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
 

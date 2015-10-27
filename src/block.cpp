@@ -44,7 +44,7 @@ int Block::offsetTo(unsigned dest)
 void Block::branchHere(unsigned source)
 {
     assert(source < instrs_.size() - 1);
-    Branch* b = instrs_[source].data->asBranch();
+    BranchInstr* b = instrs_[source].data->asBranch();
     b->setOffset(offsetFrom(source));
 }
 

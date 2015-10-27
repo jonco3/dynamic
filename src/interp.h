@@ -285,22 +285,22 @@ struct Interpreter : public Cell
 #undef declare_instr_method
 
     template <BinaryOp Op>
-    void executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr);
+    void executeBinaryOpInt(Traced<BinaryOpInstr*> instr);
 
     template <BinaryOp Op>
-    void executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr);
+    void executeBinaryOpFloat(Traced<BinaryOpInstr*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpInt(Traced<InstrCompareOpInt*> instr);
+    void executeCompareOpInt(Traced<CompareOpInstr*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpFloat(Traced<InstrCompareOpFloat*> instr);
+    void executeCompareOpFloat(Traced<CompareOpInstr*> instr);
 
     template <BinaryOp Op>
-    void executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr);
+    void executeAugAssignUpdateInt(Traced<BinaryOpInstr*> instr);
 
     template <BinaryOp Op>
-    void executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> instr);
+    void executeAugAssignUpdateFloat(Traced<BinaryOpInstr*> instr);
 
     bool getMethod(Name ident);
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,

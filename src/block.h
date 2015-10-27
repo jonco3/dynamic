@@ -59,7 +59,7 @@ struct Block : public Cell
     int offsetFrom(unsigned source);
     int offsetTo(unsigned dest);
 
-    template <typename T, typename... Args>
+    template <InstrType Type, typename... Args>
     inline unsigned append(Args&& ...args);
 
     unsigned append(Traced<Instr*> data);
@@ -92,10 +92,10 @@ struct Block : public Cell
     vector<pair<size_t, unsigned>> offsetLines_;
 };
 
-template <typename T, typename... Args>
+template <InstrType Type, typename... Args>
 unsigned Block::append(Args&& ...args)
 {
-    Stack<Instr*> instr(gc.create<T>(forward<Args>(args)...));
+    Stack<Instr*> instr(InstrFactory<Type>::get(forward<Args>(args)...));
     return append(instr);
 }
 

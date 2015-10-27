@@ -27,13 +27,13 @@ const char* instrName(InstrType type)
 }
 
 void
-Interpreter::executeInstr_Const(Traced<InstrConst*> instr)
+Interpreter::executeInstr_Const(Traced<ValueInstr*> instr)
 {
     pushStack(instr->value());
 }
 
 void
-Interpreter::executeInstr_GetStackLocal(Traced<InstrGetStackLocal*> instr)
+Interpreter::executeInstr_GetStackLocal(Traced<IdentAndSlotInstr*> instr)
 {
     // Name was present when compiled, but may have been deleted.
     {
@@ -49,7 +49,7 @@ Interpreter::executeInstr_GetStackLocal(Traced<InstrGetStackLocal*> instr)
 }
 
 void
-Interpreter::executeInstr_SetStackLocal(Traced<InstrSetStackLocal*> instr)
+Interpreter::executeInstr_SetStackLocal(Traced<IdentAndSlotInstr*> instr)
 {
     AutoAssertNoGC nogc;
     Value value = peekStack();
@@ -58,7 +58,7 @@ Interpreter::executeInstr_SetStackLocal(Traced<InstrSetStackLocal*> instr)
 }
 
 void
-Interpreter::executeInstr_DelStackLocal(Traced<InstrDelStackLocal*> instr)
+Interpreter::executeInstr_DelStackLocal(Traced<IdentAndSlotInstr*> instr)
 {
     // Delete by setting slot value to UninitializedSlot.
     {
@@ -73,7 +73,7 @@ Interpreter::executeInstr_DelStackLocal(Traced<InstrDelStackLocal*> instr)
 }
 
 void
-Interpreter::executeInstr_GetLexical(Traced<InstrGetLexical*> instr)
+Interpreter::executeInstr_GetLexical(Traced<FrameAndIdentInstr*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
     assert(env);
@@ -88,7 +88,7 @@ Interpreter::executeInstr_GetLexical(Traced<InstrGetLexical*> instr)
 }
 
 void
-Interpreter::executeInstr_SetLexical(Traced<InstrSetLexical*> instr)
+Interpreter::executeInstr_SetLexical(Traced<FrameAndIdentInstr*> instr)
 {
     Stack<Value> value(peekStack());
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
@@ -98,7 +98,7 @@ Interpreter::executeInstr_SetLexical(Traced<InstrSetLexical*> instr)
 }
 
 void
-Interpreter::executeInstr_DelLexical(Traced<InstrDelLexical*> instr)
+Interpreter::executeInstr_DelLexical(Traced<FrameAndIdentInstr*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
     assert(env);
@@ -108,7 +108,7 @@ Interpreter::executeInstr_DelLexical(Traced<InstrDelLexical*> instr)
 }
 
 void
-Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
+Interpreter::executeInstr_GetGlobal(Traced<GlobalAndIdentInstr*> instr)
 {
     Stack<Value> value;
     Stack<Object*> global(instr->global());
@@ -117,7 +117,7 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 
         if (!instr->isFallback()) {
             replaceInstr(instr,
-                         gc.create<InstrGetGlobalSlot>(global, instr->ident));
+                         InstrFactory<Instr_GetGlobalSlot>::get(global, instr->ident));
         }
         return;
     }
@@ -130,7 +130,7 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 
         if (!instr->isFallback()) {
             replaceInstr(instr,
-                         gc.create<InstrGetBuiltinsSlot>(global, instr->ident));
+                         InstrFactory<Instr_GetBuiltinsSlot>::get(global, instr->ident));
         }
         return;
     }
@@ -139,7 +139,7 @@ Interpreter::executeInstr_GetGlobal(Traced<InstrGetGlobal*> instr)
 }
 
 void
-Interpreter::executeInstr_GetGlobalSlot(Traced<InstrGetGlobalSlot*> instr)
+Interpreter::executeInstr_GetGlobalSlot(Traced<GlobalSlotInstr*> instr)
 {
     int slot = instr->globalSlot();
     if (slot != Layout::NotFound) {
@@ -148,12 +148,12 @@ Interpreter::executeInstr_GetGlobalSlot(Traced<InstrGetGlobalSlot*> instr)
     }
 
     Stack<Object*> global(instr->global());
-    auto fallback = gc.create<InstrGetGlobal>(global, instr->ident, true);
+    auto fallback = InstrFactory<Instr_GetGlobal>::get(global, instr->ident, true);
     replaceInstrAndRestart(instr, fallback);
 }
 
 void
-Interpreter::executeInstr_GetBuiltinsSlot(Traced<InstrGetBuiltinsSlot*> instr)
+Interpreter::executeInstr_GetBuiltinsSlot(Traced<BuiltinsSlotInstr*> instr)
 {
     Stack<Object*> builtins;
     int slot = instr->globalSlot();
@@ -167,25 +167,25 @@ Interpreter::executeInstr_GetBuiltinsSlot(Traced<InstrGetBuiltinsSlot*> instr)
     }
 
     Stack<Object*> global(instr->global());
-    auto fallback = gc.create<InstrGetGlobal>(global, instr->ident, true);
+    auto fallback = InstrFactory<Instr_GetGlobal>::get(global, instr->ident, true);
     replaceInstrAndRestart(instr, fallback);
 }
 
 void
-Interpreter::executeInstr_SetGlobal(Traced<InstrSetGlobal*> instr)
+Interpreter::executeInstr_SetGlobal(Traced<GlobalAndIdentInstr*> instr)
 {
     Stack<Value> value(peekStack());
     Stack<Object*> global(instr->global());
     if (global->hasAttr(instr->ident) && !instr->isFallback()) {
         replaceInstr(instr,
-                     gc.create<InstrSetGlobalSlot>(global, instr->ident));
+                     InstrFactory<Instr_SetGlobalSlot>::get(global, instr->ident));
     }
 
     instr->global()->setAttr(instr->ident, value);
 }
 
 void
-Interpreter::executeInstr_SetGlobalSlot(Traced<InstrSetGlobalSlot*> instr)
+Interpreter::executeInstr_SetGlobalSlot(Traced<GlobalSlotInstr*> instr)
 {
     Stack<Value> value(peekStack());
     int slot = instr->globalSlot();
@@ -195,19 +195,19 @@ Interpreter::executeInstr_SetGlobalSlot(Traced<InstrSetGlobalSlot*> instr)
     }
 
     Stack<Object*> global(instr->global());
-    auto fallback = gc.create<InstrSetGlobal>(global, instr->ident, true);
+    auto fallback = InstrFactory<Instr_SetGlobal>::get(global, instr->ident, true);
     replaceInstrAndRestart(instr, fallback);
 }
 
 void
-Interpreter::executeInstr_DelGlobal(Traced<InstrDelGlobal*> instr)
+Interpreter::executeInstr_DelGlobal(Traced<GlobalAndIdentInstr*> instr)
 {
     if (!instr->global()->maybeDelOwnAttr(instr->ident))
         raiseNameError(instr->ident);
 }
 
 void
-Interpreter::executeInstr_GetAttr(Traced<InstrGetAttr*> instr)
+Interpreter::executeInstr_GetAttr(Traced<IdentInstr*> instr)
 {
     Stack<Value> value(popStack());
     Stack<Value> result;
@@ -218,7 +218,7 @@ Interpreter::executeInstr_GetAttr(Traced<InstrGetAttr*> instr)
 }
 
 void
-Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
+Interpreter::executeInstr_SetAttr(Traced<IdentInstr*> instr)
 {
     // todo: this logic should move into setAttr() so python setattr picks it
     // up.
@@ -244,7 +244,7 @@ Interpreter::executeInstr_SetAttr(Traced<InstrSetAttr*> instr)
 }
 
 void
-Interpreter::executeInstr_DelAttr(Traced<InstrDelAttr*> instr)
+Interpreter::executeInstr_DelAttr(Traced<IdentInstr*> instr)
 {
     // todo: should not be able to delete attributes of builtin types?
     Stack<Object*> obj(popStack().toObject());
@@ -254,7 +254,7 @@ Interpreter::executeInstr_DelAttr(Traced<InstrDelAttr*> instr)
 }
 
 void
-Interpreter::executeInstr_Call(Traced<InstrCall*> instr)
+Interpreter::executeInstr_Call(Traced<CallInstr*> instr)
 {
     Stack<Value> target(peekStack(instr->count));
     startCall(target, instr->count, 1);
@@ -288,7 +288,7 @@ bool Interpreter::getMethod(Name ident)
 }
 
 void
-Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
+Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
 {
     Stack<Value> value(peekStack());
     if (!getMethod(instr->ident))
@@ -298,20 +298,20 @@ Interpreter::executeInstr_GetMethod(Traced<InstrGetMethod*> instr)
         // Builtin classes cannot be changed, so we can cache the lookup.
         Stack<Class*> cls(value.type());
         Stack<Value> result(peekStack(2));
-        replaceInstr(instr, gc.create<InstrGetMethodBuiltin>(instr->ident, cls, result));
+        replaceInstr(instr, InstrFactory<Instr_GetMethodBuiltin>::get(instr->ident, cls, result));
     } else {
-        replaceInstr(instr, gc.create<InstrGetMethodFallback>(instr->ident));
+        replaceInstr(instr, InstrFactory<Instr_GetMethodFallback>::get(instr->ident));
     }
 }
 
 void
-Interpreter::executeInstr_GetMethodFallback(Traced<InstrGetMethodFallback*> instr)
+Interpreter::executeInstr_GetMethodFallback(Traced<IdentInstr*> instr)
 {
     getMethod(instr->ident);
 }
 
 void
-Interpreter::executeInstr_GetMethodBuiltin(Traced<InstrGetMethodBuiltin*> instr)
+Interpreter::executeInstr_GetMethodBuiltin(Traced<BuiltinMethodInstr*> instr)
 {
     {
         AutoAssertNoGC nogc;
@@ -323,11 +323,11 @@ Interpreter::executeInstr_GetMethodBuiltin(Traced<InstrGetMethodBuiltin*> instr)
         }
     }
 
-    replaceInstrAndRestart(instr, gc.create<InstrGetMethodFallback>(instr->ident));
+    replaceInstrAndRestart(instr, InstrFactory<Instr_GetMethodFallback>::get(instr->ident));
 }
 
 void
-Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
+Interpreter::executeInstr_CallMethod(Traced<CallInstr*> instr)
 {
     bool extraArg = peekStack(instr->count + 1).as<Boolean>()->value();
     Stack<Value> target(peekStack(instr->count + 2));
@@ -336,7 +336,7 @@ Interpreter::executeInstr_CallMethod(Traced<InstrCallMethod*> instr)
 }
 
 void
-Interpreter::executeInstr_CreateEnv(Traced<InstrCreateEnv*> instr)
+Interpreter::executeInstr_CreateEnv(Traced<Instr*> instr)
 {
     Frame* frame = getFrame();
     assert(!frame->env());
@@ -357,7 +357,7 @@ Interpreter::executeInstr_CreateEnv(Traced<InstrCreateEnv*> instr)
 }
 
 void
-Interpreter::executeInstr_InitStackLocals(Traced<InstrInitStackLocals*> instr)
+Interpreter::executeInstr_InitStackLocals(Traced<Instr*> instr)
 {
     AutoAssertNoGC nogc;
     Frame* frame = getFrame();
@@ -372,7 +372,7 @@ Interpreter::executeInstr_InitStackLocals(Traced<InstrInitStackLocals*> instr)
 }
 
 void
-Interpreter::executeInstr_In(Traced<InstrIn*> instr)
+Interpreter::executeInstr_In(Traced<Instr*> instr)
 {
     // todo: implement this
     // https://docs.python.org/3/reference/expressions.html#membership-test-details
@@ -399,7 +399,7 @@ Interpreter::executeInstr_In(Traced<InstrIn*> instr)
 }
 
 void
-Interpreter::executeInstr_Is(Traced<InstrIs*> instr)
+Interpreter::executeInstr_Is(Traced<Instr*> instr)
 {
     Value b = popStack();
     Value a = popStack();
@@ -408,7 +408,7 @@ Interpreter::executeInstr_Is(Traced<InstrIs*> instr)
 }
 
 void
-Interpreter::executeInstr_Not(Traced<InstrNot*> instr)
+Interpreter::executeInstr_Not(Traced<Instr*> instr)
 {
     // the following values are interpreted as false: False, None, numeric zero
     // of all types, and empty strings and containers (including strings,
@@ -419,14 +419,14 @@ Interpreter::executeInstr_Not(Traced<InstrNot*> instr)
 }
 
 void
-Interpreter::executeInstr_BranchAlways(Traced<InstrBranchAlways*> instr)
+Interpreter::executeInstr_BranchAlways(Traced<BranchInstr*> instr)
 {
     assert(instr->offset_);
     branch(instr->offset_);
 }
 
 void
-Interpreter::executeInstr_BranchIfTrue(Traced<InstrBranchIfTrue*> instr)
+Interpreter::executeInstr_BranchIfTrue(Traced<BranchInstr*> instr)
 {
     assert(instr->offset_);
     Object *x = popStack().toObject();
@@ -435,7 +435,7 @@ Interpreter::executeInstr_BranchIfTrue(Traced<InstrBranchIfTrue*> instr)
 }
 
 void
-Interpreter::executeInstr_BranchIfFalse(Traced<InstrBranchIfFalse*> instr)
+Interpreter::executeInstr_BranchIfFalse(Traced<BranchInstr*> instr)
 {
     assert(instr->offset_);
     Object *x = popStack().toObject();
@@ -444,7 +444,7 @@ Interpreter::executeInstr_BranchIfFalse(Traced<InstrBranchIfFalse*> instr)
 }
 
 void
-Interpreter::executeInstr_Or(Traced<InstrOr*> instr)
+Interpreter::executeInstr_Or(Traced<BranchInstr*> instr)
 {
     // The expression |x or y| first evaluates x; if x is true, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
@@ -460,7 +460,7 @@ Interpreter::executeInstr_Or(Traced<InstrOr*> instr)
 }
 
 void
-Interpreter::executeInstr_And(Traced<InstrAnd*> instr)
+Interpreter::executeInstr_And(Traced<BranchInstr*> instr)
 {
     // The expression |x and y| first evaluates x; if x is false, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
@@ -475,17 +475,24 @@ Interpreter::executeInstr_And(Traced<InstrAnd*> instr)
     popStack();
 }
 
-InstrLambda::InstrLambda(Name name, const vector<Name>& paramNames,
-                         Traced<Block*> block, unsigned defaultCount,
-                         bool takesRest, bool isGenerator)
+LambdaInstr::LambdaInstr(InstrType type,
+                         Name name,
+                         const vector<Name>& paramNames,
+                         Traced<Block*>
+                         block,
+                         unsigned defaultCount,
+                         bool takesRest,
+                         bool isGenerator)
   : Instr(Instr_Lambda),
     funcName_(name),
     info_(gc.create<FunctionInfo>(paramNames, block, defaultCount, takesRest,
                                   isGenerator))
-{}
+{
+    assert(type == Instr_Lambda);
+}
 
 void
-Interpreter::executeInstr_Lambda(Traced<InstrLambda*> instr)
+Interpreter::executeInstr_Lambda(Traced<LambdaInstr*> instr)
 {
     Stack<FunctionInfo*> info(instr->functionInfo());
     Stack<Block*> block(instr->block());
@@ -499,49 +506,49 @@ Interpreter::executeInstr_Lambda(Traced<InstrLambda*> instr)
 }
 
 void
-Interpreter::executeInstr_Dup(Traced<InstrDup*> instr)
+Interpreter::executeInstr_Dup(Traced<IndexInstr*> instr)
 {
     pushStack(peekStack(instr->index));
 }
 
 void
-Interpreter::executeInstr_Pop(Traced<InstrPop*> instr)
+Interpreter::executeInstr_Pop(Traced<Instr*> instr)
 {
     popStack();
 }
 
 void
-Interpreter::executeInstr_Swap(Traced<InstrSwap*> instr)
+Interpreter::executeInstr_Swap(Traced<Instr*> instr)
 {
     swapStack();
 }
 
 void
-Interpreter::executeInstr_Tuple(Traced<InstrTuple*> instr)
+Interpreter::executeInstr_Tuple(Traced<CountInstr*> instr)
 {
-    Tuple* tuple = Tuple::get(stackSlice(instr->size));
-    popStack(instr->size);
+    Tuple* tuple = Tuple::get(stackSlice(instr->count));
+    popStack(instr->count);
     pushStack(tuple);
 }
 
 void
-Interpreter::executeInstr_List(Traced<InstrList*> instr)
+Interpreter::executeInstr_List(Traced<CountInstr*> instr)
 {
-    List* list = gc.create<List>(stackSlice(instr->size));
-    popStack(instr->size);
+    List* list = gc.create<List>(stackSlice(instr->count));
+    popStack(instr->count);
     pushStack(list);
 }
 
 void
-Interpreter::executeInstr_Dict(Traced<InstrDict*> instr)
+Interpreter::executeInstr_Dict(Traced<CountInstr*> instr)
 {
-    Dict* dict = gc.create<Dict>(stackSlice(instr->size * 2));
-    popStack(instr->size * 2);
+    Dict* dict = gc.create<Dict>(stackSlice(instr->count * 2));
+    popStack(instr->count * 2);
     pushStack(dict);
 }
 
 void
-Interpreter::executeInstr_Slice(Traced<InstrSlice*> instr)
+Interpreter::executeInstr_Slice(Traced<Instr*> instr)
 {
     Slice* slice = gc.create<Slice>(stackSlice(3));
     popStack(3);
@@ -549,7 +556,7 @@ Interpreter::executeInstr_Slice(Traced<InstrSlice*> instr)
 }
 
 void
-Interpreter::executeInstr_AssertionFailed(Traced<InstrAssertionFailed*> instr)
+Interpreter::executeInstr_AssertionFailed(Traced<Instr*> instr)
 {
     Object* obj = popStack().toObject();
     assert(obj->is<String>() || obj == None);
@@ -559,7 +566,7 @@ Interpreter::executeInstr_AssertionFailed(Traced<InstrAssertionFailed*> instr)
 }
 
 void
-Interpreter::executeInstr_MakeClassFromFrame(Traced<InstrMakeClassFromFrame*> instr)
+Interpreter::executeInstr_MakeClassFromFrame(Traced<IdentInstr*> instr)
 {
     Stack<Env*> env(this->env());
 
@@ -676,34 +683,34 @@ static bool IterableIsBuiltinList(Traced<Value> value)
 }
 
 void
-Interpreter::executeInstr_Destructure(Traced<InstrDestructure*> instr)
+Interpreter::executeInstr_Destructure(Traced<CountInstr*> instr)
 {
     Stack<Value> iterable(peekStack());
     Instr* replacement;
     if (IterableIsBuiltinList(iterable)) {
         replacement =
-            gc.create<InstrDestructure>(instr->count, Instr_DestructureList);
+            InstrFactory<Instr_DestructureList>::get(instr->count);
     } else {
         replacement =
-            gc.create<InstrDestructure>(instr->count, Instr_DestructureFallback);
+            InstrFactory<Instr_DestructureFallback>::get(instr->count);
     }
 
     replaceInstrAndRestart(instr, replacement);
 }
 
 void
-Interpreter::executeInstr_DestructureFallback(Traced<InstrDestructure*> instr)
+Interpreter::executeInstr_DestructureFallback(Traced<CountInstr*> instr)
 {
     executeDestructureFallback(instr->count);
 }
 
 void
-Interpreter::executeInstr_DestructureList(Traced<InstrDestructure*> instr)
+Interpreter::executeInstr_DestructureList(Traced<CountInstr*> instr)
 {
     Stack<Value> iterable(peekStack());
     if (!IterableIsBuiltinList(iterable)) {
         Instr* replacement =
-            gc.create<InstrDestructure>(instr->count, Instr_DestructureFallback);
+            InstrFactory<Instr_DestructureFallback>::get(instr->count);
         replaceInstrAndRestart(instr, replacement);
         return;
     }
@@ -723,14 +730,14 @@ Interpreter::executeInstr_DestructureList(Traced<InstrDestructure*> instr)
 }
 
 void
-Interpreter::executeInstr_Raise(Traced<InstrRaise*> instr)
+Interpreter::executeInstr_Raise(Traced<Instr*> instr)
 {
     // todo: exceptions must be old-style classes or derived from BaseException
     raiseException();
 }
 
 void
-Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
+Interpreter::executeInstr_GetIterator(Traced<Instr*> instr)
 {
     Stack<Value> result;
     if (!getIterator(result))
@@ -740,7 +747,7 @@ Interpreter::executeInstr_GetIterator(Traced<InstrGetIterator*> instr)
 }
 
 void
-Interpreter::executeInstr_IteratorNext(Traced<InstrIteratorNext*> instr)
+Interpreter::executeInstr_IteratorNext(Traced<Instr*> instr)
 {
     // The stack is already set up with next method and target on top
     Stack<Value> target(peekStack(2));
@@ -821,23 +828,35 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
     return false;
 }
 
-void BinaryOpInstrBase::print(ostream& s) const
+void BinaryOpInstr::print(ostream& s) const
 {
     s << " " << BinaryOpNames[op];
 }
 
-bool ShouldInlineIntBinaryOp(BinaryOp op) {
+static bool ShouldInlineIntBinaryOp(BinaryOp op) {
     // Must match for_each_int_binary_op_to_inline macro in instr.h
     return true;
 }
 
-bool ShouldInlineFloatBinaryOp(BinaryOp op) {
+static Instr* InlineIntBinaryOpInstr(BinaryOp op) {
+    assert(ShouldInlineIntBinaryOp(op));
+    auto type = InstrType(Instr_BinaryOpInt_Add + op);
+    return gc.create<BinaryOpInstr>(type, op);
+}
+
+static bool ShouldInlineFloatBinaryOp(BinaryOp op) {
     // Must match for_each_float_binary_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
 }
 
+static Instr* InlineFloatBinaryOpInstr(BinaryOp op) {
+    assert(ShouldInlineFloatBinaryOp(op));
+    auto type = InstrType(Instr_BinaryOpFloat_Add + op);
+    return gc.create<BinaryOpInstr>(type, op);
+}
+
 void
-Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
+Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 {
     Stack<Value> right(peekStack(0));
     Stack<Value> left(peekStack(1));
@@ -847,7 +866,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
         left.isInt32() && right.isInt32())
     {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, gc.create<InstrBinaryOpInt>(instr->op));
+        replaceInstrAndRestart(instr, InlineIntBinaryOpInstr(instr->op));
         return;
     }
 
@@ -856,7 +875,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
         && left.isDouble() && right.isDouble())
     {
         assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, gc.create<InstrBinaryOpFloat>(instr->op));
+        replaceInstrAndRestart(instr, InlineFloatBinaryOpInstr(instr->op));
         return;
     }
 
@@ -868,7 +887,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
     {
         Stack<Class*> leftClass(left.type());
         Stack<Class*> rightClass(right.type());
-        replaceInstr(instr, gc.create<InstrBinaryOpBuiltin>(
+        replaceInstr(instr, InstrFactory<Instr_BinaryOpBuiltin>::get(
                          instr->op, leftClass, rightClass, method));
         return;
     }
@@ -877,7 +896,7 @@ Interpreter::executeInstr_BinaryOp(Traced<InstrBinaryOp*> instr)
 }
 
 void
-Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
+Interpreter::executeInstr_BinaryOpFallback(Traced<BinaryOpInstr*> instr)
 {
     Stack<Value> method;
     executeBinaryOp(instr->op, method);
@@ -885,13 +904,13 @@ Interpreter::executeInstr_BinaryOpFallback(Traced<InstrBinaryOpFallback*> instr)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr)
+Interpreter::executeBinaryOpInt(Traced<BinaryOpInstr*> instr)
 {
     assert(ShouldInlineIntBinaryOp(instr->op));
 
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrBinaryOpFallback>(instr->op));
+            instr, InstrFactory<Instr_BinaryOpFallback>::get(instr->op));
         return;
     }
 
@@ -902,7 +921,7 @@ Interpreter::executeBinaryOpInt(Traced<InstrBinaryOpInt*> instr)
 
 #define define_execute_binary_op_int(name)                                    \
     void Interpreter::executeInstr_BinaryOpInt_##name(                        \
-        Traced<InstrBinaryOpInt*> instr)                                      \
+        Traced<BinaryOpInstr*> instr)                                         \
     {                                                                         \
         executeBinaryOpInt<Binary##name>(instr);                              \
     }
@@ -911,13 +930,13 @@ for_each_int_binary_op_to_inline(define_execute_binary_op_int)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr)
+Interpreter::executeBinaryOpFloat(Traced<BinaryOpInstr*> instr)
 {
     assert(ShouldInlineFloatBinaryOp(instr->op));
 
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrBinaryOpFallback>(instr->op));
+            instr, InstrFactory<Instr_BinaryOpFallback>::get(instr->op));
         return;
     }
 
@@ -928,24 +947,25 @@ Interpreter::executeBinaryOpFloat(Traced<InstrBinaryOpFloat*> instr)
 
 #define define_execute_binary_op_float(name)                                   \
     void Interpreter::executeInstr_BinaryOpFloat_##name(                       \
-        Traced<InstrBinaryOpFloat*> instr)                                     \
+        Traced<BinaryOpInstr*> instr)                                          \
     {                                                                          \
         executeBinaryOpFloat<Binary##name>(instr);                             \
     }
 for_each_float_binary_op_to_inline(define_execute_binary_op_float)
 #undef define_execute_binary_op_float
 
-InstrBinaryOpBuiltin::InstrBinaryOpBuiltin(BinaryOp op,
+BuiltinBinaryOpInstr::BuiltinBinaryOpInstr(InstrType type,
+                                           BinaryOp op,
                                            Traced<Class*> left,
                                            Traced<Class*> right,
                                            Traced<Value> method)
-  : BinaryOpInstrBase(Instr_BinaryOpBuiltin, op),
+  : BinaryOpInstr(type, op),
     left_(left),
     right_(right),
     method_(method)
 {}
 
-void InstrBinaryOpBuiltin::traceChildren(Tracer& t)
+void BuiltinBinaryOpInstr::traceChildren(Tracer& t)
 {
     gc.trace(t, &left_);
     gc.trace(t, &right_);
@@ -953,14 +973,14 @@ void InstrBinaryOpBuiltin::traceChildren(Tracer& t)
 }
 
 void
-Interpreter::executeInstr_BinaryOpBuiltin(Traced<InstrBinaryOpBuiltin*> instr)
+Interpreter::executeInstr_BinaryOpBuiltin(Traced<BuiltinBinaryOpInstr*> instr)
 {
     Value right = peekStack(0);
     Value left = peekStack(1);
 
     if (left.type() != instr->left() || right.type() != instr->right()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrBinaryOpFallback>(instr->op));
+            instr, InstrFactory<Instr_BinaryOpFallback>::get(instr->op));
         return;
     }
 
@@ -968,32 +988,43 @@ Interpreter::executeInstr_BinaryOpBuiltin(Traced<InstrBinaryOpBuiltin*> instr)
     startCall(method, 2);
 }
 
-void CompareOpInstrBase::print(ostream& s) const
+void CompareOpInstr::print(ostream& s) const
 {
     s << " " << CompareOpNames[op];
 }
 
+InstrType InlineIntCompareOpInstr(CompareOp op) {
+    return InstrType(Instr_CompareOpInt_LT + op);
+}
+
+InstrType InlineFloatCompareOpInstr(CompareOp op) {
+    return InstrType(Instr_CompareOpFloat_LT + op);
+}
+
 void
-Interpreter::executeInstr_CompareOp(Traced<InstrCompareOp*> instr)
+Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
 {
     Value right = peekStack(0);
     Value left = peekStack(1);
+    InstrType type;
     Instr* replacement;
     if (left.isInt32() && right.isInt32()) {
         assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        replacement = gc.create<InstrCompareOpInt>(instr->op);
+        type = InlineIntCompareOpInstr(instr->op);
+        replacement = gc.create<CompareOpInstr>(type, instr->op);
     } else if (left.isDouble() && right.isDouble()) {
         assert(Float::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        replacement = gc.create<InstrCompareOpFloat>(instr->op);
+        type = InlineFloatCompareOpInstr(instr->op);
+        replacement = gc.create<CompareOpInstr>(type, instr->op);
     } else {
-        replacement = gc.create<InstrCompareOpFallback>(instr->op);
+        replacement = InstrFactory<Instr_CompareOpFallback>::get(instr->op);
     }
     replaceInstrAndRestart(instr, replacement);
 }
 
 
 void
-Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> instr)
+Interpreter::executeInstr_CompareOpFallback(Traced<CompareOpInstr*> instr)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -1041,11 +1072,11 @@ Interpreter::executeInstr_CompareOpFallback(Traced<InstrCompareOpFallback*> inst
 
 template <CompareOp Op>
 inline void
-Interpreter::executeCompareOpInt(Traced<InstrCompareOpInt*> instr)
+Interpreter::executeCompareOpInt(Traced<CompareOpInstr*> instr)
 {
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrCompareOpFallback>(instr->op));
+            instr, InstrFactory<Instr_CompareOpFallback>::get(instr->op));
         return;
     }
 
@@ -1056,7 +1087,7 @@ Interpreter::executeCompareOpInt(Traced<InstrCompareOpInt*> instr)
 
 #define define_execute_compare_op_int(name, token, method, rmethod)            \
 void Interpreter::executeInstr_CompareOpInt_##name(                            \
-    Traced<InstrCompareOpInt*> instr)                                          \
+    Traced<CompareOpInstr*> instr)                                             \
 {                                                                              \
     executeCompareOpInt<Compare##name>(instr);                                 \
 }
@@ -1065,11 +1096,11 @@ for_each_compare_op(define_execute_compare_op_int)
 
 template <CompareOp Op>
 inline void
-Interpreter::executeCompareOpFloat(Traced<InstrCompareOpFloat*> instr)
+Interpreter::executeCompareOpFloat(Traced<CompareOpInstr*> instr)
 {
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrCompareOpFallback>(instr->op));
+            instr, InstrFactory<Instr_CompareOpFallback>::get(instr->op));
         return;
     }
 
@@ -1080,7 +1111,7 @@ Interpreter::executeCompareOpFloat(Traced<InstrCompareOpFloat*> instr)
 
 #define define_execute_compare_op_float(name, token, method, rmethod)          \
 void Interpreter::executeInstr_CompareOpFloat_##name(                          \
-    Traced<InstrCompareOpFloat*> instr)                                        \
+    Traced<CompareOpInstr*> instr)                                             \
 {                                                                              \
     executeCompareOpFloat<Compare##name>(instr);                               \
 }
@@ -1118,18 +1149,30 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
     return true;
 }
 
-bool ShouldInlineIntAugAssignOp(BinaryOp op) {
+static bool ShouldInlineIntAugAssignOp(BinaryOp op) {
     // Must match for_each_int_aug_assign_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
 }
 
-bool ShouldInlineFloatAugAssignOp(BinaryOp op) {
+static Instr* InlineIntAugAssignOpInstr(BinaryOp op) {
+    assert(ShouldInlineIntAugAssignOp(op));
+    auto type = InstrType(Instr_AugAssignUpdateInt_Add + op);
+    return gc.create<BinaryOpInstr>(type, op);
+}
+
+static bool ShouldInlineFloatAugAssignOp(BinaryOp op) {
     // Must match for_each_float_aug_assign_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
 }
 
+static Instr* InlineFloatAugAssignOpInstr(BinaryOp op) {
+    assert(ShouldInlineFloatAugAssignOp(op));
+    auto type = InstrType(Instr_AugAssignUpdateFloat_Add + op);
+    return gc.create<BinaryOpInstr>(type, op);
+}
+
 void
-Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
+Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
 {
     const BinaryOp op = instr->op;
     Stack<Value> right(peekStack(0));
@@ -1140,7 +1183,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
         left.isInt32() && right.isInt32())
     {
         assert(Integer::ObjectClass->hasAttr(Name::binMethod[op]));
-        replaceInstrAndRestart(instr, gc.create<InstrAugAssignUpdateInt>(op));
+        replaceInstrAndRestart(instr, InlineIntAugAssignOpInstr(instr->op));
         return;
     }
 
@@ -1149,7 +1192,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
         && left.isDouble() && right.isDouble())
     {
         assert(Float::ObjectClass->hasAttr(Name::binMethod[op]));
-        replaceInstrAndRestart(instr, gc.create<InstrAugAssignUpdateFloat>(op));
+        replaceInstrAndRestart(instr, InlineFloatAugAssignOpInstr(instr->op));
         return;
     }
 
@@ -1166,17 +1209,17 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<InstrAugAssignUpdate*> instr)
         assert(isCallableDescriptor);
         Stack<Class*> leftClass(left.type());
         Stack<Class*> rightClass(right.type());
-        replaceInstr(instr, gc.create<InstrAugAssignUpdateBuiltin>(
+        replaceInstr(instr, InstrFactory<Instr_AugAssignUpdateBuiltin>::get(
                          op, leftClass, rightClass, method));
         return;
     }
 
     // Otherwise replace with fallback instruction.
-    replaceInstr(instr, gc.create<InstrAugAssignUpdateFallback>(op));
+    replaceInstr(instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(op));
 }
 
 void
-Interpreter::executeInstr_AugAssignUpdateFallback(Traced<InstrAugAssignUpdateFallback*> instr)
+Interpreter::executeInstr_AugAssignUpdateFallback(Traced<BinaryOpInstr*> instr)
 {
     Stack<Value> method;
     bool isCallableDescriptor;
@@ -1185,13 +1228,13 @@ Interpreter::executeInstr_AugAssignUpdateFallback(Traced<InstrAugAssignUpdateFal
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr)
+Interpreter::executeAugAssignUpdateInt(Traced<BinaryOpInstr*> instr)
 {
     assert(ShouldInlineIntBinaryOp(instr->op));
 
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+            instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(instr->op));
         return;
     }
 
@@ -1202,7 +1245,7 @@ Interpreter::executeAugAssignUpdateInt(Traced<InstrAugAssignUpdateInt*> instr)
 
 #define define_execute_aug_assign_op_int(name)                                \
     void Interpreter::executeInstr_AugAssignUpdateInt_##name(                 \
-        Traced<InstrAugAssignUpdateInt*> instr)                               \
+        Traced<BinaryOpInstr*> instr)                                         \
     {                                                                         \
         executeAugAssignUpdateInt<Binary##name>(instr);                       \
     }
@@ -1211,13 +1254,13 @@ for_each_int_aug_assign_op_to_inline(define_execute_aug_assign_op_int)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> instr)
+Interpreter::executeAugAssignUpdateFloat(Traced<BinaryOpInstr*> instr)
 {
     assert(ShouldInlineFloatBinaryOp(instr->op));
 
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+            instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(instr->op));
         return;
     }
 
@@ -1228,39 +1271,22 @@ Interpreter::executeAugAssignUpdateFloat(Traced<InstrAugAssignUpdateFloat*> inst
 
 #define define_execute_aug_assign_op_float(name)                              \
     void Interpreter::executeInstr_AugAssignUpdateFloat_##name(               \
-        Traced<InstrAugAssignUpdateFloat*> instr)                             \
+        Traced<BinaryOpInstr*> instr)                                         \
     {                                                                         \
         executeAugAssignUpdateFloat<Binary##name>(instr);                     \
     }
 for_each_float_aug_assign_op_to_inline(define_execute_aug_assign_op_float)
 #undef define_execute_aug_assign_op_float
 
-InstrAugAssignUpdateBuiltin::InstrAugAssignUpdateBuiltin(BinaryOp op,
-                                                         Traced<Class*> left,
-                                                         Traced<Class*> right,
-                                                         Traced<Value> method)
-  : BinaryOpInstrBase(Instr_AugAssignUpdateBuiltin, op),
-    left_(left),
-    right_(right),
-    method_(method)
-{}
-
-void InstrAugAssignUpdateBuiltin::traceChildren(Tracer& t)
-{
-    gc.trace(t, &left_);
-    gc.trace(t, &right_);
-    gc.trace(t, &method_);
-}
-
 void
-Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<InstrAugAssignUpdateBuiltin*> instr)
+Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<BuiltinBinaryOpInstr*> instr)
 {
     Value right = peekStack(0);
     Value left = peekStack(1);
 
     if (left.type() != instr->left() || right.type() != instr->right()) {
         replaceInstrAndRestart(
-            instr, gc.create<InstrAugAssignUpdateFallback>(instr->op));
+            instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(instr->op));
         return;
     }
 
@@ -1269,7 +1295,7 @@ Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<InstrAugAssignUpdateBuil
 }
 
 void
-Interpreter::executeInstr_StartGenerator(Traced<InstrStartGenerator*> instr)
+Interpreter::executeInstr_StartGenerator(Traced<Instr*> instr)
 {
     Frame* frame = getFrame();
     Stack<Block*> block(frame->block());
@@ -1282,7 +1308,7 @@ Interpreter::executeInstr_StartGenerator(Traced<InstrStartGenerator*> instr)
 }
 
 void
-Interpreter::executeInstr_ResumeGenerator(Traced<InstrResumeGenerator*> instr)
+Interpreter::executeInstr_ResumeGenerator(Traced<Instr*> instr)
 {
     // todo: get slot 0
     Stack<GeneratorIter*> gen(
@@ -1291,14 +1317,14 @@ Interpreter::executeInstr_ResumeGenerator(Traced<InstrResumeGenerator*> instr)
 }
 
 void
-Interpreter::executeInstr_LeaveGenerator(Traced<InstrLeaveGenerator*> instr)
+Interpreter::executeInstr_LeaveGenerator(Traced<Instr*> instr)
 {
     Stack<GeneratorIter*> gen(getGeneratorIter());
     gen->leave(*this);
 }
 
 void
-Interpreter::executeInstr_SuspendGenerator(Traced<InstrSuspendGenerator*> instr)
+Interpreter::executeInstr_SuspendGenerator(Traced<Instr*> instr)
 {
     Stack<Value> value(popStack());
     Stack<GeneratorIter*> gen(getGeneratorIter());
@@ -1306,19 +1332,19 @@ Interpreter::executeInstr_SuspendGenerator(Traced<InstrSuspendGenerator*> instr)
 }
 
 void
-Interpreter::executeInstr_EnterCatchRegion(Traced<InstrEnterCatchRegion*> instr)
+Interpreter::executeInstr_EnterCatchRegion(Traced<BranchInstr*> instr)
 {
     pushExceptionHandler(ExceptionHandler::CatchHandler, instr->offset_);
 }
 
 void
-Interpreter::executeInstr_LeaveCatchRegion(Traced<InstrLeaveCatchRegion*> instr)
+Interpreter::executeInstr_LeaveCatchRegion(Traced<Instr*> instr)
 {
     popExceptionHandler(ExceptionHandler::CatchHandler);
 }
 
 void
-Interpreter::executeInstr_MatchCurrentException(Traced<InstrMatchCurrentException*> instr)
+Interpreter::executeInstr_MatchCurrentException(Traced<Instr*> instr)
 {
     Stack<Object*> obj(popStack().toObject());
     Stack<Exception*> exception(currentException());
@@ -1331,37 +1357,37 @@ Interpreter::executeInstr_MatchCurrentException(Traced<InstrMatchCurrentExceptio
 }
 
 void
-Interpreter::executeInstr_HandleCurrentException(Traced<InstrHandleCurrentException*> instr)
+Interpreter::executeInstr_HandleCurrentException(Traced<Instr*> instr)
 {
     finishHandlingException();
 }
 
 void
-Interpreter::executeInstr_EnterFinallyRegion(Traced<InstrEnterFinallyRegion*> instr)
+Interpreter::executeInstr_EnterFinallyRegion(Traced<BranchInstr*> instr)
 {
     pushExceptionHandler(ExceptionHandler::FinallyHandler, instr->offset_);
 }
 
 void
-Interpreter::executeInstr_LeaveFinallyRegion(Traced<InstrLeaveFinallyRegion*> instr)
+Interpreter::executeInstr_LeaveFinallyRegion(Traced<Instr*> instr)
 {
     popExceptionHandler(ExceptionHandler::FinallyHandler);
 }
 
 void
-Interpreter::executeInstr_FinishExceptionHandler(Traced<InstrFinishExceptionHandler*> instr)
+Interpreter::executeInstr_FinishExceptionHandler(Traced<Instr*> instr)
 {
     return maybeContinueHandlingException();
 }
 
 void
-Interpreter::executeInstr_LoopControlJump(Traced<InstrLoopControlJump*> instr)
+Interpreter::executeInstr_LoopControlJump(Traced<LoopControlJumpInstr*> instr)
 {
     loopControlJump(instr->finallyCount(), instr->target());
 }
 
 void
-Interpreter::executeInstr_ListAppend(Traced<InstrListAppend*> instr)
+Interpreter::executeInstr_ListAppend(Traced<Instr*> instr)
 {
     Stack<Value> value(popStack());
     Stack<Value> list(popStack());
@@ -1371,16 +1397,16 @@ Interpreter::executeInstr_ListAppend(Traced<InstrListAppend*> instr)
 }
 
 void
-Interpreter::executeInstr_AssertStackDepth(Traced<InstrAssertStackDepth*> instr)
+Interpreter::executeInstr_AssertStackDepth(Traced<CountInstr*> instr)
 {
 #ifdef DEBUG
     Frame* frame = getFrame();
     unsigned depth = stackPos() - frame->stackPos();
-    if (depth != instr->expected) {
-        cerr << "Excpected stack depth " << dec << instr->expected;
+    if (depth != instr->count) {
+        cerr << "Excpected stack depth " << dec << instr->count;
         cerr << " but got " << depth << " in: " << endl;
         cerr << *getFrame()->block() << endl;
-        assert(depth == instr->expected);
+        assert(depth == instr->count);
     }
 #endif
 }

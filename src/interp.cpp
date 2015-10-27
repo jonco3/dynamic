@@ -53,7 +53,7 @@ void Interpreter::init()
 {
     // Create a block that will cause the interpreter loop to exit.
     AbortTrampoline.init(gc.create<Block>(Env::InitialLayout, 1, false));
-    AbortTrampoline->append<InstrAbort>();
+    AbortTrampoline->append<Instr_Abort>();
     AbortTrampoline->setMaxStackDepth(1);
 
     interp.init(gc.create<Interpreter>());

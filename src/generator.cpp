@@ -32,9 +32,9 @@ void GeneratorIter::init()
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName("self");
     Stack<Block*> block(gc.create<Block>(layout, 1, true));
-    block->append<InstrCreateEnv>(); // todo: eventually we can remove this
-    block->append<InstrResumeGenerator>();
-    block->append<InstrReturn>();
+    block->append<Instr_CreateEnv>(); // todo: eventually we can remove this
+    block->append<Instr_ResumeGenerator>();
+    block->append<Instr_Return>();
     block->setMaxStackDepth(1);
     static vector<Name> params = { "self" };
     Stack<Env*> env; // todo: allow construction of traced for nullptr

@@ -88,9 +88,9 @@ static Value make_builtin_iter()
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName("iterable");
     Stack<Block*> block(gc.create<Block>(layout, 1, false));
-    block->append<InstrInitStackLocals>();
-    block->append<InstrGetIterator>();
-    block->append<InstrReturn>();
+    block->append<Instr_InitStackLocals>();
+    block->append<Instr_GetIterator>();
+    block->append<Instr_Return>();
     block->setMaxStackDepth(1);
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     vector<Name> args = { "iterable" };
