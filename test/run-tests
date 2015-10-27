@@ -16,6 +16,8 @@ parser.add_argument('--dir', metavar='TEST_DIR', action='append', dest='dirs',
                     help='directory containing tests to run')
 parser.add_argument('--command', metavar='CMD', action='append', dest='commands',
                     help='python interpreter command')
+parser.add_argument('--repeat', metavar='TIMES', type=int, default=1,
+                    help='run benchmarks multiple times')
 args = parser.parse_args()
 
 if not args.commands:
@@ -73,30 +75,35 @@ def runTest(filename, command):
 
     command = command.split() + [filename] + testArgs
 
-    ok = True
-    startTime = time.perf_counter()
-    try:
-        output = subprocess.check_output(command, stderr = subprocess.STDOUT)
-        endTime = time.perf_counter()
-    except subprocess.CalledProcessError as e:
-        ok = False
-        output = e.output
+    totalTime = 0
 
-    output = output.decode().strip()
+    for i in range(0, args.repeat):
+        ok = True
+        startTime = time.perf_counter()
+        try:
+            output = subprocess.check_output(command, stderr = subprocess.STDOUT)
+            endTime = time.perf_counter()
+        except subprocess.CalledProcessError as e:
+            ok = False
+            output = e.output
 
-    if not ok:
-        return 'FAIL', 'Execution failed: ' + output
+        output = output.decode().strip()
 
-    if not args.benchmark:
-        output = output.strip()
-        if output != "\n".join(testExpect):
-            message = ('    Output did not match expected:\n' +
-                       '      Expected: ' + '|'.join(testExpect) + '\n' +
-                       '      Actual:   ' + output.replace('\n', '|'))
-            return 'FAIL', message
+        if not ok:
+            return 'FAIL', 'Execution failed: ' + output
+
+        if not args.benchmark:
+            output = output.strip()
+            if output != "\n".join(testExpect):
+                message = ('    Output did not match expected:\n' +
+                           '      Expected: ' + '|'.join(testExpect) + '\n' +
+                           '      Actual:   ' + output.replace('\n', '|'))
+                return 'FAIL', message
+
+        totalTime += endTime - startTime
 
     passCount += 1
-    return 'PASS', endTime - startTime
+    return 'PASS', totalTime / args.repeat
 
 def formatTime(secs):
     return "%-20.2f" % (secs * 1000)
