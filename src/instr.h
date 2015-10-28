@@ -67,8 +67,8 @@ struct Interpreter;
     instr(GetMethod, IdentInstr)                                             \
     instr(GetMethodFallback, IdentInstr)                                     \
     instr(GetMethodBuiltin, BuiltinMethodInstr)                              \
-    instr(Call, CallInstr)                                                   \
-    instr(CallMethod, CallInstr)                                             \
+    instr(Call, CountInstr)                                                  \
+    instr(CallMethod, CountInstr)                                            \
     instr(CreateEnv, Instr)                                                  \
     instr(InitStackLocals, Instr)                                            \
     instr(In, Instr)                                                         \
@@ -180,9 +180,9 @@ struct Instr : public Cell
     bool is(InstrType t) const { return type() == t; }
 
     virtual bool isBranch() const { return false; };
-    inline BranchInstr* asBranch();
+    BranchInstr* asBranch();
 
-    void print(ostream& s) const override {}
+    void print(ostream& s) const override;
 
   private:
     const InstrType type_;
@@ -192,9 +192,7 @@ struct IdentInstr : public Instr
 {
     IdentInstr(InstrType type, Name ident) : Instr(type), ident(ident) {}
 
-    void print(ostream& s) const override {
-        s << " " << ident;
-    }
+    void print(ostream& s) const override;
 
     // todo: move to Interpreter
     bool raiseAttrError(Traced<Value> value, Interpreter& interp);
@@ -208,9 +206,7 @@ struct IdentAndSlotInstr : public IdentInstr
       : IdentInstr(type, ident), slot(slot)
     {}
 
-    void print(ostream& s) const override {
-        s << " " << ident << " " << slot;
-    }
+    void print(ostream& s) const override;
 
     // todo: move to Interpreter
     bool raiseAttrError(Traced<Value> value, Interpreter& interp);
@@ -224,9 +220,7 @@ struct FrameAndIdentInstr : public IdentInstr
       : IdentInstr(type, ident), frameIndex(frameIndex)
     {}
 
-    void print(ostream& s) const override {
-        s << " " << frameIndex << " " << ident;
-    }
+    void print(ostream& s) const override;
 
     const unsigned frameIndex;
 };
@@ -334,9 +328,7 @@ struct CountInstr : public Instr
 {
     CountInstr(InstrType type, unsigned count) : Instr(type), count(count) {}
 
-    void print(ostream& s) const override {
-        s << " " << count;
-    }
+    void print(ostream& s) const override;
 
     const unsigned count;
 };
@@ -345,9 +337,7 @@ struct IndexInstr : public Instr
 {
     IndexInstr(InstrType type, unsigned index) : Instr(type), index(index) {}
 
-    void print(ostream& s) const override {
-        s << " " << index;
-    }
+    void print(ostream& s) const override;
 
     const unsigned index;
 };
@@ -360,15 +350,10 @@ struct ValueInstr : public Instr
         assert(type == Instr_Const);
     }
 
-    void print(ostream& s) const override {
-        s << " " << value_;
-    }
+    void print(ostream& s) const override;
+    void traceChildren(Tracer& t) override;
 
     Value value() { return value_; }
-
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &value_);
-    }
 
   private:
     Heap<Value> value_;
@@ -383,26 +368,10 @@ struct BuiltinMethodInstr : public IdentInstr
         result_(result)
     {}
 
-    virtual void traceChildren(Tracer& t) override {
-        gc.trace(t, &class_);
-        gc.trace(t, &result_);
-    }
+    void traceChildren(Tracer& t) override;
 
     Heap<Class*> class_;
     Heap<Value> result_;
-};
-
-struct CallInstr : public Instr
-{
-    CallInstr(InstrType type, unsigned count)
-        : Instr(type), count(count)
-    {}
-
-    void print(ostream& s) const override {
-        s << " " << count;
-    }
-
-    const unsigned count;
 };
 
 struct BranchInstr : public Instr
@@ -416,22 +385,19 @@ struct BranchInstr : public Instr
     };
 
     void setOffset(int offset) {
-        assert(!offset_);
+        assert(offset && !offset_);
         offset_ = offset;
     }
 
-    void print(ostream& s) const override {
-        s << " " << offset_;
+    int offset() const {
+        return offset_;
     }
 
+    void print(ostream& s) const override;
+
+  private:
     int offset_;
 };
-
-inline BranchInstr* Instr::asBranch()
-{
-    assert(isBranch());
-    return static_cast<BranchInstr*>(this);
-}
 
 struct LambdaInstr : public Instr
 {
@@ -451,30 +417,32 @@ struct LambdaInstr : public Instr
     bool takesRest() const { return info_->takesRest_; }
     bool isGenerator() const { return info_->isGenerator_; }
 
-    void traceChildren(Tracer& t) override {
-        gc.trace(t, &info_);
-    }
-
-    void print(ostream& s) const override {
-        for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i) {
-            s << " " << *i;
-        }
-    }
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
 
   private:
     Name funcName_;
     Heap<FunctionInfo*> info_;
 };
 
-struct BinaryOpInstr : public Instr
+struct BinaryOpInstrBase : public Instr
 {
-    BinaryOpInstr(unsigned type, BinaryOp op)
-      : Instr(InstrType(type)), op(op)
-    {}
+    BinaryOpInstrBase(InstrType type, BinaryOp op) : Instr(type), op(op) {}
 
     void print(ostream& s) const override;
 
     const BinaryOp op;
+};
+
+struct BinaryOpInstr : public BinaryOpInstrBase
+{
+    BinaryOpInstr(InstrType type, BinaryOp op)
+      : BinaryOpInstrBase(type, op), count(0)
+    {}
+
+    void print(ostream& s) const override;
+
+    unsigned count;
 };
 
 struct BuiltinBinaryOpInstr : public BinaryOpInstr
@@ -524,9 +492,7 @@ struct LoopControlJumpInstr : public Instr
         target_ = target;
     }
 
-    void print(ostream& s) const override {
-        s << " " << finallyCount_ << " " << target_;
-    }
+    void print(ostream& s) const override;
 
   private:
     unsigned finallyCount_;

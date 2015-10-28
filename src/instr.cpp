@@ -26,6 +26,105 @@ const char* instrName(InstrType type)
     return names[type];
 }
 
+void Instr::print(ostream& s) const
+{
+    s << instrName(type_);
+}
+
+BranchInstr* Instr::asBranch()
+{
+    assert(isBranch());
+    return static_cast<BranchInstr*>(this);
+}
+
+void IdentInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << ident;
+}
+
+void IdentAndSlotInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << ident << " " << slot;
+}
+
+void FrameAndIdentInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << frameIndex << " " << ident;
+}
+
+void CountInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << count;
+}
+
+void IndexInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << index;
+}
+
+void ValueInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << value_;
+}
+
+void ValueInstr::traceChildren(Tracer& t)
+{
+    gc.trace(t, &value_);
+}
+
+void BuiltinMethodInstr::traceChildren(Tracer& t)
+{
+    gc.trace(t, &class_);
+    gc.trace(t, &result_);
+}
+
+void BranchInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << offset_;
+}
+
+void LambdaInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    for (auto i = info_->params_.begin(); i != info_->params_.end(); ++i) {
+        s << " " << *i;
+    }
+}
+
+void LambdaInstr::traceChildren(Tracer& t)
+{
+    gc.trace(t, &info_);
+}
+
+void BinaryOpInstrBase::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << BinaryOpNames[op];
+}
+
+void BinaryOpInstr::print(ostream& s) const
+{
+    BinaryOpInstrBase::print(s);
+}
+
+void CompareOpInstr::print(ostream& s) const
+{
+    s << " " << CompareOpNames[op];
+}
+
+void LoopControlJumpInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << finallyCount_ << " " << target_;
+}
+
 void
 Interpreter::executeInstr_Const(Traced<ValueInstr*> instr)
 {
@@ -254,7 +353,7 @@ Interpreter::executeInstr_DelAttr(Traced<IdentInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_Call(Traced<CallInstr*> instr)
+Interpreter::executeInstr_Call(Traced<CountInstr*> instr)
 {
     Stack<Value> target(peekStack(instr->count));
     startCall(target, instr->count, 1);
@@ -327,7 +426,7 @@ Interpreter::executeInstr_GetMethodBuiltin(Traced<BuiltinMethodInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_CallMethod(Traced<CallInstr*> instr)
+Interpreter::executeInstr_CallMethod(Traced<CountInstr*> instr)
 {
     bool extraArg = peekStack(instr->count + 1).as<Boolean>()->value();
     Stack<Value> target(peekStack(instr->count + 2));
@@ -421,26 +520,26 @@ Interpreter::executeInstr_Not(Traced<Instr*> instr)
 void
 Interpreter::executeInstr_BranchAlways(Traced<BranchInstr*> instr)
 {
-    assert(instr->offset_);
-    branch(instr->offset_);
+    assert(instr->offset());
+    branch(instr->offset());
 }
 
 void
 Interpreter::executeInstr_BranchIfTrue(Traced<BranchInstr*> instr)
 {
-    assert(instr->offset_);
+    assert(instr->offset());
     Object *x = popStack().toObject();
     if (x->isTrue())
-        branch(instr->offset_);
+        branch(instr->offset());
 }
 
 void
 Interpreter::executeInstr_BranchIfFalse(Traced<BranchInstr*> instr)
 {
-    assert(instr->offset_);
+    assert(instr->offset());
     Object *x = popStack().toObject();
     if (!x->isTrue())
-        branch(instr->offset_);
+        branch(instr->offset());
 }
 
 void
@@ -449,10 +548,10 @@ Interpreter::executeInstr_Or(Traced<BranchInstr*> instr)
     // The expression |x or y| first evaluates x; if x is true, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
-    assert(instr->offset_);
+    assert(instr->offset());
     Object *x = peekStack().toObject();
     if (x->isTrue()) {
-        branch(instr->offset_);
+        branch(instr->offset());
         return;
     }
 
@@ -465,10 +564,10 @@ Interpreter::executeInstr_And(Traced<BranchInstr*> instr)
     // The expression |x and y| first evaluates x; if x is false, its value is
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
-    assert(instr->offset_);
+    assert(instr->offset());
     Object *x = peekStack().toObject();
     if (!x->isTrue()) {
-        branch(instr->offset_);
+        branch(instr->offset());
         return;
     }
 
@@ -828,11 +927,6 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
     return false;
 }
 
-void BinaryOpInstr::print(ostream& s) const
-{
-    s << " " << BinaryOpNames[op];
-}
-
 static bool ShouldInlineIntBinaryOp(BinaryOp op) {
     // Must match for_each_int_binary_op_to_inline macro in instr.h
     return true;
@@ -986,11 +1080,6 @@ Interpreter::executeInstr_BinaryOpBuiltin(Traced<BuiltinBinaryOpInstr*> instr)
 
     Stack<Value> method(instr->method());
     startCall(method, 2);
-}
-
-void CompareOpInstr::print(ostream& s) const
-{
-    s << " " << CompareOpNames[op];
 }
 
 InstrType InlineIntCompareOpInstr(CompareOp op) {
@@ -1334,7 +1423,7 @@ Interpreter::executeInstr_SuspendGenerator(Traced<Instr*> instr)
 void
 Interpreter::executeInstr_EnterCatchRegion(Traced<BranchInstr*> instr)
 {
-    pushExceptionHandler(ExceptionHandler::CatchHandler, instr->offset_);
+    pushExceptionHandler(ExceptionHandler::CatchHandler, instr->offset());
 }
 
 void
@@ -1365,7 +1454,7 @@ Interpreter::executeInstr_HandleCurrentException(Traced<Instr*> instr)
 void
 Interpreter::executeInstr_EnterFinallyRegion(Traced<BranchInstr*> instr)
 {
-    pushExceptionHandler(ExceptionHandler::FinallyHandler, instr->offset_);
+    pushExceptionHandler(ExceptionHandler::FinallyHandler, instr->offset());
 }
 
 void
