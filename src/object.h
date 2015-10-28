@@ -85,8 +85,7 @@ struct Object : public Cell
     bool isInstanceOf(Class* cls) const;
 
   protected:
-    Object(Traced<Class*> cls, Traced<Class*> base,
-           Traced<Layout*> layout = InitialLayout);
+    Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout);
 
     // Only for use during initialization
     void init(Traced<Class*> cls);

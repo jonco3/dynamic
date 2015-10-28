@@ -73,11 +73,12 @@ struct WrapperMixins<W, T*>
         return Traced<Value>::fromTracedLocation(ptr);
     }
 
-    operator Traced<Object*> () const {
-        static_assert(is_base_of<Object, T>::value,
-                      "T must derive from object for this conversion");
-        Object* const * ptr = reinterpret_cast<Object* const *>(extract());
-        return Traced<Object*>::fromTracedLocation(ptr);
+    template <typename S>
+    operator Traced<S*> () const {
+        static_assert(is_base_of<S, T>::value,
+                      "T must derive from S for this conversion");
+        S* const * ptr = reinterpret_cast<S* const *>(extract());
+        return Traced<S*>::fromTracedLocation(ptr);
     }
 
   private:
