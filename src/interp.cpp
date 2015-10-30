@@ -605,7 +605,7 @@ inline bool Interpreter::checkArguments(Traced<Callable*> callable,
     return true;
 }
 
-unsigned Interpreter::mungeArguments(Traced<Function*> function,
+inline unsigned Interpreter::mungeArguments(Traced<Function*> function,
                                      unsigned argCount)
 {
     // Fill in default values for missing arguments
