@@ -195,8 +195,10 @@ struct Interpreter : public Cell
     void logInstr(Instr* instr) {}
 #endif
 
+    const Heap<Instr*>& currentInstr() const;
     void replaceInstr(Instr* current, Instr* newData);
     void replaceInstrAndRestart(Instr* current, Instr* newData);
+    void insertStubInstr(Instr* current, Instr* stub);
 
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
@@ -281,32 +283,38 @@ struct Interpreter : public Cell
     // Instruction implementations
 #define declare_instr_method(name, cls)                                       \
     void executeInstr_##name(Traced<cls*> self);
+
     for_each_outofline_instr(declare_instr_method)
+    for_each_stub_instr(declare_instr_method)
+
 #undef declare_instr_method
 
     template <BinaryOp Op>
-    void executeBinaryOpInt(Traced<BinaryOpInstr*> instr);
+    void executeBinaryOpInt(Traced<BinaryOpStubInstr*> instr);
 
     template <BinaryOp Op>
-    void executeBinaryOpFloat(Traced<BinaryOpInstr*> instr);
+    void executeBinaryOpFloat(Traced<BinaryOpStubInstr*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpInt(Traced<CompareOpInstr*> instr);
+    void executeCompareOpInt(Traced<CompareOpStubInstr*> instr);
 
     template <CompareOp Op>
-    void executeCompareOpFloat(Traced<CompareOpInstr*> instr);
+    void executeCompareOpFloat(Traced<CompareOpStubInstr*> instr);
 
     template <BinaryOp Op>
-    void executeAugAssignUpdateInt(Traced<BinaryOpInstr*> instr);
+    void executeAugAssignUpdateInt(Traced<BinaryOpStubInstr*> instr);
 
     template <BinaryOp Op>
-    void executeAugAssignUpdateFloat(Traced<BinaryOpInstr*> instr);
+    void executeAugAssignUpdateFloat(Traced<BinaryOpStubInstr*> instr);
+
+    void dispatchInstr(Traced<Instr*> instr);
 
     bool getMethod(Name ident);
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
                            Traced<Value> left, Traced<Value> right,
                            MutableTraced<Value> methodOut);
     bool executeBinaryOp(BinaryOp op, MutableTraced<Value> methodOut);
+    bool executeCompareOp(CompareOp op, MutableTraced<Value> methodOut);
     bool executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
                                 bool& isCallableDescriptor);
     bool getIterator(MutableTraced<Value> resultOut);

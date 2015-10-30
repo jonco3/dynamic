@@ -711,6 +711,11 @@ Interpreter::CallStatus Interpreter::raiseTypeError(string message,
     return CallError;
 }
 
+const Heap<Instr*>& Interpreter::currentInstr() const
+{
+    return instrp[-1].data;
+}
+
 void Interpreter::replaceInstr(Instr* current, Instr* newData)
 {
     InstrThunk& it = instrp[-1];
@@ -724,4 +729,13 @@ void Interpreter::replaceInstrAndRestart(Instr* current, Instr* newData)
     replaceInstr(current, newData);
     Stack<Instr*> instr(newData);
     instrp--;
+}
+
+void Interpreter::insertStubInstr(Instr* current, Instr* stub)
+{
+    InstrThunk& it = instrp[-1];
+    assert(getNextInstr(stub) == it.data);
+    assert(getFinalInstr(it.data) == current);
+    it.type = stub->type();
+    it.data = stub;
 }

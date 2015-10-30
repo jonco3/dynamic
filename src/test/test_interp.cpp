@@ -46,7 +46,9 @@ void testException(const string& input, const string& expected)
 void testReplacement(const string& input,
                      const string& expected,
                      InstrType initial,
-                     InstrType replacement)
+                     InstrType replacement,
+                     InstrType next1 = InstrTypeCount,
+                     InstrType next2 = InstrTypeCount)
 {
     Stack<Block*> block;
     CompileModule(input, None, block);
@@ -66,7 +68,20 @@ void testReplacement(const string& input,
     testTrue(ok);
     testEqual(repr(result.get()), expected);
 
-    testEqual(instrName(instrp->data->type()), instrName(replacement));
+    instr = instrp->data;
+    testEqual(instrName(instr->type()), instrName(replacement));
+
+    if (next1 < InstrTypeCount) {
+        instr = getNextInstr(instr);
+        assert(instr);
+        testEqual(instrName(instr->type()), instrName(next1));
+
+        if (next2 < InstrTypeCount) {
+            instr = getNextInstr(instr);
+            assert(instr);
+            testEqual(instrName(instr->type()), instrName(next2));
+        }
+    }
 }
 
 void testReplacements(const string& defs,
@@ -78,14 +93,12 @@ void testReplacements(const string& defs,
                       InstrType afterCall1Then2,
                       InstrType afterCall2Then1)
 {
-    testReplacement(defs + "\n" + call1,
-                    result1, initial, afterCall1);
-    testReplacement(defs + "\n" + call2,
-                    result2, initial, afterCall2);
+    testReplacement(defs + "\n" + call1, result1, initial, afterCall1);
+    testReplacement(defs + "\n" + call2, result2, initial, afterCall2);
     testReplacement(defs + "\n" + call1 + "\n" + call2,
-                    result2, initial, afterCall1Then2);
+                  result2, initial, afterCall1Then2);
     testReplacement(defs + "\n" + call2 + "\n" + call1,
-                    result1, initial, afterCall2Then1);
+                  result1, initial, afterCall2Then1);
 }
 
 void testReplacements(const string& defs,
@@ -98,6 +111,21 @@ void testReplacements(const string& defs,
 {
     testReplacements(defs, call1, result1, call2, result2,
                      initial, afterCall1, afterCall2, afterBoth, afterBoth);
+}
+
+void testStubs(const string& defs,
+               const string& call1, const string& result1,
+               const string& call2, const string& result2,
+               InstrType initial,
+               InstrType afterCall1,
+               InstrType afterCall2)
+{
+    testReplacement(defs + "\n" + call1, result1, initial, afterCall1, initial);
+    testReplacement(defs + "\n" + call2, result2, initial, afterCall2, initial);
+    testReplacement(defs + "\n" + call1 + "\n" + call2,
+                    result2, initial, afterCall2, afterCall1, initial);
+    testReplacement(defs + "\n" + call2 + "\n" + call1,
+                    result1, initial, afterCall1, afterCall2, initial);
 }
 
 testcase(interp)
@@ -251,52 +279,47 @@ testcase(interp)
                      Instr_GetMethodBuiltin,
                      Instr_GetMethodFallback);
 
-    testReplacements("def foo(x, y):\n"
-                     "  return x + y",
-                     "foo(1, 2)", "3",
-                     "foo('a', 'b')", "'ab'",
-                     Instr_BinaryOp,
-                     Instr_BinaryOpInt_Add,
-                     Instr_BinaryOpBuiltin,
-                     Instr_BinaryOpFallback);
+    testStubs("def foo(x, y):\n"
+              "  return x + y",
+              "foo(1, 2)", "3",
+              "foo('a', 'b')", "'ab'",
+              Instr_BinaryOp,
+              Instr_BinaryOpInt_Add,
+              Instr_BinaryOpBuiltin);
 
-    testReplacements("def foo(x, y):\n"
-                     "  return x - y",
-                     "foo(2.75, 0.5)", "2.25",
-                     "foo(5, 1)", "4",
-                     Instr_BinaryOp,
-                     Instr_BinaryOpFloat_Sub,
-                     Instr_BinaryOpInt_Sub,
-                     Instr_BinaryOpFallback);
+    testStubs("def foo(x, y):\n"
+              "  return x - y",
+              "foo(2.75, 0.5)", "2.25",
+              "foo(5, 1)", "4",
+              Instr_BinaryOp,
+              Instr_BinaryOpFloat_Sub,
+              Instr_BinaryOpInt_Sub);
 
-    testReplacements("def foo(x, y):\n"
-                     "  return x > y",
-                     "foo(2.75, 0.5)", "True",
-                     "foo(1, 2)", "False",
-                     Instr_CompareOp,
-                     Instr_CompareOpFloat_GT,
-                     Instr_CompareOpInt_GT,
-                     Instr_CompareOpFallback);
+    testStubs("def foo(x, y):\n"
+              "  return x > y",
+              "foo(2.75, 0.5)", "True",
+              "foo(1, 2)", "False",
+              Instr_CompareOp,
+              Instr_CompareOpFloat_GT,
+              Instr_CompareOpInt_GT);
 
-    testReplacements("def foo(x, y):\n"
-                     "  x += y\n"
-                     "  return x",
-                     "foo(1, 2)", "3",
-                     "foo('a', 'b')", "'ab'",
-                     Instr_AugAssignUpdate,
-                     Instr_AugAssignUpdateInt_Add,
-                     Instr_AugAssignUpdateBuiltin,
-                     Instr_AugAssignUpdateFallback);
+    testStubs("def foo(x, y):\n"
+              "  x += y\n"
+              "  return x",
+              "foo(1, 2)", "3",
+              "foo('a', 'b')", "'ab'",
+              Instr_AugAssignUpdate,
+              Instr_AugAssignUpdateInt_Add,
+              Instr_AugAssignUpdateBuiltin);
 
-    testReplacements("def foo(x, y):\n"
-                     "  x *= y\n"
-                     "  return x",
-                     "foo(2.0, 1.25)", "2.5",
-                     "foo(2, 2)", "4",
-                     Instr_AugAssignUpdate,
-                     Instr_AugAssignUpdateFloat_Mul,
-                     Instr_AugAssignUpdateInt_Mul,
-                     Instr_AugAssignUpdateFallback);
+    testStubs("def foo(x, y):\n"
+              "  x *= y\n"
+              "  return x",
+              "foo(2.0, 1.25)", "2.5",
+              "foo(2, 2)", "4",
+              Instr_AugAssignUpdate,
+              Instr_AugAssignUpdateFloat_Mul,
+              Instr_AugAssignUpdateInt_Mul);
 
     testReplacements("g = 1\n"
                      "def foo():\n"

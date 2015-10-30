@@ -96,49 +96,8 @@ struct Interpreter;
     instr(GetIterator, Instr)                                                \
     instr(IteratorNext, Instr)                                               \
     instr(BinaryOp, BinaryOpInstr)                                           \
-    instr(BinaryOpFallback, BinaryOpInstr)                                   \
-    instr(BinaryOpInt_Add, BinaryOpInstr)                                    \
-    instr(BinaryOpInt_Sub, BinaryOpInstr)                                    \
-    instr(BinaryOpInt_Mul, BinaryOpInstr)                                    \
-    instr(BinaryOpInt_TrueDiv, BinaryOpInstr)                                \
-    instr(BinaryOpInt_FloorDiv, BinaryOpInstr)                               \
-    instr(BinaryOpInt_Modulo, BinaryOpInstr)                                 \
-    instr(BinaryOpInt_Power, BinaryOpInstr)                                  \
-    instr(BinaryOpInt_Or, BinaryOpInstr)                                     \
-    instr(BinaryOpInt_Xor, BinaryOpInstr)                                    \
-    instr(BinaryOpInt_And, BinaryOpInstr)                                    \
-    instr(BinaryOpInt_LeftShift, BinaryOpInstr)                              \
-    instr(BinaryOpInt_RightShift, BinaryOpInstr)                             \
-    instr(BinaryOpFloat_Add, BinaryOpInstr)                                  \
-    instr(BinaryOpFloat_Sub, BinaryOpInstr)                                  \
-    instr(BinaryOpFloat_Mul, BinaryOpInstr)                                  \
-    instr(BinaryOpFloat_TrueDiv, BinaryOpInstr)                              \
-    instr(BinaryOpBuiltin, BuiltinBinaryOpInstr)                             \
     instr(CompareOp, CompareOpInstr)                                         \
-    instr(CompareOpFallback, CompareOpInstr)                                 \
-    instr(CompareOpInt_LT, CompareOpInstr)                                   \
-    instr(CompareOpInt_LE, CompareOpInstr)                                   \
-    instr(CompareOpInt_GT, CompareOpInstr)                                   \
-    instr(CompareOpInt_GE, CompareOpInstr)                                   \
-    instr(CompareOpInt_EQ, CompareOpInstr)                                   \
-    instr(CompareOpInt_NE, CompareOpInstr)                                   \
-    instr(CompareOpFloat_LT, CompareOpInstr)                                 \
-    instr(CompareOpFloat_LE, CompareOpInstr)                                 \
-    instr(CompareOpFloat_GT, CompareOpInstr)                                 \
-    instr(CompareOpFloat_GE, CompareOpInstr)                                 \
-    instr(CompareOpFloat_EQ, CompareOpInstr)                                 \
-    instr(CompareOpFloat_NE, CompareOpInstr)                                 \
     instr(AugAssignUpdate, BinaryOpInstr)                                    \
-    instr(AugAssignUpdateFallback, BinaryOpInstr)                            \
-    instr(AugAssignUpdateInt_Add, BinaryOpInstr)                             \
-    instr(AugAssignUpdateInt_Sub, BinaryOpInstr)                             \
-    instr(AugAssignUpdateInt_Mul, BinaryOpInstr)                             \
-    instr(AugAssignUpdateInt_TrueDiv, BinaryOpInstr)                         \
-    instr(AugAssignUpdateFloat_Add, BinaryOpInstr)                           \
-    instr(AugAssignUpdateFloat_Sub, BinaryOpInstr)                           \
-    instr(AugAssignUpdateFloat_Mul, BinaryOpInstr)                           \
-    instr(AugAssignUpdateFloat_TrueDiv, BinaryOpInstr)                       \
-    instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr)                      \
     instr(StartGenerator, Instr)                                             \
     instr(ResumeGenerator, Instr)                                            \
     instr(LeaveGenerator, Instr)                                             \
@@ -154,14 +113,61 @@ struct Interpreter;
     instr(ListAppend, Instr)                                                 \
     instr(AssertStackDepth, CountInstr)
 
+#define for_each_stub_instr(instr)                                           \
+    instr(BinaryOpInt_Add, BinaryOpStubInstr)                                \
+    instr(BinaryOpInt_Sub, BinaryOpStubInstr)                                \
+    instr(BinaryOpInt_Mul, BinaryOpStubInstr)                                \
+    instr(BinaryOpInt_TrueDiv, BinaryOpStubInstr)                            \
+    instr(BinaryOpInt_FloorDiv, BinaryOpStubInstr)                           \
+    instr(BinaryOpInt_Modulo, BinaryOpStubInstr)                             \
+    instr(BinaryOpInt_Power, BinaryOpStubInstr)                              \
+    instr(BinaryOpInt_Or, BinaryOpStubInstr)                                 \
+    instr(BinaryOpInt_Xor, BinaryOpStubInstr)                                \
+    instr(BinaryOpInt_And, BinaryOpStubInstr)                                \
+    instr(BinaryOpInt_LeftShift, BinaryOpStubInstr)                          \
+    instr(BinaryOpInt_RightShift, BinaryOpStubInstr)                         \
+    instr(BinaryOpFloat_Add, BinaryOpStubInstr)                              \
+    instr(BinaryOpFloat_Sub, BinaryOpStubInstr)                              \
+    instr(BinaryOpFloat_Mul, BinaryOpStubInstr)                              \
+    instr(BinaryOpFloat_TrueDiv, BinaryOpStubInstr)                          \
+    instr(BinaryOpBuiltin, BuiltinBinaryOpInstr)                             \
+    instr(CompareOpInt_LT, CompareOpStubInstr)                               \
+    instr(CompareOpInt_LE, CompareOpStubInstr)                               \
+    instr(CompareOpInt_GT, CompareOpStubInstr)                               \
+    instr(CompareOpInt_GE, CompareOpStubInstr)                               \
+    instr(CompareOpInt_EQ, CompareOpStubInstr)                               \
+    instr(CompareOpInt_NE, CompareOpStubInstr)                               \
+    instr(CompareOpFloat_LT, CompareOpStubInstr)                             \
+    instr(CompareOpFloat_LE, CompareOpStubInstr)                             \
+    instr(CompareOpFloat_GT, CompareOpStubInstr)                             \
+    instr(CompareOpFloat_GE, CompareOpStubInstr)                             \
+    instr(CompareOpFloat_EQ, CompareOpStubInstr)                             \
+    instr(CompareOpFloat_NE, CompareOpStubInstr)                             \
+    instr(AugAssignUpdateInt_Add, BinaryOpStubInstr)                         \
+    instr(AugAssignUpdateInt_Sub, BinaryOpStubInstr)                         \
+    instr(AugAssignUpdateInt_Mul, BinaryOpStubInstr)                         \
+    instr(AugAssignUpdateInt_TrueDiv, BinaryOpStubInstr)                     \
+    instr(AugAssignUpdateFloat_Add, BinaryOpStubInstr)                       \
+    instr(AugAssignUpdateFloat_Sub, BinaryOpStubInstr)                       \
+    instr(AugAssignUpdateFloat_Mul, BinaryOpStubInstr)                       \
+    instr(AugAssignUpdateFloat_TrueDiv, BinaryOpStubInstr)                   \
+    instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr)
+
+#define for_each_instr(instr)                                                \
+    for_each_inline_instr(instr)                                             \
+    for_each_outofline_instr(instr)                                          \
+    for_each_stub_instr(instr)
+
+#define define_instr_enum(name, cls)                                         \
+    Instr_##name,
+
 enum InstrType
 {
-#define instr_enum(name, cls) Instr_##name,
-    for_each_inline_instr(instr_enum)
-    for_each_outofline_instr(instr_enum)
-#undef instr_enum
+    for_each_instr(define_instr_enum)
     InstrTypeCount
 };
+
+#undef define_instr_enum
 
 extern const char* instrName(InstrType type);
 
@@ -437,18 +443,42 @@ struct BinaryOpInstrBase : public Instr
 struct BinaryOpInstr : public BinaryOpInstrBase
 {
     BinaryOpInstr(InstrType type, BinaryOp op)
-      : BinaryOpInstrBase(type, op), count(0)
+      : BinaryOpInstrBase(type, op), stubCount(0)
     {}
 
     void print(ostream& s) const override;
 
-    unsigned count;
+    unsigned stubCount;
 };
 
-struct BuiltinBinaryOpInstr : public BinaryOpInstr
+struct BinaryOpStubInstr : public BinaryOpInstrBase
 {
-    BuiltinBinaryOpInstr(InstrType type, BinaryOp op, Traced<Class*> left,
-                         Traced<Class*> right, Traced<Value> method);
+    BinaryOpStubInstr(InstrType type, BinaryOp op, Traced<Instr*> next)
+      : BinaryOpInstrBase(type, op), next_(next)
+    {
+        assert(next_);
+    }
+
+    const Heap<Instr*>& next() { return next_; }
+
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
+
+  private:
+    Heap<Instr*> next_;
+};
+
+struct BuiltinBinaryOpInstr : public BinaryOpStubInstr
+{
+    BuiltinBinaryOpInstr(InstrType type, BinaryOp op, Traced<Instr*> next,
+                         Traced<Class*> left, Traced<Class*> right,
+                         Traced<Value> method)
+      : BinaryOpStubInstr(type, op, next),
+        left_(left),
+        right_(right),
+        method_(method)
+    {}
+
     Class* left() { return left_; }
     Class* right() { return right_; }
     Value method() { return method_; }
@@ -461,15 +491,41 @@ struct BuiltinBinaryOpInstr : public BinaryOpInstr
     Heap<Value> method_;
 };
 
-struct CompareOpInstr : public Instr
+struct CompareOpInstrBase : public Instr
 {
-    CompareOpInstr(unsigned type, CompareOp op)
-      : Instr(InstrType(type)), op(op)
+    CompareOpInstrBase(InstrType type, CompareOp op)
+      : Instr(type), op(op)
     {}
 
     void print(ostream& s) const override;
 
     const CompareOp op;
+};
+
+struct CompareOpInstr : public CompareOpInstrBase
+{
+    CompareOpInstr(InstrType type, CompareOp op)
+      : CompareOpInstrBase(type, op), stubCount(0)
+    {}
+
+    void print(ostream& s) const override;
+
+    unsigned stubCount;
+};
+
+struct CompareOpStubInstr : public CompareOpInstr
+{
+    CompareOpStubInstr(InstrType type, CompareOp op, Traced<Instr*> next)
+      : CompareOpInstr(type, op), next_(next)
+    {}
+
+    const Heap<Instr*>& next() { return next_; }
+
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
+
+  private:
+    Heap<Instr*> next_;
 };
 
 struct LoopControlJumpInstr : public Instr
@@ -515,6 +571,10 @@ struct InstrFactory
 
 for_each_inline_instr(define_instr_factory)
 for_each_outofline_instr(define_instr_factory)
+
 #undef define_instr_factory
+
+extern Instr* getNextInstr(Instr* instr);
+extern Instr* getFinalInstr(Instr* instr);
 
 #endif

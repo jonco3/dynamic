@@ -13,17 +13,46 @@
 
 const char* instrName(InstrType type)
 {
-    static const char* names[InstrTypeCount] = {
-#define instr_name(name, cls)                                                 \
+#define define_instr_name(name, cls)                                          \
         #name,
 
-    for_each_inline_instr(instr_name)
-    for_each_outofline_instr(instr_name)
-#undef instr_enum
+    static const char* names[InstrTypeCount] = {
+        for_each_instr(define_instr_name)
     };
+
+#undef define_instr_enum
 
     assert(type < InstrTypeCount);
     return names[type];
+}
+
+Instr* getNextInstr(Instr* instr)
+{
+#define define_non_stub_case(name, cls)                                       \
+      case Instr_##name:                                                      \
+        return nullptr;
+
+#define define_stub_case(name, cls)                                           \
+      case Instr_##name:                                                      \
+        return static_cast<cls*>(instr)->next();
+
+    switch (instr->type()) {
+        for_each_inline_instr(define_non_stub_case)
+        for_each_outofline_instr(define_non_stub_case)
+        for_each_stub_instr(define_stub_case)
+      default:
+        assert(false);
+        return nullptr;
+    }
+
+#undef define_non_stub_case
+#undef define_stub_case
+}
+
+Instr* getFinalInstr(Instr* instr) {
+    while (Instr* next = getNextInstr(instr))
+        instr = next;
+    return instr;
 }
 
 void Instr::print(ostream& s) const
@@ -112,11 +141,53 @@ void BinaryOpInstrBase::print(ostream& s) const
 void BinaryOpInstr::print(ostream& s) const
 {
     BinaryOpInstrBase::print(s);
+    if (stubCount)
+        s << " " << dec << stubCount;
+}
+
+void BinaryOpStubInstr::traceChildren(Tracer& t)
+{
+    gc.trace(t, &next_);
+}
+
+void BinaryOpStubInstr::print(ostream& s) const
+{
+    BinaryOpInstrBase::print(s);
+    s << " -> ";
+    next_->print(s);
+}
+
+void BuiltinBinaryOpInstr::traceChildren(Tracer& t)
+{
+    BinaryOpStubInstr::traceChildren(t);
+    gc.trace(t, &left_);
+    gc.trace(t, &right_);
+    gc.trace(t, &method_);
+}
+
+void CompareOpInstrBase::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << CompareOpNames[op];
 }
 
 void CompareOpInstr::print(ostream& s) const
 {
-    s << " " << CompareOpNames[op];
+    CompareOpInstrBase::print(s);
+     if (stubCount)
+        s << " " << dec << stubCount;
+}
+
+void CompareOpStubInstr::traceChildren(Tracer& t)
+{
+    gc.trace(t, &next_);
+}
+
+void CompareOpStubInstr::print(ostream& s) const
+{
+    CompareOpInstrBase::print(s);
+    s << " -> ";
+    next_->print(s);
 }
 
 void LoopControlJumpInstr::print(ostream& s) const
@@ -932,79 +1003,64 @@ static bool ShouldInlineIntBinaryOp(BinaryOp op) {
     return true;
 }
 
-static Instr* InlineIntBinaryOpInstr(BinaryOp op) {
-    assert(ShouldInlineIntBinaryOp(op));
-    auto type = InstrType(Instr_BinaryOpInt_Add + op);
-    return gc.create<BinaryOpInstr>(type, op);
-}
-
 static bool ShouldInlineFloatBinaryOp(BinaryOp op) {
     // Must match for_each_float_binary_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
 }
 
-static Instr* InlineFloatBinaryOpInstr(BinaryOp op) {
-    assert(ShouldInlineFloatBinaryOp(op));
-    auto type = InstrType(Instr_BinaryOpFloat_Add + op);
-    return gc.create<BinaryOpInstr>(type, op);
-}
+static const unsigned MaxStubCount = 8;
 
 void
 Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 {
+    BinaryOp op = instr->op;
     Stack<Value> right(peekStack(0));
     Stack<Value> left(peekStack(1));
 
-    // If both arguments are integers, inline the operation and restart.
-    if (ShouldInlineIntBinaryOp(instr->op) &&
-        left.isInt32() && right.isInt32())
-    {
-        assert(Integer::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, InlineIntBinaryOpInstr(instr->op));
-        return;
-    }
-
-    // If both arguments are doubles, inline the operation and restart.
-    if (ShouldInlineFloatBinaryOp(instr->op)
-        && left.isDouble() && right.isDouble())
-    {
-        assert(Float::ObjectClass->hasAttr(Name::binMethod[instr->op]));
-        replaceInstrAndRestart(instr, InlineFloatBinaryOpInstr(instr->op));
-        return;
-    }
-
-    // Find the method to call and execute it.  If successful and both arguments
-    // are instances of builtin classes, cache the method.
+    // Find the method to call and execute it.
     Stack<Value> method;
-    if (executeBinaryOp(instr->op, method) &&
-        left.type()->isFinal() && right.type()->isFinal())
-    {
-        Stack<Class*> leftClass(left.type());
-        Stack<Class*> rightClass(right.type());
-        replaceInstr(instr, InstrFactory<Instr_BinaryOpBuiltin>::get(
-                         instr->op, leftClass, rightClass, method));
+    if (!executeBinaryOp(op, method))
         return;
+
+    // Check stub count before attempting to optimise.
+    if (instr->stubCount == MaxStubCount)
+        return;
+
+    Stack<BinaryOpStubInstr*> stub;
+
+    if (ShouldInlineIntBinaryOp(op) && left.isInt32() && right.isInt32()) {
+        // If both arguments are integers, inline the operation.
+        auto type = InstrType(Instr_BinaryOpInt_Add + op);
+        stub = gc.create<BinaryOpStubInstr>(type, op, currentInstr());
+    } else if (ShouldInlineFloatBinaryOp(op) &&
+               left.isDouble() && right.isDouble())
+    {
+        // If both arguments are doubles, inline the operation.
+        auto type = InstrType(Instr_BinaryOpFloat_Add + op);
+        stub = gc.create<BinaryOpStubInstr>(type, op, currentInstr());
+    } else if (left.type()->isFinal() && right.type()->isFinal()) {
+    // If both arguments are instances of builtin classes, cache the method.
+        Stack<Class*> lc(left.type());
+        Stack<Class*> rc(right.type());
+        auto type = Instr_BinaryOpBuiltin;
+        stub = gc.create<BuiltinBinaryOpInstr>(type, op, currentInstr(),
+                                               lc, rc, method);
     }
 
-    // Execution failed, retry this all next time.
-}
-
-void
-Interpreter::executeInstr_BinaryOpFallback(Traced<BinaryOpInstr*> instr)
-{
-    Stack<Value> method;
-    executeBinaryOp(instr->op, method);
+    if (stub) {
+        instr->stubCount++;
+        insertStubInstr(instr, stub);
+    }
 }
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeBinaryOpInt(Traced<BinaryOpInstr*> instr)
+Interpreter::executeBinaryOpInt(Traced<BinaryOpStubInstr*> instr)
 {
     assert(ShouldInlineIntBinaryOp(instr->op));
 
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_BinaryOpFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1015,7 +1071,7 @@ Interpreter::executeBinaryOpInt(Traced<BinaryOpInstr*> instr)
 
 #define define_execute_binary_op_int(name)                                    \
     void Interpreter::executeInstr_BinaryOpInt_##name(                        \
-        Traced<BinaryOpInstr*> instr)                                         \
+        Traced<BinaryOpStubInstr*> instr)                                     \
     {                                                                         \
         executeBinaryOpInt<Binary##name>(instr);                              \
     }
@@ -1024,13 +1080,12 @@ for_each_int_binary_op_to_inline(define_execute_binary_op_int)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeBinaryOpFloat(Traced<BinaryOpInstr*> instr)
+Interpreter::executeBinaryOpFloat(Traced<BinaryOpStubInstr*> instr)
 {
     assert(ShouldInlineFloatBinaryOp(instr->op));
 
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_BinaryOpFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1041,30 +1096,12 @@ Interpreter::executeBinaryOpFloat(Traced<BinaryOpInstr*> instr)
 
 #define define_execute_binary_op_float(name)                                   \
     void Interpreter::executeInstr_BinaryOpFloat_##name(                       \
-        Traced<BinaryOpInstr*> instr)                                          \
+        Traced<BinaryOpStubInstr*> instr)                                      \
     {                                                                          \
         executeBinaryOpFloat<Binary##name>(instr);                             \
     }
 for_each_float_binary_op_to_inline(define_execute_binary_op_float)
 #undef define_execute_binary_op_float
-
-BuiltinBinaryOpInstr::BuiltinBinaryOpInstr(InstrType type,
-                                           BinaryOp op,
-                                           Traced<Class*> left,
-                                           Traced<Class*> right,
-                                           Traced<Value> method)
-  : BinaryOpInstr(type, op),
-    left_(left),
-    right_(right),
-    method_(method)
-{}
-
-void BuiltinBinaryOpInstr::traceChildren(Tracer& t)
-{
-    gc.trace(t, &left_);
-    gc.trace(t, &right_);
-    gc.trace(t, &method_);
-}
 
 void
 Interpreter::executeInstr_BinaryOpBuiltin(Traced<BuiltinBinaryOpInstr*> instr)
@@ -1073,8 +1110,7 @@ Interpreter::executeInstr_BinaryOpBuiltin(Traced<BuiltinBinaryOpInstr*> instr)
     Value left = peekStack(1);
 
     if (left.type() != instr->left() || right.type() != instr->right()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_BinaryOpFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1090,30 +1126,8 @@ InstrType InlineFloatCompareOpInstr(CompareOp op) {
     return InstrType(Instr_CompareOpFloat_LT + op);
 }
 
-void
-Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
-{
-    Value right = peekStack(0);
-    Value left = peekStack(1);
-    InstrType type;
-    Instr* replacement;
-    if (left.isInt32() && right.isInt32()) {
-        assert(Integer::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        type = InlineIntCompareOpInstr(instr->op);
-        replacement = gc.create<CompareOpInstr>(type, instr->op);
-    } else if (left.isDouble() && right.isDouble()) {
-        assert(Float::ObjectClass->hasAttr(Name::compareMethod[instr->op]));
-        type = InlineFloatCompareOpInstr(instr->op);
-        replacement = gc.create<CompareOpInstr>(type, instr->op);
-    } else {
-        replacement = InstrFactory<Instr_CompareOpFallback>::get(instr->op);
-    }
-    replaceInstrAndRestart(instr, replacement);
-}
-
-
-void
-Interpreter::executeInstr_CompareOpFallback(Traced<CompareOpInstr*> instr)
+bool
+Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -1124,16 +1138,17 @@ Interpreter::executeInstr_CompareOpFallback(Traced<CompareOpInstr*> instr)
     // __le__() and __ge__() are each other's reflection, and __eq__() and
     // __ne__() are their own reflection."
 
-    CompareOp op = instr->op;
     const Name* names = Name::compareMethod;
     const Name* rnames = Name::compareMethodReflected;
-    Stack<Value> method;
     if (maybeCallBinaryOp(left, names[op], left, right, method))
-        return;
+        return true;
+
     if (!rnames[op].isNull() &&
-        maybeCallBinaryOp(right, rnames[op], right, left, method)) {
-        return;
+        maybeCallBinaryOp(right, rnames[op], right, left, method))
+    {
+        return true;
     }
+
     if (op == CompareNE &&
         maybeCallBinaryOp(left, names[CompareEQ], left, right, method))
     {
@@ -1141,7 +1156,7 @@ Interpreter::executeInstr_CompareOpFallback(Traced<CompareOpInstr*> instr)
             Stack<Value> result(popStack());
             pushStack(Boolean::get(!result.as<Boolean>()->value()));
         }
-        return;
+        return true;
     }
 
     Stack<Value> result;
@@ -1151,21 +1166,55 @@ Interpreter::executeInstr_CompareOpFallback(Traced<CompareOpInstr*> instr)
         result = Boolean::get(left.toObject() != right.toObject());
     } else {
         pushStack(gc.create<TypeError>(
-                         "unsupported operand type(s) for compare operation"));
+                      "unsupported operand type(s) for compare operation"));
         raiseException();
-        return;
+        return false;
     }
 
     pushStack(result);
+    return false;
+}
+
+void
+Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
+{
+    CompareOp op = instr->op;
+    Stack<Value> right(peekStack(0));
+    Stack<Value> left(peekStack(1));
+
+    // Find the method to call and execute it.
+    Stack<Value> method;
+    if (!executeCompareOp(op, method))
+        return;
+
+    // Check stub count before attempting to optimise.
+    if (instr->stubCount == MaxStubCount)
+        return;
+
+    Stack<CompareOpStubInstr*> stub;
+
+    if (left.isInt32() && right.isInt32()) {
+        // If both arguments are integers, inline the operation.
+        auto type = InstrType(Instr_CompareOpInt_LT + op);
+        stub = gc.create<CompareOpStubInstr>(type, op, currentInstr());
+    } else if (left.isDouble() && right.isDouble()) {
+        // If both arguments are doubles, inline the operation.
+        auto type = InstrType(Instr_CompareOpFloat_LT + op);
+        stub = gc.create<CompareOpStubInstr>(type, op, currentInstr());
+    }
+
+    if (stub) {
+        instr->stubCount++;
+        insertStubInstr(instr, stub);
+    }
 }
 
 template <CompareOp Op>
 inline void
-Interpreter::executeCompareOpInt(Traced<CompareOpInstr*> instr)
+Interpreter::executeCompareOpInt(Traced<CompareOpStubInstr*> instr)
 {
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_CompareOpFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1176,7 +1225,7 @@ Interpreter::executeCompareOpInt(Traced<CompareOpInstr*> instr)
 
 #define define_execute_compare_op_int(name, token, method, rmethod)            \
 void Interpreter::executeInstr_CompareOpInt_##name(                            \
-    Traced<CompareOpInstr*> instr)                                             \
+    Traced<CompareOpStubInstr*> instr)                                         \
 {                                                                              \
     executeCompareOpInt<Compare##name>(instr);                                 \
 }
@@ -1185,11 +1234,10 @@ for_each_compare_op(define_execute_compare_op_int)
 
 template <CompareOp Op>
 inline void
-Interpreter::executeCompareOpFloat(Traced<CompareOpInstr*> instr)
+Interpreter::executeCompareOpFloat(Traced<CompareOpStubInstr*> instr)
 {
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_CompareOpFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1200,7 +1248,7 @@ Interpreter::executeCompareOpFloat(Traced<CompareOpInstr*> instr)
 
 #define define_execute_compare_op_float(name, token, method, rmethod)          \
 void Interpreter::executeInstr_CompareOpFloat_##name(                          \
-    Traced<CompareOpInstr*> instr)                                             \
+    Traced<CompareOpStubInstr*> instr)                                         \
 {                                                                              \
     executeCompareOpFloat<Compare##name>(instr);                               \
 }
@@ -1243,21 +1291,9 @@ static bool ShouldInlineIntAugAssignOp(BinaryOp op) {
     return op <= BinaryTrueDiv;
 }
 
-static Instr* InlineIntAugAssignOpInstr(BinaryOp op) {
-    assert(ShouldInlineIntAugAssignOp(op));
-    auto type = InstrType(Instr_AugAssignUpdateInt_Add + op);
-    return gc.create<BinaryOpInstr>(type, op);
-}
-
 static bool ShouldInlineFloatAugAssignOp(BinaryOp op) {
     // Must match for_each_float_aug_assign_op_to_inline macro in instr.h
     return op <= BinaryTrueDiv;
-}
-
-static Instr* InlineFloatAugAssignOpInstr(BinaryOp op) {
-    assert(ShouldInlineFloatAugAssignOp(op));
-    auto type = InstrType(Instr_AugAssignUpdateFloat_Add + op);
-    return gc.create<BinaryOpInstr>(type, op);
 }
 
 void
@@ -1267,63 +1303,52 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
     Stack<Value> right(peekStack(0));
     Stack<Value> left(peekStack(1));
 
-    // If both arguments are integers, inline the operation and restart.
-    if (ShouldInlineIntAugAssignOp(instr->op) &&
-        left.isInt32() && right.isInt32())
-    {
-        assert(Integer::ObjectClass->hasAttr(Name::binMethod[op]));
-        replaceInstrAndRestart(instr, InlineIntAugAssignOpInstr(instr->op));
-        return;
-    }
-
-    // If both arguments are doubles, inline the operation and restart.
-    if (ShouldInlineFloatAugAssignOp(op)
-        && left.isDouble() && right.isDouble())
-    {
-        assert(Float::ObjectClass->hasAttr(Name::binMethod[op]));
-        replaceInstrAndRestart(instr, InlineFloatAugAssignOpInstr(instr->op));
-        return;
-    }
-
     // Find the method to call and execute it.
     Stack<Value> method;
     bool isCallableDescriptor;
     if (!executeAugAssignUpdate(op, method, isCallableDescriptor))
         return;
 
-    // If successful and both arguments are instances of builtin classes, cache
-    // the method.
-    if (left.type()->isFinal() && right.type()->isFinal())
-    {
-        assert(isCallableDescriptor);
-        Stack<Class*> leftClass(left.type());
-        Stack<Class*> rightClass(right.type());
-        replaceInstr(instr, InstrFactory<Instr_AugAssignUpdateBuiltin>::get(
-                         op, leftClass, rightClass, method));
+    // Check stub count before attempting to optimise.
+    if (instr->stubCount == MaxStubCount)
         return;
+
+    Stack<BinaryOpStubInstr*> stub;
+
+    if (ShouldInlineIntAugAssignOp(op) && left.isInt32() && right.isInt32()) {
+        // If both arguments are integers, inline the operation.
+        auto type = InstrType(Instr_AugAssignUpdateInt_Add + op);
+        stub = gc.create<BinaryOpStubInstr>(type, op, currentInstr());
+    } else if (ShouldInlineFloatAugAssignOp(op)
+        && left.isDouble() && right.isDouble())
+    {
+        // If both arguments are doubles, inline the operation.
+        auto type = InstrType(Instr_AugAssignUpdateFloat_Add + op);
+        stub = gc.create<BinaryOpStubInstr>(type, op, currentInstr());
+    } else if (left.type()->isFinal() && right.type()->isFinal()) {
+        // If both arguments are instances of builtin classes, cache the method.
+        assert(isCallableDescriptor);
+        Stack<Class*> lc(left.type());
+        Stack<Class*> rc(right.type());
+        auto type = Instr_AugAssignUpdateBuiltin;
+        stub = gc.create<BuiltinBinaryOpInstr>(type, op, currentInstr(),
+                                               lc, rc, method);
     }
 
-    // Otherwise replace with fallback instruction.
-    replaceInstr(instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(op));
-}
-
-void
-Interpreter::executeInstr_AugAssignUpdateFallback(Traced<BinaryOpInstr*> instr)
-{
-    Stack<Value> method;
-    bool isCallableDescriptor;
-    executeAugAssignUpdate(instr->op, method, isCallableDescriptor);
+    if (stub) {
+        instr->stubCount++;
+        insertStubInstr(instr, stub);
+    }
 }
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeAugAssignUpdateInt(Traced<BinaryOpInstr*> instr)
+Interpreter::executeAugAssignUpdateInt(Traced<BinaryOpStubInstr*> instr)
 {
     assert(ShouldInlineIntBinaryOp(instr->op));
 
     if (!peekStack(0).isInt32() || !peekStack(1).isInt32()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1334,7 +1359,7 @@ Interpreter::executeAugAssignUpdateInt(Traced<BinaryOpInstr*> instr)
 
 #define define_execute_aug_assign_op_int(name)                                \
     void Interpreter::executeInstr_AugAssignUpdateInt_##name(                 \
-        Traced<BinaryOpInstr*> instr)                                         \
+        Traced<BinaryOpStubInstr*> instr)                                     \
     {                                                                         \
         executeAugAssignUpdateInt<Binary##name>(instr);                       \
     }
@@ -1343,13 +1368,12 @@ for_each_int_aug_assign_op_to_inline(define_execute_aug_assign_op_int)
 
 template <BinaryOp Op>
 inline void
-Interpreter::executeAugAssignUpdateFloat(Traced<BinaryOpInstr*> instr)
+Interpreter::executeAugAssignUpdateFloat(Traced<BinaryOpStubInstr*> instr)
 {
     assert(ShouldInlineFloatBinaryOp(instr->op));
 
     if (!peekStack(0).isDouble() || !peekStack(1).isDouble()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1360,7 +1384,7 @@ Interpreter::executeAugAssignUpdateFloat(Traced<BinaryOpInstr*> instr)
 
 #define define_execute_aug_assign_op_float(name)                              \
     void Interpreter::executeInstr_AugAssignUpdateFloat_##name(               \
-        Traced<BinaryOpInstr*> instr)                                         \
+        Traced<BinaryOpStubInstr*> instr)                                     \
     {                                                                         \
         executeAugAssignUpdateFloat<Binary##name>(instr);                     \
     }
@@ -1374,8 +1398,7 @@ Interpreter::executeInstr_AugAssignUpdateBuiltin(Traced<BuiltinBinaryOpInstr*> i
     Value left = peekStack(1);
 
     if (left.type() != instr->left() || right.type() != instr->right()) {
-        replaceInstrAndRestart(
-            instr, InstrFactory<Instr_AugAssignUpdateFallback>::get(instr->op));
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -1502,14 +1525,15 @@ Interpreter::executeInstr_AssertStackDepth(Traced<CountInstr*> instr)
 
 bool Interpreter::run(MutableTraced<Value> resultOut)
 {
-    static const void* dispatchTable[] =
-    {
-#define dispatch_table_entry(it, cls)                                         \
+#define define_dispatch_table_entry(it, cls)                                  \
         &&instr_##it,
-    for_each_inline_instr(dispatch_table_entry)
-    for_each_outofline_instr(dispatch_table_entry)
-#undef dispatch_table_entry
+
+    static const void* dispatchTable[] = {
+        for_each_instr(define_dispatch_table_entry)
     };
+
+#undef define_dispatch_table_entry
+
     static_assert(sizeof(dispatchTable) / sizeof(void*) == InstrTypeCount,
         "Dispatch table is not correct size");
 
@@ -1534,23 +1558,62 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
   instr_Return: {
         Value value = popStack();
         returnFromFrame(value);
-        if (!instrp)
+        if (!instrp)  // todo: quit/abort instr
             goto exit;
         dispatch();
     }
 
-#define handle_instr(it, cls)                                                 \
+#define define_handle_instr(it, cls)                                          \
     instr_##it: {                                                             \
         cls** ip = reinterpret_cast<cls**>(&thunk->data.get());               \
         executeInstr_##it(Traced<cls*>::fromTracedLocation(ip));              \
         assert(instrp);                                                       \
         dispatch();                                                           \
     }
-    for_each_outofline_instr(handle_instr)
-#undef handle_instr
+
+    for_each_outofline_instr(define_handle_instr)
+    for_each_stub_instr(define_handle_instr)
+
+#undef define_handle_instr
 
   exit:
     assert(!instrp);
     resultOut = popStack();
     return true;
+}
+
+void Interpreter::dispatchInstr(Traced<Instr*> instr)
+{
+#define define_dispatch_table_entry(it, cls)                                  \
+        &&instr_##it,
+
+    static const void* dispatchTable[] = {
+        for_each_instr(define_dispatch_table_entry)
+    };
+
+#undef define_dispatch_table_entry
+
+    static_assert(sizeof(dispatchTable) / sizeof(void*) == InstrTypeCount,
+        "Dispatch table is not correct size");
+
+    logInstr(instr);
+    assert(instr->type() < InstrTypeCount);
+    goto *dispatchTable[instr->type()];
+
+  instr_Abort:
+  instr_Return:
+    assert(false);
+
+#define define_handle_instr(it, cls)                                          \
+    instr_##it: {                                                             \
+        Instr** instrp = const_cast<Instr**>(&instr.get());                   \
+        cls** ip = reinterpret_cast<cls**>(instrp);                           \
+        executeInstr_##it(Traced<cls*>::fromTracedLocation(ip));              \
+        return;                                                               \
+    }
+
+    for_each_outofline_instr(define_handle_instr)
+    for_each_stub_instr(define_handle_instr)
+
+#undef define_handle_instr
 }
