@@ -126,6 +126,18 @@ struct Interpreter;
     instr(BinaryOpInt_And, BinaryOpStubInstr)                                \
     instr(BinaryOpInt_LeftShift, BinaryOpStubInstr)                          \
     instr(BinaryOpInt_RightShift, BinaryOpStubInstr)                         \
+    instr(BinaryOpInteger_Add, BinaryOpStubInstr)                            \
+    instr(BinaryOpInteger_Sub, BinaryOpStubInstr)                            \
+    instr(BinaryOpInteger_Mul, BinaryOpStubInstr)                            \
+    instr(BinaryOpInteger_TrueDiv, BinaryOpStubInstr)                        \
+    instr(BinaryOpInteger_FloorDiv, BinaryOpStubInstr)                       \
+    instr(BinaryOpInteger_Modulo, BinaryOpStubInstr)                         \
+    instr(BinaryOpInteger_Power, BinaryOpStubInstr)                          \
+    instr(BinaryOpInteger_Or, BinaryOpStubInstr)                             \
+    instr(BinaryOpInteger_Xor, BinaryOpStubInstr)                            \
+    instr(BinaryOpInteger_And, BinaryOpStubInstr)                            \
+    instr(BinaryOpInteger_LeftShift, BinaryOpStubInstr)                      \
+    instr(BinaryOpInteger_RightShift, BinaryOpStubInstr)                     \
     instr(BinaryOpFloat_Add, BinaryOpStubInstr)                              \
     instr(BinaryOpFloat_Sub, BinaryOpStubInstr)                              \
     instr(BinaryOpFloat_Mul, BinaryOpStubInstr)                              \

@@ -1029,8 +1029,12 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
     Stack<BinaryOpStubInstr*> stub;
 
     if (ShouldInlineIntBinaryOp(op) && left.isInt32() && right.isInt32()) {
-        // If both arguments are integers, inline the operation.
+        // If both arguments are 32 bit tagged integers, inline the operation.
         auto type = InstrType(Instr_BinaryOpInt_Add + op);
+        stub = gc.create<BinaryOpStubInstr>(type, op, currentInstr());
+    } else if (ShouldInlineIntBinaryOp(op) && left.isInt() && right.isInt()) {
+        // If both arguments are integers, inline the operation.
+        auto type = InstrType(Instr_BinaryOpInteger_Add + op);
         stub = gc.create<BinaryOpStubInstr>(type, op, currentInstr());
     } else if (ShouldInlineFloatBinaryOp(op) &&
                left.isDouble() && right.isDouble())
@@ -1077,6 +1081,31 @@ Interpreter::executeBinaryOpInt(Traced<BinaryOpStubInstr*> instr)
     }
 for_each_int_binary_op_to_inline(define_execute_binary_op_int)
 #undef define_execute_binary_op_int
+
+template <BinaryOp Op>
+inline void
+Interpreter::executeBinaryOpInteger(Traced<BinaryOpStubInstr*> instr)
+{
+    assert(ShouldInlineIntBinaryOp(instr->op));
+
+    if (!peekStack(0).isInt() || !peekStack(1).isInt()) {
+        dispatchInstr(instr->next());
+        return;
+    }
+
+    int64_t b = popStack().toInt();
+    int64_t a = popStack().toInt();
+    pushStack(Integer::binaryOp<Op>(a, b));
+}
+
+#define define_execute_binary_op_integer(name)                                \
+    void Interpreter::executeInstr_BinaryOpInteger_##name(                    \
+        Traced<BinaryOpStubInstr*> instr)                                     \
+    {                                                                         \
+        executeBinaryOpInteger<Binary##name>(instr);                          \
+    }
+for_each_int_binary_op_to_inline(define_execute_binary_op_integer)
+#undef define_execute_binary_op_integer
 
 template <BinaryOp Op>
 inline void
