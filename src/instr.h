@@ -43,6 +43,27 @@ struct Interpreter;
 #define for_each_float_aug_assign_op_to_inline(op)                           \
     for_each_simple_binary_op_type(op)
 
+#define for_each_instr_type(type)                                            \
+    type(Instr)                                                              \
+    type(IdentInstr)                                                         \
+    type(IdentAndSlotInstr)                                                  \
+    type(FrameAndIdentInstr)                                                 \
+    type(GlobalAndIdentInstr)                                                \
+    type(GlobalSlotInstr)                                                    \
+    type(BuiltinsSlotInstr)                                                  \
+    type(CountInstr)                                                         \
+    type(IndexInstr)                                                         \
+    type(ValueInstr)                                                         \
+    type(BuiltinMethodInstr)                                                 \
+    type(BranchInstr)                                                        \
+    type(LambdaInstr)                                                        \
+    type(BinaryOpInstr)                                                      \
+    type(BinaryOpStubInstr)                                                  \
+    type(BuiltinBinaryOpInstr)                                               \
+    type(CompareOpInstr)                                                     \
+    type(CompareOpStubInstr)                                                 \
+    type(LoopControlJumpInstr)
+
 #define for_each_inline_instr(instr)                                         \
     instr(Abort, Instr)                                                      \
     instr(Return, Instr)
@@ -170,17 +191,29 @@ struct Interpreter;
     for_each_outofline_instr(instr)                                          \
     for_each_stub_instr(instr)
 
-#define define_instr_enum(name, cls)                                         \
-    Instr_##name,
+enum InstrType
+{
+#define define_instr_type_enum(type)                                         \
+    InstrType_##type,
+
+    for_each_instr_type(define_instr_type_enum)
+    InstrTypeCount
+
+#undef define_instr_type_enum
+};
 
 enum InstrCode
 {
-    for_each_instr(define_instr_enum)
+#define define_instr_code_enum(name, cls)                                    \
+    Instr_##name,
+
+    for_each_instr(define_instr_code_enum)
     InstrCodeCount
+
+#undef define_instr_code_enum
 };
 
-#undef define_instr_enum
-
+extern InstrType instrType(InstrCode code);
 extern const char* instrName(InstrCode code);
 
 struct BranchInstr;
@@ -206,9 +239,10 @@ struct Instr : public Cell
     const InstrCode code_;
 };
 
-struct IdentInstr : public Instr
+struct IdentInstrBase : public Instr
 {
-    IdentInstr(InstrCode code, Name ident) : Instr(code), ident(ident) {}
+    IdentInstrBase(InstrCode code, Name ident) : Instr(code), ident(ident)
+    {}
 
     void print(ostream& s) const override;
 
@@ -218,11 +252,21 @@ struct IdentInstr : public Instr
     const Name ident;
 };
 
-struct IdentAndSlotInstr : public IdentInstr
+struct IdentInstr : public IdentInstrBase
+{
+    IdentInstr(InstrCode code, Name ident) : IdentInstrBase(code, ident)
+    {
+        assert(instrType(code) == InstrType_IdentInstr);
+    }
+};
+
+struct IdentAndSlotInstr : public IdentInstrBase
 {
     IdentAndSlotInstr(InstrCode code, Name ident, unsigned slot)
-      : IdentInstr(code, ident), slot(slot)
-    {}
+      : IdentInstrBase(code, ident), slot(slot)
+    {
+        assert(instrType(code) == InstrType_IdentAndSlotInstr);
+    }
 
     void print(ostream& s) const override;
 
@@ -232,23 +276,26 @@ struct IdentAndSlotInstr : public IdentInstr
     const unsigned slot;
 };
 
-struct FrameAndIdentInstr : public IdentInstr
+struct FrameAndIdentInstr : public IdentInstrBase
 {
     FrameAndIdentInstr(InstrCode code, unsigned frameIndex, Name ident)
-      : IdentInstr(code, ident), frameIndex(frameIndex)
-    {}
+      : IdentInstrBase(code, ident), frameIndex(frameIndex)
+    {
+        assert(instrType(code) == InstrType_FrameAndIdentInstr);
+    }
 
     void print(ostream& s) const override;
 
     const unsigned frameIndex;
 };
 
-struct GlobalAndIdentInstr : public IdentInstr
+struct GlobalAndIdentInstr : public IdentInstrBase
 {
     GlobalAndIdentInstr(InstrCode code, Traced<Object*> global, Name ident,
                         bool fallback = false)
-      : IdentInstr(code, ident), global_(global), fallback_(fallback)
+      : IdentInstrBase(code, ident), global_(global), fallback_(fallback)
     {
+        assert(instrType(code) == InstrType_GlobalAndIdentInstr);
         assert(global);
     }
 
@@ -289,11 +336,12 @@ struct SlotGuard
     int slot_;
 };
 
-struct GlobalSlotInstr : public IdentInstr
+struct GlobalSlotInstr : public IdentInstrBase
 {
     GlobalSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
-      : IdentInstr(code, ident), global_(global), globalSlot_(global, ident)
+      : IdentInstrBase(code, ident), global_(global), globalSlot_(global, ident)
     {
+        assert(instrType(code) == InstrType_GlobalSlotInstr);
         assert(global);
     }
 
@@ -314,7 +362,7 @@ struct GlobalSlotInstr : public IdentInstr
 
     GlobalSlotInstr(InstrCode code, Traced<Object*> global,
                        Name globalIdent, Name ident)
-      : IdentInstr(code, ident),
+      : IdentInstrBase(code, ident),
         global_(global),
         globalSlot_(global, globalIdent)
     {
@@ -327,7 +375,9 @@ struct BuiltinsSlotInstr : public GlobalSlotInstr
     BuiltinsSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
       : GlobalSlotInstr(code, global, Name::__builtins__, ident),
         builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
-    {}
+    {
+        assert(instrType(code) == InstrType_BuiltinsSlotInstr);
+    }
 
     void traceChildren(Tracer& t) override {
         GlobalSlotInstr::traceChildren(t);
@@ -344,7 +394,9 @@ struct BuiltinsSlotInstr : public GlobalSlotInstr
 
 struct CountInstr : public Instr
 {
-    CountInstr(InstrCode code, unsigned count) : Instr(code), count(count) {}
+    CountInstr(InstrCode code, unsigned count) : Instr(code), count(count) {
+        assert(instrType(code) == InstrType_CountInstr);
+    }
 
     void print(ostream& s) const override;
 
@@ -353,7 +405,9 @@ struct CountInstr : public Instr
 
 struct IndexInstr : public Instr
 {
-    IndexInstr(InstrCode code, unsigned index) : Instr(code), index(index) {}
+    IndexInstr(InstrCode code, unsigned index) : Instr(code), index(index) {
+        assert(instrType(code) == InstrType_IndexInstr);
+    }
 
     void print(ostream& s) const override;
 
@@ -365,7 +419,7 @@ struct ValueInstr : public Instr
     ValueInstr(InstrCode code, Traced<Value> v)
         : Instr(code), value_(v)
     {
-        assert(code == Instr_Const);
+        assert(instrType(code) == InstrType_ValueInstr);
     }
 
     void print(ostream& s) const override;
@@ -377,14 +431,16 @@ struct ValueInstr : public Instr
     Heap<Value> value_;
 };
 
-struct BuiltinMethodInstr : public IdentInstr
+struct BuiltinMethodInstr : public IdentInstrBase
 {
     BuiltinMethodInstr(InstrCode code, Name name, Traced<Class*> cls,
                        Traced<Value> result)
-      : IdentInstr(code, name),
+      : IdentInstrBase(code, name),
         class_(cls),
         result_(result)
-    {}
+    {
+        assert(instrType(code) == InstrType_BuiltinMethodInstr);
+    }
 
     void traceChildren(Tracer& t) override;
 
@@ -396,7 +452,9 @@ struct BranchInstr : public Instr
 {
     BranchInstr(InstrCode code, int offset = 0)
       : Instr(code), offset_(offset)
-    {}
+    {
+        assert(instrType(code) == InstrType_BranchInstr);
+    }
 
     bool isBranch() const override {
         return true;
@@ -456,16 +514,18 @@ struct BinaryOpInstr : public BinaryOpInstrBase
 {
     BinaryOpInstr(InstrCode code, BinaryOp op)
       : BinaryOpInstrBase(code, op), stubCount(0)
-    {}
+    {
+        assert(instrType(code) == InstrType_BinaryOpInstr);
+    }
 
     void print(ostream& s) const override;
 
     unsigned stubCount;
 };
 
-struct BinaryOpStubInstr : public BinaryOpInstrBase
+struct BinaryOpStubInstrBase : public BinaryOpInstrBase
 {
-    BinaryOpStubInstr(InstrCode code, BinaryOp op, Traced<Instr*> next)
+    BinaryOpStubInstrBase(InstrCode code, BinaryOp op, Traced<Instr*> next)
       : BinaryOpInstrBase(code, op), next_(next)
     {
         assert(next_);
@@ -480,16 +540,27 @@ struct BinaryOpStubInstr : public BinaryOpInstrBase
     Heap<Instr*> next_;
 };
 
-struct BuiltinBinaryOpInstr : public BinaryOpStubInstr
+struct BinaryOpStubInstr : public BinaryOpStubInstrBase
+{
+    BinaryOpStubInstr(InstrCode code, BinaryOp op, Traced<Instr*> next)
+      : BinaryOpStubInstrBase(code, op, next)
+    {
+        assert(instrType(code) == InstrType_BinaryOpStubInstr);
+    }
+};
+
+struct BuiltinBinaryOpInstr : public BinaryOpStubInstrBase
 {
     BuiltinBinaryOpInstr(InstrCode code, BinaryOp op, Traced<Instr*> next,
                          Traced<Class*> left, Traced<Class*> right,
                          Traced<Value> method)
-      : BinaryOpStubInstr(code, op, next),
+      : BinaryOpStubInstrBase(code, op, next),
         left_(left),
         right_(right),
         method_(method)
-    {}
+    {
+        assert(instrType(code) == InstrType_BuiltinBinaryOpInstr);
+    }
 
     Class* left() { return left_; }
     Class* right() { return right_; }
@@ -518,18 +589,22 @@ struct CompareOpInstr : public CompareOpInstrBase
 {
     CompareOpInstr(InstrCode code, CompareOp op)
       : CompareOpInstrBase(code, op), stubCount(0)
-    {}
+    {
+        assert(instrType(code) == InstrType_CompareOpInstr);
+    }
 
     void print(ostream& s) const override;
 
     unsigned stubCount;
 };
 
-struct CompareOpStubInstr : public CompareOpInstr
+struct CompareOpStubInstr : public CompareOpInstrBase
 {
     CompareOpStubInstr(InstrCode code, CompareOp op, Traced<Instr*> next)
-      : CompareOpInstr(code, op), next_(next)
-    {}
+      : CompareOpInstrBase(code, op), next_(next)
+    {
+        assert(instrType(code) == InstrType_CompareOpStubInstr);
+    }
 
     const Heap<Instr*>& next() { return next_; }
 
@@ -548,7 +623,7 @@ struct LoopControlJumpInstr : public Instr
         finallyCount_(finallyCount),
         target_(target)
     {
-        assert(code == Instr_LoopControlJump);
+        assert(instrType(code) == InstrType_LoopControlJumpInstr);
     }
 
     unsigned finallyCount() const { return finallyCount_; }

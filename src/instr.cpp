@@ -11,6 +11,21 @@
 #include "list.h"
 #include "utils.h"
 
+InstrType instrType(InstrCode code)
+{
+#define define_instr_type(name, cls)                                          \
+        InstrType_##cls,
+
+    static InstrType types[InstrCodeCount] = {
+        for_each_instr(define_instr_type)
+    };
+
+#undef define_instr_enum
+
+    assert(code < InstrCodeCount);
+    return types[code];
+}
+
 const char* instrName(InstrCode code)
 {
 #define define_instr_name(name, cls)                                          \
@@ -66,7 +81,7 @@ BranchInstr* Instr::asBranch()
     return static_cast<BranchInstr*>(this);
 }
 
-void IdentInstr::print(ostream& s) const
+void IdentInstrBase::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << ident;
@@ -145,12 +160,12 @@ void BinaryOpInstr::print(ostream& s) const
         s << " " << dec << stubCount;
 }
 
-void BinaryOpStubInstr::traceChildren(Tracer& t)
+void BinaryOpStubInstrBase::traceChildren(Tracer& t)
 {
     gc.trace(t, &next_);
 }
 
-void BinaryOpStubInstr::print(ostream& s) const
+void BinaryOpStubInstrBase::print(ostream& s) const
 {
     BinaryOpInstrBase::print(s);
     s << " -> ";
@@ -159,7 +174,7 @@ void BinaryOpStubInstr::print(ostream& s) const
 
 void BuiltinBinaryOpInstr::traceChildren(Tracer& t)
 {
-    BinaryOpStubInstr::traceChildren(t);
+    BinaryOpStubInstrBase::traceChildren(t);
     gc.trace(t, &left_);
     gc.trace(t, &right_);
     gc.trace(t, &method_);
@@ -658,7 +673,7 @@ LambdaInstr::LambdaInstr(InstrCode code,
     info_(gc.create<FunctionInfo>(paramNames, block, defaultCount, takesRest,
                                   isGenerator))
 {
-    assert(code == Instr_Lambda);
+    assert(instrType(code) == InstrType_LambdaInstr);
 }
 
 void
@@ -1026,7 +1041,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
     if (instr->stubCount == MaxStubCount)
         return;
 
-    Stack<BinaryOpStubInstr*> stub;
+    Stack<BinaryOpStubInstrBase*> stub;
 
     if (ShouldInlineIntBinaryOp(op) && left.isInt32() && right.isInt32()) {
         // If both arguments are 32 bit tagged integers, inline the operation.
@@ -1342,7 +1357,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
     if (instr->stubCount == MaxStubCount)
         return;
 
-    Stack<BinaryOpStubInstr*> stub;
+    Stack<BinaryOpStubInstrBase*> stub;
 
     if (ShouldInlineIntAugAssignOp(op) && left.isInt32() && right.isInt32()) {
         // If both arguments are integers, inline the operation.
