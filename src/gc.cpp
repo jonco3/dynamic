@@ -8,6 +8,8 @@
 
 GC gc;
 
+bool logGCStats = false;
+
 #ifdef DEBUG
 
 bool logGC = false;
@@ -154,6 +156,7 @@ GC::GC()
     scheduleFactorPercent(200),
     currentEpoch(1),
     prevEpoch(2),
+    gcCount(0),
     cellCount(0),
     isSweeping(false),
 #ifdef DEBUG
@@ -230,6 +233,8 @@ void GC::collect()
 {
     assert(!isSweeping);
 
+    gcCount++;
+
     log("> GC::collect", cellCount, currentEpoch);
 
     // Begin new epoch
@@ -277,6 +282,8 @@ void GC::collect()
     collectAt = max(minCollectAt, static_cast<size_t>(cellCount * factor));
 
     log("< GC::collect", cellCount, currentEpoch);
+
+    logStats();
 }
 
 void GC::shutdown()
@@ -287,4 +294,48 @@ void GC::shutdown()
         r->clear();
     collect();
     assert(cellCount == 0);
+}
+
+void GC::logStats()
+{
+    if (!logGCStats)
+        return;
+
+    unsigned rootCount = 0;
+    for (RootBase* r = rootList; r; r = r->nextRoot())
+        rootCount++;
+
+    unsigned stackRootCount = 0;
+    for (StackBase* r = stackList; r; r = r->nextRoot())
+        stackRootCount++;
+
+    cout << dec;
+    cout << "GC stats" << endl;
+    cout << "  epoc:         " << size_t(currentEpoch) << endl;
+    cout << "  gc count:     " << gcCount << endl;
+    cout << "  cell count:   " << cellCount << endl;
+    cout << "  next trigger: " << collectAt << endl;
+    cout << "  system roots: " << rootCount << endl;
+    cout << "  stack roots:  " << stackRootCount << endl;
+    cout << "  allocated cells:" << endl;
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++) {
+        if (!cells[sc].empty()) {
+            cout << "    " << sizeFromClass(sc) << ": ";
+            cout << cells[sc].size() << endl;
+        }
+    }
+    cout << "  allocated swept cells:" << endl;
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++) {
+        if (!sweptCells[sc].empty()) {
+            cout << "    " << sizeFromClass(sc) << ": ";
+            cout << sweptCells[sc].size() << endl;
+        }
+    }
+    cout << "  free cells:" << endl;
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++) {
+        if (!freeCells[sc].empty()) {
+            cout << "    " << sizeFromClass(sc) << ": ";
+            cout << freeCells[sc].size() << endl;
+        }
+    }
 }

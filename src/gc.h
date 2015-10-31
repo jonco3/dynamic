@@ -14,6 +14,8 @@ using namespace std;
 
 // Simple mark and sweep garbage collector.
 
+extern bool logGCStats;
+
 #ifdef DEBUG
 extern bool logGC;
 #endif
@@ -96,8 +98,11 @@ struct GC
                       typename vector<T*>::iterator dying,
                       vector<Cell*>& freeCells, size_t size);
 
+    void logStats();
+
     int8_t currentEpoch;
     int8_t prevEpoch;
+    size_t gcCount;
     size_t cellCount;
     vector<Cell*> cells[sizeClassCount];
     vector<SweptCell*> sweptCells[sizeClassCount];
