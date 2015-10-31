@@ -173,29 +173,29 @@ struct Interpreter;
 #define define_instr_enum(name, cls)                                         \
     Instr_##name,
 
-enum InstrType
+enum InstrCode
 {
     for_each_instr(define_instr_enum)
-    InstrTypeCount
+    InstrCodeCount
 };
 
 #undef define_instr_enum
 
-extern const char* instrName(InstrType type);
+extern const char* instrName(InstrCode code);
 
 struct BranchInstr;
 
 // Base class for instruction data.
 struct Instr : public Cell
 {
-    Instr(InstrType type)
-      : type_(type)
+    Instr(InstrCode code)
+      : code_(code)
     {
-        assert(type < InstrTypeCount);
+        assert(code < InstrCodeCount);
     }
 
-    InstrType type() const { return type_; }
-    bool is(InstrType t) const { return type() == t; }
+    InstrCode code() const { return code_; }
+    bool is(InstrCode t) const { return code() == t; }
 
     virtual bool isBranch() const { return false; };
     BranchInstr* asBranch();
@@ -203,12 +203,12 @@ struct Instr : public Cell
     void print(ostream& s) const override;
 
   private:
-    const InstrType type_;
+    const InstrCode code_;
 };
 
 struct IdentInstr : public Instr
 {
-    IdentInstr(InstrType type, Name ident) : Instr(type), ident(ident) {}
+    IdentInstr(InstrCode code, Name ident) : Instr(code), ident(ident) {}
 
     void print(ostream& s) const override;
 
@@ -220,8 +220,8 @@ struct IdentInstr : public Instr
 
 struct IdentAndSlotInstr : public IdentInstr
 {
-    IdentAndSlotInstr(InstrType type, Name ident, unsigned slot)
-      : IdentInstr(type, ident), slot(slot)
+    IdentAndSlotInstr(InstrCode code, Name ident, unsigned slot)
+      : IdentInstr(code, ident), slot(slot)
     {}
 
     void print(ostream& s) const override;
@@ -234,8 +234,8 @@ struct IdentAndSlotInstr : public IdentInstr
 
 struct FrameAndIdentInstr : public IdentInstr
 {
-    FrameAndIdentInstr(InstrType type, unsigned frameIndex, Name ident)
-      : IdentInstr(type, ident), frameIndex(frameIndex)
+    FrameAndIdentInstr(InstrCode code, unsigned frameIndex, Name ident)
+      : IdentInstr(code, ident), frameIndex(frameIndex)
     {}
 
     void print(ostream& s) const override;
@@ -245,9 +245,9 @@ struct FrameAndIdentInstr : public IdentInstr
 
 struct GlobalAndIdentInstr : public IdentInstr
 {
-    GlobalAndIdentInstr(InstrType type, Traced<Object*> global, Name ident,
+    GlobalAndIdentInstr(InstrCode code, Traced<Object*> global, Name ident,
                         bool fallback = false)
-      : IdentInstr(type, ident), global_(global), fallback_(fallback)
+      : IdentInstr(code, ident), global_(global), fallback_(fallback)
     {
         assert(global);
     }
@@ -291,8 +291,8 @@ struct SlotGuard
 
 struct GlobalSlotInstr : public IdentInstr
 {
-    GlobalSlotInstr(InstrType type, Traced<Object*> global, Name ident)
-      : IdentInstr(type, ident), global_(global), globalSlot_(global, ident)
+    GlobalSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
+      : IdentInstr(code, ident), global_(global), globalSlot_(global, ident)
     {
         assert(global);
     }
@@ -312,9 +312,9 @@ struct GlobalSlotInstr : public IdentInstr
     Heap<Object*> global_;
     SlotGuard globalSlot_;
 
-    GlobalSlotInstr(InstrType type, Traced<Object*> global,
+    GlobalSlotInstr(InstrCode code, Traced<Object*> global,
                        Name globalIdent, Name ident)
-      : IdentInstr(type, ident),
+      : IdentInstr(code, ident),
         global_(global),
         globalSlot_(global, globalIdent)
     {
@@ -324,8 +324,8 @@ struct GlobalSlotInstr : public IdentInstr
 
 struct BuiltinsSlotInstr : public GlobalSlotInstr
 {
-    BuiltinsSlotInstr(InstrType type, Traced<Object*> global, Name ident)
-      : GlobalSlotInstr(type, global, Name::__builtins__, ident),
+    BuiltinsSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
+      : GlobalSlotInstr(code, global, Name::__builtins__, ident),
         builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
     {}
 
@@ -344,7 +344,7 @@ struct BuiltinsSlotInstr : public GlobalSlotInstr
 
 struct CountInstr : public Instr
 {
-    CountInstr(InstrType type, unsigned count) : Instr(type), count(count) {}
+    CountInstr(InstrCode code, unsigned count) : Instr(code), count(count) {}
 
     void print(ostream& s) const override;
 
@@ -353,7 +353,7 @@ struct CountInstr : public Instr
 
 struct IndexInstr : public Instr
 {
-    IndexInstr(InstrType type, unsigned index) : Instr(type), index(index) {}
+    IndexInstr(InstrCode code, unsigned index) : Instr(code), index(index) {}
 
     void print(ostream& s) const override;
 
@@ -362,10 +362,10 @@ struct IndexInstr : public Instr
 
 struct ValueInstr : public Instr
 {
-    ValueInstr(InstrType type, Traced<Value> v)
-        : Instr(type), value_(v)
+    ValueInstr(InstrCode code, Traced<Value> v)
+        : Instr(code), value_(v)
     {
-        assert(type == Instr_Const);
+        assert(code == Instr_Const);
     }
 
     void print(ostream& s) const override;
@@ -379,9 +379,9 @@ struct ValueInstr : public Instr
 
 struct BuiltinMethodInstr : public IdentInstr
 {
-    BuiltinMethodInstr(InstrType type, Name name, Traced<Class*> cls,
+    BuiltinMethodInstr(InstrCode code, Name name, Traced<Class*> cls,
                        Traced<Value> result)
-      : IdentInstr(type, name),
+      : IdentInstr(code, name),
         class_(cls),
         result_(result)
     {}
@@ -394,8 +394,8 @@ struct BuiltinMethodInstr : public IdentInstr
 
 struct BranchInstr : public Instr
 {
-    BranchInstr(InstrType type, int offset = 0)
-      : Instr(type), offset_(offset)
+    BranchInstr(InstrCode code, int offset = 0)
+      : Instr(code), offset_(offset)
     {}
 
     bool isBranch() const override {
@@ -419,7 +419,7 @@ struct BranchInstr : public Instr
 
 struct LambdaInstr : public Instr
 {
-    LambdaInstr(InstrType type,
+    LambdaInstr(InstrCode code,
                 Name name,
                 const vector<Name>& paramNames,
                 Traced<Block*> block,
@@ -445,7 +445,7 @@ struct LambdaInstr : public Instr
 
 struct BinaryOpInstrBase : public Instr
 {
-    BinaryOpInstrBase(InstrType type, BinaryOp op) : Instr(type), op(op) {}
+    BinaryOpInstrBase(InstrCode code, BinaryOp op) : Instr(code), op(op) {}
 
     void print(ostream& s) const override;
 
@@ -454,8 +454,8 @@ struct BinaryOpInstrBase : public Instr
 
 struct BinaryOpInstr : public BinaryOpInstrBase
 {
-    BinaryOpInstr(InstrType type, BinaryOp op)
-      : BinaryOpInstrBase(type, op), stubCount(0)
+    BinaryOpInstr(InstrCode code, BinaryOp op)
+      : BinaryOpInstrBase(code, op), stubCount(0)
     {}
 
     void print(ostream& s) const override;
@@ -465,8 +465,8 @@ struct BinaryOpInstr : public BinaryOpInstrBase
 
 struct BinaryOpStubInstr : public BinaryOpInstrBase
 {
-    BinaryOpStubInstr(InstrType type, BinaryOp op, Traced<Instr*> next)
-      : BinaryOpInstrBase(type, op), next_(next)
+    BinaryOpStubInstr(InstrCode code, BinaryOp op, Traced<Instr*> next)
+      : BinaryOpInstrBase(code, op), next_(next)
     {
         assert(next_);
     }
@@ -482,10 +482,10 @@ struct BinaryOpStubInstr : public BinaryOpInstrBase
 
 struct BuiltinBinaryOpInstr : public BinaryOpStubInstr
 {
-    BuiltinBinaryOpInstr(InstrType type, BinaryOp op, Traced<Instr*> next,
+    BuiltinBinaryOpInstr(InstrCode code, BinaryOp op, Traced<Instr*> next,
                          Traced<Class*> left, Traced<Class*> right,
                          Traced<Value> method)
-      : BinaryOpStubInstr(type, op, next),
+      : BinaryOpStubInstr(code, op, next),
         left_(left),
         right_(right),
         method_(method)
@@ -505,8 +505,8 @@ struct BuiltinBinaryOpInstr : public BinaryOpStubInstr
 
 struct CompareOpInstrBase : public Instr
 {
-    CompareOpInstrBase(InstrType type, CompareOp op)
-      : Instr(type), op(op)
+    CompareOpInstrBase(InstrCode code, CompareOp op)
+      : Instr(code), op(op)
     {}
 
     void print(ostream& s) const override;
@@ -516,8 +516,8 @@ struct CompareOpInstrBase : public Instr
 
 struct CompareOpInstr : public CompareOpInstrBase
 {
-    CompareOpInstr(InstrType type, CompareOp op)
-      : CompareOpInstrBase(type, op), stubCount(0)
+    CompareOpInstr(InstrCode code, CompareOp op)
+      : CompareOpInstrBase(code, op), stubCount(0)
     {}
 
     void print(ostream& s) const override;
@@ -527,8 +527,8 @@ struct CompareOpInstr : public CompareOpInstrBase
 
 struct CompareOpStubInstr : public CompareOpInstr
 {
-    CompareOpStubInstr(InstrType type, CompareOp op, Traced<Instr*> next)
-      : CompareOpInstr(type, op), next_(next)
+    CompareOpStubInstr(InstrCode code, CompareOp op, Traced<Instr*> next)
+      : CompareOpInstr(code, op), next_(next)
     {}
 
     const Heap<Instr*>& next() { return next_; }
@@ -542,13 +542,13 @@ struct CompareOpStubInstr : public CompareOpInstr
 
 struct LoopControlJumpInstr : public Instr
 {
-    LoopControlJumpInstr(InstrType type, unsigned finallyCount,
+    LoopControlJumpInstr(InstrCode code, unsigned finallyCount,
                          unsigned target = 0)
       : Instr(Instr_LoopControlJump),
         finallyCount_(finallyCount),
         target_(target)
     {
-        assert(type == Instr_LoopControlJump);
+        assert(code == Instr_LoopControlJump);
     }
 
     unsigned finallyCount() const { return finallyCount_; }
@@ -567,17 +567,17 @@ struct LoopControlJumpInstr : public Instr
     unsigned target_;
 };
 
-template <InstrType type>
+template <InstrCode Code>
 struct InstrFactory
 {};
 
-#define define_instr_factory(type, cls)                                       \
+#define define_instr_factory(code, cls)                                       \
     template <>                                                               \
-    struct InstrFactory<Instr_##type>                                         \
+    struct InstrFactory<Instr_##code>                                         \
     {                                                                         \
         template <typename... Args>                                           \
         static Instr* get(Args&&... args) {                                   \
-            return gc.create<cls>(Instr_##type, forward<Args>(args)...);      \
+            return gc.create<cls>(Instr_##code, forward<Args>(args)...);      \
         }                                                                     \
     };
 

@@ -164,7 +164,7 @@ void Interpreter::logInstr(Instr* instr)
 {
     if (logExecution) {
         logStart();
-        cout << instrName(instr->type()) << *instr;
+        cout << instrName(instr->code()) << *instr;
         cout << " at line " << dec << currentPos().line << endl;
     }
 }
@@ -720,7 +720,7 @@ void Interpreter::replaceInstr(Instr* current, Instr* newData)
 {
     InstrThunk& it = instrp[-1];
     assert(it.data == current);
-    it.type = newData->type();
+    it.code = newData->code();
     it.data = newData;
 }
 
@@ -736,6 +736,6 @@ void Interpreter::insertStubInstr(Instr* current, Instr* stub)
     InstrThunk& it = instrp[-1];
     assert(getNextInstr(stub) == it.data);
     assert(getFinalInstr(it.data) == current);
-    it.type = stub->type();
+    it.code = stub->code();
     it.data = stub;
 }

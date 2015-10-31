@@ -30,12 +30,12 @@ using InstrFunc = bool (*)(Traced<T*> self, Interpreter& interp);
 struct InstrThunk
 {
     InstrThunk(Traced<Instr*> instr)
-      : type(instr->type()), data(instr)
+      : code(instr->code()), data(instr)
     {
         assert(data);
     }
 
-    InstrType type;
+    InstrCode code;
     Heap<Instr*> data;
 };
 
@@ -59,7 +59,7 @@ struct Block : public Cell
     int offsetFrom(unsigned source);
     int offsetTo(unsigned dest);
 
-    template <InstrType Type, typename... Args>
+    template <InstrCode Code, typename... Args>
     inline unsigned append(Args&& ...args);
 
     unsigned append(Traced<Instr*> data);
@@ -80,7 +80,7 @@ struct Block : public Cell
     TokenPos getPos(InstrThunk* instrp) const;
 
     // For unit tests
-    InstrThunk* findInstr(unsigned type);
+    InstrThunk* findInstr(unsigned code);
 
   private:
     Heap<Layout*> layout_;
@@ -92,10 +92,10 @@ struct Block : public Cell
     vector<pair<size_t, unsigned>> offsetLines_;
 };
 
-template <InstrType Type, typename... Args>
+template <InstrCode Code, typename... Args>
 unsigned Block::append(Args&& ...args)
 {
-    Stack<Instr*> instr(InstrFactory<Type>::get(forward<Args>(args)...));
+    Stack<Instr*> instr(InstrFactory<Code>::get(forward<Args>(args)...));
     return append(instr);
 }
 

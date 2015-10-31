@@ -45,10 +45,10 @@ void testException(const string& input, const string& expected)
 
 void testReplacement(const string& input,
                      const string& expected,
-                     InstrType initial,
-                     InstrType replacement,
-                     InstrType next1 = InstrTypeCount,
-                     InstrType next2 = InstrTypeCount)
+                     InstrCode initial,
+                     InstrCode replacement,
+                     InstrCode next1 = InstrCodeCount,
+                     InstrCode next2 = InstrCodeCount)
 {
     Stack<Block*> block;
     CompileModule(input, None, block);
@@ -69,17 +69,17 @@ void testReplacement(const string& input,
     testEqual(repr(result.get()), expected);
 
     instr = instrp->data;
-    testEqual(instrName(instr->type()), instrName(replacement));
+    testEqual(instrName(instr->code()), instrName(replacement));
 
-    if (next1 < InstrTypeCount) {
+    if (next1 < InstrCodeCount) {
         instr = getNextInstr(instr);
         assert(instr);
-        testEqual(instrName(instr->type()), instrName(next1));
+        testEqual(instrName(instr->code()), instrName(next1));
 
-        if (next2 < InstrTypeCount) {
+        if (next2 < InstrCodeCount) {
             instr = getNextInstr(instr);
             assert(instr);
-            testEqual(instrName(instr->type()), instrName(next2));
+            testEqual(instrName(instr->code()), instrName(next2));
         }
     }
 }
@@ -87,11 +87,11 @@ void testReplacement(const string& input,
 void testReplacements(const string& defs,
                       const string& call1, const string& result1,
                       const string& call2, const string& result2,
-                      InstrType initial,
-                      InstrType afterCall1,
-                      InstrType afterCall2,
-                      InstrType afterCall1Then2,
-                      InstrType afterCall2Then1)
+                      InstrCode initial,
+                      InstrCode afterCall1,
+                      InstrCode afterCall2,
+                      InstrCode afterCall1Then2,
+                      InstrCode afterCall2Then1)
 {
     testReplacement(defs + "\n" + call1, result1, initial, afterCall1);
     testReplacement(defs + "\n" + call2, result2, initial, afterCall2);
@@ -104,10 +104,10 @@ void testReplacements(const string& defs,
 void testReplacements(const string& defs,
                       const string& call1, const string& result1,
                       const string& call2, const string& result2,
-                      InstrType initial,
-                      InstrType afterCall1,
-                      InstrType afterCall2,
-                      InstrType afterBoth)
+                      InstrCode initial,
+                      InstrCode afterCall1,
+                      InstrCode afterCall2,
+                      InstrCode afterBoth)
 {
     testReplacements(defs, call1, result1, call2, result2,
                      initial, afterCall1, afterCall2, afterBoth, afterBoth);
@@ -116,9 +116,9 @@ void testReplacements(const string& defs,
 void testStubs(const string& defs,
                const string& call1, const string& result1,
                const string& call2, const string& result2,
-               InstrType initial,
-               InstrType afterCall1,
-               InstrType afterCall2)
+               InstrCode initial,
+               InstrCode afterCall1,
+               InstrCode afterCall2)
 {
     testReplacement(defs + "\n" + call1, result1, initial, afterCall1, initial);
     testReplacement(defs + "\n" + call2, result2, initial, afterCall2, initial);

@@ -182,7 +182,7 @@ struct ByteCompiler : public SyntaxVisitor
                contextStack.back() == Context::Delete;
     }
 
-    template <InstrType Type, typename... Args>
+    template <InstrCode Type, typename... Args>
     unsigned emit(Args&& ...args) {
         return block->append<Type>(forward<Args>(args)...);
     }

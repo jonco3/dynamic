@@ -93,10 +93,10 @@ void Block::setNextPos(const TokenPos& pos)
         offsetLines_.emplace_back(instrs_.size(), pos.line);
 }
 
-InstrThunk* Block::findInstr(unsigned type)
+InstrThunk* Block::findInstr(unsigned code)
 {
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i) {
-        if (i->data->type() == type)
+        if (i->data->code() == code)
             return &(*i);
     }
     return nullptr;
