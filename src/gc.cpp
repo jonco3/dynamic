@@ -155,8 +155,6 @@ GC::GC()
     currentEpoch(1),
     prevEpoch(2),
     cellCount(0),
-    cells(sizeClassCount),
-    freeCells(sizeClassCount),
     isSweeping(false),
 #ifdef DEBUG
     isAllocating(false),
@@ -168,8 +166,6 @@ GC::GC()
 Cell* GC::allocCell(SizeClass sc)
 {
     assert(sc < sizeClassCount);
-    assert(sc < cells.size());
-    assert(sc < freeCells.size());
     size_t allocSize = sizeFromClass(sc);
     assert(allocSize >= sizeof(Cell));
 

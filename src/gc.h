@@ -93,8 +93,8 @@ struct GC
     int8_t currentEpoch;
     int8_t prevEpoch;
     size_t cellCount;
-    vector<vector<Cell*>> cells;
-    vector<vector<Cell*>> freeCells;
+    vector<Cell*> cells[sizeClassCount];
+    vector<Cell*> freeCells[sizeClassCount];
     RootBase* rootList;
     StackBase* stackList;
     bool isSweeping;
