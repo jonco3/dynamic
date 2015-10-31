@@ -5,9 +5,10 @@
 #include "name.h"
 
 struct Class;
+struct Frame;
+struct Layout;
 struct Object;
 struct Value;
-struct Frame;
 
 template <>
 struct GCTraits<Value>

@@ -22,6 +22,7 @@ struct Cell;
 struct Marker;
 struct RootBase;
 struct StackBase;
+struct SweptCell;
 template <typename T> struct Heap;
 template <typename T> struct HeapVector;
 template <typename T> struct VectorBase;
@@ -80,20 +81,26 @@ struct GC
     static inline SizeClass sizeClass(size_t size);
     static inline size_t sizeFromClass(SizeClass sc);
 
-    Cell* allocCell(SizeClass sc);
+    Cell* allocCell(SizeClass cc, bool requiresSweep);
 
     bool isDying(const Cell* cell);
     void maybeCollect();
 
-    vector<Cell*>::iterator sweepCells(vector<Cell*>& cells);
+    template <typename T>
+    typename vector<T*>::iterator partitionDyingCells(vector<T*>& cells);
+    void sweepCells(vector<SweptCell*>& cells,
+                    vector<SweptCell*>::iterator dying);
     void freeOldFreeCells(vector<Cell*>& cells);
-    void destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
+    template <typename T>
+    void destroyCells(vector<T*>& cells,
+                      typename vector<T*>::iterator dying,
                       vector<Cell*>& freeCells, size_t size);
 
     int8_t currentEpoch;
     int8_t prevEpoch;
     size_t cellCount;
     vector<Cell*> cells[sizeClassCount];
+    vector<SweptCell*> sweptCells[sizeClassCount];
     vector<Cell*> freeCells[sizeClassCount];
     RootBase* rootList;
     StackBase* stackList;
@@ -125,7 +132,6 @@ struct Cell
 
     virtual void traceChildren(Tracer& t) {}
     virtual void print(ostream& s) const;
-    virtual void sweep() {}
 
   protected:
     bool isDying() const;
@@ -137,11 +143,16 @@ struct Cell
     bool shouldSweep();
 
     static bool maybeMark(Cell** cellp);
-    static void sweepCell(Cell* cell);
+    static void sweepCell(SweptCell* cell);
     static void destroyCell(Cell* cell, size_t size);
 
     friend struct GC;
     friend struct Marker;
+};
+
+struct SweptCell : public Cell
+{
+    virtual void sweep() = 0;
 };
 
 inline ostream& operator<<(ostream& s, const Cell& cell) {
@@ -837,8 +848,9 @@ T* GC::create(Args&&... args) {
 
     maybeCollect();
 
-    SizeClass sc = sizeClass(sizeof(T));
-    void* data = allocCell(sc);
+    bool requiresSweep = is_base_of<SweptCell, T>::value;
+    SizeClass cc = sizeClass(sizeof(T));
+    void* data = allocCell(cc, requiresSweep);
 
     Stack<T*> t(static_cast<T*>(data));
     assert(static_cast<Cell*>(t.get()) == data);

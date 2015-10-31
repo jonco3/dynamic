@@ -13,7 +13,7 @@ using namespace std;
 // Layout defines a mapping from names to slots and is used for object storage
 // and execution frames.
 
-struct Layout : public Cell
+struct Layout : public SweptCell
 {
     static const int NotFound = -1;
 

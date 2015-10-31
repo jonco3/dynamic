@@ -69,7 +69,7 @@ void Cell::checkValid() const
 }
 #endif
 
-bool Cell::shouldMark()
+inline bool Cell::shouldMark()
 {
 #ifdef DEBUG
     checkValid();
@@ -77,7 +77,7 @@ bool Cell::shouldMark()
     return epoch_ == gc.prevEpoch;
 }
 
-bool Cell::shouldSweep()
+inline bool Cell::shouldSweep()
 {
 #ifdef DEBUG
     checkValid();
@@ -105,7 +105,7 @@ bool Cell::maybeMark(Cell** cellp)
     return false;
 }
 
-void Cell::sweepCell(Cell* cell)
+void Cell::sweepCell(SweptCell* cell)
 {
     log("  sweeping", cell);
     assert(cell->shouldSweep());
@@ -163,48 +163,55 @@ GC::GC()
     collectAt(minCollectAt)
 {}
 
-Cell* GC::allocCell(SizeClass sc)
+Cell* GC::allocCell(SizeClass sc, bool requiresSweep)
 {
     assert(sc < sizeClassCount);
     size_t allocSize = sizeFromClass(sc);
     assert(allocSize >= sizeof(Cell));
 
-    Cell* cell;
+    void* cell;
     if (!freeCells[sc].empty()) {
         cell = freeCells[sc].back();
         freeCells[sc].pop_back();
     } else {
-        cell = static_cast<Cell*>(malloc(allocSize));
+        cell = malloc(allocSize);
     }
 
     // Pre-initialize memory to zero so that if we trigger GC by allocating in a
     // constructor then any pointers in the partially constructed object will be
     // in a valid state.
-    memset(static_cast<void*>(cell), 0, allocSize);
+    memset(cell, 0, allocSize);
 
-    cells[sc].push_back(cell);
+    if (requiresSweep)
+        sweptCells[sc].push_back(static_cast<SweptCell*>(cell));
+    else
+        cells[sc].push_back(static_cast<Cell*>(cell));
     cellCount++;
-    return cell;
+    return static_cast<Cell*>(cell);
 }
 
-vector<Cell*>::iterator GC::sweepCells(vector<Cell*>& cells)
+template <typename T>
+typename vector<T*>::iterator GC::partitionDyingCells(vector<T*>& cells)
 {
-    auto dying = partition(cells.begin(), cells.end(), [] (Cell* cell) {
+    return partition(cells.begin(), cells.end(), [] (T* cell) {
         return !cell->shouldSweep();
     });
+}
+
+void GC::sweepCells(vector<SweptCell*>& cells,
+                       vector<SweptCell*>::iterator dying)
+{
     for_each(dying, cells.end(), Cell::sweepCell);
-    return dying;
 }
 
 void GC::freeOldFreeCells(vector<Cell*>& cells)
 {
-    for_each(cells.begin(), cells.end(), []  (Cell* cell) {
-        free(cell);
-    });
+    for_each(cells.begin(), cells.end(), [] (Cell* cell) { free(cell); });
     cells.clear();
 }
 
-void GC::destroyCells(vector<Cell*>& cells, vector<Cell*>::iterator dying,
+template <typename T>
+void GC::destroyCells(vector<T*>& cells, typename vector<T*>::iterator dying,
                       vector<Cell*>& freeCells, size_t size)
 {
     for (auto i = dying; i != cells.end(); i++) {
@@ -246,13 +253,21 @@ void GC::collect()
     // Sweep
     log("- sweeping");
     isSweeping = true;
-    vector<vector<Cell*>::iterator> dying(sizeClassCount);
+    vector<Cell*>::iterator dyingCells[sizeClassCount];
+    vector<SweptCell*>::iterator dyingSweptCells[sizeClassCount];
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++) {
+        dyingCells[sc] = partitionDyingCells(cells[sc]);
+        dyingSweptCells[sc] = partitionDyingCells(sweptCells[sc]);
+    }
     for (SizeClass sc = 0; sc < sizeClassCount; sc++)
-        dying[sc] = sweepCells(cells[sc]);
+        sweepCells(sweptCells[sc], dyingSweptCells[sc]);
     for (SizeClass sc = 0; sc < sizeClassCount; sc++)
         freeOldFreeCells(freeCells[sc]);
-    for (SizeClass sc = 0; sc < sizeClassCount; sc++)
-        destroyCells(cells[sc], dying[sc], freeCells[sc], sizeFromClass(sc));
+    for (SizeClass sc = 0; sc < sizeClassCount; sc++) {
+        size_t size = sizeFromClass(sc);
+        destroyCells(cells[sc], dyingCells[sc], freeCells[sc], size);
+        destroyCells(sweptCells[sc], dyingSweptCells[sc], freeCells[sc], size);
+    }
     isSweeping = false;
 
     // Schedule next collection
