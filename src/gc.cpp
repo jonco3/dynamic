@@ -214,12 +214,13 @@ template <typename T>
 void GC::destroyCells(vector<T*>& cells, typename vector<T*>::iterator dying,
                       vector<Cell*>& freeCells, size_t size)
 {
+    size_t count = cells.end() - dying;
+    freeCells.reserve(freeCells.size() + count);
     for (auto i = dying; i != cells.end(); i++) {
         Cell* cell = *i;
         Cell::destroyCell(cell, size);
         freeCells.push_back(cell);
     }
-    size_t count = cells.end() - dying;
     assert(gc.cellCount >= count);
     gc.cellCount -= count;
     cells.erase(dying, cells.end());
