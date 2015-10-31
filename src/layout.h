@@ -13,6 +13,8 @@ using namespace std;
 // Layout defines a mapping from names to slots and is used for object storage
 // and execution frames.
 
+struct LayoutChildren;
+
 struct Layout : public SweptCell
 {
     static const int NotFound = -1;
@@ -42,10 +44,28 @@ struct Layout : public SweptCell
     void sweep() override;
 
   private:
+    struct Children
+    {
+        Children();
+        bool has(Name name);
+        void add(Layout* layout);
+        void remove(Name name);
+        Layout* get(Name name);
+
+      private:
+        typedef unordered_map<Name, Layout*> Map;
+
+        bool hasMany_;
+        union {
+            Layout* single_;
+            Map* many_;
+        };
+    };
+
     Heap<Layout*> parent_;
     int slot_;
     Name name_;
-    unordered_map<Name, Layout*> children_;
+    Children children_;
 
     bool hasChild(Layout* child);
     void removeChild(Layout* child);

@@ -8,6 +8,69 @@ GlobalRoot<Layout*> Layout::Empty;
 
 static bool layoutInitialized = false;
 
+inline Layout::Children::Children()
+  : hasMany_(false), single_(nullptr)
+{}
+
+inline bool Layout::Children::has(Name name)
+{
+    if (hasMany_)
+        return many_->find(name) != many_->end();
+
+    return single_ && single_->name() == name;
+}
+
+inline void Layout::Children::add(Layout* layout)
+{
+    assert(!has(layout->name()));
+
+    if (!hasMany_) {
+        if (!single_) {
+            single_ = layout;
+            return;
+        }
+
+        Layout* current = single_;
+        hasMany_ = true;
+        many_ = new Map();
+        many_->emplace(current->name(), current);
+    }
+
+    assert(many_);
+    many_->emplace(layout->name(), layout);
+}
+
+inline void Layout::Children::remove(Name name)
+{
+    if (!hasMany_) {
+        assert(single_ && single_->name() == name);
+        single_ = nullptr;
+        return;
+    }
+
+    assert(many_);
+    auto i = many_->find(name);
+    assert(i != many_->end());
+    many_->erase(i);
+}
+
+inline Layout* Layout::Children::get(Name name)
+{
+    if (!hasMany_) {
+        if (single_ && single_->name() == name)
+            return single_;
+
+        return nullptr;
+    }
+
+    assert(many_);
+    auto i = many_->find(name);
+    if (i != many_->end())
+        return i->second;
+
+    return nullptr;
+}
+
 Layout::Layout()
   : parent_(nullptr), slot_(-1), name_("")
 {
@@ -19,9 +82,18 @@ Layout::Layout(Traced<Layout*> parent, Name name)
 {
     assert(parent);
     assert(name != "");
-    assert(parent->children_.find(name) == children_.end());
-    parent->children_.emplace(name, this);
+    parent->children_.add(this);
     slot_ = parent_->slotIndex() + 1;
+}
+
+inline bool Layout::hasChild(Layout* child)
+{
+    return children_.get(child->name()) == child;
+}
+
+inline void Layout::removeChild(Layout* child)
+{
+    children_.remove(child->name());
 }
 
 void Layout::sweep()
@@ -33,18 +105,6 @@ void Layout::sweep()
         if (!parent_->isDying())
             parent_->removeChild(this);
     }
-}
-
-bool Layout::hasChild(Layout* child)
-{
-    return children_.find(child->name()) != children_.end();
-}
-
-void Layout::removeChild(Layout* child)
-{
-    auto i = children_.find(child->name());
-    assert(i != children_.end());
-    children_.erase(i);
 }
 
 bool Layout::subsumes(Traced<Layout*> other)
@@ -89,9 +149,9 @@ Layout* Layout::addName(Name name)
 {
     assert(name != "");
     assert(!hasName(name));
-    auto i = children_.find(name);
-    if (i != children_.end())
-        return i->second;
+    Layout* child = children_.get(name);
+    if (child)
+        return child;
 
     Stack<Layout*> self(this);
     return gc.create<Layout>(self, name);
