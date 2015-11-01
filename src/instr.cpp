@@ -890,10 +890,10 @@ Interpreter::executeInstr_DestructureFallback(Traced<CountInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_DestructureList(Traced<CountInstr*> instr)
+Interpreter::executeInstr_DestructureTuple(Traced<CountInstr*> instr)
 {
     Stack<Value> iterable(peekStack());
-    if (!IterableIsBuiltinList(iterable)) {
+    if (!iterable.is<Tuple>()) {
         Instr* replacement =
             InstrFactory<Instr_DestructureFallback>::get(instr->count);
         replaceInstrAndRestart(instr, replacement);
@@ -901,7 +901,32 @@ Interpreter::executeInstr_DestructureList(Traced<CountInstr*> instr)
     }
 
     popStack();
-    ListBase* list = static_cast<ListBase*>(iterable.toObject());
+    Tuple* tuple = iterable.as<Tuple>();
+
+    unsigned count = tuple->len();
+    if (count < instr->count)
+        return raiseValueError("too few values to unpack");
+
+    if (count > instr->count)
+        return raiseValueError("too many values to unpack");
+
+    for (unsigned i = 0; i < count; i++)
+        pushStack(tuple->getitem(i));
+}
+
+void
+Interpreter::executeInstr_DestructureList(Traced<CountInstr*> instr)
+{
+    Stack<Value> iterable(peekStack());
+    if (!iterable.is<List>()) {
+        Instr* replacement =
+            InstrFactory<Instr_DestructureFallback>::get(instr->count);
+        replaceInstrAndRestart(instr, replacement);
+        return;
+    }
+
+    popStack();
+    List* list = iterable.as<List>();
 
     unsigned count = list->len();
     if (count < instr->count)

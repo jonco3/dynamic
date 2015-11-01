@@ -3,89 +3,64 @@
 
 #include "object.h"
 
-struct ListIter;
+struct List;
 
-struct ListBase : public Object
+struct Tuple : public Object
 {
-    bool len(MutableTraced<Value> resultOut);
-    bool getitem(Traced<Value> index, MutableTraced<Value> resultOut);
-    bool contains(Traced<Value> element, MutableTraced<Value> resultOut);
-    bool iter(MutableTraced<Value> resultOut);
+    static GlobalRoot<Class*> ObjectClass;
+    static GlobalRoot<Tuple*> Empty;
 
-    virtual const string& listName() const = 0;
+    static void init();
+
+    static Tuple* get(const TracedVector<Value>& values);
+    Tuple(const TracedVector<Value>& values);
+    Tuple(size_t size);
+    Tuple(Traced<Class*> cls, size_t size);
+    Tuple(Traced<Class*> cls, Traced<Tuple*> init);
+    Tuple(Traced<Class*> cls, Traced<List*> init);
+    void initElement(size_t index, const Value& value);
+
+    void print(ostream& s) const override;
     void traceChildren(Tracer& t) override;
 
     int32_t len() { return (int32_t)elements_.size(); }
-    Value getitem(size_t index) {
-        return elements_.at(index);
-    }
-
-    bool operator==(const ListBase& other);
-    bool operator!=(const ListBase& other) { return !(*this == other); }
-
+    bool contains(Traced<Value> value);
+    Value getitem(size_t index) { return elements_.at(index); }
     const HeapVector<Value>& elements() const { return elements_; }
 
-  protected:
-    HeapVector<Value> elements_;
-    friend struct ListIter;
-
-    ListBase(Traced<Class*> cls, const TracedVector<Value>& values);
-    ListBase(Traced<Class*> cls, size_t size);
-
-    virtual ListBase* createDerived(size_t size) = 0;
-
-    bool checkIndex(int32_t index, MutableTraced<Value> resultOut);
-};
-
-struct Tuple : public ListBase
-{
-    static void init();
-
-    static GlobalRoot<Class*> ObjectClass;
-
-    static GlobalRoot<Tuple*> Empty;
-
-    static Tuple* get(const TracedVector<Value>& values);
-
-    static Tuple* createUninitialised(size_t size);
-    void initElement(size_t index, const Value& value);
-
-    const string& listName() const override;
-    void print(ostream& s) const override;
-
-    Tuple(const TracedVector<Value>& values);
-    Tuple(size_t size);
-    Tuple(Traced<Class*> cls, Traced<ListBase*> init);
-
   private:
-    ListBase* createDerived(size_t size) override {
-        return gc.create<Tuple>(size);
-    }
+    HeapVector<Value> elements_;
 };
 
-struct List : public ListBase
+struct List : public Object
 {
-    static void init();
-
     static GlobalRoot<Class*> ObjectClass;
+
+    static void init();
 
     List(const TracedVector<Value>& values);
     List(size_t size);
-    List(Traced<Class*> cls, Traced<ListBase*> init);
+    List(Traced<Class*> cls, size_t size);
+    List(Traced<Class*> cls, Traced<Tuple*> init);
+    List(Traced<Class*> cls, Traced<List*> init);
+    void initElement(size_t index, const Value& value);
 
-    const string& listName() const override;
     void print(ostream& os) const override;
+    void traceChildren(Tracer& t) override;
 
-    bool setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut);
+    int32_t len() { return (int32_t)elements_.size(); }
+    bool contains(Traced<Value> value);
+    Value getitem(size_t index) { return elements_.at(index); }
+    const HeapVector<Value>& elements() const { return elements_; }
+
+    bool setitem(Traced<Value> index, Traced<Value> value,
+                 MutableTraced<Value> resultOut);
     bool delitem(Traced<Value> index, MutableTraced<Value> resultOut);
     bool append(Traced<Value> element, MutableTraced<Value> resultOut);
     void sort();
 
   private:
-
-    ListBase* createDerived(size_t size) override {
-        return gc.create<List>(size);
-    }
+    HeapVector<Value> elements_;
 };
 
 extern void initList();

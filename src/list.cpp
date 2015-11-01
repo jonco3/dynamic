@@ -12,12 +12,13 @@
 
 #include <algorithm>
 
-struct ListIter : public Object
+template <typename T>
+struct ListIterImpl : public Object
 {
     static void init();
     static GlobalRoot<Class*> ObjectClass;
 
-    ListIter(Traced<ListBase*> list);
+    ListIterImpl(Traced<T*> list);
 
     void traceChildren(Tracer& t) override;
 
@@ -25,208 +26,21 @@ struct ListIter : public Object
     bool next(MutableTraced<Value> resultOut);
 
   private:
-    Heap<ListBase*> list_;
+    Heap<T*> list_;
     int index_;
 };
 
 GlobalRoot<Class*> Tuple::ObjectClass;
 GlobalRoot<Tuple*> Tuple::Empty;
 GlobalRoot<Class*> List::ObjectClass;
-GlobalRoot<Class*> ListIter::ObjectClass;
+template <typename T>
+GlobalRoot<Class*> ListIterImpl<T>::ObjectClass;
 
-void initList()
-{
-    List::init();
-    Tuple::init();
-    ListIter::init();
-}
+template struct ListIterImpl<Tuple>;
+template struct ListIterImpl<List>;
 
-#ifdef DEBUG
-static bool isListBase(Object *o)
-{
-    return o->isInstanceOf(Tuple::ObjectClass) ||
-        o->isInstanceOf(List::ObjectClass);
-}
-#endif
-
-static ListBase* asListBase(Object *o)
-{
-    assert(isListBase(o));
-    return static_cast<ListBase*>(o);
-}
-
-template <class T>
-static bool listBase_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
-        return false;
-
-    Stack<ListBase*> init;
-    Stack<Class*> cls(args[0].asObject()->as<Class>());
-    assert(cls->isDerivedFrom(List::ObjectClass) ||
-           cls->isDerivedFrom(Tuple::ObjectClass));
-
-    if (args.size() == 1) {
-        resultOut = gc.create<T>(cls, init);
-        return true;
-    }
-
-    Stack<Object*> arg(args[1].toObject());
-    if (arg->isInstanceOf(List::ObjectClass)) {
-        init = arg->as<List>();
-        resultOut = gc.create<T>(cls, init);
-        return true;
-    }
-
-    if (arg->isInstanceOf(Tuple::ObjectClass)) {
-        init = arg->as<Tuple>();
-        resultOut = gc.create<T>(cls, init);
-        return true;
-    }
-
-    Stack<Value> result;
-    interp->pushStack(arg);
-    if (!interp->call(IterableToList, 1, result)) {
-        resultOut = result;
-        return false;
-    }
-
-    if (cls->isDerivedFrom(List::ObjectClass)) {
-        resultOut = result;
-        return true;
-    }
-
-    init = result.as<List>();
-    resultOut = gc.create<T>(cls, init);
-    return true;
-}
-
-static bool listBase_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    ListBase* l = asListBase(args[0].toObject());
-    return l->len(resultOut);
-}
-
-static bool listBase_getitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    ListBase* l = asListBase(args[0].toObject());
-    return l->getitem(args[1], resultOut);
-}
-
-static bool listBase_contains(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    ListBase* l = asListBase(args[0].toObject());
-    return l->contains(args[1], resultOut);
-}
-
-static bool listBase_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    ListBase* l = asListBase(args[0].toObject());
-    return l->iter(resultOut);
-}
-
-static void listBase_initNatives(Traced<Class*> cls)
-{
-    Stack<Value> value;
-    initNativeMethod(cls, "__len__", listBase_len, 1);
-    initNativeMethod(cls, "__getitem__", listBase_getitem, 2);
-    initNativeMethod(cls, "__contains__", listBase_contains, 2);
-    initNativeMethod(cls, "__iter__", listBase_iter, 1);
-    // __eq__ and __ne__ are supplied by lib/internal.py
-}
-
-ListBase::ListBase(Traced<Class*> cls, const TracedVector<Value>& values)
-  : Object(cls), elements_(values.size())
-{
-    for (unsigned i = 0; i < values.size(); ++i)
-        elements_[i] = values[i];
-}
-
-ListBase::ListBase(Traced<Class*> cls, size_t size)
-  : Object(cls), elements_(size)
-{
-#ifdef DEBUG
-    for (unsigned i = 0; i < size; ++i)
-        elements_[i] = None;
-#endif
-}
-
-void ListBase::traceChildren(Tracer& t)
-{
-    gc.traceVector(t, &elements_);
-}
-
-bool ListBase::len(MutableTraced<Value> resultOut)
-{
-    resultOut = Integer::get(elements_.size());
-    return true;
-}
-
-bool ListBase::checkIndex(int32_t index, MutableTraced<Value> resultOut)
-{
-    if (index < 0 || size_t(index) >= elements_.size()) {
-        resultOut = gc.create<IndexError>(listName() + " index out of range");
-        return false;
-    }
-    return true;
-}
-
-bool ListBase::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
-{
-    if (index.isInt()) {
-        int32_t i = WrapIndex(index.toInt(), len());
-        if (!checkIndex(i, resultOut))
-            return false;
-        resultOut = elements_[i];
-        return true;
-    } else if (index.isInstanceOf(Slice::ObjectClass)) {
-        Stack<Slice*> slice(index.as<Slice>());
-        int32_t start, count, step;
-        if (!slice->getIterationData(len(), start, count, step, resultOut))
-            return false;
-
-        Stack<ListBase*> result(createDerived(count));
-        int32_t src = start;
-        for (size_t i = 0; i < count; i++) {
-            assert(src < len());
-            result->elements_[i] = elements_[src];
-            src += step;
-        }
-
-        resultOut = Value(result);
-        return true;
-    } else {
-        resultOut = gc.create<TypeError>(
-            listName() + " indices must be integers or slices");
-        return false;
-    }
-}
-
-bool ListBase::contains(Traced<Value> element, MutableTraced<Value> resultOut)
-{
-    bool found = find(elements_.begin(), elements_.end(), element) != elements_.end();
-    resultOut = Boolean::get(found);
-    return true;
-}
-
-bool ListBase::iter(MutableTraced<Value> resultOut)
-{
-    Stack<ListBase*> self(this);
-    resultOut = gc.create<ListIter>(self);
-    return true;
-}
-
-bool ListBase::operator==(const ListBase& other)
-{
-    return false;
-}
-
-void Tuple::init()
-{
-    ObjectClass.init(Class::createNative("tuple", listBase_new<Tuple>, 2));
-    listBase_initNatives(ObjectClass);
-    Empty.init(gc.create<Tuple>(EmptyValueArray));
-}
+typedef ListIterImpl<Tuple> TupleIter;
+typedef ListIterImpl<List> ListIter;
 
 /* static */ Tuple* Tuple::get(const TracedVector<Value>& values)
 {
@@ -235,35 +49,48 @@ void Tuple::init()
     return gc.create<Tuple>(values);
 }
 
-/* static */ Tuple* Tuple::createUninitialised(size_t size)
+Tuple::Tuple(const TracedVector<Value>& values)
+  : Object(ObjectClass), elements_(values.size())
 {
-    return gc.create<Tuple>(size);
+    for (unsigned i = 0; i < values.size(); ++i)
+        elements_[i] = values[i];
 }
 
-Tuple::Tuple(const TracedVector<Value>& values)
-  : ListBase(ObjectClass, values) {}
-
 Tuple::Tuple(size_t size)
-  : ListBase(ObjectClass, size) {}
+  : Object(ObjectClass), elements_(size)
+{
+#ifdef DEBUG
+    for (unsigned i = 0; i < size; ++i)
+        elements_[i] = None;
+#endif
+}
 
-Tuple::Tuple(Traced<Class*> cls, Traced<ListBase*> init)
-  : ListBase(cls, 0)
+Tuple::Tuple(Traced<Class*> cls, size_t size)
+  : Object(ObjectClass), elements_(size)
 {
     assert(cls->isDerivedFrom(ObjectClass));
-    if (init)
-        elements_ = init->elements();
+#ifdef DEBUG
+    for (unsigned i = 0; i < size; ++i)
+        elements_[i] = None;
+#endif
+}
+
+Tuple::Tuple(Traced<Class*> cls, Traced<Tuple*> init)
+  : Object(cls), elements_(init->elements_) // todo
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+}
+
+Tuple::Tuple(Traced<Class*> cls, Traced<List*> init)
+  : Object(cls), elements_(init->elements()) // todo
+{
+    assert(cls->isDerivedFrom(ObjectClass));
 }
 
 void Tuple::initElement(size_t index, const Value& value)
 {
     assert(elements_[index].asObject() == None);
     elements_[index] = value;
-}
-
-const string& Tuple::listName() const
-{
-    static string name("tuple");
-    return name;
 }
 
 void Tuple::print(ostream& s) const
@@ -279,64 +106,58 @@ void Tuple::print(ostream& s) const
     s << ")";
 }
 
-static bool list_setitem(TracedVector<Value> args,
-                         MutableTraced<Value> resultOut)
+void Tuple::traceChildren(Tracer& t)
 {
-    List* list = args[0].as<List>();
-    return list->setitem(args[1], args[2], resultOut);
+    gc.traceVector(t, &elements_);
 }
 
-static bool list_delitem(TracedVector<Value> args,
-                         MutableTraced<Value> resultOut)
+bool Tuple::contains(Traced<Value> value)
 {
-    List* list = args[0].as<List>();
-    return list->delitem(args[1], resultOut);
-}
-
-static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    List* list = args[0].as<List>();
-    return list->append(args[1], resultOut);
-}
-
-static bool list_sort(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    List* list = args[0].as<List>();
-    list->sort();
-    resultOut = None;
-    return true;
-}
-
-void List::init()
-{
-    ObjectClass.init(Class::createNative("list", listBase_new<List>, 2));
-    listBase_initNatives(ObjectClass);
-    initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
-    initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
-    initNativeMethod(ObjectClass, "append", list_append, 2);
-    initNativeMethod(ObjectClass, "sort", list_sort, 1);
+    return find(elements_.begin(), elements_.end(), value) != elements_.end();
 }
 
 List::List(const TracedVector<Value>& values)
-  : ListBase(ObjectClass, values)
-{}
-
-List::List(size_t size)
-  : ListBase(ObjectClass, size)
-{}
-
-List::List(Traced<Class*> cls, Traced<ListBase*> init)
-  : ListBase(cls, 0)
+  : Object(ObjectClass), elements_(values.size())
 {
-    assert(cls->isDerivedFrom(ObjectClass));
-    if (init)
-        elements_ = init->elements();
+    for (unsigned i = 0; i < values.size(); ++i)
+        elements_[i] = values[i];
 }
 
-const string& List::listName() const
+List::List(size_t size)
+  : Object(ObjectClass), elements_(size)
 {
-    static string name("list");
-    return name;
+#ifdef DEBUG
+    for (unsigned i = 0; i < size; ++i)
+        elements_[i] = None;
+#endif
+}
+
+List::List(Traced<Class*> cls, size_t size)
+  : Object(ObjectClass), elements_(size)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+#ifdef DEBUG
+    for (unsigned i = 0; i < size; ++i)
+        elements_[i] = None;
+#endif
+}
+
+List::List(Traced<Class*> cls, Traced<List*> init)
+  : Object(cls), elements_(init->elements_)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+}
+
+List::List(Traced<Class*> cls, Traced<Tuple*> init)
+  : Object(cls), elements_(init->elements())
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+}
+
+void List::initElement(size_t index, const Value& value)
+{
+    assert(elements_[index].asObject() == None);
+    elements_[index] = value;
 }
 
 void List::print(ostream& s) const
@@ -350,11 +171,20 @@ void List::print(ostream& s) const
     s << "]";
 }
 
+void List::traceChildren(Tracer& t)
+{
+    gc.traceVector(t, &elements_);
+}
+
+bool List::contains(Traced<Value> value)
+{
+    return find(elements_.begin(), elements_.end(), value) != elements_.end();
+}
+
 bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut)
 {
     if (!index.isInt()) {
-        resultOut = gc.create<TypeError>(
-            listName() + " indices must be integers");
+        resultOut = gc.create<TypeError>("list indices must be integers");
         return false;
     }
 
@@ -362,8 +192,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<IndexError>(
-            listName() + " index out of range");
+        resultOut = gc.create<IndexError>("list index out of range");
         return false;
     }
 
@@ -375,8 +204,7 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value
 bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
     if (!index.isInt()) {
-        resultOut = gc.create<TypeError>(
-            listName() + " indices must be integers");
+        resultOut = gc.create<TypeError>("list indices must be integers");
         return false;
     }
 
@@ -384,8 +212,7 @@ bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
     if (i < 0)
         i = elements_.size() + i;
     if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<IndexError>(
-            listName() + " index out of range");
+        resultOut = gc.create<IndexError>("list index out of range");
         return false;
     }
 
@@ -425,53 +252,232 @@ void List::sort()
     ::sort(elements_.begin(), elements_.end(), compareElements);
 }
 
-static bool listIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    ListIter* i = args[0].as<ListIter>();
-    return i->iter(resultOut);
-}
-
-static bool listIter_next(TracedVector<Value> args, MutableTraced<Value> resultOut)
-{
-    ListIter* i = args[0].as<ListIter>();
-    return i->next(resultOut);
-}
-
-void ListIter::init()
-{
-    ObjectClass.init(Class::createNative("listiterator", nullptr));
-    initNativeMethod(ObjectClass, Name::__iter__, listIter_iter, 1);
-    initNativeMethod(ObjectClass, Name::__next__, listIter_next, 1);
-}
-
-ListIter::ListIter(Traced<ListBase*> list)
+template <typename T>
+ListIterImpl<T>::ListIterImpl(Traced<T*> list)
   : Object(ObjectClass), list_(list), index_(0)
 {}
 
-void ListIter::traceChildren(Tracer& t)
+template <typename T>
+void ListIterImpl<T>::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
     gc.trace(t, &list_);
 }
 
-bool ListIter::iter(MutableTraced<Value> resultOut)
+template <typename T>
+bool ListIterImpl<T>::iter(MutableTraced<Value> resultOut)
 {
-    Stack<ListIter*> self(this);
+    Stack<ListIterImpl*> self(this);
     resultOut = Value(self);
     return true;
 }
 
-bool ListIter::next(MutableTraced<Value> resultOut)
+template <typename T>
+bool ListIterImpl<T>::next(MutableTraced<Value> resultOut)
 {
     assert(index_ >= -1);
-    if (index_ == -1 || size_t(index_) >= list_->elements_.size()) {
+    if (index_ == -1 || size_t(index_) >= list_->elements().size()) {
         index_ = -1;
         resultOut = StopIterationException;
         return false;
     }
 
-    assert(index_ >= 0 && (size_t)index_ < list_->elements_.size());
-    resultOut = list_->elements_[index_];
+    assert(index_ >= 0 && (size_t)index_ < list_->elements().size());
+    resultOut = list_->elements()[index_];
     index_++;
     return true;
+}
+
+template <class T>
+static bool generic_new(TracedVector<Value> args,
+                        MutableTraced<Value> resultOut)
+{
+    if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
+        return false;
+
+    Stack<Class*> cls(args[0].asObject()->as<Class>());
+    assert(cls->isDerivedFrom(List::ObjectClass) ||
+           cls->isDerivedFrom(Tuple::ObjectClass));
+
+    if (args.size() == 1) {
+        resultOut = gc.create<T>(cls, 0);
+        return true;
+    }
+
+    Stack<Object*> arg(args[1].toObject());
+    if (arg->isInstanceOf(List::ObjectClass)) {
+        Stack<List*> init(arg->as<List>());
+        resultOut = gc.create<T>(cls, static_cast<Traced<List*>>(init));
+        return true;
+    }
+
+    if (arg->isInstanceOf(Tuple::ObjectClass)) {
+        Stack<Tuple*> init(arg->as<Tuple>());
+        resultOut = gc.create<T>(cls, static_cast<Traced<Tuple*>>(init));
+        return true;
+    }
+
+    Stack<Value> result;
+    interp->pushStack(arg);
+    if (!interp->call(IterableToList, 1, result)) {
+        resultOut = result;
+        return false;
+    }
+
+    // todo: can skip copy here if T is List and cls is List::ObjectClass.
+
+    Stack<List*> init(result.as<List>());
+    resultOut = gc.create<T>(cls, static_cast<Traced<List*>>(init));
+    return true;
+}
+
+template <class T>
+static bool generic_len(TracedVector<Value> args,
+                        MutableTraced<Value> resultOut)
+{
+    resultOut = Integer::get(args[0].as<T>()->len());
+    return true;
+}
+
+
+template <class T>
+static bool generic_getitem(TracedVector<Value> args,
+                            MutableTraced<Value> resultOut)
+{
+    Stack<T*> self(args[0].as<T>());
+    Stack<Value> index(args[1]);
+
+    if (index.isInt()) {
+        int32_t i = WrapIndex(index.toInt(), self->len());
+        if (i < 0 || size_t(i) >= self->len()) {
+            resultOut = gc.create<IndexError>("index out of range");
+            return false;
+        }
+        resultOut = self->getitem(i);
+        return true;
+    } else if (index.isInstanceOf(Slice::ObjectClass)) {
+        Stack<Slice*> slice(index.as<Slice>());
+        int32_t start, count, step;
+        if (!slice->getIterationData(self->len(), start, count, step,
+                                     resultOut))
+        {
+            return false;
+        }
+
+        Stack<T*> result(gc.create<T>(count));
+        int32_t src = start;
+        for (size_t i = 0; i < count; i++) {
+            assert(src < self->len());
+            result->initElement(i, self->getitem(src));
+            src += step;
+        }
+
+        resultOut = Value(result);
+        return true;
+    } else {
+        resultOut = gc.create<TypeError>(
+            "indices must be integers or slices");
+        return false;
+    }
+}
+
+template <class T>
+static bool generic_contains(TracedVector<Value> args,
+                             MutableTraced<Value> resultOut)
+{
+    resultOut = Boolean::get(args[0].as<T>()->contains(args[1]));
+    return true;
+}
+
+template <class T>
+static bool generic_iter(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
+    Stack<T*> self(args[0].as<T>());
+    resultOut = gc.create<ListIterImpl<T>>(self);
+    return true;
+}
+
+static bool list_setitem(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
+    return args[0].as<List>()->setitem(args[1], args[2], resultOut);
+}
+
+static bool list_delitem(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
+    return args[0].as<List>()->delitem(args[1], resultOut);
+}
+
+static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    return args[0].as<List>()->append(args[1], resultOut);
+}
+
+static bool list_sort(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    args[0].as<List>()->sort();
+    resultOut = None;
+    return true;
+}
+
+template <class T>
+static void generic_initNatives(Traced<Class*> cls)
+{
+    Stack<Value> value;
+    initNativeMethod(cls, "__len__", generic_len<T>, 1);
+    initNativeMethod(cls, "__getitem__", generic_getitem<T>, 2);
+    initNativeMethod(cls, "__contains__", generic_contains<T>, 2);
+    initNativeMethod(cls, "__iter__", generic_iter<T>, 1);
+    // __eq__ and __ne__ are supplied by lib/internal.py
+}
+
+void Tuple::init()
+{
+    ObjectClass.init(Class::createNative("tuple", generic_new<Tuple>, 2));
+    generic_initNatives<Tuple>(ObjectClass);
+    Empty.init(gc.create<Tuple>(EmptyValueArray));
+}
+
+void List::init()
+{
+    ObjectClass.init(Class::createNative("list", generic_new<List>, 2));
+    generic_initNatives<List>(ObjectClass);
+    initNativeMethod(ObjectClass, "__setitem__", list_setitem, 3);
+    initNativeMethod(ObjectClass, "__delitem__", list_delitem, 2);
+    initNativeMethod(ObjectClass, "append", list_append, 2);
+    initNativeMethod(ObjectClass, "sort", list_sort, 1);
+}
+
+template <typename T>
+static bool listIter_iter(TracedVector<Value> args,
+                          MutableTraced<Value> resultOut)
+{
+    ListIterImpl<T>* i = args[0].as<ListIterImpl<T>>();
+    return i->iter(resultOut);
+}
+
+template <typename T>
+static bool listIter_next(TracedVector<Value> args,
+                          MutableTraced<Value> resultOut)
+{
+    ListIterImpl<T>* i = args[0].as<ListIterImpl<T>>();
+    return i->next(resultOut);
+}
+
+template<typename T>
+void ListIterImpl<T>::init()
+{
+    ObjectClass.init(Class::createNative("listiterator", nullptr));
+    initNativeMethod(ObjectClass, Name::__iter__, listIter_iter<T>, 1);
+    initNativeMethod(ObjectClass, Name::__next__, listIter_next<T>, 1);
+}
+
+void initList()
+{
+    Tuple::init();
+    List::init();
+    TupleIter::init();
+    ListIter::init();
 }

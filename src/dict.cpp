@@ -157,7 +157,7 @@ bool Dict::delitem(Traced<Value> key, MutableTraced<Value> resultOut)
 bool Dict::keys(MutableTraced<Value> resultOut)
 {
     // todo: should be some kind of iterator?
-    Stack<Tuple*> keys(Tuple::createUninitialised(entries_.size()));
+    Stack<Tuple*> keys(gc.create<Tuple>(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         keys->initElement(index++, i.first);
@@ -168,7 +168,7 @@ bool Dict::keys(MutableTraced<Value> resultOut)
 bool Dict::values(MutableTraced<Value> resultOut)
 {
     // todo: should be some kind of iterator?
-    Stack<Tuple*> values(Tuple::createUninitialised(entries_.size()));
+    Stack<Tuple*> values(gc.create<Tuple>(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         values->initElement(index++, i.second);

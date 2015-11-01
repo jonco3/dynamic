@@ -19,8 +19,8 @@ testcase(tuple)
     testInterp("2 in (1, 2, 3)", "True");
 
     testException("1[0]", "'int' object has no attribute '__getitem__'");
-    testException("()[0]", "tuple index out of range");
-    testException("(1,)[1]", "tuple index out of range");
+    testException("()[0]", "index out of range");
+    testException("(1,)[1]", "index out of range");
     // todo: should be TypeError: 'tuple' object does not support item assignment
     testException("(1,)[0] = 2", "'tuple' object has no attribute '__setitem__'");
     // todo: should be TypeError: argument of type 'int' is not iterable
@@ -45,6 +45,6 @@ testcase(list)
     testInterp("a = [1]; a.append(2); a", "[1, 2]");
 
     testException("1[0]", "'int' object has no attribute '__getitem__'");
-    testException("[][0]", "list index out of range");
-    testException("[1][1]", "list index out of range");
+    testException("[][0]", "index out of range");
+    testException("[1][1]", "index out of range");
 }

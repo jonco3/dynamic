@@ -111,6 +111,7 @@ struct Interpreter;
     instr(AssertionFailed, Instr)                                            \
     instr(MakeClassFromFrame, IdentInstr)                                    \
     instr(Destructure, CountInstr)                                           \
+    instr(DestructureTuple, CountInstr)                                      \
     instr(DestructureList, CountInstr)                                       \
     instr(DestructureFallback, CountInstr)                                   \
     instr(Raise, Instr)                                                      \
