@@ -535,7 +535,7 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
         } else if (name == Name::__bases__) {
             RootVector<Value> bases(1);
             bases[0] = obj->as<Class>()->base();
-            resultOut = gc.create<Tuple>(bases);
+            resultOut = Tuple::get(bases);
             return true;
         }
     }

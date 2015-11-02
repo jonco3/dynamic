@@ -13,23 +13,33 @@ struct Tuple : public Object
     static void init();
 
     static Tuple* get(const TracedVector<Value>& values);
-    Tuple(const TracedVector<Value>& values);
-    Tuple(size_t size);
-    Tuple(Traced<Class*> cls, size_t size);
-    Tuple(Traced<Class*> cls, Traced<Tuple*> init);
-    Tuple(Traced<Class*> cls, Traced<List*> init);
+    static Tuple* get(size_t size);
+    static Tuple* get(Traced<Class*> cls, size_t size);
+    static Tuple* get(Traced<Class*> cls, Traced<Tuple*> init);
+    static Tuple* get(Traced<Class*> cls, Traced<List*> init);
     void initElement(size_t index, const Value& value);
 
     void print(ostream& s) const override;
     void traceChildren(Tracer& t) override;
 
-    int32_t len() { return (int32_t)elements_.size(); }
+    int32_t len() { return size_; }
     bool contains(Traced<Value> value);
-    Value getitem(size_t index) { return elements_.at(index); }
-    const HeapVector<Value>& elements() const { return elements_; }
+    Value getitem(size_t index) {
+        assert(index < size_);
+        return elements_[index];
+    }
+
 
   private:
-    HeapVector<Value> elements_;
+    friend struct GC;
+    Tuple(const TracedVector<Value>& values);
+    Tuple(size_t size);
+    Tuple(Traced<Class*> cls, size_t size);
+    Tuple(Traced<Class*> cls, Traced<Tuple*> init);
+    Tuple(Traced<Class*> cls, Traced<List*> init);
+
+    int32_t size_;
+    Heap<Value> elements_[0];
 };
 
 struct List : public Object
@@ -38,6 +48,8 @@ struct List : public Object
 
     static void init();
 
+    template <typename... Args>
+    static List* get(Args&&... args);
     List(const TracedVector<Value>& values);
     List(size_t size);
     List(Traced<Class*> cls, size_t size);
@@ -60,6 +72,7 @@ struct List : public Object
     void sort();
 
   private:
+
     HeapVector<Value> elements_;
 };
 

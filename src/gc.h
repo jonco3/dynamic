@@ -46,6 +46,8 @@ struct GC
 
     template <typename T, typename... Args>
     inline T* create(Args&&... args);
+    template <typename T, typename... Args>
+    inline T* createSized(size_t size, Args&&... args);
 
     void collect();
 
@@ -844,6 +846,29 @@ inline void GC::maybeCollect()
     assert(unsafeCount == 0);
     if (cellCount >= collectAt)
         collect();
+}
+
+template <typename T, typename... Args>
+T* GC::createSized(size_t size, Args&&... args) {
+    static_assert(is_base_of<Cell, T>::value,
+                  "Type T must be derived from Cell");
+    assert(size >= sizeof(T));
+
+    maybeCollect();
+
+    bool requiresSweep = is_base_of<SweptCell, T>::value;
+    SizeClass cc = sizeClass(size);
+    void* data = allocCell(cc, requiresSweep);
+
+    Stack<T*> t(static_cast<T*>(data));
+    assert(static_cast<Cell*>(t.get()) == data);
+    assert(!isAllocating);
+#ifdef DEBUG
+    isAllocating = true;
+#endif
+    new (t.get()) T(std::forward<Args>(args)...);
+    assert(!isAllocating);
+    return t;
 }
 
 template <typename T, typename... Args>
