@@ -862,23 +862,17 @@ Interpreter::executeDestructureFallback(unsigned expected)
         return raiseException(result);
 }
 
-static bool IterableIsBuiltinList(Traced<Value> value)
-{
-    return value.is<List>() || value.is<Tuple>();
-}
-
 void
 Interpreter::executeInstr_Destructure(Traced<CountInstr*> instr)
 {
     Stack<Value> iterable(peekStack());
     Instr* replacement;
-    if (IterableIsBuiltinList(iterable)) {
-        replacement =
-            InstrFactory<Instr_DestructureList>::get(instr->count);
-    } else {
-        replacement =
-            InstrFactory<Instr_DestructureFallback>::get(instr->count);
-    }
+    if (iterable.is<List>())
+        replacement = InstrFactory<Instr_DestructureList>::get(instr->count);
+    else if (iterable.is<Tuple>())
+        replacement = InstrFactory<Instr_DestructureTuple>::get(instr->count);
+    else
+        replacement = InstrFactory<Instr_DestructureFallback>::get(instr->count);
 
     replaceInstrAndRestart(instr, replacement);
 }
