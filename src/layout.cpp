@@ -12,6 +12,14 @@ inline Layout::Children::Children()
   : hasMany_(false), single_(nullptr)
 {}
 
+inline Layout::Children::~Children()
+{
+    if (hasMany_) {
+        assert(many_);
+        delete many_;
+    }
+}
+
 inline bool Layout::Children::has(Name name)
 {
     if (hasMany_)

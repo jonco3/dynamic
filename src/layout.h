@@ -47,6 +47,7 @@ struct Layout : public SweptCell
     struct Children
     {
         Children();
+        ~Children();
         bool has(Name name);
         void add(Layout* layout);
         void remove(Name name);
