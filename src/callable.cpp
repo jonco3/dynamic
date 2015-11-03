@@ -88,6 +88,13 @@ void Function::traceChildren(Tracer& t)
     gc.trace(t, &env_);
 }
 
+void Function::dump(ostream& s) const
+{
+    s << type()->name();
+    s << " object at 0x" << hex << reinterpret_cast<uintptr_t>(this) << endl;
+    s << *info_->block_ << endl;
+}
+
 Method::Method(Traced<Callable*> callable, Traced<Object*> object)
   : Object(ObjectClass), callable_(callable), object_(object)
 {}

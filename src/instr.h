@@ -533,32 +533,21 @@ struct BinaryOpInstr : public Instr
     unsigned stubCount;
 };
 
-struct BinaryOpStubInstrBase : public StubInstr
+struct BinaryOpStubInstr : public StubInstr
 {
-    BinaryOpStubInstrBase(InstrCode code, Traced<Instr*> next, BinaryOp op)
-      : StubInstr(code, next), op(op)
-    {}
-
-    void print(ostream& s) const override;
-
-    const BinaryOp op;
-};
-
-struct BinaryOpStubInstr : public BinaryOpStubInstrBase
-{
-    BinaryOpStubInstr(InstrCode code, Traced<Instr*> next, BinaryOp op)
-      : BinaryOpStubInstrBase(code, next, op)
+    BinaryOpStubInstr(InstrCode code, Traced<Instr*> next)
+      : StubInstr(code, next)
     {
         assert(instrType(code) == InstrType_BinaryOpStubInstr);
     }
 };
 
-struct BuiltinBinaryOpInstr : public BinaryOpStubInstrBase
+struct BuiltinBinaryOpInstr : public StubInstr
 {
-    BuiltinBinaryOpInstr(InstrCode code, Traced<Instr*> next, BinaryOp op,
+    BuiltinBinaryOpInstr(InstrCode code, Traced<Instr*> next,
                          Traced<Class*> left, Traced<Class*> right,
                          Traced<Value> method)
-      : BinaryOpStubInstrBase(code, next, op),
+      : StubInstr(code, next),
         left_(left),
         right_(right),
         method_(method)
@@ -595,15 +584,13 @@ struct CompareOpInstr : public Instr
 
 struct CompareOpStubInstr : public StubInstr
 {
-    CompareOpStubInstr(InstrCode code, Traced<Instr*> next, CompareOp op)
-      : StubInstr(code, next), op(op)
+    CompareOpStubInstr(InstrCode code, Traced<Instr*> next)
+      : StubInstr(code, next)
     {
         assert(instrType(code) == InstrType_CompareOpStubInstr);
     }
 
     void print(ostream& s) const override;
-
-    const CompareOp op;
 };
 
 struct LoopControlJumpInstr : public Instr

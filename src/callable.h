@@ -93,6 +93,7 @@ struct Function : public Callable
     }
 
     void traceChildren(Tracer& t) override;
+    void dump(ostream& s) const override;
 
   private:
     Heap<FunctionInfo*> info_;
