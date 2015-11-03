@@ -502,32 +502,10 @@ struct LambdaInstr : public Instr
     Heap<FunctionInfo*> info_;
 };
 
-struct BinaryOpInstrBase : public Instr
+struct StubInstr : public Instr
 {
-    BinaryOpInstrBase(InstrCode code, BinaryOp op) : Instr(code), op(op) {}
-
-    void print(ostream& s) const override;
-
-    const BinaryOp op;
-};
-
-struct BinaryOpInstr : public BinaryOpInstrBase
-{
-    BinaryOpInstr(InstrCode code, BinaryOp op)
-      : BinaryOpInstrBase(code, op), stubCount(0)
-    {
-        assert(instrType(code) == InstrType_BinaryOpInstr);
-    }
-
-    void print(ostream& s) const override;
-
-    unsigned stubCount;
-};
-
-struct BinaryOpStubInstrBase : public BinaryOpInstrBase
-{
-    BinaryOpStubInstrBase(InstrCode code, BinaryOp op, Traced<Instr*> next)
-      : BinaryOpInstrBase(code, op), next_(next)
+    StubInstr(InstrCode code, Traced<Instr*> next)
+      : Instr(code), next_(next)
     {
         assert(next_);
     }
@@ -541,10 +519,35 @@ struct BinaryOpStubInstrBase : public BinaryOpInstrBase
     Heap<Instr*> next_;
 };
 
+struct BinaryOpInstr : public Instr
+{
+    BinaryOpInstr(InstrCode code, BinaryOp op)
+      : Instr(code), op(op), stubCount(0)
+    {
+        assert(instrType(code) == InstrType_BinaryOpInstr);
+    }
+
+    void print(ostream& s) const override;
+
+    const BinaryOp op;
+    unsigned stubCount;
+};
+
+struct BinaryOpStubInstrBase : public StubInstr
+{
+    BinaryOpStubInstrBase(InstrCode code, Traced<Instr*> next, BinaryOp op)
+      : StubInstr(code, next), op(op)
+    {}
+
+    void print(ostream& s) const override;
+
+    const BinaryOp op;
+};
+
 struct BinaryOpStubInstr : public BinaryOpStubInstrBase
 {
-    BinaryOpStubInstr(InstrCode code, BinaryOp op, Traced<Instr*> next)
-      : BinaryOpStubInstrBase(code, op, next)
+    BinaryOpStubInstr(InstrCode code, Traced<Instr*> next, BinaryOp op)
+      : BinaryOpStubInstrBase(code, next, op)
     {
         assert(instrType(code) == InstrType_BinaryOpStubInstr);
     }
@@ -552,10 +555,10 @@ struct BinaryOpStubInstr : public BinaryOpStubInstrBase
 
 struct BuiltinBinaryOpInstr : public BinaryOpStubInstrBase
 {
-    BuiltinBinaryOpInstr(InstrCode code, BinaryOp op, Traced<Instr*> next,
+    BuiltinBinaryOpInstr(InstrCode code, Traced<Instr*> next, BinaryOp op,
                          Traced<Class*> left, Traced<Class*> right,
                          Traced<Value> method)
-      : BinaryOpStubInstrBase(code, op, next),
+      : BinaryOpStubInstrBase(code, next, op),
         left_(left),
         right_(right),
         method_(method)
@@ -567,6 +570,7 @@ struct BuiltinBinaryOpInstr : public BinaryOpStubInstrBase
     Class* right() { return right_; }
     Value method() { return method_; }
 
+    void print(ostream& s) const override;
     void traceChildren(Tracer& t) override;
 
   private:
@@ -575,45 +579,31 @@ struct BuiltinBinaryOpInstr : public BinaryOpStubInstrBase
     Heap<Value> method_;
 };
 
-struct CompareOpInstrBase : public Instr
-{
-    CompareOpInstrBase(InstrCode code, CompareOp op)
-      : Instr(code), op(op)
-    {}
-
-    void print(ostream& s) const override;
-
-    const CompareOp op;
-};
-
-struct CompareOpInstr : public CompareOpInstrBase
+struct CompareOpInstr : public Instr
 {
     CompareOpInstr(InstrCode code, CompareOp op)
-      : CompareOpInstrBase(code, op), stubCount(0)
+      : Instr(code), op(op), stubCount(0)
     {
         assert(instrType(code) == InstrType_CompareOpInstr);
     }
 
     void print(ostream& s) const override;
 
+    const CompareOp op;
     unsigned stubCount;
 };
 
-struct CompareOpStubInstr : public CompareOpInstrBase
+struct CompareOpStubInstr : public StubInstr
 {
-    CompareOpStubInstr(InstrCode code, CompareOp op, Traced<Instr*> next)
-      : CompareOpInstrBase(code, op), next_(next)
+    CompareOpStubInstr(InstrCode code, Traced<Instr*> next, CompareOp op)
+      : StubInstr(code, next), op(op)
     {
         assert(instrType(code) == InstrType_CompareOpStubInstr);
     }
 
-    const Heap<Instr*>& next() { return next_; }
-
-    void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;
 
-  private:
-    Heap<Instr*> next_;
+    const CompareOp op;
 };
 
 struct LoopControlJumpInstr : public Instr

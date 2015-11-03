@@ -147,29 +147,34 @@ void LambdaInstr::traceChildren(Tracer& t)
     gc.trace(t, &info_);
 }
 
-void BinaryOpInstrBase::print(ostream& s) const
+void StubInstr::print(ostream& s) const
 {
     Instr::print(s);
-    s << " " << BinaryOpNames[op];
 }
 
-void BinaryOpInstr::print(ostream& s) const
-{
-    BinaryOpInstrBase::print(s);
-    if (stubCount)
-        s << " " << dec << stubCount;
-}
-
-void BinaryOpStubInstrBase::traceChildren(Tracer& t)
+void StubInstr::traceChildren(Tracer& t)
 {
     gc.trace(t, &next_);
 }
 
+void BinaryOpInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << BinaryOpNames[op];
+    if (stubCount)
+        s << " " << dec << stubCount;
+}
+
 void BinaryOpStubInstrBase::print(ostream& s) const
 {
-    BinaryOpInstrBase::print(s);
-    s << " -> ";
-    next_->print(s);
+    StubInstr::print(s);
+    s << " " << BinaryOpNames[op];
+}
+
+void BuiltinBinaryOpInstr::print(ostream& s) const
+{
+    BinaryOpStubInstrBase::print(s);
+    s << "builtin " << hex << method_.toObject();
 }
 
 void BuiltinBinaryOpInstr::traceChildren(Tracer& t)
@@ -180,29 +185,18 @@ void BuiltinBinaryOpInstr::traceChildren(Tracer& t)
     gc.trace(t, &method_);
 }
 
-void CompareOpInstrBase::print(ostream& s) const
+void CompareOpInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << CompareOpNames[op];
-}
-
-void CompareOpInstr::print(ostream& s) const
-{
-    CompareOpInstrBase::print(s);
-     if (stubCount)
+    if (stubCount)
         s << " " << dec << stubCount;
-}
-
-void CompareOpStubInstr::traceChildren(Tracer& t)
-{
-    gc.trace(t, &next_);
 }
 
 void CompareOpStubInstr::print(ostream& s) const
 {
-    CompareOpInstrBase::print(s);
-    s << " -> ";
-    next_->print(s);
+    StubInstr::print(s);
+    s << " " << CompareOpNames[op];
 }
 
 void LoopControlJumpInstr::print(ostream& s) const
@@ -1065,23 +1059,23 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
     if (ShouldInlineIntBinaryOp(op) && left.isInt32() && right.isInt32()) {
         // If both arguments are 32 bit tagged integers, inline the operation.
         auto code = InstrCode(Instr_BinaryOpInt_Add + op);
-        stub = gc.create<BinaryOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<BinaryOpStubInstr>(code, currentInstr(), op);
     } else if (ShouldInlineIntBinaryOp(op) && left.isInt() && right.isInt()) {
         // If both arguments are integers, inline the operation.
         auto code = InstrCode(Instr_BinaryOpInteger_Add + op);
-        stub = gc.create<BinaryOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<BinaryOpStubInstr>(code, currentInstr(), op);
     } else if (ShouldInlineFloatBinaryOp(op) &&
                left.isDouble() && right.isDouble())
     {
         // If both arguments are doubles, inline the operation.
         auto code = InstrCode(Instr_BinaryOpFloat_Add + op);
-        stub = gc.create<BinaryOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<BinaryOpStubInstr>(code, currentInstr(), op);
     } else if (left.type()->isFinal() && right.type()->isFinal()) {
     // If both arguments are instances of builtin classes, cache the method.
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
         auto code = Instr_BinaryOpBuiltin;
-        stub = gc.create<BuiltinBinaryOpInstr>(code, op, currentInstr(),
+        stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(), op,
                                                lc, rc, method);
     }
 
@@ -1259,11 +1253,11 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
     if (left.isInt32() && right.isInt32()) {
         // If both arguments are integers, inline the operation.
         auto code = InstrCode(Instr_CompareOpInt_LT + op);
-        stub = gc.create<CompareOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<CompareOpStubInstr>(code, currentInstr(), op);
     } else if (left.isDouble() && right.isDouble()) {
         // If both arguments are doubles, inline the operation.
         auto code = InstrCode(Instr_CompareOpFloat_LT + op);
-        stub = gc.create<CompareOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<CompareOpStubInstr>(code, currentInstr(), op);
     }
 
     if (stub) {
@@ -1381,20 +1375,20 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
     if (ShouldInlineIntAugAssignOp(op) && left.isInt32() && right.isInt32()) {
         // If both arguments are integers, inline the operation.
         auto code = InstrCode(Instr_AugAssignUpdateInt_Add + op);
-        stub = gc.create<BinaryOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<BinaryOpStubInstr>(code, currentInstr(), op);
     } else if (ShouldInlineFloatAugAssignOp(op)
         && left.isDouble() && right.isDouble())
     {
         // If both arguments are doubles, inline the operation.
         auto code = InstrCode(Instr_AugAssignUpdateFloat_Add + op);
-        stub = gc.create<BinaryOpStubInstr>(code, op, currentInstr());
+        stub = gc.create<BinaryOpStubInstr>(code, currentInstr(), op);
     } else if (left.type()->isFinal() && right.type()->isFinal()) {
         // If both arguments are instances of builtin classes, cache the method.
         assert(isCallableDescriptor);
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
         auto code = Instr_AugAssignUpdateBuiltin;
-        stub = gc.create<BuiltinBinaryOpInstr>(code, op, currentInstr(),
+        stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(), op,
                                                lc, rc, method);
     }
 
