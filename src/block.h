@@ -22,11 +22,6 @@ extern bool assertStackDepth;
 extern bool logCompile;
 #endif
 
-typedef bool (*InstrFuncBase)(Traced<Instr*> self, Interpreter& interp);
-
-template <typename T>
-using InstrFunc = bool (*)(Traced<T*> self, Interpreter& interp);
-
 struct InstrThunk
 {
     InstrThunk(Traced<Instr*> instr)
