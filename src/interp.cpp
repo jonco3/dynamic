@@ -164,7 +164,7 @@ void Interpreter::logInstr(Instr* instr)
 {
     if (logExecution) {
         logStart();
-        cout << instrName(instr->code()) << *instr;
+        cout << *instr;
         cout << " at line " << dec << currentPos().line << endl;
     }
 }
