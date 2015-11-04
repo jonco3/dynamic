@@ -219,6 +219,9 @@ extern const char* instrName(InstrCode code);
 
 struct BranchInstr;
 
+#define define_instr_type(t)                                                 \
+    static const InstrType Type = InstrType_##t
+
 // Base class for instruction data.
 struct Instr : public Cell
 {
@@ -255,18 +258,22 @@ struct IdentInstrBase : public Instr
 
 struct IdentInstr : public IdentInstrBase
 {
+    static const InstrType Type = InstrType_IdentInstr;
+
     IdentInstr(InstrCode code, Name ident) : IdentInstrBase(code, ident)
     {
-        assert(instrType(code) == InstrType_IdentInstr);
+        assert(instrType(code) == Type);
     }
 };
 
 struct IdentAndSlotInstr : public IdentInstrBase
 {
+    define_instr_type(IdentAndSlotInstr);
+
     IdentAndSlotInstr(InstrCode code, Name ident, unsigned slot)
       : IdentInstrBase(code, ident), slot(slot)
     {
-        assert(instrType(code) == InstrType_IdentAndSlotInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -279,10 +286,12 @@ struct IdentAndSlotInstr : public IdentInstrBase
 
 struct FrameAndIdentInstr : public IdentInstrBase
 {
+    define_instr_type(FrameAndIdentInstr);
+
     FrameAndIdentInstr(InstrCode code, unsigned frameIndex, Name ident)
       : IdentInstrBase(code, ident), frameIndex(frameIndex)
     {
-        assert(instrType(code) == InstrType_FrameAndIdentInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -292,11 +301,13 @@ struct FrameAndIdentInstr : public IdentInstrBase
 
 struct GlobalAndIdentInstr : public IdentInstrBase
 {
+    define_instr_type(GlobalAndIdentInstr);
+
     GlobalAndIdentInstr(InstrCode code, Traced<Object*> global, Name ident,
                         bool fallback = false)
       : IdentInstrBase(code, ident), global_(global), fallback_(fallback)
     {
-        assert(instrType(code) == InstrType_GlobalAndIdentInstr);
+        assert(instrType(code) == Type);
         assert(global);
     }
 
@@ -339,10 +350,12 @@ struct SlotGuard
 
 struct GlobalSlotInstr : public IdentInstrBase
 {
+    define_instr_type(GlobalSlotInstr);
+
     GlobalSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
       : IdentInstrBase(code, ident), global_(global), globalSlot_(global, ident)
     {
-        assert(instrType(code) == InstrType_GlobalSlotInstr);
+        assert(instrType(code) == Type);
         assert(global);
     }
 
@@ -373,11 +386,13 @@ struct GlobalSlotInstr : public IdentInstrBase
 
 struct BuiltinsSlotInstr : public GlobalSlotInstr
 {
+    define_instr_type(BuiltinsSlotInstr);
+
     BuiltinsSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
       : GlobalSlotInstr(code, global, Name::__builtins__, ident),
         builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
     {
-        assert(instrType(code) == InstrType_BuiltinsSlotInstr);
+        assert(instrType(code) == Type);
     }
 
     void traceChildren(Tracer& t) override {
@@ -395,8 +410,10 @@ struct BuiltinsSlotInstr : public GlobalSlotInstr
 
 struct CountInstr : public Instr
 {
+    define_instr_type(CountInstr);
+
     CountInstr(InstrCode code, unsigned count) : Instr(code), count(count) {
-        assert(instrType(code) == InstrType_CountInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -406,8 +423,10 @@ struct CountInstr : public Instr
 
 struct IndexInstr : public Instr
 {
+    define_instr_type(IndexInstr);
+
     IndexInstr(InstrCode code, unsigned index) : Instr(code), index(index) {
-        assert(instrType(code) == InstrType_IndexInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -417,10 +436,12 @@ struct IndexInstr : public Instr
 
 struct ValueInstr : public Instr
 {
+    define_instr_type(ValueInstr);
+
     ValueInstr(InstrCode code, Traced<Value> v)
         : Instr(code), value_(v)
     {
-        assert(instrType(code) == InstrType_ValueInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -434,13 +455,15 @@ struct ValueInstr : public Instr
 
 struct BuiltinMethodInstr : public IdentInstrBase
 {
+    define_instr_type(BuiltinMethodInstr);
+
     BuiltinMethodInstr(InstrCode code, Name name, Traced<Class*> cls,
                        Traced<Value> result)
       : IdentInstrBase(code, name),
         class_(cls),
         result_(result)
     {
-        assert(instrType(code) == InstrType_BuiltinMethodInstr);
+        assert(instrType(code) == Type);
     }
 
     void traceChildren(Tracer& t) override;
@@ -451,10 +474,12 @@ struct BuiltinMethodInstr : public IdentInstrBase
 
 struct BranchInstr : public Instr
 {
+    define_instr_type(BranchInstr);
+
     BranchInstr(InstrCode code, int offset = 0)
       : Instr(code), offset_(offset)
     {
-        assert(instrType(code) == InstrType_BranchInstr);
+        assert(instrType(code) == Type);
     }
 
     bool isBranch() const override {
@@ -478,13 +503,22 @@ struct BranchInstr : public Instr
 
 struct LambdaInstr : public Instr
 {
+    define_instr_type(LambdaInstr);
+
     LambdaInstr(InstrCode code,
                 Name name,
                 const vector<Name>& paramNames,
                 Traced<Block*> block,
                 unsigned defaultCount = 0,
                 bool takesRest = false,
-                bool isGenerator = false);
+                bool isGenerator = false)
+      : Instr(Instr_Lambda),
+        funcName_(name),
+        info_(gc.create<FunctionInfo>(paramNames, block, defaultCount,
+                                      takesRest, isGenerator))
+    {
+        assert(instrType(code) == Type);
+    }
 
     Name functionName() const { return funcName_; }
     FunctionInfo* functionInfo() const { return info_; }
@@ -521,10 +555,12 @@ struct StubInstr : public Instr
 
 struct BinaryOpInstr : public Instr
 {
+    define_instr_type(BinaryOpInstr);
+
     BinaryOpInstr(InstrCode code, BinaryOp op)
       : Instr(code), op(op), stubCount(0)
     {
-        assert(instrType(code) == InstrType_BinaryOpInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -535,15 +571,19 @@ struct BinaryOpInstr : public Instr
 
 struct BinaryOpStubInstr : public StubInstr
 {
+    define_instr_type(BinaryOpStubInstr);
+
     BinaryOpStubInstr(InstrCode code, Traced<Instr*> next)
       : StubInstr(code, next)
     {
-        assert(instrType(code) == InstrType_BinaryOpStubInstr);
+        assert(instrType(code) == Type);
     }
 };
 
 struct BuiltinBinaryOpInstr : public StubInstr
 {
+    define_instr_type(BuiltinBinaryOpInstr);
+
     BuiltinBinaryOpInstr(InstrCode code, Traced<Instr*> next,
                          Traced<Class*> left, Traced<Class*> right,
                          Traced<Value> method)
@@ -552,7 +592,7 @@ struct BuiltinBinaryOpInstr : public StubInstr
         right_(right),
         method_(method)
     {
-        assert(instrType(code) == InstrType_BuiltinBinaryOpInstr);
+        assert(instrType(code) == Type);
     }
 
     Class* left() { return left_; }
@@ -570,10 +610,12 @@ struct BuiltinBinaryOpInstr : public StubInstr
 
 struct CompareOpInstr : public Instr
 {
+    define_instr_type(CompareOpInstr);
+
     CompareOpInstr(InstrCode code, CompareOp op)
       : Instr(code), op(op), stubCount(0)
     {
-        assert(instrType(code) == InstrType_CompareOpInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -584,10 +626,12 @@ struct CompareOpInstr : public Instr
 
 struct CompareOpStubInstr : public StubInstr
 {
+    define_instr_type(CompareOpStubInstr);
+
     CompareOpStubInstr(InstrCode code, Traced<Instr*> next)
       : StubInstr(code, next)
     {
-        assert(instrType(code) == InstrType_CompareOpStubInstr);
+        assert(instrType(code) == Type);
     }
 
     void print(ostream& s) const override;
@@ -595,13 +639,15 @@ struct CompareOpStubInstr : public StubInstr
 
 struct LoopControlJumpInstr : public Instr
 {
+    define_instr_type(LoopControlJumpInstr);
+
     LoopControlJumpInstr(InstrCode code, unsigned finallyCount,
                          unsigned target = 0)
       : Instr(Instr_LoopControlJump),
         finallyCount_(finallyCount),
         target_(target)
     {
-        assert(instrType(code) == InstrType_LoopControlJumpInstr);
+        assert(instrType(code) == Type);
     }
 
     unsigned finallyCount() const { return finallyCount_; }
@@ -619,6 +665,8 @@ struct LoopControlJumpInstr : public Instr
     unsigned finallyCount_;
     unsigned target_;
 };
+
+#undef define_instr_type
 
 template <InstrCode Code>
 struct InstrFactory

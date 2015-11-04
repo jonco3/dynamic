@@ -649,22 +649,6 @@ Interpreter::executeInstr_And(Traced<BranchInstr*> instr)
     popStack();
 }
 
-LambdaInstr::LambdaInstr(InstrCode code,
-                         Name name,
-                         const vector<Name>& paramNames,
-                         Traced<Block*>
-                         block,
-                         unsigned defaultCount,
-                         bool takesRest,
-                         bool isGenerator)
-  : Instr(Instr_Lambda),
-    funcName_(name),
-    info_(gc.create<FunctionInfo>(paramNames, block, defaultCount, takesRest,
-                                  isGenerator))
-{
-    assert(instrType(code) == InstrType_LambdaInstr);
-}
-
 void
 Interpreter::executeInstr_Lambda(Traced<LambdaInstr*> instr)
 {
