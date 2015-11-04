@@ -232,10 +232,20 @@ struct Instr : public Cell
     }
 
     InstrCode code() const { return code_; }
-    bool is(InstrCode t) const { return code() == t; }
 
-    virtual bool isBranch() const { return false; };
-    BranchInstr* asBranch();
+    InstrType type() const { return instrType(code_); }
+
+    template <typename T>
+    bool is() const {
+        static_assert(is_base_of<Instr, T>::value, "Invalid type parameter");
+        return type() == T::Type;
+    }
+
+    template <typename T>
+    T* as() {
+        assert(is<T>());
+        return static_cast<T*>(this);
+    }
 
     void print(ostream& s) const override;
 
@@ -481,10 +491,6 @@ struct BranchInstr : public Instr
     {
         assert(instrType(code) == Type);
     }
-
-    bool isBranch() const override {
-        return true;
-    };
 
     void setOffset(int offset) {
         assert(offset && !offset_);

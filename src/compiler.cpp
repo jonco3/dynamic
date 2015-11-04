@@ -68,7 +68,7 @@ struct ByteCompiler : public SyntaxVisitor
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s, params.size());
-        if (!block->lastInstr().data->is(Instr_Return)) {
+        if (block->lastInstr().data->code() != Instr_Return) {
             emit<Instr_Pop>();
             emit<Instr_Const>(None);
             emit<Instr_Return>();
@@ -117,7 +117,7 @@ struct ByteCompiler : public SyntaxVisitor
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
         build(s, params.size());
-        if (!block->lastInstr().data->is(Instr_LeaveGenerator)) {
+        if (block->lastInstr().data->code() != Instr_LeaveGenerator) {
             emit<Instr_Pop>();
             emit<Instr_LeaveGenerator>();
         }
@@ -204,7 +204,7 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned pos = block->instrCount();
         for (unsigned source : breakInstrs) {
             Instr *instr = block->instr(source).data;
-            assert(instr->is(Instr_LoopControlJump));
+            assert(instr->code() == Instr_LoopControlJump);
             static_cast<LoopControlJumpInstr*>(instr)->setTarget(pos);
         }
         breakInstrs.clear();

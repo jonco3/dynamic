@@ -75,12 +75,6 @@ void Instr::print(ostream& s) const
     s << instrName(code_);
 }
 
-BranchInstr* Instr::asBranch()
-{
-    assert(isBranch());
-    return static_cast<BranchInstr*>(this);
-}
-
 void IdentInstrBase::print(ostream& s) const
 {
     Instr::print(s);

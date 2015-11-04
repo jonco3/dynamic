@@ -56,7 +56,7 @@ void testReplacement(const string& input,
     InstrThunk* instrp = block->findInstr(Instr_Lambda);
     assert(instrp);
     Instr* instr = instrp->data;
-    assert(instr->is(Instr_Lambda));
+    assert(instr->code() == Instr_Lambda);
     LambdaInstr* lambda = static_cast<LambdaInstr*>(instr);
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
