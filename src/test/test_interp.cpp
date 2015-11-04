@@ -270,14 +270,13 @@ testcase(interp)
                   "foo()\n",
                   "foo() takes 1 positional arguments but 0 were given");
 
-    testReplacements("def foo(x, y):\n"
+    testStubs("def foo(x, y):\n"
                      "  return x.__add__(y)",
                      "foo(1, 2)", "3",
                      "foo('a', 'b')", "'ab'",
                      Instr_GetMethod,
                      Instr_GetMethodBuiltin,
-                     Instr_GetMethodBuiltin,
-                     Instr_GetMethodFallback);
+                     Instr_GetMethodBuiltin);
 
     testStubs("def foo(x, y):\n"
               "  return x + y",

@@ -73,6 +73,8 @@ Instr* getFinalInstr(Instr* instr) {
 void Instr::print(ostream& s) const
 {
     s << instrName(code_);
+    if (stubCount_)
+        s << " " << dec << stubCount_;
 }
 
 void IdentInstrBase::print(ostream& s) const
@@ -118,6 +120,7 @@ void ValueInstr::traceChildren(Tracer& t)
 
 void BuiltinMethodInstr::traceChildren(Tracer& t)
 {
+    StubInstr::traceChildren(t);
     gc.trace(t, &class_);
     gc.trace(t, &result_);
 }
@@ -157,8 +160,6 @@ void BinaryOpInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << BinaryOpNames[op];
-    if (stubCount)
-        s << " " << dec << stubCount;
 }
 
 void BuiltinBinaryOpInstr::print(ostream& s) const
@@ -179,8 +180,6 @@ void CompareOpInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << CompareOpNames[op];
-    if (stubCount)
-        s << " " << dec << stubCount;
 }
 
 void CompareOpStubInstr::print(ostream& s) const
@@ -462,36 +461,31 @@ Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
     if (!getMethod(instr->ident))
         return;
 
+    // Check stub count before attempting to optimise.
+    if (!instr->canAddStub())
+        return;
+
     if (value.type()->isFinal()) {
         // Builtin classes cannot be changed, so we can cache the lookup.
         Stack<Class*> cls(value.type());
         Stack<Value> result(peekStack(2));
-        replaceInstr(instr, InstrFactory<Instr_GetMethodBuiltin>::get(instr->ident, cls, result));
-    } else {
-        replaceInstr(instr, InstrFactory<Instr_GetMethodFallback>::get(instr->ident));
+        auto stub = InstrFactory<Instr_GetMethodBuiltin>::get(currentInstr(),
+                                                              cls, result);
+        insertStubInstr(instr, stub);
     }
-}
-
-void
-Interpreter::executeInstr_GetMethodFallback(Traced<IdentInstr*> instr)
-{
-    getMethod(instr->ident);
 }
 
 void
 Interpreter::executeInstr_GetMethodBuiltin(Traced<BuiltinMethodInstr*> instr)
 {
-    {
-        AutoAssertNoGC nogc;
-        Value value = peekStack();
-        if (value.type() == instr->class_) {
-            popStack();
-            pushStack(instr->result_, Boolean::True, value);
-            return;
-        }
+    Value value = peekStack();
+    if (value.type() != instr->class_) {
+        dispatchInstr(instr->next());
+        return;
     }
 
-    replaceInstrAndRestart(instr, InstrFactory<Instr_GetMethodFallback>::get(instr->ident));
+    popStack();
+    pushStack(instr->result_, Boolean::True, value);
 }
 
 void
@@ -1009,8 +1003,6 @@ static bool ShouldInlineFloatBinaryOp(BinaryOp op) {
     return op <= BinaryTrueDiv;
 }
 
-static const unsigned MaxStubCount = 8;
-
 void
 Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 {
@@ -1024,7 +1016,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
         return;
 
     // Check stub count before attempting to optimise.
-    if (instr->stubCount == MaxStubCount)
+    if (!instr->canAddStub())
         return;
 
     Stack<StubInstr*> stub;
@@ -1052,10 +1044,8 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
                                                lc, rc, method);
     }
 
-    if (stub) {
-        instr->stubCount++;
+    if (stub)
         insertStubInstr(instr, stub);
-    }
 }
 
 template <BinaryOp Op>
@@ -1218,7 +1208,7 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
         return;
 
     // Check stub count before attempting to optimise.
-    if (instr->stubCount == MaxStubCount)
+    if (!instr->canAddStub())
         return;
 
     Stack<CompareOpStubInstr*> stub;
@@ -1233,10 +1223,8 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
         stub = gc.create<CompareOpStubInstr>(code, currentInstr());
     }
 
-    if (stub) {
-        instr->stubCount++;
+    if (stub)
         insertStubInstr(instr, stub);
-    }
 }
 
 template <CompareOp Op>
@@ -1340,7 +1328,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
         return;
 
     // Check stub count before attempting to optimise.
-    if (instr->stubCount == MaxStubCount)
+    if (!instr->canAddStub())
         return;
 
     Stack<StubInstr*> stub;
@@ -1365,10 +1353,8 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
                                                lc, rc, method);
     }
 
-    if (stub) {
-        instr->stubCount++;
+    if (stub)
         insertStubInstr(instr, stub);
-    }
 }
 
 template <BinaryOp Op>

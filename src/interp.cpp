@@ -736,6 +736,7 @@ void Interpreter::insertStubInstr(Instr* current, Instr* stub)
     InstrThunk& it = instrp[-1];
     assert(getNextInstr(stub) == it.data);
     assert(getFinalInstr(it.data) == current);
+    current->incStubCount();
     it.code = stub->code();
     it.data = stub;
 }

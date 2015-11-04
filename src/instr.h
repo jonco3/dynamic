@@ -86,8 +86,6 @@ struct Interpreter;
     instr(SetAttr, IdentInstr)                                               \
     instr(DelAttr, IdentInstr)                                               \
     instr(GetMethod, IdentInstr)                                             \
-    instr(GetMethodFallback, IdentInstr)                                     \
-    instr(GetMethodBuiltin, BuiltinMethodInstr)                              \
     instr(Call, CountInstr)                                                  \
     instr(CallMethod, CountInstr)                                            \
     instr(CreateEnv, Instr)                                                  \
@@ -136,6 +134,7 @@ struct Interpreter;
     instr(AssertStackDepth, CountInstr)
 
 #define for_each_stub_instr(instr)                                           \
+    instr(GetMethodBuiltin, BuiltinMethodInstr)                              \
     instr(BinaryOpInt_Add, BinaryOpStubInstr)                                \
     instr(BinaryOpInt_Sub, BinaryOpStubInstr)                                \
     instr(BinaryOpInt_Mul, BinaryOpStubInstr)                                \
@@ -203,7 +202,7 @@ enum InstrType
 #undef define_instr_type_enum
 };
 
-enum InstrCode
+enum InstrCode : uint8_t
 {
 #define define_instr_code_enum(name, cls)                                    \
     Instr_##name,
@@ -249,8 +248,16 @@ struct Instr : public Cell
 
     void print(ostream& s) const override;
 
+    static const unsigned MaxStubCount = 8;
+    bool canAddStub() { return stubCount_ < MaxStubCount; }
+    void incStubCount() {
+        assert(canAddStub());
+        stubCount_++;
+    }
+
   private:
     const InstrCode code_;
+    uint8_t stubCount_;
 };
 
 struct IdentInstrBase : public Instr
@@ -463,13 +470,30 @@ struct ValueInstr : public Instr
     Heap<Value> value_;
 };
 
-struct BuiltinMethodInstr : public IdentInstrBase
+struct StubInstr : public Instr
+{
+    StubInstr(InstrCode code, Traced<Instr*> next)
+      : Instr(code), next_(next)
+    {
+        assert(next_);
+    }
+
+    const Heap<Instr*>& next() { return next_; }
+
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
+
+  private:
+    Heap<Instr*> next_;
+};
+
+struct BuiltinMethodInstr : public StubInstr
 {
     define_instr_type(BuiltinMethodInstr);
 
-    BuiltinMethodInstr(InstrCode code, Name name, Traced<Class*> cls,
-                       Traced<Value> result)
-      : IdentInstrBase(code, name),
+    BuiltinMethodInstr(InstrCode code, Traced<Instr*> next,
+                       Traced<Class*> cls, Traced<Value> result)
+      : StubInstr(code, next),
         class_(cls),
         result_(result)
     {
@@ -542,29 +566,12 @@ struct LambdaInstr : public Instr
     Heap<FunctionInfo*> info_;
 };
 
-struct StubInstr : public Instr
-{
-    StubInstr(InstrCode code, Traced<Instr*> next)
-      : Instr(code), next_(next)
-    {
-        assert(next_);
-    }
-
-    const Heap<Instr*>& next() { return next_; }
-
-    void traceChildren(Tracer& t) override;
-    void print(ostream& s) const override;
-
-  private:
-    Heap<Instr*> next_;
-};
-
 struct BinaryOpInstr : public Instr
 {
     define_instr_type(BinaryOpInstr);
 
     BinaryOpInstr(InstrCode code, BinaryOp op)
-      : Instr(code), op(op), stubCount(0)
+      : Instr(code), op(op)
     {
         assert(instrType(code) == Type);
     }
@@ -572,7 +579,6 @@ struct BinaryOpInstr : public Instr
     void print(ostream& s) const override;
 
     const BinaryOp op;
-    unsigned stubCount;
 };
 
 struct BinaryOpStubInstr : public StubInstr
@@ -619,7 +625,7 @@ struct CompareOpInstr : public Instr
     define_instr_type(CompareOpInstr);
 
     CompareOpInstr(InstrCode code, CompareOp op)
-      : Instr(code), op(op), stubCount(0)
+      : Instr(code), op(op)
     {
         assert(instrType(code) == Type);
     }
@@ -627,7 +633,6 @@ struct CompareOpInstr : public Instr
     void print(ostream& s) const override;
 
     const CompareOp op;
-    unsigned stubCount;
 };
 
 struct CompareOpStubInstr : public StubInstr
@@ -690,6 +695,7 @@ struct InstrFactory
 
 for_each_inline_instr(define_instr_factory)
 for_each_outofline_instr(define_instr_factory)
+for_each_stub_instr(define_instr_factory)
 
 #undef define_instr_factory
 

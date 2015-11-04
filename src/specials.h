@@ -1,6 +1,8 @@
 #ifndef __SPECIALS_H__
 #define __SPECIALS_H__
 
+#include <stdint.h>
+
 #define for_each_binary_op(op)                                                \
     op(Add,        "+",  "__add__",      "__radd__",      "__iadd__")         \
     op(Sub,        "-",  "__sub__",      "__rsub__",      "__isub__")         \
@@ -20,10 +22,10 @@
     op(LE, "<=", "__le__", "__ge__")                                          \
     op(GT, ">",  "__gt__", "__lt__")                                          \
     op(GE, ">=", "__ge__", "__le__")                                          \
-    op(EQ, "==", "__eq__", "__eq__")                                           \
+    op(EQ, "==", "__eq__", "__eq__")                                          \
     op(NE, "!=", "__ne__", "__ne__")
 
-enum BinaryOp
+enum BinaryOp : uint8_t
 {
 #define define_enum(name, token, method, rmethod, imethod)                    \
     Binary##name,
@@ -33,7 +35,7 @@ enum BinaryOp
     CountBinaryOp
 };
 
-enum CompareOp
+enum CompareOp : uint8_t
 {
 #define define_enum(name, token, method, rmethod)                             \
     Compare##name,
