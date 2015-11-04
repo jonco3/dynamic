@@ -312,7 +312,6 @@ struct Interpreter : public Cell
 
     void dispatchInstr(Traced<Instr*> instr);
 
-    bool getMethod(Name ident);
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
                            Traced<Value> left, Traced<Value> right,
                            MutableTraced<Value> methodOut);

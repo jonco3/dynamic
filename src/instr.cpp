@@ -440,26 +440,19 @@ Interpreter::executeInstr_Call(Traced<CountInstr*> instr)
  * count.
  */
 
-bool Interpreter::getMethod(Name ident)
-{
-    Stack<Value> value(popStack());
-    Stack<Value> result;
-    bool isCallableDescriptor;
-    if (!getMethodAttr(value, ident, result, isCallableDescriptor)) {
-        raiseAttrError(value, ident);
-        return false;
-    }
-
-    pushStack(result, Boolean::get(isCallableDescriptor), value);
-    return true;
-}
-
 void
 Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
 {
-    Stack<Value> value(peekStack());
-    if (!getMethod(instr->ident))
+    // Attempt to get the method.
+    Stack<Value> value(popStack());
+    Stack<Value> result;
+    bool isCallableDescriptor;
+    if (!getMethodAttr(value, instr->ident, result, isCallableDescriptor)) {
+        raiseAttrError(value, instr->ident);
         return;
+    }
+
+    pushStack(result, Boolean::get(isCallableDescriptor), value);
 
     // Check stub count before attempting to optimise.
     if (!instr->canAddStub())
@@ -468,7 +461,6 @@ Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
     if (value.type()->isFinal()) {
         // Builtin classes cannot be changed, so we can cache the lookup.
         Stack<Class*> cls(value.type());
-        Stack<Value> result(peekStack(2));
         auto stub = InstrFactory<Instr_GetMethodBuiltin>::get(currentInstr(),
                                                               cls, result);
         insertStubInstr(instr, stub);
