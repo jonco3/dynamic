@@ -83,13 +83,13 @@ void IdentInstrBase::print(ostream& s) const
     s << " " << ident;
 }
 
-void IdentAndSlotInstr::print(ostream& s) const
+void StackSlotInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << ident << " " << slot;
 }
 
-void FrameAndIdentInstr::print(ostream& s) const
+void LexicalFrameInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << frameIndex << " " << ident;
@@ -200,7 +200,7 @@ Interpreter::executeInstr_Const(Traced<ValueInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_GetStackLocal(Traced<IdentAndSlotInstr*> instr)
+Interpreter::executeInstr_GetStackLocal(Traced<StackSlotInstr*> instr)
 {
     // Name was present when compiled, but may have been deleted.
     {
@@ -216,7 +216,7 @@ Interpreter::executeInstr_GetStackLocal(Traced<IdentAndSlotInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_SetStackLocal(Traced<IdentAndSlotInstr*> instr)
+Interpreter::executeInstr_SetStackLocal(Traced<StackSlotInstr*> instr)
 {
     AutoAssertNoGC nogc;
     Value value = peekStack();
@@ -225,7 +225,7 @@ Interpreter::executeInstr_SetStackLocal(Traced<IdentAndSlotInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_DelStackLocal(Traced<IdentAndSlotInstr*> instr)
+Interpreter::executeInstr_DelStackLocal(Traced<StackSlotInstr*> instr)
 {
     // Delete by setting slot value to UninitializedSlot.
     {
@@ -240,7 +240,7 @@ Interpreter::executeInstr_DelStackLocal(Traced<IdentAndSlotInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_GetLexical(Traced<FrameAndIdentInstr*> instr)
+Interpreter::executeInstr_GetLexical(Traced<LexicalFrameInstr*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
     assert(env);
@@ -255,7 +255,7 @@ Interpreter::executeInstr_GetLexical(Traced<FrameAndIdentInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_SetLexical(Traced<FrameAndIdentInstr*> instr)
+Interpreter::executeInstr_SetLexical(Traced<LexicalFrameInstr*> instr)
 {
     Stack<Value> value(peekStack());
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
@@ -265,7 +265,7 @@ Interpreter::executeInstr_SetLexical(Traced<FrameAndIdentInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_DelLexical(Traced<FrameAndIdentInstr*> instr)
+Interpreter::executeInstr_DelLexical(Traced<LexicalFrameInstr*> instr)
 {
     Stack<Env*> env(lexicalEnv(instr->frameIndex));
     assert(env);
@@ -275,7 +275,7 @@ Interpreter::executeInstr_DelLexical(Traced<FrameAndIdentInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_GetGlobal(Traced<GlobalAndIdentInstr*> instr)
+Interpreter::executeInstr_GetGlobal(Traced<GlobalNameInstr*> instr)
 {
     Stack<Value> value;
     Stack<Object*> global(instr->global());
@@ -339,7 +339,7 @@ Interpreter::executeInstr_GetBuiltinsSlot(Traced<BuiltinsSlotInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_SetGlobal(Traced<GlobalAndIdentInstr*> instr)
+Interpreter::executeInstr_SetGlobal(Traced<GlobalNameInstr*> instr)
 {
     Stack<Value> value(peekStack());
     Stack<Object*> global(instr->global());
@@ -367,7 +367,7 @@ Interpreter::executeInstr_SetGlobalSlot(Traced<GlobalSlotInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_DelGlobal(Traced<GlobalAndIdentInstr*> instr)
+Interpreter::executeInstr_DelGlobal(Traced<GlobalNameInstr*> instr)
 {
     if (!instr->global()->maybeDelOwnAttr(instr->ident))
         raiseNameError(instr->ident);

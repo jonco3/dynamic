@@ -46,9 +46,9 @@ struct Interpreter;
 #define for_each_instr_type(type)                                            \
     type(Instr)                                                              \
     type(IdentInstr)                                                         \
-    type(IdentAndSlotInstr)                                                  \
-    type(FrameAndIdentInstr)                                                 \
-    type(GlobalAndIdentInstr)                                                \
+    type(StackSlotInstr)                                                     \
+    type(LexicalFrameInstr)                                                  \
+    type(GlobalNameInstr)                                                    \
     type(GlobalSlotInstr)                                                    \
     type(BuiltinsSlotInstr)                                                  \
     type(CountInstr)                                                         \
@@ -70,18 +70,18 @@ struct Interpreter;
 
 #define for_each_outofline_instr(instr)                                      \
     instr(Const, ValueInstr)                                                 \
-    instr(GetStackLocal, IdentAndSlotInstr)                                  \
-    instr(SetStackLocal, IdentAndSlotInstr)                                  \
-    instr(DelStackLocal, IdentAndSlotInstr)                                  \
-    instr(GetLexical, FrameAndIdentInstr)                                    \
-    instr(SetLexical, FrameAndIdentInstr)                                    \
-    instr(DelLexical, FrameAndIdentInstr)                                    \
-    instr(GetGlobal, GlobalAndIdentInstr)                                    \
+    instr(GetStackLocal, StackSlotInstr)                                     \
+    instr(SetStackLocal, StackSlotInstr)                                     \
+    instr(DelStackLocal, StackSlotInstr)                                     \
+    instr(GetLexical, LexicalFrameInstr)                                     \
+    instr(SetLexical, LexicalFrameInstr)                                     \
+    instr(DelLexical, LexicalFrameInstr)                                     \
+    instr(GetGlobal, GlobalNameInstr)                                        \
     instr(GetGlobalSlot, GlobalSlotInstr)                                    \
     instr(GetBuiltinsSlot, BuiltinsSlotInstr)                                \
-    instr(SetGlobal, GlobalAndIdentInstr)                                    \
+    instr(SetGlobal, GlobalNameInstr)                                        \
     instr(SetGlobalSlot, GlobalSlotInstr)                                    \
-    instr(DelGlobal, GlobalAndIdentInstr)                                    \
+    instr(DelGlobal, GlobalNameInstr)                                        \
     instr(GetAttr, IdentInstr)                                               \
     instr(SetAttr, IdentInstr)                                               \
     instr(DelAttr, IdentInstr)                                               \
@@ -283,11 +283,11 @@ struct IdentInstr : public IdentInstrBase
     }
 };
 
-struct IdentAndSlotInstr : public IdentInstrBase
+struct StackSlotInstr : public IdentInstrBase
 {
-    define_instr_type(IdentAndSlotInstr);
+    define_instr_type(StackSlotInstr);
 
-    IdentAndSlotInstr(InstrCode code, Name ident, unsigned slot)
+    StackSlotInstr(InstrCode code, Name ident, unsigned slot)
       : IdentInstrBase(code, ident), slot(slot)
     {
         assert(instrType(code) == Type);
@@ -301,11 +301,11 @@ struct IdentAndSlotInstr : public IdentInstrBase
     const unsigned slot;
 };
 
-struct FrameAndIdentInstr : public IdentInstrBase
+struct LexicalFrameInstr : public IdentInstrBase
 {
-    define_instr_type(FrameAndIdentInstr);
+    define_instr_type(LexicalFrameInstr);
 
-    FrameAndIdentInstr(InstrCode code, unsigned frameIndex, Name ident)
+    LexicalFrameInstr(InstrCode code, unsigned frameIndex, Name ident)
       : IdentInstrBase(code, ident), frameIndex(frameIndex)
     {
         assert(instrType(code) == Type);
@@ -316,12 +316,12 @@ struct FrameAndIdentInstr : public IdentInstrBase
     const unsigned frameIndex;
 };
 
-struct GlobalAndIdentInstr : public IdentInstrBase
+struct GlobalNameInstr : public IdentInstrBase
 {
-    define_instr_type(GlobalAndIdentInstr);
+    define_instr_type(GlobalNameInstr);
 
-    GlobalAndIdentInstr(InstrCode code, Traced<Object*> global, Name ident,
-                        bool fallback = false)
+    GlobalNameInstr(InstrCode code, Traced<Object*> global, Name ident,
+                    bool fallback = false)
       : IdentInstrBase(code, ident), global_(global), fallback_(fallback)
     {
         assert(instrType(code) == Type);
