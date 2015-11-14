@@ -1029,10 +1029,6 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
         // If both arguments are 32 bit tagged integers, inline the operation.
         auto code = InstrCode(Instr_BinaryOpInt_Add + op);
         stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
-    } else if (ShouldInlineIntBinaryOp(op) && left.isInt() && right.isInt()) {
-        // If both arguments are integers, inline the operation.
-        auto code = InstrCode(Instr_BinaryOpInteger_Add + op);
-        stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
     } else if (ShouldInlineFloatBinaryOp(op) &&
                left.isDouble() && right.isDouble())
     {
@@ -1040,7 +1036,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
         auto code = InstrCode(Instr_BinaryOpFloat_Add + op);
         stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
     } else if (left.type()->isFinal() && right.type()->isFinal()) {
-    // If both arguments are instances of builtin classes, cache the method.
+        // If both arguments are instances of builtin classes, cache the method.
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
         auto code = Instr_BinaryOpBuiltin;
@@ -1076,31 +1072,6 @@ Interpreter::executeBinaryOpInt(Traced<BinaryOpStubInstr*> instr)
     }
 for_each_int_binary_op_to_inline(define_execute_binary_op_int)
 #undef define_execute_binary_op_int
-
-template <BinaryOp Op>
-inline void
-Interpreter::executeBinaryOpInteger(Traced<BinaryOpStubInstr*> instr)
-{
-    assert(ShouldInlineIntBinaryOp(Op));
-
-    if (!peekStack(0).isInt() || !peekStack(1).isInt()) {
-        dispatchInstr(instr->next());
-        return;
-    }
-
-    int64_t b = popStack().toInt();
-    int64_t a = popStack().toInt();
-    pushStack(Integer::binaryOp<Op>(a, b));
-}
-
-#define define_execute_binary_op_integer(name)                                \
-    void Interpreter::executeInstr_BinaryOpInteger_##name(                    \
-        Traced<BinaryOpStubInstr*> instr)                                     \
-    {                                                                         \
-        executeBinaryOpInteger<Binary##name>(instr);                          \
-    }
-for_each_int_binary_op_to_inline(define_execute_binary_op_integer)
-#undef define_execute_binary_op_integer
 
 template <BinaryOp Op>
 inline void

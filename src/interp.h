@@ -292,9 +292,6 @@ struct Interpreter : public Cell
     void executeBinaryOpInt(Traced<BinaryOpStubInstr*> instr);
 
     template <BinaryOp Op>
-    void executeBinaryOpInteger(Traced<BinaryOpStubInstr*> instr);
-
-    template <BinaryOp Op>
     void executeBinaryOpFloat(Traced<BinaryOpStubInstr*> instr);
 
     template <CompareOp Op>
