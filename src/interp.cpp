@@ -716,21 +716,6 @@ const Heap<Instr*>& Interpreter::currentInstr() const
     return instrp[-1].data;
 }
 
-void Interpreter::replaceInstr(Instr* current, Instr* newData)
-{
-    InstrThunk& it = instrp[-1];
-    assert(it.data == current);
-    it.code = newData->code();
-    it.data = newData;
-}
-
-void Interpreter::replaceInstrAndRestart(Instr* current, Instr* newData)
-{
-    replaceInstr(current, newData);
-    Stack<Instr*> instr(newData);
-    instrp--;
-}
-
 void Interpreter::insertStubInstr(Instr* current, Instr* stub)
 {
     InstrThunk& it = instrp[-1];

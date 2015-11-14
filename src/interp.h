@@ -196,8 +196,6 @@ struct Interpreter : public Cell
 #endif
 
     const Heap<Instr*>& currentInstr() const;
-    void replaceInstr(Instr* current, Instr* newData);
-    void replaceInstrAndRestart(Instr* current, Instr* newData);
     void insertStubInstr(Instr* current, Instr* stub);
     void replaceAllStubs(Instr* current, Instr* stub);
 
