@@ -277,65 +277,68 @@ Interpreter::executeInstr_DelLexical(Traced<LexicalFrameInstr*> instr)
 void
 Interpreter::executeInstr_GetGlobal(Traced<GlobalNameInstr*> instr)
 {
-    Stack<Value> value;
     Stack<Object*> global(instr->global());
-    if (global->maybeGetAttr(instr->ident, value)) {
-        pushStack(value);
+    Name ident = instr->ident;
+    int slot = global->findOwnAttr(ident);
+    if (slot != Layout::NotFound) {
+        pushStack(global->getSlot(slot));
 
-        if (!instr->isFallback()) {
-            replaceInstr(instr,
-                         InstrFactory<Instr_GetGlobalSlot>::get(global, instr->ident));
+        if (instr->canAddStub()) {
+            auto stub =
+                InstrFactory<Instr_GetGlobalSlot>::get(instr, global, ident);
+            replaceAllStubs(instr, stub);
         }
         return;
     }
 
-    Stack<Value> builtins;
-    if (instr->global()->maybeGetAttr(Name::__builtins__, builtins) &&
-        builtins.maybeGetAttr(instr->ident, value))
-    {
-        pushStack(value);
+    int builtinsSlot = global->findOwnAttr(Name::__builtins__);
+    if (builtinsSlot != Layout::NotFound) {
+        Stack<Object*> builtins(global->getSlot(builtinsSlot).toObject());
+        slot = builtins->findOwnAttr(ident);
+        if (slot != Layout::NotFound) {
+            pushStack(builtins->getSlot(slot));
 
-        if (!instr->isFallback()) {
-            replaceInstr(instr,
-                         InstrFactory<Instr_GetBuiltinsSlot>::get(global, instr->ident));
+            if (instr->canAddStub()) {
+                auto stub = InstrFactory<Instr_GetBuiltinsSlot>::get(
+                    instr, global, builtins, ident);
+                replaceAllStubs(instr, stub);
+            }
+            return;
         }
-        return;
     }
 
-    raiseNameError(instr->ident);
+    raiseNameError(ident);
 }
 
 void
 Interpreter::executeInstr_GetGlobalSlot(Traced<GlobalSlotInstr*> instr)
 {
     int slot = instr->globalSlot();
-    if (slot != Layout::NotFound) {
-        pushStack(instr->global()->getSlot(slot));
+    if (slot == Layout::NotFound) {
+        dispatchInstr(instr->next());
         return;
     }
 
-    Stack<Object*> global(instr->global());
-    auto fallback = InstrFactory<Instr_GetGlobal>::get(global, instr->ident, true);
-    replaceInstrAndRestart(instr, fallback);
+    pushStack(instr->global()->getSlot(slot));
 }
 
 void
 Interpreter::executeInstr_GetBuiltinsSlot(Traced<BuiltinsSlotInstr*> instr)
 {
-    Stack<Object*> builtins;
     int slot = instr->globalSlot();
-    if (slot != Layout::NotFound) {
-        builtins = instr->global()->getSlot(slot).toObject();
-        slot = instr->builtinsSlot(builtins);
-        if (slot != Layout::NotFound) {
-            pushStack(builtins->getSlot(slot));
-            return;
-        }
+    if (slot == Layout::NotFound) {
+        dispatchInstr(instr->next());
+        return;
     }
 
-    Stack<Object*> global(instr->global());
-    auto fallback = InstrFactory<Instr_GetGlobal>::get(global, instr->ident, true);
-    replaceInstrAndRestart(instr, fallback);
+    Stack<Object*> builtins(instr->global()->getSlot(slot).toObject());
+    slot = instr->builtinsSlot(builtins);
+    if (slot == Layout::NotFound) {
+        dispatchInstr(instr->next());
+        return;
+    }
+
+    pushStack(builtins->getSlot(slot));
 }
 
 void
@@ -343,27 +346,27 @@ Interpreter::executeInstr_SetGlobal(Traced<GlobalNameInstr*> instr)
 {
     Stack<Value> value(peekStack());
     Stack<Object*> global(instr->global());
-    if (global->hasAttr(instr->ident) && !instr->isFallback()) {
-        replaceInstr(instr,
-                     InstrFactory<Instr_SetGlobalSlot>::get(global, instr->ident));
-    }
-
     instr->global()->setAttr(instr->ident, value);
+
+    if (!instr->canAddStub())
+        return;
+
+    auto stub = InstrFactory<Instr_SetGlobalSlot>::get(
+        instr, global, instr->ident);
+    replaceAllStubs(instr, stub);
 }
 
 void
 Interpreter::executeInstr_SetGlobalSlot(Traced<GlobalSlotInstr*> instr)
 {
-    Stack<Value> value(peekStack());
     int slot = instr->globalSlot();
-    if (slot != Layout::NotFound) {
-        instr->global()->setSlot(slot, value);
+    if (slot == Layout::NotFound) {
+        dispatchInstr(instr->next());
         return;
     }
 
-    Stack<Object*> global(instr->global());
-    auto fallback = InstrFactory<Instr_SetGlobal>::get(global, instr->ident, true);
-    replaceInstrAndRestart(instr, fallback);
+    Stack<Value> value(peekStack());
+    instr->global()->setSlot(slot, value);
 }
 
 void

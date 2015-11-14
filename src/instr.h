@@ -77,10 +77,7 @@ struct Interpreter;
     instr(SetLexical, LexicalFrameInstr)                                     \
     instr(DelLexical, LexicalFrameInstr)                                     \
     instr(GetGlobal, GlobalNameInstr)                                        \
-    instr(GetGlobalSlot, GlobalSlotInstr)                                    \
-    instr(GetBuiltinsSlot, BuiltinsSlotInstr)                                \
     instr(SetGlobal, GlobalNameInstr)                                        \
-    instr(SetGlobalSlot, GlobalSlotInstr)                                    \
     instr(DelGlobal, GlobalNameInstr)                                        \
     instr(GetAttr, IdentInstr)                                               \
     instr(SetAttr, IdentInstr)                                               \
@@ -134,6 +131,9 @@ struct Interpreter;
     instr(AssertStackDepth, CountInstr)
 
 #define for_each_stub_instr(instr)                                           \
+    instr(GetGlobalSlot, GlobalSlotInstr)                                    \
+    instr(SetGlobalSlot, GlobalSlotInstr)                                    \
+    instr(GetBuiltinsSlot, BuiltinsSlotInstr)                                \
     instr(GetMethodBuiltin, BuiltinMethodInstr)                              \
     instr(BinaryOpInt_Add, BinaryOpStubInstr)                                \
     instr(BinaryOpInt_Sub, BinaryOpStubInstr)                                \
@@ -260,6 +260,23 @@ struct Instr : public Cell
     uint8_t stubCount_;
 };
 
+struct StubInstr : public Instr
+{
+    StubInstr(InstrCode code, Traced<Instr*> next)
+      : Instr(code), next_(next)
+    {
+        assert(next_);
+    }
+
+    const Heap<Instr*>& next() { return next_; }
+
+    void traceChildren(Tracer& t) override;
+    void print(ostream& s) const override;
+
+  private:
+    Heap<Instr*> next_;
+};
+
 struct IdentInstrBase : public Instr
 {
     IdentInstrBase(InstrCode code, Name ident) : Instr(code), ident(ident)
@@ -320,16 +337,14 @@ struct GlobalNameInstr : public IdentInstrBase
 {
     define_instr_type(GlobalNameInstr);
 
-    GlobalNameInstr(InstrCode code, Traced<Object*> global, Name ident,
-                    bool fallback = false)
-      : IdentInstrBase(code, ident), global_(global), fallback_(fallback)
+    GlobalNameInstr(InstrCode code, Traced<Object*> global, Name ident)
+      : IdentInstrBase(code, ident), global_(global)
     {
         assert(instrType(code) == Type);
         assert(global);
     }
 
     const Heap<Object*>& global() const { return global_; }
-    bool isFallback() const { return fallback_; }
 
     virtual void traceChildren(Tracer& t) override {
         gc.trace(t, &global_);
@@ -337,7 +352,6 @@ struct GlobalNameInstr : public IdentInstrBase
 
   private:
     Heap<Object*> global_;
-    bool fallback_;
 };
 
 struct SlotGuard
@@ -365,16 +379,12 @@ struct SlotGuard
     int slot_;
 };
 
-struct GlobalSlotInstr : public IdentInstrBase
+struct GlobalSlotInstrBase : public StubInstr
 {
-    define_instr_type(GlobalSlotInstr);
-
-    GlobalSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
-      : IdentInstrBase(code, ident), global_(global), globalSlot_(global, ident)
-    {
-        assert(instrType(code) == Type);
-        assert(global);
-    }
+    GlobalSlotInstrBase(InstrCode code, Traced<Instr*> next,
+                        Traced<Object*> global, Name ident)
+      : StubInstr(code, next), global_(global), globalSlot_(global, ident)
+    {}
 
     void traceChildren(Tracer& t) override {
         gc.trace(t, &global_);
@@ -390,30 +400,35 @@ struct GlobalSlotInstr : public IdentInstrBase
   protected:
     Heap<Object*> global_;
     SlotGuard globalSlot_;
+};
 
-    GlobalSlotInstr(InstrCode code, Traced<Object*> global,
-                       Name globalIdent, Name ident)
-      : IdentInstrBase(code, ident),
-        global_(global),
-        globalSlot_(global, globalIdent)
+struct GlobalSlotInstr : public GlobalSlotInstrBase
+{
+    define_instr_type(GlobalSlotInstr);
+
+    GlobalSlotInstr(InstrCode code, Traced<Instr*> next,
+                    Traced<Object*> global, Name ident)
+      : GlobalSlotInstrBase(code, next, global, ident)
     {
-        assert(global);
+        assert(instrType(code) == Type);
     }
 };
 
-struct BuiltinsSlotInstr : public GlobalSlotInstr
+struct BuiltinsSlotInstr : public GlobalSlotInstrBase
 {
     define_instr_type(BuiltinsSlotInstr);
 
-    BuiltinsSlotInstr(InstrCode code, Traced<Object*> global, Name ident)
-      : GlobalSlotInstr(code, global, Name::__builtins__, ident),
-        builtinsSlot_(global->getSlot(globalSlot_.slot()).toObject(), ident)
+    BuiltinsSlotInstr(InstrCode code, Traced<Instr*> next,
+                      Traced<Object*> global, Traced<Object*> builtins,
+                      Name ident)
+      : GlobalSlotInstrBase(code, next, global, Name::__builtins__),
+        builtinsSlot_(builtins, ident)
     {
         assert(instrType(code) == Type);
     }
 
     void traceChildren(Tracer& t) override {
-        GlobalSlotInstr::traceChildren(t);
+        GlobalSlotInstrBase::traceChildren(t);
         builtinsSlot_.traceChildren(t);
     }
 
@@ -468,23 +483,6 @@ struct ValueInstr : public Instr
 
   private:
     Heap<Value> value_;
-};
-
-struct StubInstr : public Instr
-{
-    StubInstr(InstrCode code, Traced<Instr*> next)
-      : Instr(code), next_(next)
-    {
-        assert(next_);
-    }
-
-    const Heap<Instr*>& next() { return next_; }
-
-    void traceChildren(Tracer& t) override;
-    void print(ostream& s) const override;
-
-  private:
-    Heap<Instr*> next_;
 };
 
 struct BuiltinMethodInstr : public StubInstr

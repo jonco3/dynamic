@@ -328,7 +328,6 @@ testcase(interp)
                      Instr_GetGlobal,
                      Instr_GetGlobalSlot,
                      Instr_GetGlobalSlot,
-                     Instr_GetGlobal,
                      Instr_GetGlobalSlot);
 
     testReplacements("g = 1\n"
@@ -340,7 +339,6 @@ testcase(interp)
                      Instr_GetGlobal,
                      Instr_GetGlobalSlot,
                      Instr_GetGlobalSlot,
-                     Instr_GetGlobal,
                      Instr_GetGlobalSlot);
 
     testReplacements("def foo():\n"
@@ -350,7 +348,6 @@ testcase(interp)
                      Instr_GetGlobal,
                      Instr_GetBuiltinsSlot,
                      Instr_GetBuiltinsSlot,
-                     Instr_GetGlobal,
                      Instr_GetBuiltinsSlot);
 
     // todo: add test for GetBuiltinsSlot where we modify __builtins__
@@ -365,7 +362,6 @@ testcase(interp)
                      Instr_SetGlobal,
                      Instr_SetGlobalSlot,
                      Instr_SetGlobalSlot,
-                     Instr_SetGlobal,
                      Instr_SetGlobalSlot);
 
     testExpectingException = true;

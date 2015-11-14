@@ -740,3 +740,13 @@ void Interpreter::insertStubInstr(Instr* current, Instr* stub)
     it.code = stub->code();
     it.data = stub;
 }
+
+void Interpreter::replaceAllStubs(Instr* current, Instr* stub)
+{
+    InstrThunk& it = instrp[-1];
+    assert(getNextInstr(stub) == current);
+    assert(getFinalInstr(it.data) == current);
+    current->incStubCount();
+    it.code = stub->code();
+    it.data = stub;
+}

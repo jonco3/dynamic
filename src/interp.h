@@ -199,6 +199,7 @@ struct Interpreter : public Cell
     void replaceInstr(Instr* current, Instr* newData);
     void replaceInstrAndRestart(Instr* current, Instr* newData);
     void insertStubInstr(Instr* current, Instr* stub);
+    void replaceAllStubs(Instr* current, Instr* stub);
 
     void resumeGenerator(Traced<Block*> block,
                          Traced<Env*> env,
