@@ -101,6 +101,12 @@ void CountInstr::print(ostream& s) const
     s << " " << count;
 }
 
+void CountStubInstr::print(ostream& s) const
+{
+    StubInstr::print(s);
+    s << " " << count;
+}
+
 void IndexInstr::print(ostream& s) const
 {
     Instr::print(s);
@@ -795,9 +801,10 @@ Interpreter::executeDestructureFallback(unsigned expected)
     Stack<Value> type(iterator.type());
     Stack<Value> nextMethod;
     bool isCallableDescriptor;
-    if (!getMethodAttr(type, Name::__next__, nextMethod, isCallableDescriptor))
+    if (!getMethodAttr(type, Name::__next__, nextMethod, isCallableDescriptor)) {
         return raiseTypeError(string("Argument is not iterable: ") +
                               type.as<Class>()->name());
+    }
 
     for (size_t count = 0; count < expected; count++) {
         if (isCallableDescriptor)
@@ -821,32 +828,36 @@ Interpreter::executeDestructureFallback(unsigned expected)
 void
 Interpreter::executeInstr_Destructure(Traced<CountInstr*> instr)
 {
-    Stack<Value> iterable(peekStack());
-    Instr* replacement;
-    if (iterable.is<List>())
-        replacement = InstrFactory<Instr_DestructureList>::get(instr->count);
-    else if (iterable.is<Tuple>())
-        replacement = InstrFactory<Instr_DestructureTuple>::get(instr->count);
-    else
-        replacement = InstrFactory<Instr_DestructureFallback>::get(instr->count);
+    unsigned count = instr->count;
 
-    replaceInstrAndRestart(instr, replacement);
-}
+    // todo: not sure how much point there is adding a stub here rather than
+    // just switching on iterable type.
+    if (instr->canAddStub()) {
+        Stack<Value> iterable(peekStack());
+        if (iterable.is<Tuple>()) {
+            Stack<Instr*> stub(InstrFactory<Instr_DestructureTuple>::get(
+                                   currentInstr(), count));
+            insertStubInstr(instr, stub);
+            dispatchInstr(stub);
+            return;
+        } else if (iterable.is<List>()) {
+            Stack<Instr*> stub(InstrFactory<Instr_DestructureList>::get(
+                                   currentInstr(), count));
+            insertStubInstr(instr, stub);
+            dispatchInstr(stub);
+            return;
+        }
+    }
 
-void
-Interpreter::executeInstr_DestructureFallback(Traced<CountInstr*> instr)
-{
     executeDestructureFallback(instr->count);
 }
 
 void
-Interpreter::executeInstr_DestructureTuple(Traced<CountInstr*> instr)
+Interpreter::executeInstr_DestructureTuple(Traced<CountStubInstr*> instr)
 {
     Stack<Value> iterable(peekStack());
     if (!iterable.is<Tuple>()) {
-        Instr* replacement =
-            InstrFactory<Instr_DestructureFallback>::get(instr->count);
-        replaceInstrAndRestart(instr, replacement);
+        dispatchInstr(instr->next());
         return;
     }
 
@@ -865,13 +876,11 @@ Interpreter::executeInstr_DestructureTuple(Traced<CountInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_DestructureList(Traced<CountInstr*> instr)
+Interpreter::executeInstr_DestructureList(Traced<CountStubInstr*> instr)
 {
     Stack<Value> iterable(peekStack());
     if (!iterable.is<List>()) {
-        Instr* replacement =
-            InstrFactory<Instr_DestructureFallback>::get(instr->count);
-        replaceInstrAndRestart(instr, replacement);
+        dispatchInstr(instr->next());
         return;
     }
 

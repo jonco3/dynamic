@@ -743,6 +743,7 @@ void Interpreter::insertStubInstr(Instr* current, Instr* stub)
 
 void Interpreter::replaceAllStubs(Instr* current, Instr* stub)
 {
+    // This replaces all stubs but doesn't reset the stub count.
     InstrThunk& it = instrp[-1];
     assert(getNextInstr(stub) == current);
     assert(getFinalInstr(it.data) == current);
