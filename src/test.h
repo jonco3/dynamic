@@ -43,23 +43,30 @@ inline void testFailure(const char* testStr,
     using namespace std;
     cerr << file << ":" << dec << line << ": test failed: ";
     cerr << actualStr << " " << testStr << " " << expectedStr << endl;
-    cerr << "  got: " << actual << " " << endl;
-    cerr << "    " << testStr << " " << expected << endl;
-    cerr << "  at: " << file << " line " << line << endl;
+    cerr << "Got: " << actual << " " << testStr << " " << expected << endl;
     abortTests();
 }
 
 template <typename A, typename E>
-inline void testEqualImpl(const A actual, const E expected,
+inline void testEqualImpl(A&& actual, E&& expected,
                           const char* actualStr, const char* expectedStr,
                           const char* file, unsigned line)
 {
-    if (actual != expected)
+    if (!(actual == expected))
         testFailure("==", actualStr, expectedStr, actual, expected, file, line);
 }
 
+template <typename A, typename E>
+inline void testNotEqualImpl(A&& actual, E&& expected,
+                             const char* actualStr, const char* expectedStr,
+                             const char* file, unsigned line)
+{
+    if (!(actual != expected))
+        testFailure("!=", actualStr, expectedStr, actual, expected, file, line);
+}
+
 template <>
-inline void testEqualImpl(const char* actual, const char* expected,
+inline void testEqualImpl(const char*& actual, const char*& expected,
                           const char* actualStr, const char* expectedStr,
                           const char* file, unsigned line)
 {
@@ -69,6 +76,9 @@ inline void testEqualImpl(const char* actual, const char* expected,
 
 #define testEqual(actual, expected)                                           \
     testEqualImpl(actual, expected, #actual, #expected, __FILE__, __LINE__)
+
+#define testNotEqual(actual, expected)                                        \
+    testNotEqualImpl(actual, expected, #actual, #expected, __FILE__, __LINE__)
 
 #define testTrue(actual)                                                      \
     testEqual(actual, true)
