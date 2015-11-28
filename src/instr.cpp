@@ -492,7 +492,7 @@ Interpreter::executeInstr_GetMethodBuiltin(Traced<BuiltinMethodInstr*> instr)
 void
 Interpreter::executeInstr_CallMethod(Traced<CountInstr*> instr)
 {
-    bool extraArg = peekStack(instr->count + 1).as<Boolean>()->value();
+    bool extraArg = peekStack(instr->count + 1).as<Boolean>()->boolValue();
     Stack<Value> target(peekStack(instr->count + 2));
     unsigned argCount = instr->count + (extraArg ? 1 : 0);
     return startCall(target, argCount, extraArg ? 2 : 3);

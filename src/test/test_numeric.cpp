@@ -5,6 +5,20 @@
 
 #include "test_interp.h"
 
+static void mpz_set_si64(mpz_t n, int64_t i)
+{
+    mpz_set_si(n, (int32_t)(i >> 32));
+    mpz_mul_2exp(n, n, 32);
+    mpz_add_ui(n, n, (uint32_t)i);
+}
+
+static mpz_class mpzFromInt64(int64_t i)
+{
+    mpz_class n;
+    mpz_set_si64(n.get_mpz_t(), i);
+    return n;
+}
+
 static void testIntIsInt32(int64_t i)
 {
     Value v = Integer::get(i);
@@ -12,7 +26,7 @@ static void testIntIsInt32(int64_t i)
     testTrue(v.isInt32());
     testFalse(v.isObject());
     testEqual(v.asInt32(), i);
-    testEqual(v.toInt(), i);
+    testEqual(v.toInt(), mpzFromInt64(i));
 }
 
 static void testIntIsObject(int64_t i)
@@ -21,7 +35,7 @@ static void testIntIsObject(int64_t i)
     testTrue(v.isInt());
     testFalse(v.isInt32());
     testTrue(v.isObject());
-    testEqual(v.toInt(), i);
+    testEqual(v.toInt(), mpzFromInt64(i));
 }
 
 testcase(numeric)

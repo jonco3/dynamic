@@ -55,7 +55,7 @@ int32_t Slice::getSlotOrDefault(unsigned slot, int32_t def)
     Value value = getSlot(slot);
     if (value == Value(None))
         return def;
-    return value.toInt();
+    return value.asInt32();
 }
 
 void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step)

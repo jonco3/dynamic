@@ -226,20 +226,41 @@ bool List::contains(Traced<Value> value)
     return find(elements_.begin(), elements_.end(), value) != elements_.end();
 }
 
-bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value> resultOut)
+static bool raiseOutOfRange(MutableTraced<Value> resultOut)
+{
+    resultOut = gc.create<IndexError>("index out of range");
+    return false;
+}
+
+template <typename T>
+inline static bool
+GetIndex(T* self, Traced<Value> index,
+         int32_t* intOut, MutableTraced<Value> resultOut)
 {
     if (!index.isInt()) {
-        resultOut = gc.create<TypeError>("list indices must be integers");
+        resultOut = gc.create<TypeError>("indices must be integers");
         return false;
     }
 
-    int32_t i = index.toInt();
-    if (i < 0)
-        i = elements_.size() + i;
-    if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<IndexError>("list index out of range");
+    int32_t i;
+    if (!index.toInt32(&i))
+        return raiseOutOfRange(resultOut);
+
+    size_t len = self->len();
+    i = WrapIndex(i, len);
+    if (i < 0 || size_t(i) >= len)
+        return raiseOutOfRange(resultOut);
+
+    *intOut = i;
+    return true;
+}
+
+bool List::setitem(Traced<Value> index, Traced<Value> value,
+                   MutableTraced<Value> resultOut)
+{
+    int32_t i;
+    if (!GetIndex(this, index, &i, resultOut))
         return false;
-    }
 
     elements_[i] = value;
     resultOut = value;
@@ -248,18 +269,10 @@ bool List::setitem(Traced<Value> index, Traced<Value> value, MutableTraced<Value
 
 bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
 {
-    if (!index.isInt()) {
-        resultOut = gc.create<TypeError>("list indices must be integers");
-        return false;
-    }
 
-    int32_t i = index.toInt();
-    if (i < 0)
-        i = elements_.size() + i;
-    if (i < 0 || size_t(i) >= elements_.size()) {
-        resultOut = gc.create<IndexError>("list index out of range");
+    int32_t i;
+    if (!GetIndex(this, index, &i, resultOut))
         return false;
-    }
 
     elements_.erase(elements_.begin() + i);
     resultOut = None;
@@ -393,11 +406,9 @@ static bool generic_getitem(TracedVector<Value> args,
     Stack<Value> index(args[1]);
 
     if (index.isInt()) {
-        int32_t i = WrapIndex(index.toInt(), self->len());
-        if (i < 0 || size_t(i) >= self->len()) {
-            resultOut = gc.create<IndexError>("index out of range");
+        int32_t i;
+        if (!GetIndex(self.get(), index, &i, resultOut))
             return false;
-        }
         resultOut = self->getitem(i);
         return true;
     } else if (index.isInstanceOf(Slice::ObjectClass)) {

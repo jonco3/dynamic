@@ -123,6 +123,8 @@ AC_PROG_CXX([g++ clang++])
 CHECK_COMPILER_WRAPPER
 
 # Checks for libraries.
+AC_CHECK_LIB(gmp, __gmpz_init, ,
+  [AC_MSG_ERROR([GNU MP not found, see https://gmplib.org/])])
 
 # Checks for header files.
 

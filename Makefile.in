@@ -19,7 +19,7 @@ LD             = @CXX@
 
 FLAGS          = -Wall -Werror --std=c++14
 CXXFLAGS       = @CXXFLAGS@ $(FLAGS) -I.. -include config.h -DUSE_READLINE
-LDFLAGS        = @LDFLAGS@ $(FLAGS) -lm -lreadline
+LDFLAGS        = @LDFLAGS@ $(FLAGS) -lm -lreadline -lgmpxx -lgmp
 
 SRCS = \
 	src/name.cpp \

@@ -4,6 +4,8 @@
 #include "gcdefs.h"
 #include "name.h"
 
+#include <gmpxx.h>
+
 #include <ostream>
 
 using namespace std;
@@ -98,7 +100,8 @@ struct Value
     inline bool isFloat() const;
 
     inline Object *toObject() const;
-    inline int64_t toInt() const;
+    inline mpz_class toInt() const;
+    bool toInt32(int32_t* out) const;
     inline double toFloat() const;
 
     inline Value getAttr(Name name) const;

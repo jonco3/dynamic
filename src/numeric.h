@@ -3,36 +3,54 @@
 
 #include "object.h"
 
+#include <gmpxx.h>
+
 struct Integer : public Object
 {
     static void init();
 
     static GlobalRoot<Class*> ObjectClass;
 
+    template <typename T>
+    static bool fitsInt32(T v) {
+        return v >= INT32_MIN && v <= INT32_MAX;
+    }
+
     static Value get(int64_t v) {
-        int32_t i32 = static_cast<int32_t>(v);
-        if (i32 == v)
-            return Value(i32);
-        else
-            return getObject(v);
+        if (fitsInt32(v))
+            return Value(int32_t(v));
+
+        return getObject(v);
+    }
+
+    static Value get(const mpz_class& v) {
+        static_assert(sizeof(long) >= sizeof(int32_t),
+                      "This assumes that get_si() returns enough bits");
+
+        if (fitsInt32(v))
+            return Value(int32_t(v.get_si()));
+
+        return getObject(v);
     }
 
     static Object* getObject(int64_t v);
+    static Object* getObject(const mpz_class& v);
 
     Integer(int64_t v = 0);
+    Integer(const mpz_class& v);
     Integer(Traced<Class*> cls, int64_t v);
 
-    int64_t value() const { return value_; }
+    const mpz_class& value() const { return value_; }
     void print(ostream& s) const override;
 
     template <BinaryOp Op>
-    static inline Value binaryOp(int64_t a, int64_t b);
+    static Value binaryOp(int64_t a, int64_t b);
 
     template <CompareOp Op>
-    static inline Value compareOp(int64_t a, int64_t b);
+    static Value compareOp(int64_t a, int64_t b);
 
   private:
-    int64_t value_;
+    mpz_class value_;
 };
 
 struct Boolean : public Integer
@@ -46,9 +64,17 @@ struct Boolean : public Integer
 
     static Boolean* get(bool v) { return v ? True : False; }
 
+    bool boolValue() {
+        assert(this == True || this == False);
+        return this == True;
+    }
+
     void print(ostream& s) const override;
 
     Boolean(int64_t value);
+
+  private:
+    static bool ClassInitialised;
 };
 
 struct Float : public Object

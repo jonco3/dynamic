@@ -16,13 +16,33 @@ GlobalRoot<Class*> Boolean::ObjectClass;
 GlobalRoot<Boolean*> Boolean::True;
 GlobalRoot<Boolean*> Boolean::False;
 
-typedef int64_t (IntUnaryOp)(int64_t);
-static int64_t intPos(int64_t a) { return a; }
-static int64_t intNeg(int64_t a) { return -a; }
-static int64_t intInvert(int64_t a) { return ~a; }
-static int64_t intHash(int64_t a) { return a; }
+typedef int32_t (Int32UnaryOp)(int32_t);
+typedef mpz_class (MPZUnaryOp)(const mpz_class&);
 
-template <IntUnaryOp op>
+static inline int32_t intPos(int32_t a) { return a; }
+static inline int32_t intNeg(int32_t a) { return -a; }
+static inline int32_t intInvert(int32_t a) { return ~a; }
+static inline int32_t intHash(int32_t a) { return a; }
+
+static inline mpz_class mpzPos(const mpz_class& a) { return a; }
+
+static inline mpz_class mpzNeg(const mpz_class& a)
+{
+    mpz_class r;
+    mpz_neg(r.get_mpz_t(), a.get_mpz_t());
+    return r;
+}
+
+static inline mpz_class mpzInvert(const mpz_class& a)
+{
+    mpz_class r;
+    mpz_com(r.get_mpz_t(), a.get_mpz_t());
+    return r;
+}
+
+static inline mpz_class mpzHash(const mpz_class& a) { return a; }
+
+template <Int32UnaryOp int32op, MPZUnaryOp mpzOp>
 static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass)) {
@@ -30,8 +50,118 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
         return true;
     }
 
-    resultOut = Integer::get(op(args[0].toInt()));
+    if (args[0].isInt32())
+        resultOut = Integer::get(int32op(args[0].asInt32()));
+    else
+        resultOut = Integer::get(mpzOp(args[0].as<Integer>()->value()));
+
     return true;
+}
+
+template <BinaryOp Op>
+static Value mpzBinaryOp(const mpz_class& a, const mpz_class& b);
+
+template <> inline Value mpzBinaryOp<BinaryAdd>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a + b);
+}
+
+template <> inline Value mpzBinaryOp<BinarySub>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a - b);
+}
+
+template <> inline Value mpzBinaryOp<BinaryMul>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a * b);
+}
+
+template <> inline Value mpzBinaryOp<BinaryTrueDiv>(const mpz_class& a, const mpz_class& b)
+{
+    return Float::get(a.get_d() / b.get_d());
+}
+
+template <> inline Value mpzBinaryOp<BinaryFloorDiv>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a / b);
+}
+
+template <> inline Value mpzBinaryOp<BinaryModulo>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a % b);
+}
+
+template <> inline Value mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_class& b)
+{
+    assert(b.fits_sint_p()); // todo: raise error
+    mpz_class r;
+    mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
+    return Integer::get(r);
+}
+
+template <> inline Value mpzBinaryOp<BinaryOr>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a | b);
+}
+
+template <> inline Value mpzBinaryOp<BinaryXor>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a ^ b);
+}
+
+template <> inline Value mpzBinaryOp<BinaryAnd>(const mpz_class& a, const mpz_class& b)
+{
+    return Integer::get(a & b);
+}
+
+template <> Value mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_class& b)
+{
+    assert(b.fits_sint_p()); // todo
+    mpz_class r;
+    mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
+    return Integer::get(r);
+}
+
+template <> Value mpzBinaryOp<BinaryRightShift>(const mpz_class& a, const mpz_class& b)
+{
+    assert(b.fits_sint_p()); // todo
+    mpz_class r;
+    mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
+    // todo: rounds towards zero
+    return Integer::get(r);
+}
+
+template <CompareOp Op>
+static Value mpzCompareOp(const mpz_class& a, const mpz_class& b);
+
+template <> inline Value mpzCompareOp<CompareLT>(const mpz_class& a, const mpz_class& b)
+{
+    return Boolean::get(a < b);
+}
+
+template <> inline Value mpzCompareOp<CompareLE>(const mpz_class& a, const mpz_class& b)
+{
+    return Boolean::get(a <= b);
+}
+
+template <> inline Value mpzCompareOp<CompareGT>(const mpz_class& a, const mpz_class& b)
+{
+    return Boolean::get(a > b);
+}
+
+template <> inline Value mpzCompareOp<CompareGE>(const mpz_class& a, const mpz_class& b)
+{
+    return Boolean::get(a >= b);
+}
+
+template <> inline Value mpzCompareOp<CompareEQ>(const mpz_class& a, const mpz_class& b)
+{
+    return Boolean::get(a == b);
+}
+
+template <> inline Value mpzCompareOp<CompareNE>(const mpz_class& a, const mpz_class& b)
+{
+    return Boolean::get(a != b);
 }
 
 template <BinaryOp Op>
@@ -44,7 +174,18 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
         return true;
     }
 
-    resultOut = Integer::binaryOp<Op>(args[0].toInt(), args[1].toInt());
+    if (args[0].isInt32() && args[1].isInt32()) {
+        resultOut = Integer::binaryOp<Op>(args[0].asInt32(), args[1].asInt32());
+        return true;
+    }
+
+    if (!args[0].isInt32() && !args[1].isInt32()) {
+        resultOut = mpzBinaryOp<Op>(args[0].as<Integer>()->value(),
+                                    args[1].as<Integer>()->value());
+        return true;
+    }
+
+    resultOut = mpzBinaryOp<Op>(args[0].toInt(), args[1].toInt());
     return true;
 }
 
@@ -58,7 +199,19 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
         return true;
     }
 
-    resultOut = Integer::compareOp<Op>(args[0].toInt(), args[1].toInt());
+    if (args[0].isInt32() && args[1].isInt32()) {
+        resultOut = Integer::compareOp<Op>(args[0].asInt32(),
+                                           args[1].asInt32());
+        return true;
+    }
+
+    if (!args[0].isInt32() && !args[1].isInt32()) {
+        resultOut = mpzCompareOp<Op>(args[0].as<Integer>()->value(),
+                                     args[1].as<Integer>()->value());
+        return true;
+    }
+
+    resultOut = mpzCompareOp<Op>(args[0].toInt(), args[1].toInt());
     return true;
 }
 
@@ -106,9 +259,9 @@ void Integer::init()
 {
     Stack<Class*> cls(Class::createNative("int", intNew, 2));
     Stack<Value> value;
-    initNativeMethod(cls, "__pos__", intUnaryOp<intPos>, 1);
-    initNativeMethod(cls, "__neg__", intUnaryOp<intNeg>, 1);
-    initNativeMethod(cls, "__invert__", intUnaryOp<intInvert>, 1);
+    initNativeMethod(cls, "__pos__", intUnaryOp<intPos, mpzPos>, 1);
+    initNativeMethod(cls, "__neg__", intUnaryOp<intNeg, mpzNeg>, 1);
+    initNativeMethod(cls, "__invert__", intUnaryOp<intInvert, mpzInvert>, 1);
     initNativeMethod(cls, "__lt__", intCompareOp<CompareLT>, 2);
     initNativeMethod(cls, "__le__", intCompareOp<CompareLE>, 2);
     initNativeMethod(cls, "__gt__", intCompareOp<CompareGT>, 2);
@@ -127,19 +280,42 @@ void Integer::init()
     initNativeMethod(cls, "__floordiv__", intBinaryOp<BinaryFloorDiv>, 2);
     initNativeMethod(cls, "__mod__", intBinaryOp<BinaryModulo>, 2);
     initNativeMethod(cls, "__pow__", intBinaryOp<BinaryPower>, 2);
-    initNativeMethod(cls, "__hash__", intUnaryOp<intHash>, 1);
+    initNativeMethod(cls, "__hash__", intUnaryOp<intHash, mpzHash>, 1);
     ObjectClass.init(cls);
 }
 
+static void mpz_set_si64(mpz_t n, int64_t i)
+{
+    mpz_set_si(n, (int32_t)(i >> 32));
+    mpz_mul_2exp(n, n, 32);
+    mpz_add_ui(n, n, (uint32_t)i);
+}
+
+static mpz_class mpzFromInt64(int64_t i)
+{
+    mpz_class n;
+    mpz_set_si64(n.get_mpz_t(), i);
+    return n;
+}
+
 Integer::Integer(int64_t v)
+  : Object(ObjectClass), value_(mpzFromInt64(v))
+{}
+
+Integer::Integer(const mpz_class& v)
   : Object(ObjectClass), value_(v)
 {}
 
 Integer::Integer(Traced<Class*> cls, int64_t v)
-  : Object(cls), value_(v)
+  : Object(cls), value_(mpzFromInt64(v))
 {}
 
 Object* Integer::getObject(int64_t v)
+{
+    return gc.create<Integer>(v);
+}
+
+Object* Integer::getObject(const mpz_class& v)
 {
     return gc.create<Integer>(v);
 }
@@ -163,17 +339,22 @@ static bool boolNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
+bool Boolean::ClassInitialised = false;
+
 void Boolean::init()
 {
+    assert(!ClassInitialised);
     ObjectClass.init(Class::createNative("bool", boolNew, 1,
                                          Integer::ObjectClass));
     True.init(gc.create<Boolean>(1));
     False.init(gc.create<Boolean>(0));
+    ClassInitialised = true;
 }
 
 Boolean::Boolean(int64_t value)
   : Integer(ObjectClass, value)
 {
+    assert(!ClassInitialised);
     assert(value == 0 || value == 1);
 }
 
@@ -211,8 +392,10 @@ static bool floatOrIntValue(Traced<Value> value, double& out)
 {
     if (value.isFloat())
         out = value.toFloat();
-    else if (value.isInt())
-        out = value.toInt();
+    else if (value.isInt32())
+        out = value.asInt32();
+    else if (value.isInstanceOf<Integer>())
+        out = value.as<Integer>()->value().get_d();
     else
         return false;
 
@@ -302,8 +485,10 @@ static bool floatNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
     }
 
     Stack<Value> arg(args[1]);
-    if (arg.isInt()) {
-        resultOut = Float::get(arg.toInt());
+    if (arg.isInt32()) {
+        resultOut = Float::get(arg.asInt32());
+    } else if (arg.is<Integer>()) {
+        resultOut = Float::get(arg.as<Integer>()->value().get_d());
     } else if (arg.isFloat()) {
         resultOut = Float::get(arg.toFloat());
     } else if (arg.isInstanceOf(String::ObjectClass)) {

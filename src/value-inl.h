@@ -89,10 +89,10 @@ inline bool Value::isFloat() const
     return isDouble() || (isObject() && asObject()->isInstanceOf<Float>());
 }
 
-inline int64_t Value::toInt() const
+inline mpz_class Value::toInt() const
 {
     assert(isInt());
-    return isInt32() ? asInt32() : as<Integer>()->value();
+    return isInt32() ? mpz_class(asInt32()) : as<Integer>()->value();
 }
 
 inline double Value::toFloat() const
@@ -175,9 +175,21 @@ inline bool WrapperMixins<W, Value>::isFloat() const
 }
 
 template <typename W>
-inline int64_t WrapperMixins<W, Value>::toInt() const
+inline int32_t WrapperMixins<W, Value>::asInt32() const
+{
+    return extract()->asInt32();
+}
+
+template <typename W>
+inline mpz_class WrapperMixins<W, Value>::toInt() const
 {
     return extract()->toInt();
+}
+
+template <typename W>
+inline bool WrapperMixins<W, Value>::toInt32(int32_t* out) const
+{
+    return extract()->toInt32(out);
 }
 
 template <typename W>

@@ -4,6 +4,8 @@
 #include "gc.h"
 #include "name.h"
 
+#include <gmpxx.h>
+
 struct Class;
 struct Frame;
 struct Layout;
@@ -38,7 +40,9 @@ struct WrapperMixins<W, Value>
     inline bool isDouble() const;
     inline bool isInt() const;
     inline bool isFloat() const;
-    inline int64_t toInt() const;
+    inline int32_t asInt32() const;
+    inline mpz_class toInt() const;
+    inline bool toInt32(int32_t* out) const;
     inline double toFloat() const;
     inline Object *asObject() const;
     inline Object *maybeObject() const;

@@ -190,12 +190,15 @@ size_t Dict::ValueHash::operator()(Value vArg) const
     if (!interp->call(hashFunc, 1, result))
         throw PythonException(result);
 
-    if (!result.isInt()) {
+    if (result.isInt32())
+        return result.asInt32();
+
+    if (!result.is<Integer>()) {
         result = gc.create<TypeError>("__hash__ method should return an int");
         throw PythonException(result);
     }
 
-    return result.toInt();
+    return result.as<Integer>()->value().get_ui(); // todo: truncates result
 }
 
 bool Dict::ValuesEqual::operator()(Value a, Value b) const
@@ -218,5 +221,5 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
         throw PythonException(result);
     }
 
-    return obj->as<Boolean>()->value();
+    return obj->as<Boolean>()->boolValue();
 }

@@ -1,7 +1,9 @@
 # args: 10
-# output: -0.16907516382852444
-# output: -0.16907302171469984
+# output: -0.16907516382852447
+# output: -0.16907302171469982
 # bench-args: 10000
+
+# todo - python3 second line of output is actually -0.16907302171469987
 
 # The Computer Language Benchmarks Game
 # http://benchmarksgame.alioth.debian.org/

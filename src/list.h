@@ -72,7 +72,6 @@ struct List : public Object
     void sort();
 
   private:
-
     HeapVector<Value> elements_;
 };
 
