@@ -61,37 +61,51 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 template <BinaryOp Op>
 static Value mpzBinaryOp(const mpz_class& a, const mpz_class& b);
 
-template <> inline Value mpzBinaryOp<BinaryAdd>(const mpz_class& a, const mpz_class& b)
-{
-    return Integer::get(a + b);
-}
+template <BinaryOp Op>
+static Value mpzIntBinaryOp(const mpz_class& a, int32_t b);
 
-template <> inline Value mpzBinaryOp<BinarySub>(const mpz_class& a, const mpz_class& b)
-{
-    return Integer::get(a - b);
-}
+template <BinaryOp Op>
+static Value intMpzBinaryOp(int32_t a, const mpz_class& b);
 
-template <> inline Value mpzBinaryOp<BinaryMul>(const mpz_class& a, const mpz_class& b)
-{
-    return Integer::get(a * b);
-}
+#define define_binary_op_mpz_mpz(op, expr)                                    \
+    template <> inline Value                                                  \
+    mpzBinaryOp<op>(const mpz_class& a, const mpz_class& b)                   \
+    {                                                                         \
+        return expr;                                                          \
+    }
 
-template <> inline Value mpzBinaryOp<BinaryTrueDiv>(const mpz_class& a, const mpz_class& b)
-{
-    return Float::get(a.get_d() / b.get_d());
-}
+#define define_binary_op_mpz_int(op, expr)                                    \
+    template <> inline Value                                                  \
+    mpzIntBinaryOp<op>(const mpz_class& a, int32_t b)                         \
+    {                                                                         \
+        return expr;                                                          \
+    }
 
-template <> inline Value mpzBinaryOp<BinaryFloorDiv>(const mpz_class& a, const mpz_class& b)
-{
-    return Integer::get(a / b);
-}
+#define define_binary_op_int_mpz(op, expr)                                    \
+    template <> inline Value                                                  \
+    intMpzBinaryOp<op>(int32_t a, const mpz_class& b)                         \
+    {                                                                         \
+        return expr;                                                          \
+    }
 
-template <> inline Value mpzBinaryOp<BinaryModulo>(const mpz_class& a, const mpz_class& b)
-{
-    return Integer::get(a % b);
-}
+#define define_binary_ops(op, expr)                                           \
+    define_binary_op_mpz_mpz(op, Integer::get(expr))                          \
+    define_binary_op_mpz_int(op, Integer::get(expr))                          \
+    define_binary_op_int_mpz(op, Integer::get(expr))
 
-template <> inline Value mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_class& b)
+define_binary_ops(BinaryAdd, a + b)
+define_binary_ops(BinarySub, a - b)
+define_binary_ops(BinaryMul, a * b)
+define_binary_ops(BinaryFloorDiv, a / b)
+
+define_binary_op_mpz_mpz(BinaryTrueDiv, Float::get(a.get_d() / b.get_d()))
+define_binary_op_mpz_int(BinaryTrueDiv, Float::get(a.get_d() / b))
+define_binary_op_int_mpz(BinaryTrueDiv, Float::get(double(a) / b.get_d()))
+
+define_binary_ops(BinaryModulo, a % b)
+
+template <>
+inline Value mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_class& b)
 {
     assert(b.fits_sint_p()); // todo: raise error
     mpz_class r;
@@ -99,22 +113,31 @@ template <> inline Value mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_
     return Integer::get(r);
 }
 
-template <> inline Value mpzBinaryOp<BinaryOr>(const mpz_class& a, const mpz_class& b)
+template <>
+inline Value mpzIntBinaryOp<BinaryPower>(const mpz_class& a, int32_t b)
 {
-    return Integer::get(a | b);
+    assert(b >= 0); // todo
+    mpz_class r;
+    mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b);
+    return Integer::get(r);
 }
 
-template <> inline Value mpzBinaryOp<BinaryXor>(const mpz_class& a, const mpz_class& b)
+template <>
+inline Value intMpzBinaryOp<BinaryPower>(int32_t a, const mpz_class& b)
 {
-    return Integer::get(a ^ b);
+    assert(b.fits_sint_p()); // todo: raise error
+    mpz_class aa(a);
+    mpz_class r;
+    mpz_pow_ui(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
+    return Integer::get(r);
 }
 
-template <> inline Value mpzBinaryOp<BinaryAnd>(const mpz_class& a, const mpz_class& b)
-{
-    return Integer::get(a & b);
-}
+define_binary_ops(BinaryOr, a | b)
+define_binary_ops(BinaryXor, a ^ b)
+define_binary_ops(BinaryAnd, a & b)
 
-template <> Value mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_class& b)
+template <>
+Value mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_class& b)
 {
     assert(b.fits_sint_p()); // todo
     mpz_class r;
@@ -122,11 +145,50 @@ template <> Value mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_cla
     return Integer::get(r);
 }
 
-template <> Value mpzBinaryOp<BinaryRightShift>(const mpz_class& a, const mpz_class& b)
+template <>
+Value mpzIntBinaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b)
+{
+    mpz_class r;
+    mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
+    return Integer::get(r);
+}
+
+template <>
+Value intMpzBinaryOp<BinaryLeftShift>(int32_t a, const mpz_class& b)
+{
+    assert(b.fits_sint_p()); // todo
+    mpz_class aa(a);
+    mpz_class r;
+    mpz_mul_2exp(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
+    return Integer::get(r);
+}
+
+template <>
+Value mpzBinaryOp<BinaryRightShift>(const mpz_class& a, const mpz_class& b)
 {
     assert(b.fits_sint_p()); // todo
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
+    // todo: rounds towards zero
+    return Integer::get(r);
+}
+
+template <>
+Value mpzIntBinaryOp<BinaryRightShift>(const mpz_class& a, int32_t b)
+{
+    mpz_class r;
+    mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
+    // todo: rounds towards zero
+    return Integer::get(r);
+}
+
+template <>
+Value intMpzBinaryOp<BinaryRightShift>(int32_t a, const mpz_class& b)
+{
+    assert(b.fits_sint_p()); // todo
+    mpz_class aa(a);
+    mpz_class r;
+    mpz_div_2exp(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
     // todo: rounds towards zero
     return Integer::get(r);
 }
@@ -174,18 +236,27 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
         return true;
     }
 
-    if (args[0].isInt32() && args[1].isInt32()) {
+    bool leftIsInt32 = args[0].isInt32();
+    bool rightIsInt32 = args[1].isInt32();
+    if (leftIsInt32 && rightIsInt32) {
         resultOut = Integer::binaryOp<Op>(args[0].asInt32(), args[1].asInt32());
         return true;
     }
 
-    if (!args[0].isInt32() && !args[1].isInt32()) {
-        resultOut = mpzBinaryOp<Op>(args[0].as<Integer>()->value(),
-                                    args[1].as<Integer>()->value());
+    if (leftIsInt32) {
+        resultOut = intMpzBinaryOp<Op>(args[0].asInt32(),
+                                       args[1].as<Integer>()->value());
         return true;
     }
 
-    resultOut = mpzBinaryOp<Op>(args[0].toInt(), args[1].toInt());
+    if (rightIsInt32) {
+        resultOut = mpzIntBinaryOp<Op>(args[0].as<Integer>()->value(),
+                                       args[1].asInt32());
+        return true;
+    }
+
+    resultOut = mpzBinaryOp<Op>(args[0].as<Integer>()->value(),
+                                args[1].as<Integer>()->value());
     return true;
 }
 

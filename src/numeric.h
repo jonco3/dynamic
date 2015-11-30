@@ -8,6 +8,7 @@
 struct Integer : public Object
 {
     static void init();
+    static void final();
 
     static GlobalRoot<Class*> ObjectClass;
 
