@@ -13,7 +13,7 @@ struct Integer : public Object
     static GlobalRoot<Class*> ObjectClass;
 
     template <typename T>
-    static bool fitsInt32(T v) {
+    static bool fitsInt32(T&& v) {
         return v >= INT32_MIN && v <= INT32_MAX;
     }
 
