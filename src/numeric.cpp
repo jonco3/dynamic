@@ -196,35 +196,44 @@ Value intMpzBinaryOp<BinaryRightShift>(int32_t a, const mpz_class& b)
 template <CompareOp Op>
 static Value mpzCompareOp(const mpz_class& a, const mpz_class& b);
 
-template <> inline Value mpzCompareOp<CompareLT>(const mpz_class& a, const mpz_class& b)
-{
-    return Boolean::get(a < b);
-}
+template <CompareOp Op>
+static Value mpzIntCompareOp(const mpz_class& a, int32_t b);
 
-template <> inline Value mpzCompareOp<CompareLE>(const mpz_class& a, const mpz_class& b)
-{
-    return Boolean::get(a <= b);
-}
+template <CompareOp Op>
+static Value intMpzCompareOp(int32_t a, const mpz_class& b);
 
-template <> inline Value mpzCompareOp<CompareGT>(const mpz_class& a, const mpz_class& b)
-{
-    return Boolean::get(a > b);
-}
+#define define_compare_op_mpz_mpz(op, expr)                                    \
+    template <> inline Value                                                  \
+    mpzCompareOp<op>(const mpz_class& a, const mpz_class& b)                   \
+    {                                                                         \
+        return expr;                                                          \
+    }
 
-template <> inline Value mpzCompareOp<CompareGE>(const mpz_class& a, const mpz_class& b)
-{
-    return Boolean::get(a >= b);
-}
+#define define_compare_op_mpz_int(op, expr)                                    \
+    template <> inline Value                                                  \
+    mpzIntCompareOp<op>(const mpz_class& a, int32_t b)                         \
+    {                                                                         \
+        return expr;                                                          \
+    }
 
-template <> inline Value mpzCompareOp<CompareEQ>(const mpz_class& a, const mpz_class& b)
-{
-    return Boolean::get(a == b);
-}
+#define define_compare_op_int_mpz(op, expr)                                    \
+    template <> inline Value                                                  \
+    intMpzCompareOp<op>(int32_t a, const mpz_class& b)                         \
+    {                                                                         \
+        return expr;                                                          \
+    }
 
-template <> inline Value mpzCompareOp<CompareNE>(const mpz_class& a, const mpz_class& b)
-{
-    return Boolean::get(a != b);
-}
+#define define_compare_ops(op, expr)                                           \
+    define_compare_op_mpz_mpz(op, Boolean::get(expr))                          \
+    define_compare_op_mpz_int(op, Boolean::get(expr))                          \
+    define_compare_op_int_mpz(op, Boolean::get(expr))
+
+define_compare_ops(CompareLT, a < b)
+define_compare_ops(CompareLE, a <= b)
+define_compare_ops(CompareGT, a > b)
+define_compare_ops(CompareGE, a >= b)
+define_compare_ops(CompareEQ, a == b)
+define_compare_ops(CompareNE, a != b)
 
 template <BinaryOp Op>
 static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
@@ -270,19 +279,28 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
         return true;
     }
 
-    if (args[0].isInt32() && args[1].isInt32()) {
-        resultOut = Integer::compareOp<Op>(args[0].asInt32(),
-                                           args[1].asInt32());
+    bool leftIsInt32 = args[0].isInt32();
+    bool rightIsInt32 = args[1].isInt32();
+    if (leftIsInt32 && rightIsInt32) {
+        resultOut =
+            Integer::compareOp<Op>(args[0].asInt32(), args[1].asInt32());
         return true;
     }
 
-    if (!args[0].isInt32() && !args[1].isInt32()) {
-        resultOut = mpzCompareOp<Op>(args[0].as<Integer>()->value(),
-                                     args[1].as<Integer>()->value());
+    if (leftIsInt32) {
+        resultOut = intMpzCompareOp<Op>(args[0].asInt32(),
+                                       args[1].as<Integer>()->value());
         return true;
     }
 
-    resultOut = mpzCompareOp<Op>(args[0].toInt(), args[1].toInt());
+    if (rightIsInt32) {
+        resultOut = mpzIntCompareOp<Op>(args[0].as<Integer>()->value(),
+                                       args[1].asInt32());
+        return true;
+    }
+
+    resultOut = mpzCompareOp<Op>(args[0].as<Integer>()->value(),
+                                args[1].as<Integer>()->value());
     return true;
 }
 
