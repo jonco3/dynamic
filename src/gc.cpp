@@ -151,7 +151,7 @@ GC::GC()
 #ifdef DEBUG
     minCollectAt(100),
 #else
-    minCollectAt(10000),
+    minCollectAt(100000),
 #endif
     scheduleFactorPercent(200),
     currentEpoch(1),
