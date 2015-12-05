@@ -104,7 +104,7 @@ struct GC
     template <typename T>
     void destroyCells(vector<T*>& cells,
                       typename vector<T*>::iterator dying,
-                      vector<Cell*>& freeCells, size_t size);
+                      vector<Cell*>& freeCells, size_t size, bool destruct);
 
     void logStats();
 

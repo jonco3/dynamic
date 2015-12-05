@@ -212,13 +212,14 @@ void GC::freeOldFreeCells(vector<Cell*>& cells)
 
 template <typename T>
 void GC::destroyCells(vector<T*>& cells, typename vector<T*>::iterator dying,
-                      vector<Cell*>& freeCells, size_t size)
+                      vector<Cell*>& freeCells, size_t size, bool destruct)
 {
     size_t count = cells.end() - dying;
     freeCells.reserve(freeCells.size() + count);
     for (auto i = dying; i != cells.end(); i++) {
         Cell* cell = *i;
-        Cell::destructCell(cell);
+        if (destruct)
+            Cell::destructCell(cell);
 #ifdef DEBUG
         memset(reinterpret_cast<uint8_t*>(cell), 0xff, size);
 #endif
@@ -271,8 +272,9 @@ void GC::collect()
         freeOldFreeCells(freeCells[sc]);
     for (SizeClass sc = 0; sc < sizeClassCount; sc++) {
         size_t size = sizeFromClass(sc);
-        destroyCells(cells[sc], dyingCells[sc], freeCells[sc], size);
-        destroyCells(sweptCells[sc], dyingSweptCells[sc], freeCells[sc], size);
+        destroyCells(cells[sc], dyingCells[sc], freeCells[sc], size, false);
+        destroyCells(sweptCells[sc], dyingSweptCells[sc], freeCells[sc], size,
+                     true);
     }
     isSweeping = false;
 
