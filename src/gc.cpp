@@ -134,6 +134,7 @@ struct Marker : public Tracer
         while (!stack_.empty()) {
             Cell* cell = stack_.back();
             stack_.pop_back();
+            log("  trace", cell);
             cell->traceChildren(*this);
         }
     }

@@ -334,7 +334,8 @@ struct GlobalNameInstr : public IdentInstrBase
 
     const Heap<Object*>& global() const { return global_; }
 
-    virtual void traceChildren(Tracer& t) override {
+    void traceChildren(Tracer& t) override {
+        IdentInstrBase::traceChildren(t);
         gc.trace(t, &global_);
     }
 
@@ -375,6 +376,7 @@ struct GlobalSlotInstrBase : public StubInstr
     {}
 
     void traceChildren(Tracer& t) override {
+        StubInstr::traceChildren(t);
         gc.trace(t, &global_);
         globalSlot_.traceChildren(t);
     }

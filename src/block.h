@@ -68,7 +68,7 @@ struct Block : public Cell
         return i >= &instrs_.front() && i <= &instrs_.back();
     }
 
-    virtual void traceChildren(Tracer& t) override;
+    void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;
 
     void setNextPos(const TokenPos& pos);

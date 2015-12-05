@@ -113,6 +113,23 @@ void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
 }
 
 #ifdef LOG_EXECUTION
+static void logValue(const Value& value)
+{
+    AutoAssertNoGC noGC;
+    if (value.isObject()) {
+        Object* obj = value.asObject();
+        if (!obj) {
+            cout << "nullptr";
+            return;
+        }
+
+        cout << obj->type()->name() << " at 0x" << hex << obj;
+        return;
+    }
+
+    cout << value;
+}
+
 void Interpreter::logStart(int indentDelta)
 {
     size_t indent = frames.size() + indentDelta;
@@ -125,7 +142,9 @@ void Interpreter::logStackPush(const Value& value)
 {
     if (logExecution) {
         logStart(1);
-        cout << "push @" << dec << stackPos() << " " << value << endl;
+        cout << "push @" << dec << stackPos() << " ";
+        logValue(value);
+        cout << endl;
     }
 }
 
@@ -135,7 +154,9 @@ void Interpreter::logStackPush(const Value* first, const Value* last)
         size_t pos = stackPos();
         while (first != last) {
             logStart(1);
-            cout << "push @" << dec << pos++ << " " << *first++ << endl;
+            cout << "push @" << dec << pos++ << " ";
+            logValue(*first++);
+            cout << endl;
         }
     }
 }
@@ -147,7 +168,9 @@ void Interpreter::logStackPop(size_t count)
         for (size_t i = 0; i < count; i++) {
             logStart(1);
             Value value = stack[stackPos() - 1 - i];
-            cout << "pop @" << dec << --pos << " " << value << endl;
+            cout << "pop @" << dec << --pos << " ";
+            logValue(value);
+            cout << endl;
         }
     }
 }
@@ -163,6 +186,7 @@ void Interpreter::logStackSwap()
 void Interpreter::logInstr(Instr* instr)
 {
     if (logExecution) {
+        AutoAssertNoGC noGC;
         logStart();
         cout << *instr;
         cout << " at line " << dec << currentPos().line << endl;

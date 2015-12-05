@@ -116,11 +116,13 @@ void IndexInstr::print(ostream& s) const
 void ValueInstr::print(ostream& s) const
 {
     Instr::print(s);
-    s << " " << value_;
+    if (!value_.isObject())
+        s << " " << value_;
 }
 
 void ValueInstr::traceChildren(Tracer& t)
 {
+    Instr::traceChildren(t);
     gc.trace(t, &value_);
 }
 
@@ -147,6 +149,7 @@ void LambdaInstr::print(ostream& s) const
 
 void LambdaInstr::traceChildren(Tracer& t)
 {
+    Instr::traceChildren(t);
     gc.trace(t, &info_);
 }
 
@@ -159,6 +162,7 @@ void StubInstr::print(ostream& s) const
 
 void StubInstr::traceChildren(Tracer& t)
 {
+    Instr::traceChildren(t);
     gc.trace(t, &next_);
 }
 
