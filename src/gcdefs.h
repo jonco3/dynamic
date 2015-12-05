@@ -41,7 +41,6 @@ struct WrapperMixins<W, Value>
     inline bool isInt() const;
     inline bool isFloat() const;
     inline int32_t asInt32() const;
-    inline mpz_class toInt() const;
     inline bool toInt32(int32_t* out) const;
     inline double toFloat() const;
     inline Object *asObject() const;

@@ -100,7 +100,6 @@ struct Value
     inline bool isFloat() const;
 
     inline Object *toObject() const;
-    inline mpz_class toInt() const;
     bool toInt32(int32_t* out) const;
     inline double toFloat() const;
 

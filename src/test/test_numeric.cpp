@@ -26,7 +26,6 @@ static void testIntIsInt32(int64_t i)
     testTrue(v.isInt32());
     testFalse(v.isObject());
     testEqual(v.asInt32(), i);
-    testEqual(v.toInt(), mpzFromInt64(i));
 }
 
 static void testIntIsObject(int64_t i)
@@ -35,7 +34,7 @@ static void testIntIsObject(int64_t i)
     testTrue(v.isInt());
     testFalse(v.isInt32());
     testTrue(v.isObject());
-    testEqual(v.toInt(), mpzFromInt64(i));
+    testEqual(v.as<Integer>()->value(), mpzFromInt64(i));
 }
 
 testcase(numeric)

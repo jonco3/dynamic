@@ -17,7 +17,7 @@ testcase(object)
     testTrue(o->hasAttr("foo"));
     testTrue(o->maybeGetAttr("foo", v));
     Stack<Object*> obj(v.toObject());
-    testEqual(v.toInt(), 1);
+    testEqual(obj->as<Integer>()->value(), 1);
 
     value = Integer::get(2);
     o->setAttr("bar", value);
@@ -33,13 +33,13 @@ testcase(object)
     testTrue(o->hasAttr("foo"));
     testFalse(o->hasAttr("bar"));
     testTrue(o->hasAttr("baz"));
-    testEqual(o->getAttr("foo").toInt(), 1);
-    testEqual(o->getAttr("baz").toInt(), 3);
+    testEqual(o->getAttr("foo").asInt32(), 1);
+    testEqual(o->getAttr("baz").asInt32(), 3);
 
     testTrue(o->maybeDelOwnAttr("baz"));
     testTrue(o->hasAttr("foo"));
     testFalse(o->hasAttr("baz"));
-    testEqual(o->getAttr("foo").toInt(), 1);
+    testEqual(o->getAttr("foo").asInt32(), 1);
 
     testTrue(o->maybeDelOwnAttr("foo"));
     testFalse(o->hasAttr("foo"));
