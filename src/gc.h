@@ -63,6 +63,12 @@ struct GC
     template <typename T>
     inline void traceVector(Tracer& t, HeapVector<T>* ptrs);
 
+#ifdef DEBUG
+    bool currentlySweeping() const {
+        return isSweeping;
+    }
+#endif
+
   private:
     static const int8_t epochCount = 2;
 
@@ -116,12 +122,14 @@ struct GC
     bool isAllocating;
     unsigned unsafeCount;
 #endif
+    unsigned supressCount;
     size_t collectAt;
 
     friend struct Cell;
     friend struct RootBase;
     friend struct StackBase;
     friend struct AutoAssertNoGC;
+    friend struct AutoSupressGC;
     friend void testcase_body_gc();
 };
 
@@ -844,7 +852,7 @@ size_t GC::sizeFromClass(SizeClass sc)
 inline void GC::maybeCollect()
 {
     assert(unsafeCount == 0);
-    if (cellCount >= collectAt)
+    if (supressCount == 0 && cellCount >= collectAt)
         collect();
 }
 
@@ -908,6 +916,25 @@ struct AutoAssertNoGC
 #ifdef DEBUG
         assert(gc.unsafeCount > 0);
         gc.unsafeCount--;
+#endif
+    }
+};
+
+/*
+ * Disable GC temporarily.
+ */
+struct AutoSupressGC
+{
+    AutoSupressGC() {
+#ifdef DEBUG
+        gc.supressCount++;
+#endif
+    }
+
+    ~AutoSupressGC() {
+#ifdef DEBUG
+        assert(gc.supressCount > 0);
+        gc.supressCount--;
 #endif
     }
 };

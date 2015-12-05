@@ -344,8 +344,78 @@ static bool intNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
+struct GMPData : public Cell
+{
+#ifdef DEBUG
+    static const uint32_t MagicValue = 0x2ac52ac5;
+    uint32_t magic;
+#endif
+
+    char data[0];
+
+    void* toPtr() {
+        return &data;
+    }
+
+    static GMPData* fromPtr(void* data);
+};
+
+/* static */ GMPData* GMPData::fromPtr(void* data) {
+    static const size_t offset = size_t(&reinterpret_cast<GMPData*>(0)->data);
+
+    auto addr = reinterpret_cast<uintptr_t>(data) - offset;
+    GMPData* cell = reinterpret_cast<GMPData*>(addr);
+    assert(cell->magic == GMPData::MagicValue);
+    return cell;
+}
+
+static void* AllocGMPData(size_t bytes)
+{
+    GMPData* cell = gc.createSized<GMPData>(sizeof(GMPData) + bytes);
+#ifdef DEBUG
+    cell->magic = GMPData::MagicValue;
+#endif
+    return cell->toPtr();
+}
+
+static void FreeGMPData(void* data, size_t bytes)
+{
+#ifdef DEBUG
+    if (!gc.currentlySweeping()) {
+        GMPData* cell = GMPData::fromPtr(data);
+        cell->magic = 0;
+    }
+#endif
+}
+
+static void* ReallocGMPData(void* oldData, size_t oldBytes, size_t newBytes)
+{
+    GMPData::fromPtr(oldData);
+    if (newBytes <= oldBytes)
+        return oldData;
+
+    void* newData = AllocGMPData(newBytes);
+    memcpy(newData, oldData, oldBytes);
+    FreeGMPData(oldData, oldBytes);
+    return newData;
+}
+
+void Integer::traceChildren(Tracer& t)
+{
+    mpz_t* mpz = reinterpret_cast<mpz_t*>(&value_);
+    mp_limb_t** pptr = &(*mpz)[0]._mp_d;
+    if (!*pptr)
+        return;
+
+    GMPData* cell = GMPData::fromPtr(*pptr);
+    gc.traceUnbarriered(t, &cell);
+    *pptr = static_cast<mp_limb_t *>(cell->toPtr());
+}
+
 void Integer::init()
 {
+    mp_set_memory_functions(AllocGMPData, ReallocGMPData, FreeGMPData);
+
     Stack<Class*> cls(Class::createNative("int", intNew, 2));
     Stack<Value> value;
     initNativeMethod(cls, "__pos__", intUnaryOp<intPos, mpzPos>, 1);
@@ -410,6 +480,7 @@ Object* Integer::getObject(const mpz_class& v)
 }
 
 void Integer::print(ostream& s) const {
+    AutoSupressGC supressGC;
     s << dec << value_;
 }
 

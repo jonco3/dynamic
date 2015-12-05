@@ -42,6 +42,8 @@ struct Integer : public Object
     Integer(Traced<Class*> cls, int64_t v);
 
     const mpz_class& value() const { return value_; }
+
+    void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;
 
     template <BinaryOp Op>
