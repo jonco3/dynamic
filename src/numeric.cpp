@@ -9,6 +9,8 @@
 #include <cmath>
 #include <sstream>
 
+//#define TRACE_GMP_ALLOC
+
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Class*> Float::ObjectClass;
 GlobalRoot<Class*> Boolean::ObjectClass;
@@ -384,12 +386,18 @@ struct GMPData : public Cell
 
 static void* AllocGMPData(size_t bytes)
 {
+#ifdef TRACE_GMP_ALLOC
+    printf("AllocGMPData %lu\n", bytes);
+#endif
     GMPData* cell = gc.createSized<GMPData>(sizeof(GMPData) + bytes);
     return cell->toPtr();
 }
 
 static void* ReallocGMPData(void* oldData, size_t oldBytes, size_t newBytes)
 {
+#ifdef TRACE_GMP_ALLOC
+    printf("ReallocGMPData %lu %lu\n", oldBytes, newBytes);
+#endif
     GMPData::fromPtr(oldData);
     if (newBytes <= oldBytes)
         return oldData;
@@ -459,9 +467,14 @@ static void mpz_set_si64(mpz_t n, int64_t i)
 
 static mpz_class mpzFromInt64(int64_t i)
 {
-    mpz_class n;
-    mpz_set_si64(n.get_mpz_t(), i);
-    return n;
+    AutoSupressGC supressGC;
+    size_t bits = (int32_t(i) == i) ? 32 : 64;
+    mpz_t n;
+    mpz_init2(n, bits + sizeof(mp_limb_t) * 8);
+    mpz_set_si64(n, i);
+    mpz_class r(n);
+    mpz_clear(n);
+    return r;
 }
 
 Integer::Integer(int64_t v)
