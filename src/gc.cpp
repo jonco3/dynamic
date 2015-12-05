@@ -95,7 +95,7 @@ bool Cell::isDying() const
     return epoch_ != gc.currentEpoch;
 }
 
-bool Cell::maybeMark(Cell** cellp)
+inline bool Cell::maybeMark(Cell** cellp)
 {
     Cell* cell = *cellp;
     if (cell->shouldMark()) {
@@ -107,21 +107,18 @@ bool Cell::maybeMark(Cell** cellp)
     return false;
 }
 
-void Cell::sweepCell(SweptCell* cell)
+inline void Cell::sweepCell(SweptCell* cell)
 {
     log("  sweeping", cell);
     assert(cell->shouldSweep());
     cell->sweep();
 }
 
-void Cell::destroyCell(Cell* cell, size_t size)
+inline void Cell::destructCell(Cell* cell)
 {
-    log("  destroy", cell);
+    log("  destruct", cell);
     assert(cell->shouldSweep());
     cell->~Cell();
-#ifdef DEBUG
-    memset(reinterpret_cast<uint8_t*>(cell), 0xff, size);
-#endif
 }
 
 struct Marker : public Tracer
@@ -221,7 +218,10 @@ void GC::destroyCells(vector<T*>& cells, typename vector<T*>::iterator dying,
     freeCells.reserve(freeCells.size() + count);
     for (auto i = dying; i != cells.end(); i++) {
         Cell* cell = *i;
-        Cell::destroyCell(cell, size);
+        Cell::destructCell(cell);
+#ifdef DEBUG
+        memset(reinterpret_cast<uint8_t*>(cell), 0xff, size);
+#endif
         freeCells.push_back(cell);
     }
     assert(gc.cellCount >= count);

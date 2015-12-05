@@ -159,7 +159,7 @@ struct Cell
 
     static bool maybeMark(Cell** cellp);
     static void sweepCell(SweptCell* cell);
-    static void destroyCell(Cell* cell, size_t size);
+    static void destructCell(Cell* cell);
 
     friend struct GC;
     friend struct Marker;
