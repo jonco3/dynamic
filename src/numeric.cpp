@@ -346,18 +346,31 @@ static bool intNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
 
 struct GMPData : public Cell
 {
+    GMPData() {
+#ifdef DEBUG
+        magic = GMPData::MagicValue;
+#endif
+    }
+
+    static GMPData* fromPtr(void* data);
+
+    void* toPtr() {
+        return &data;
+    }
+
+#ifdef DEBUG
+    void markFree() {
+        magic = 0;
+    }
+#endif
+
+  private:
 #ifdef DEBUG
     static const uint32_t MagicValue = 0x2ac52ac5;
     uint32_t magic;
 #endif
 
     char data[0];
-
-    void* toPtr() {
-        return &data;
-    }
-
-    static GMPData* fromPtr(void* data);
 };
 
 /* static */ GMPData* GMPData::fromPtr(void* data) {
@@ -372,20 +385,7 @@ struct GMPData : public Cell
 static void* AllocGMPData(size_t bytes)
 {
     GMPData* cell = gc.createSized<GMPData>(sizeof(GMPData) + bytes);
-#ifdef DEBUG
-    cell->magic = GMPData::MagicValue;
-#endif
     return cell->toPtr();
-}
-
-static void FreeGMPData(void* data, size_t bytes)
-{
-#ifdef DEBUG
-    if (!gc.currentlySweeping()) {
-        GMPData* cell = GMPData::fromPtr(data);
-        cell->magic = 0;
-    }
-#endif
 }
 
 static void* ReallocGMPData(void* oldData, size_t oldBytes, size_t newBytes)
@@ -396,8 +396,15 @@ static void* ReallocGMPData(void* oldData, size_t oldBytes, size_t newBytes)
 
     void* newData = AllocGMPData(newBytes);
     memcpy(newData, oldData, oldBytes);
-    FreeGMPData(oldData, oldBytes);
     return newData;
+}
+
+static void FreeGMPData(void* data, size_t bytes)
+{
+#ifdef DEBUG
+    if (!gc.currentlySweeping())
+        GMPData::fromPtr(data)->markFree();
+#endif
 }
 
 void Integer::traceChildren(Tracer& t)
