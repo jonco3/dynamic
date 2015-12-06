@@ -108,7 +108,7 @@ inline Class* Value::type() const
 template <typename T>
 inline bool Value::is() const
 {
-    return type() == T::ObjectClass;
+    return isObject() && asObject() && type() == T::ObjectClass;
 }
 
 template <typename T>

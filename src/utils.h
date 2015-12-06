@@ -1,7 +1,11 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#include "assert.h"
+
 #include <vector>
+
+using namespace std;
 
 #ifdef DEBUG
 #define alwaysTrue(x) assert(x)

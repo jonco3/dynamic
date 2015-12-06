@@ -116,7 +116,6 @@ inline void Cell::sweepCell(SweptCell* cell)
 
 inline void Cell::destructCell(Cell* cell)
 {
-    log("  destruct", cell);
     assert(cell->shouldSweep());
     cell->~Cell();
 }
@@ -178,10 +177,12 @@ Cell* GC::allocCell(SizeClass sc, bool requiresSweep)
         cell = malloc(allocSize);
     }
 
-    // Pre-initialize memory to zero so that if we trigger GC by allocating in a
-    // constructor then any pointers in the partially constructed object will be
-    // in a valid state.
-    memset(cell, 0, allocSize);
+    // Posion memory in debug builds.  Constructors have to be careful when
+    // initializing members to ensure that a GC during construction doesn't see
+    // an untracable state.
+#ifdef DEBUG
+    memset(reinterpret_cast<uint8_t*>(cell), 0x0f, allocSize);
+#endif
 
     if (requiresSweep)
         sweptCells[sc].push_back(static_cast<SweptCell*>(cell));
@@ -219,6 +220,7 @@ void GC::destroyCells(vector<T*>& cells, typename vector<T*>::iterator dying,
     freeCells.reserve(freeCells.size() + count);
     for (auto i = dying; i != cells.end(); i++) {
         Cell* cell = *i;
+        log("  destroy", cell);
         if (destruct)
             Cell::destructCell(cell);
 #ifdef DEBUG

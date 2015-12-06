@@ -30,6 +30,7 @@ static void testIntIsInt32(int64_t i)
 
 static void testIntIsObject(int64_t i)
 {
+    AutoSupressGC supressGC;
     Value v = Integer::get(i);
     testTrue(v.isInt());
     testFalse(v.isInt32());

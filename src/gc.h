@@ -1,6 +1,8 @@
 #ifndef __GC_H__
 #define __GC_H__
 
+#include "utils.h"
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -122,7 +124,6 @@ struct GC
     bool isAllocating;
     unsigned unsafeCount;
 #endif
-    unsigned supressCount;
     size_t collectAt;
 
     friend struct Cell;
@@ -852,7 +853,7 @@ size_t GC::sizeFromClass(SizeClass sc)
 inline void GC::maybeCollect()
 {
     assert(unsafeCount == 0);
-    if (supressCount == 0 && cellCount >= collectAt)
+    if (cellCount > collectAt)
         collect();
 }
 
@@ -925,18 +926,10 @@ struct AutoAssertNoGC
  */
 struct AutoSupressGC
 {
-    AutoSupressGC() {
-#ifdef DEBUG
-        gc.supressCount++;
-#endif
-    }
+    AutoSupressGC() : asar(gc.collectAt, SIZE_MAX) {}
 
-    ~AutoSupressGC() {
-#ifdef DEBUG
-        assert(gc.supressCount > 0);
-        gc.supressCount--;
-#endif
-    }
+  private:
+    AutoSetAndRestoreValue<size_t> asar;
 };
 
 #undef define_immutable_accessors

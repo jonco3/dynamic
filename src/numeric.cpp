@@ -52,11 +52,13 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
         return true;
     }
 
-    if (args[0].isInt32())
+    if (args[0].isInt32()) {
         resultOut = Integer::get(int32op(args[0].asInt32()));
-    else
-        resultOut = Integer::get(mpzOp(args[0].as<Integer>()->value()));
+        return true;
+    }
 
+    AutoSupressGC supressGC;
+    resultOut = Integer::get(mpzOp(args[0].as<Integer>()->value()));
     return true;
 }
 
@@ -254,6 +256,8 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
         return true;
     }
 
+    AutoSupressGC supressGC;
+
     if (leftIsInt32) {
         resultOut = intMpzBinaryOp<Op>(args[0].asInt32(),
                                        args[1].as<Integer>()->value());
@@ -355,6 +359,7 @@ struct GMPData : public Cell
     }
 
     static GMPData* fromPtr(void* data);
+    static GMPData* fromPtrUnchecked(void* data);
 
     void* toPtr() {
         return &data;
@@ -366,20 +371,24 @@ struct GMPData : public Cell
     }
 #endif
 
-  private:
 #ifdef DEBUG
     static const uint32_t MagicValue = 0x2ac52ac5;
     uint32_t magic;
 #endif
 
+  private:
     char data[0];
 };
 
-/* static */ GMPData* GMPData::fromPtr(void* data) {
+/* static */ GMPData* GMPData::fromPtrUnchecked(void* data) {
     static const size_t offset = size_t(&reinterpret_cast<GMPData*>(0)->data);
 
     auto addr = reinterpret_cast<uintptr_t>(data) - offset;
-    GMPData* cell = reinterpret_cast<GMPData*>(addr);
+    return reinterpret_cast<GMPData*>(addr);
+}
+
+/* static */ GMPData* GMPData::fromPtr(void* data) {
+    GMPData* cell = fromPtrUnchecked(data);
     assert(cell->magic == GMPData::MagicValue);
     return cell;
 }
@@ -393,6 +402,21 @@ static void* AllocGMPData(size_t bytes)
     return cell->toPtr();
 }
 
+static void FreeGMPData(void* data, size_t bytes)
+{
+#ifdef DEBUG
+    if (!gc.currentlySweeping()) {
+        GMPData::fromPtr(data)->markFree();
+        return;
+    }
+
+    GMPData* cell = GMPData::fromPtrUnchecked(data);
+    assert(cell->magic == GMPData::MagicValue || cell->magic == 0xffffffff);
+    if (cell->magic == GMPData::MagicValue)
+        cell->markFree();
+#endif
+}
+
 static void* ReallocGMPData(void* oldData, size_t oldBytes, size_t newBytes)
 {
 #ifdef TRACE_GMP_ALLOC
@@ -404,15 +428,8 @@ static void* ReallocGMPData(void* oldData, size_t oldBytes, size_t newBytes)
 
     void* newData = AllocGMPData(newBytes);
     memcpy(newData, oldData, oldBytes);
+    FreeGMPData(oldData, oldBytes);
     return newData;
-}
-
-static void FreeGMPData(void* data, size_t bytes)
-{
-#ifdef DEBUG
-    if (!gc.currentlySweeping())
-        GMPData::fromPtr(data)->markFree();
-#endif
 }
 
 void Integer::traceChildren(Tracer& t)
@@ -477,11 +494,11 @@ static mpz_class mpzFromInt64(int64_t i)
     return r;
 }
 
-Integer::Integer(int64_t v)
+inline Integer::Integer(int64_t v)
   : Object(ObjectClass), value_(mpzFromInt64(v))
 {}
 
-Integer::Integer(const mpz_class& v)
+inline Integer::Integer(const mpz_class& v)
   : Object(ObjectClass), value_(v)
 {}
 

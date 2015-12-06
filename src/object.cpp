@@ -42,7 +42,9 @@ Object* Object::create()
 }
 
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
-  : layout_(layout), slots_(layout_->slotCount(), UninitializedSlot.get())
+  : class_(nullptr),
+    layout_(layout),
+    slots_(layout_->slotCount(), UninitializedSlot.get())
 {
     if (cls != Class::ObjectClass)
         assert(base == cls);
@@ -53,7 +55,9 @@ Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
 }
 
 Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
-  : layout_(layout), slots_(layout_->slotCount(), UninitializedSlot.get())
+  : class_(nullptr),
+    layout_(layout),
+    slots_(layout_->slotCount(), UninitializedSlot.get())
 {
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));

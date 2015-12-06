@@ -213,7 +213,7 @@ struct BranchInstr;
 struct Instr : public Cell
 {
     Instr(InstrCode code)
-      : code_(code)
+      : code_(code), stubCount_(0)
     {
         assert(code < InstrCodeCount);
     }
@@ -547,9 +547,10 @@ struct LambdaInstr : public Instr
                 bool isGenerator = false)
       : Instr(Instr_Lambda),
         funcName_(name),
-        info_(gc.create<FunctionInfo>(paramNames, block, defaultCount,
-                                      takesRest, isGenerator))
+        info_(nullptr)
     {
+        info_ = gc.create<FunctionInfo>(paramNames, block, defaultCount,
+                                        takesRest, isGenerator);
         assert(instrType(code) == Type);
     }
 
