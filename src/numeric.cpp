@@ -63,33 +63,42 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 }
 
 template <BinaryOp Op>
-static Value mpzBinaryOp(const mpz_class& a, const mpz_class& b);
+static bool mpzBinaryOp(const mpz_class& a, const mpz_class& b,
+                        MutableTraced<Value> resultOut);
 
 template <BinaryOp Op>
-static Value mpzIntBinaryOp(const mpz_class& a, int32_t b);
+static bool mpzIntBinaryOp(const mpz_class& a, int32_t b,
+                           MutableTraced<Value> resultOut);
 
 template <BinaryOp Op>
-static Value intMpzBinaryOp(int32_t a, const mpz_class& b);
+static bool intMpzBinaryOp(int32_t a, const mpz_class& b,
+                           MutableTraced<Value> resultOut);
 
 #define define_binary_op_mpz_mpz(op, expr)                                    \
-    template <> inline Value                                                  \
-    mpzBinaryOp<op>(const mpz_class& a, const mpz_class& b)                   \
+    template <> inline bool                                                   \
+    mpzBinaryOp<op>(const mpz_class& a, const mpz_class& b,                   \
+                    MutableTraced<Value> resultOut)                           \
     {                                                                         \
-        return expr;                                                          \
+        resultOut = expr;                                                     \
+        return true;                                                          \
     }
 
 #define define_binary_op_mpz_int(op, expr)                                    \
-    template <> inline Value                                                  \
-    mpzIntBinaryOp<op>(const mpz_class& a, int32_t b)                         \
+    template <> inline bool                                                   \
+    mpzIntBinaryOp<op>(const mpz_class& a, int32_t b,                         \
+                       MutableTraced<Value> resultOut)                        \
     {                                                                         \
-        return expr;                                                          \
+        resultOut = expr;                                                     \
+        return true;                                                          \
     }
 
 #define define_binary_op_int_mpz(op, expr)                                    \
-    template <> inline Value                                                  \
-    intMpzBinaryOp<op>(int32_t a, const mpz_class& b)                         \
+    template <> inline bool                                                   \
+    intMpzBinaryOp<op>(int32_t a, const mpz_class& b,                         \
+                       MutableTraced<Value> resultOut)                        \
     {                                                                         \
-        return expr;                                                          \
+        resultOut = expr;                                                     \
+        return true;                                                          \
     }
 
 #define define_binary_ops(op, expr)                                           \
@@ -109,31 +118,37 @@ define_binary_op_int_mpz(BinaryTrueDiv, Float::get(double(a) / b.get_d()))
 define_binary_ops(BinaryModulo, a % b)
 
 template <>
-inline Value mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_class& b)
+inline bool mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_class& b,
+                                     MutableTraced<Value> resultOut)
 {
     assert(b.fits_sint_p()); // todo: raise error
     mpz_class r;
     mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-inline Value mpzIntBinaryOp<BinaryPower>(const mpz_class& a, int32_t b)
+inline bool mpzIntBinaryOp<BinaryPower>(const mpz_class& a, int32_t b,
+                                        MutableTraced<Value> resultOut)
 {
     assert(b >= 0); // todo
     mpz_class r;
     mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b);
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-inline Value intMpzBinaryOp<BinaryPower>(int32_t a, const mpz_class& b)
+inline bool intMpzBinaryOp<BinaryPower>(int32_t a, const mpz_class& b,
+                                        MutableTraced<Value> resultOut)
 {
     assert(b.fits_sint_p()); // todo: raise error
     mpz_class aa(a);
     mpz_class r;
     mpz_pow_ui(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 define_binary_ops(BinaryOr, a | b)
@@ -141,60 +156,72 @@ define_binary_ops(BinaryXor, a ^ b)
 define_binary_ops(BinaryAnd, a & b)
 
 template <>
-Value mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_class& b)
+inline bool mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_class& b,
+                                         MutableTraced<Value> resultOut)
 {
     assert(b.fits_sint_p()); // todo
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-Value mpzIntBinaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b)
+inline bool mpzIntBinaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b,
+                                            MutableTraced<Value> resultOut)
 {
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-Value intMpzBinaryOp<BinaryLeftShift>(int32_t a, const mpz_class& b)
+inline bool intMpzBinaryOp<BinaryLeftShift>(int32_t a, const mpz_class& b,
+                                            MutableTraced<Value> resultOut)
 {
     assert(b.fits_sint_p()); // todo
     mpz_class aa(a);
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-Value mpzBinaryOp<BinaryRightShift>(const mpz_class& a, const mpz_class& b)
+inline bool mpzBinaryOp<BinaryRightShift>(const mpz_class& a, const mpz_class& b,
+                                          MutableTraced<Value> resultOut)
 {
     assert(b.fits_sint_p()); // todo
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
     // todo: rounds towards zero
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-Value mpzIntBinaryOp<BinaryRightShift>(const mpz_class& a, int32_t b)
+inline bool mpzIntBinaryOp<BinaryRightShift>(const mpz_class& a, int32_t b,
+                                             MutableTraced<Value> resultOut)
 {
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
     // todo: rounds towards zero
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <>
-Value intMpzBinaryOp<BinaryRightShift>(int32_t a, const mpz_class& b)
+inline bool intMpzBinaryOp<BinaryRightShift>(int32_t a, const mpz_class& b,
+                                             MutableTraced<Value> resultOut)
 {
     assert(b.fits_sint_p()); // todo
     mpz_class aa(a);
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
     // todo: rounds towards zero
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
 template <CompareOp Op>
@@ -259,20 +286,20 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
     AutoSupressGC supressGC;
 
     if (leftIsInt32) {
-        resultOut = intMpzBinaryOp<Op>(args[0].asInt32(),
-                                       args[1].as<Integer>()->value());
-        return true;
+        return intMpzBinaryOp<Op>(args[0].asInt32(),
+                                  args[1].as<Integer>()->value(),
+                                  resultOut);
     }
 
     if (rightIsInt32) {
-        resultOut = mpzIntBinaryOp<Op>(args[0].as<Integer>()->value(),
-                                       args[1].asInt32());
-        return true;
+        return mpzIntBinaryOp<Op>(args[0].as<Integer>()->value(),
+                                  args[1].asInt32(),
+                                  resultOut);
     }
 
-    resultOut = mpzBinaryOp<Op>(args[0].as<Integer>()->value(),
-                                args[1].as<Integer>()->value());
-    return true;
+    return mpzBinaryOp<Op>(args[0].as<Integer>()->value(),
+                           args[1].as<Integer>()->value(),
+                           resultOut);
 }
 
 template <CompareOp Op>
