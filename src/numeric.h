@@ -154,7 +154,16 @@ template <> inline Value Integer::binaryOp<BinaryAnd>(int32_t a, int32_t b)
 
 template <> inline Value Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b)
 {
-    return Integer::get(int64_t(a) << b);
+    assert(b >= 0); // todo: raise
+    if (b < 32)
+        return Integer::get(int64_t(a) << b);
+
+    AutoSupressGC supressGC;
+    mpz_t aa;
+    mpz_init_set_si(aa, a);
+    mpz_class r;
+    mpz_mul_2exp(r.get_mpz_t(), aa, b);
+    return Integer::get(r);
 }
 
 template <> inline Value Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b)
