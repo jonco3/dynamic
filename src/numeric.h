@@ -52,6 +52,16 @@ struct Integer : public Object
     template <BinaryOp Op>
     static bool binaryOp(int32_t a, int32_t b, MutableTraced<Value> resultOut);
 
+    template <BinaryOp Op>
+    static bool binaryOp(const mpz_class& a, const mpz_class& b,
+                         MutableTraced<Value> resultOut);
+
+    template <BinaryOp Op>
+    static bool binaryOp(const mpz_class& a, int32_t b, MutableTraced<Value> resultOut);
+
+    template <BinaryOp Op>
+    static bool binaryOp(int32_t a, const mpz_class& b, MutableTraced<Value> resultOut);
+
     template <CompareOp Op>
     static Value compareOp(int32_t a, int32_t b);
 
