@@ -1,6 +1,7 @@
 #ifndef __NUMERIC_H__
 #define __NUMERIC_H__
 
+#include "exception.h"
 #include "object.h"
 
 #include <gmpxx.h>
@@ -163,7 +164,11 @@ template <> inline bool Integer::binaryOp<BinaryAnd>(int32_t a, int32_t b, Mutab
 
 template <> inline bool Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    assert(b >= 0); // todo: raise
+    if (b < 0) {
+        resultOut = gc.create<ValueError>("negative shift count");
+        return false;
+    }
+
     if (b < 32) {
         resultOut = Integer::get(int64_t(a) << b);
         return true;
@@ -180,6 +185,11 @@ template <> inline bool Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b,
 
 template <> inline bool Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
+    if (b < 0) {
+        resultOut = gc.create<ValueError>("negative shift count");
+        return false;
+    }
+
     resultOut = Integer::get(int64_t(a) >> b);
     return true;
 }

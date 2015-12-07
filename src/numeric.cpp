@@ -192,6 +192,11 @@ template <>
 inline bool mpzIntBinaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b,
                                             MutableTraced<Value> resultOut)
 {
+    if (b < 0) {
+        resultOut = gc.create<ValueError>("negative shift count");
+        return false;
+    }
+
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
     resultOut = Integer::get(r);
@@ -202,6 +207,11 @@ template <>
 inline bool mpzIntBinaryOp<BinaryRightShift>(const mpz_class& a, int32_t b,
                                              MutableTraced<Value> resultOut)
 {
+    if (b < 0) {
+        resultOut = gc.create<ValueError>("negative shift count");
+        return false;
+    }
+
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
     // todo: rounds towards zero

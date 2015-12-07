@@ -1020,7 +1020,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 
     // Find the method to call and execute it.
     Stack<Value> method;
-    if (!executeBinaryOp(op, method))
+    if (!executeBinaryOp(op, method) || isHandlingException())
         return;
 
     // Check stub count before attempting to optimise.
