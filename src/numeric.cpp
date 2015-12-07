@@ -229,39 +229,33 @@ Integer::binaryOp<BinaryRightShift>(const mpz_class& a, int32_t b,
     return true;
 }
 
-template <CompareOp Op>
-static Value mpzCompareOp(const mpz_class& a, const mpz_class& b);
-
-template <CompareOp Op>
-static Value mpzIntCompareOp(const mpz_class& a, int32_t b);
-
-template <CompareOp Op>
-static Value intMpzCompareOp(int32_t a, const mpz_class& b);
-
-#define define_compare_op_mpz_mpz(op, expr)                                    \
-    template <> inline Value                                                  \
-    mpzCompareOp<op>(const mpz_class& a, const mpz_class& b)                   \
+#define define_compare_op_mpz_mpz(op, expr)                                   \
+    template <>                                                               \
+    /* static */ inline Value                                                 \
+    Integer::compareOp<op>(const mpz_class& a, const mpz_class& b)            \
     {                                                                         \
         return expr;                                                          \
     }
 
-#define define_compare_op_mpz_int(op, expr)                                    \
-    template <> inline Value                                                  \
-    mpzIntCompareOp<op>(const mpz_class& a, int32_t b)                         \
+#define define_compare_op_mpz_int(op, expr)                                   \
+    template <>                                                               \
+    /* static */ inline Value                                                 \
+    Integer::compareOp<op>(const mpz_class& a, int32_t b)                     \
     {                                                                         \
         return expr;                                                          \
     }
 
-#define define_compare_op_int_mpz(op, expr)                                    \
-    template <> inline Value                                                  \
-    intMpzCompareOp<op>(int32_t a, const mpz_class& b)                         \
+#define define_compare_op_int_mpz(op, expr)                                   \
+    template <>                                                               \
+    /* static */ inline Value                                                 \
+    Integer::compareOp<op>(int32_t a, const mpz_class& b)                     \
     {                                                                         \
         return expr;                                                          \
     }
 
-#define define_compare_ops(op, expr)                                           \
-    define_compare_op_mpz_mpz(op, Boolean::get(expr))                          \
-    define_compare_op_mpz_int(op, Boolean::get(expr))                          \
+#define define_compare_ops(op, expr)                                          \
+    define_compare_op_mpz_mpz(op, Boolean::get(expr))                         \
+    define_compare_op_mpz_int(op, Boolean::get(expr))                         \
     define_compare_op_int_mpz(op, Boolean::get(expr))
 
 define_compare_ops(CompareLT, a < b)
@@ -326,19 +320,19 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
     }
 
     if (leftIsInt32) {
-        resultOut = intMpzCompareOp<Op>(args[0].asInt32(),
-                                       args[1].as<Integer>()->value());
+        resultOut = Integer::compareOp<Op>(args[0].asInt32(),
+                                           args[1].as<Integer>()->value());
         return true;
     }
 
     if (rightIsInt32) {
-        resultOut = mpzIntCompareOp<Op>(args[0].as<Integer>()->value(),
-                                       args[1].asInt32());
+        resultOut = Integer::compareOp<Op>(args[0].as<Integer>()->value(),
+                                           args[1].asInt32());
         return true;
     }
 
-    resultOut = mpzCompareOp<Op>(args[0].as<Integer>()->value(),
-                                args[1].as<Integer>()->value());
+    resultOut = Integer::compareOp<Op>(args[0].as<Integer>()->value(),
+                                       args[1].as<Integer>()->value());
     return true;
 }
 

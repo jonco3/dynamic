@@ -65,6 +65,15 @@ struct Integer : public Object
     template <CompareOp Op>
     static Value compareOp(int32_t a, int32_t b);
 
+    template <CompareOp Op>
+    static Value compareOp(const mpz_class& a, const mpz_class& b);
+
+    template <CompareOp Op>
+    static Value compareOp(const mpz_class& a, int32_t b);
+
+    template <CompareOp Op>
+    static Value compareOp(int32_t a, const mpz_class& b);
+
   private:
     mpz_class value_;
 
