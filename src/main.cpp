@@ -115,6 +115,7 @@ const char* usageMessage =
 #ifdef DEBUG
     "  -lg                -- log GC activity\n"
     "  -lc                -- log compiled bytecode\n"
+    "  -z N               -- perform GC every N allocations\n"
 #endif
     "  -sg                -- log GC stats\n"
     ;
@@ -150,6 +151,8 @@ int main(int argc, const char* argv[])
             logGC = true;
         else if (strcmp("-lc", opt) == 0)
             logCompile = true;
+        else if (strcmp("-z", opt) == 0)
+            gcZealPeriod = atol(argv[pos++]);
 #endif
         else if (strcmp("-sg", opt) == 0)
             logGCStats = true;

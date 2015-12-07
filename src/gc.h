@@ -20,6 +20,7 @@ extern bool logGCStats;
 
 #ifdef DEBUG
 extern bool logGC;
+extern size_t gcZealPeriod;
 #endif
 
 struct Cell;
@@ -124,6 +125,7 @@ struct GC
 #ifdef DEBUG
     bool isAllocating;
     unsigned unsafeCount;
+    size_t allocCount;
 #endif
     size_t collectAt;
 
@@ -861,6 +863,14 @@ size_t GC::sizeFromClass(SizeClass sc)
 inline void GC::maybeCollect()
 {
     assert(unsafeCount == 0);
+
+#ifdef DEBUG
+    if (allocCount % gcZealPeriod == 0) {
+        collect();
+        return;
+    }
+#endif
+
     if (cellCount > collectAt)
         collect();
 }

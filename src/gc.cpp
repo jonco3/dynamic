@@ -9,6 +9,7 @@
 GC gc;
 
 bool logGCStats = false;
+size_t gcZealPeriod = SIZE_MAX;
 
 #ifdef DEBUG
 
@@ -159,6 +160,7 @@ GC::GC()
 #ifdef DEBUG
     isAllocating(false),
     unsafeCount(0),
+    allocCount(0),
 #endif
     collectAt(minCollectAt)
 {}
@@ -189,6 +191,9 @@ Cell* GC::allocCell(SizeClass sc, bool requiresSweep)
     else
         cells[sc].push_back(static_cast<Cell*>(cell));
     cellCount++;
+ #ifdef DEBUG
+    allocCount++;
+#endif
     return static_cast<Cell*>(cell);
 }
 
