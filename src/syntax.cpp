@@ -75,7 +75,7 @@ void SyntaxPrinter::visit(const SyntaxBlock& s)
 
 void SyntaxPrinter::visit(const SyntaxInteger& s)
 {
-    os_ << dec << s.value;
+    os_ << dec << s.token.text;
 }
 
 void SyntaxPrinter::visit(const SyntaxFloat& s)

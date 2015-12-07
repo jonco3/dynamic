@@ -34,6 +34,8 @@ struct Integer : public Object
         return getObject(v);
     }
 
+    static Value get(const string& s);
+
     static Object* getObject(int64_t v);
     static Object* getObject(const mpz_class& v);
 

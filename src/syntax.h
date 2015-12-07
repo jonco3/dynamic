@@ -227,12 +227,9 @@ struct SyntaxInteger : public Syntax
 {
     define_syntax_members(Integer, "integer");
 
-    // todo: this probably doesn't correctly parse all python integers
     SyntaxInteger(const Token& token)
-      : Syntax(token), value(stol(token.text, nullptr, 0))
+      : Syntax(token)
     {}
-
-    const int64_t value;
 };
 
 struct SyntaxFloat : public Syntax

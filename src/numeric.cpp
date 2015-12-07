@@ -543,6 +543,14 @@ Object* Integer::getObject(const mpz_class& v)
     return gc.create<Integer>(v);
 }
 
+/* static */ Value Integer::get(const string& s)
+{
+    // todo: this probably doesn't correctly parse all python integers
+    AutoSupressGC supressGC;
+    mpz_class i(s);
+    return get(i);
+}
+
 void Integer::print(ostream& s) const {
     AutoSupressGC supressGC;
     s << dec << value_;

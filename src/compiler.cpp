@@ -315,7 +315,7 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxInteger& s) {
-        Stack<Value> v(Integer::get(s.value));
+        Stack<Value> v(Integer::get(s.token.text));
         emit<Instr_Const>(v);
     }
 
