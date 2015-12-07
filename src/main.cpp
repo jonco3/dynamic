@@ -116,7 +116,7 @@ const char* usageMessage =
     "  -lg                -- log GC activity\n"
     "  -lc                -- log compiled bytecode\n"
 #endif
-    "  -ls                -- log GC stats\n"
+    "  -sg                -- log GC stats\n"
     ;
 
 static void badUsage()
@@ -151,7 +151,7 @@ int main(int argc, const char* argv[])
         else if (strcmp("-lc", opt) == 0)
             logCompile = true;
 #endif
-        else if (strcmp("-ls", opt) == 0)
+        else if (strcmp("-sg", opt) == 0)
             logGCStats = true;
         else
             badUsage();
