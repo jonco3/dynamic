@@ -91,6 +91,30 @@ template <BinaryOp Op>
 static bool intMpzBinaryOp(int32_t a, const mpz_class& b,
                            MutableTraced<Value> resultOut);
 
+template <BinaryOp Op>
+static inline bool mpzBinaryOp(const mpz_class& a, const mpz_class& b,
+                               MutableTraced<Value> resultOut)
+{
+    assert(b.fits_sint_p()); // todo: raise error
+    return mpzIntBinaryOp<Op>(a, b.get_si(), resultOut);
+}
+
+template <BinaryOp Op>
+static inline bool mpzIntBinaryOp(const mpz_class& a, int32_t b,
+                                  MutableTraced<Value> resultOut)
+{
+    mpz_class bb(b);
+    return mpzBinaryOp<Op>(a, bb, resultOut);
+}
+
+template <BinaryOp Op>
+static inline bool intMpzBinaryOp(int32_t a, const mpz_class& b,
+                                  MutableTraced<Value> resultOut)
+{
+    mpz_class aa(a);
+    return mpzBinaryOp<Op>(aa, b, resultOut);
+}
+
 #define define_binary_op_mpz_mpz(op, expr)                                    \
     template <> inline bool                                                   \
     mpzBinaryOp<op>(const mpz_class& a, const mpz_class& b,                   \
@@ -135,17 +159,6 @@ define_binary_op_int_mpz(BinaryTrueDiv, Float::get(double(a) / b.get_d()))
 define_binary_ops(BinaryModulo, a % b)
 
 template <>
-inline bool mpzBinaryOp<BinaryPower>(const mpz_class& a, const mpz_class& b,
-                                     MutableTraced<Value> resultOut)
-{
-    assert(b.fits_sint_p()); // todo: raise error
-    mpz_class r;
-    mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
-    resultOut = Integer::get(r);
-    return true;
-}
-
-template <>
 inline bool mpzIntBinaryOp<BinaryPower>(const mpz_class& a, int32_t b,
                                         MutableTraced<Value> resultOut)
 {
@@ -156,32 +169,9 @@ inline bool mpzIntBinaryOp<BinaryPower>(const mpz_class& a, int32_t b,
     return true;
 }
 
-template <>
-inline bool intMpzBinaryOp<BinaryPower>(int32_t a, const mpz_class& b,
-                                        MutableTraced<Value> resultOut)
-{
-    assert(b.fits_sint_p()); // todo: raise error
-    mpz_class aa(a);
-    mpz_class r;
-    mpz_pow_ui(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
-    resultOut = Integer::get(r);
-    return true;
-}
-
 define_binary_ops(BinaryOr, a | b)
 define_binary_ops(BinaryXor, a ^ b)
 define_binary_ops(BinaryAnd, a & b)
-
-template <>
-inline bool mpzBinaryOp<BinaryLeftShift>(const mpz_class& a, const mpz_class& b,
-                                         MutableTraced<Value> resultOut)
-{
-    assert(b.fits_sint_p()); // todo
-    mpz_class r;
-    mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
-    resultOut = Integer::get(r);
-    return true;
-}
 
 template <>
 inline bool mpzIntBinaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b,
@@ -194,48 +184,11 @@ inline bool mpzIntBinaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b,
 }
 
 template <>
-inline bool intMpzBinaryOp<BinaryLeftShift>(int32_t a, const mpz_class& b,
-                                            MutableTraced<Value> resultOut)
-{
-    assert(b.fits_sint_p()); // todo
-    mpz_class aa(a);
-    mpz_class r;
-    mpz_mul_2exp(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
-    resultOut = Integer::get(r);
-    return true;
-}
-
-template <>
-inline bool mpzBinaryOp<BinaryRightShift>(const mpz_class& a, const mpz_class& b,
-                                          MutableTraced<Value> resultOut)
-{
-    assert(b.fits_sint_p()); // todo
-    mpz_class r;
-    mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b.get_si());
-    // todo: rounds towards zero
-    resultOut = Integer::get(r);
-    return true;
-}
-
-template <>
 inline bool mpzIntBinaryOp<BinaryRightShift>(const mpz_class& a, int32_t b,
                                              MutableTraced<Value> resultOut)
 {
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
-    // todo: rounds towards zero
-    resultOut = Integer::get(r);
-    return true;
-}
-
-template <>
-inline bool intMpzBinaryOp<BinaryRightShift>(int32_t a, const mpz_class& b,
-                                             MutableTraced<Value> resultOut)
-{
-    assert(b.fits_sint_p()); // todo
-    mpz_class aa(a);
-    mpz_class r;
-    mpz_div_2exp(r.get_mpz_t(), aa.get_mpz_t(), b.get_si());
     // todo: rounds towards zero
     resultOut = Integer::get(r);
     return true;
