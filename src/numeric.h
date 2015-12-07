@@ -108,61 +108,81 @@ struct Float : public Object
     const double value_;
 };
 
-template <> inline bool Integer::binaryOp<BinaryAdd>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryAdd>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(int64_t(a) + b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinarySub>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinarySub>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(int64_t(a) - b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryMul>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryMul>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(int64_t(a) * b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryTrueDiv>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryTrueDiv>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Float::get(double(a) / b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryFloorDiv>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryFloorDiv>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(a / b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryModulo>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryModulo>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(a % b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryOr>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryOr>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(a | b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryXor>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryXor>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(a ^ b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryAnd>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryAnd>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(a & b);
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     if (b < 0) {
         resultOut = gc.create<ValueError>("negative shift count");
@@ -183,7 +203,9 @@ template <> inline bool Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b,
     return true;
 }
 
-template <> inline bool Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
+template <>
+inline bool
+Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     if (b < 0) {
         resultOut = gc.create<ValueError>("negative shift count");
