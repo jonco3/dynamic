@@ -162,7 +162,16 @@ template <>
 inline bool mpzIntBinaryOp<BinaryPower>(const mpz_class& a, int32_t b,
                                         MutableTraced<Value> resultOut)
 {
-    assert(b >= 0); // todo
+    if (b == 0) {
+        resultOut = Integer::get(1);
+        return true;
+    }
+
+    if (b < 0) {
+        resultOut = Float::get(pow(a.get_d(), b));
+        return true;
+    }
+
     mpz_class r;
     mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b);
     resultOut = Integer::get(r);
