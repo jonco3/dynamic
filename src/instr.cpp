@@ -1064,8 +1064,9 @@ Interpreter::executeBinaryOpInt(Traced<BinaryOpStubInstr*> instr)
     }
 
     int32_t b = popStack().asInt32();
-    int32_t a = popStack().asInt32();
-    pushStack(Integer::binaryOp<Op>(a, b));
+    int32_t a = peekStack().asInt32();
+    if (!Integer::binaryOp<Op>(a, b, refStack()))
+        raiseException();
 }
 
 #define define_execute_binary_op_int(name)                                    \
@@ -1348,8 +1349,9 @@ Interpreter::executeAugAssignUpdateInt(Traced<BinaryOpStubInstr*> instr)
     }
 
     int32_t b = popStack().asInt32();
-    int32_t a = popStack().asInt32();
-    pushStack(Integer::binaryOp<Op>(a, b));
+    int32_t a = peekStack().asInt32();
+     if (!Integer::binaryOp<Op>(a, b, refStack()))
+        raiseException();
 }
 
 #define define_execute_aug_assign_op_int(name)                                \

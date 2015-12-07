@@ -49,7 +49,7 @@ struct Integer : public Object
     void print(ostream& s) const override;
 
     template <BinaryOp Op>
-    static Value binaryOp(int32_t a, int32_t b);
+    static bool binaryOp(int32_t a, int32_t b, MutableTraced<Value> resultOut);
 
     template <CompareOp Op>
     static Value compareOp(int32_t a, int32_t b);
@@ -107,68 +107,81 @@ struct Float : public Object
     const double value_;
 };
 
-template <> inline Value Integer::binaryOp<BinaryAdd>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryAdd>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(int64_t(a) + b);
+    resultOut = Integer::get(int64_t(a) + b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinarySub>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinarySub>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(int64_t(a) - b);
+    resultOut = Integer::get(int64_t(a) - b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryMul>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryMul>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(int64_t(a) * b);
+    resultOut = Integer::get(int64_t(a) * b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryTrueDiv>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryTrueDiv>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Float::get(double(a) / b);
+    resultOut = Float::get(double(a) / b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryFloorDiv>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryFloorDiv>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(a / b);
+    resultOut = Integer::get(a / b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryModulo>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryModulo>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(a % b);
+    resultOut = Integer::get(a % b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryOr>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryOr>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(a | b);
+    resultOut = Integer::get(a | b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryXor>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryXor>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(a ^ b);
+    resultOut = Integer::get(a ^ b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryAnd>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryAnd>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(a & b);
+    resultOut = Integer::get(a & b);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
     assert(b >= 0); // todo: raise
-    if (b < 32)
-        return Integer::get(int64_t(a) << b);
+    if (b < 32) {
+        resultOut = Integer::get(int64_t(a) << b);
+        return true;
+    }
 
     AutoSupressGC supressGC;
     mpz_t aa;
     mpz_init_set_si(aa, a);
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), aa, b);
-    return Integer::get(r);
+    resultOut = Integer::get(r);
+    return true;
 }
 
-template <> inline Value Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b)
+template <> inline bool Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    return Integer::get(int64_t(a) >> b);
+    resultOut = Integer::get(int64_t(a) >> b);
+    return true;
 }
 
 template <> inline Value Integer::compareOp<CompareLT>(int32_t a, int32_t b)

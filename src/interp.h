@@ -117,6 +117,11 @@ struct Interpreter : public Cell
         return stack[stackPos_ - offset - 1];
     }
 
+    // Return a reference to the topmost stack value.
+    MutableTraced<Value> refStack() {
+        return stack.ref(stackPos_ - 1);
+    }
+
     // Return a reference to the |count| topmost values.
     TracedVector<Value> stackSlice(unsigned count) {
         assert(stackPos() >= count);

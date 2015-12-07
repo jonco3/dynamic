@@ -30,6 +30,7 @@ struct SweptCell;
 template <typename T> struct Heap;
 template <typename T> struct HeapVector;
 template <typename T> struct VectorBase;
+template <typename T> struct MutableTraced;
 
 // A visitor that visits edges in the object graph.
 struct Tracer
@@ -347,6 +348,10 @@ struct VectorBase : public UseCountBase, protected vector<T>
         return element;
     }
 
+    MutableTraced<T> ref(unsigned index) {
+        return MutableTraced<T>::fromTracedLocation(&(*this)[index]);
+    }
+
     typename Base::iterator erase(typename Base::iterator position) {
         assert(!this->hasUses());
         return Base::erase(position);
@@ -594,9 +599,6 @@ struct Heap
     }
 };
 
-template <typename T>
-struct MutableTraced;
-
 // A handle to a traced location
 template <typename T>
 struct Traced : public WrapperMixins<Traced<T>, T>
@@ -714,7 +716,13 @@ struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
         return *this;
     }
 
+    static MutableTraced<T> fromTracedLocation(T* traced) {
+        return MutableTraced(traced);
+    }
+
   private:
+    MutableTraced(T* traced) : ptr_(*traced) {}
+
     T& ptr_;
 };
 
