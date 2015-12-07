@@ -71,6 +71,10 @@ struct GC
     bool currentlySweeping() const {
         return isSweeping;
     }
+
+    bool isSupressed() const {
+        return collectAt == SIZE_MAX;
+    }
 #endif
 
   private:
@@ -865,7 +869,7 @@ inline void GC::maybeCollect()
     assert(unsafeCount == 0);
 
 #ifdef DEBUG
-    if (allocCount % gcZealPeriod == 0) {
+    if (!isSupressed() && allocCount % gcZealPeriod == 0) {
         collect();
         return;
     }
