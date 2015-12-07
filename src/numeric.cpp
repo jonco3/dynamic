@@ -62,6 +62,23 @@ static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
+template <> Value
+/* static */ Integer::binaryOp<BinaryPower>(int32_t a, int32_t b)
+{
+    AutoSupressGC supressGC;
+    if (b == 0)
+        return Value(1);
+
+    if (b < 0)
+        return Float::get(pow(a, b));
+
+    mpz_t aa;
+    mpz_init_set_si(aa, a);
+    mpz_class r;
+    mpz_pow_ui(r.get_mpz_t(), aa, b);
+    return Integer::get(r);
+}
+
 template <BinaryOp Op>
 static bool mpzBinaryOp(const mpz_class& a, const mpz_class& b,
                         MutableTraced<Value> resultOut);

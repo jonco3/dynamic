@@ -137,11 +137,6 @@ template <> inline Value Integer::binaryOp<BinaryModulo>(int32_t a, int32_t b)
     return Integer::get(a % b);
 }
 
-template <> inline Value Integer::binaryOp<BinaryPower>(int32_t a, int32_t b)
-{
-    return Integer::get(int64_t(pow(a, b)));
-}
-
 template <> inline Value Integer::binaryOp<BinaryOr>(int32_t a, int32_t b)
 {
     return Integer::get(a | b);
