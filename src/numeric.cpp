@@ -85,6 +85,18 @@ template <>
     return true;
 }
 
+/* static */ bool Integer::largeLeftShift(int32_t a, int32_t b,
+                                          MutableTraced<Value> resultOut)
+{
+    AutoSupressGC supressGC;
+    mpz_t aa;
+    mpz_init_set_si(aa, a);
+    mpz_class r;
+    mpz_mul_2exp(r.get_mpz_t(), aa, b);
+    resultOut = Integer::get(r);
+    return true;
+}
+
 template <BinaryOp Op>
 static bool mpzBinaryOp(const mpz_class& a, const mpz_class& b,
                         MutableTraced<Value> resultOut);

@@ -57,6 +57,8 @@ struct Integer : public Object
 
   private:
     mpz_class value_;
+
+    static bool largeLeftShift(int32_t a, int32_t b, MutableTraced<Value> resultOut);
 };
 
 struct Boolean : public Integer
@@ -194,13 +196,7 @@ Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b, MutableTraced<Value> re
         return true;
     }
 
-    AutoSupressGC supressGC;
-    mpz_t aa;
-    mpz_init_set_si(aa, a);
-    mpz_class r;
-    mpz_mul_2exp(r.get_mpz_t(), aa, b);
-    resultOut = Integer::get(r);
-    return true;
+    return largeLeftShift(a, b, resultOut);
 }
 
 template <>
