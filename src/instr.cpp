@@ -944,8 +944,10 @@ Interpreter::executeInstr_IteratorNext(Traced<Instr*> instr)
 
 bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
                                     Traced<Value> left, Traced<Value> right,
-                                    MutableTraced<Value> method)
+                                    MutableTraced<Value> method,
+                                    bool& okOut)
 {
+    assert(!okOut);
     if (!obj.maybeGetAttr(name, method))
         return false;
 
@@ -962,6 +964,7 @@ bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
         return false;
 
     pushStack(result);
+    okOut = true;
     return true;
 }
 
@@ -982,17 +985,18 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
     Stack<Class*> rtype(right.type());
     const Name* names = Name::binMethod;
     const Name* rnames = Name::binMethodReflected;
+    bool ok = false;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        if (maybeCallBinaryOp(right, rnames[op], right, left, method))
-            return true;
-        if (maybeCallBinaryOp(left, names[op], left, right, method))
-            return true;
+        if (maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
+            return ok;
+        if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
+            return ok;
     } else {
-        if (maybeCallBinaryOp(left, names[op], left, right, method))
-            return true;
-        if (maybeCallBinaryOp(right, rnames[op], right, left, method))
-            return true;
+        if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
+            return ok;
+        if (maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
+            return ok;
     }
 
     pushStack(gc.create<TypeError>(
@@ -1020,7 +1024,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 
     // Find the method to call and execute it.
     Stack<Value> method;
-    if (!executeBinaryOp(op, method) || isHandlingException())
+    if (!executeBinaryOp(op, method))
         return;
 
     // Check stub count before attempting to optimise.
@@ -1140,23 +1144,22 @@ Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
 
     const Name* names = Name::compareMethod;
     const Name* rnames = Name::compareMethodReflected;
-    if (maybeCallBinaryOp(left, names[op], left, right, method))
-        return true;
+    bool ok = false;
+    if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
+        return ok;
 
     if (!rnames[op].isNull() &&
-        maybeCallBinaryOp(right, rnames[op], right, left, method))
+        maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
     {
-        return true;
+        return ok;
     }
 
     if (op == CompareNE &&
-        maybeCallBinaryOp(left, names[CompareEQ], left, right, method))
+        maybeCallBinaryOp(left, names[CompareEQ], left, right, method, ok))
     {
-        if (!isHandlingException()) {
-            Stack<Value> result(popStack());
-            pushStack(Boolean::get(!result.as<Boolean>()->value()));
-        }
-        return true;
+        if (ok)
+            refStack() = Boolean::get(!peekStack().as<Boolean>()->value());
+        return ok;
     }
 
     Stack<Value> result;

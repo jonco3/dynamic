@@ -35,6 +35,7 @@ struct Exception : public Object
     cls(AttributeError)                                                       \
     cls(IndexError)                                                           \
     cls(KeyError)                                                             \
+    cls(MemoryError)                                                          \
     cls(NameError)                                                            \
     cls(NotImplementedError)                                                  \
     cls(RuntimeError)                                                         \

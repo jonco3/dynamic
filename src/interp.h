@@ -315,7 +315,7 @@ struct Interpreter : public Cell
 
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
                            Traced<Value> left, Traced<Value> right,
-                           MutableTraced<Value> methodOut);
+                           MutableTraced<Value> methodOut, bool& okOut);
     bool executeBinaryOp(BinaryOp op, MutableTraced<Value> methodOut);
     bool executeCompareOp(CompareOp op, MutableTraced<Value> methodOut);
     bool executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,

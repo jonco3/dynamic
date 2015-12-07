@@ -101,7 +101,11 @@ template <BinaryOp Op>
 static inline bool mpzBinaryOp(const mpz_class& a, const mpz_class& b,
                                MutableTraced<Value> resultOut)
 {
-    assert(b.fits_sint_p()); // todo: raise error
+    if (!b.fits_sint_p()) {
+        resultOut = gc.create<MemoryError>("Argument too large");
+        return false;
+    }
+
     return mpzIntBinaryOp<Op>(a, b.get_si(), resultOut);
 }
 
