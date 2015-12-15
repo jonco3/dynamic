@@ -789,7 +789,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
 }
 
 void
-Interpreter::executeDestructureFallback(unsigned expected)
+Interpreter::executeDestructureGeneric(unsigned expected)
 {
     Stack<Value> result;
     if (!getIterator(result))
@@ -823,41 +823,35 @@ Interpreter::executeDestructureFallback(unsigned expected)
         return raiseException(result);
 }
 
+template <typename T>
+void
+Interpreter::executeDestructureBuiltin(unsigned expected, T* seq)
+{
+    popStack();
+
+    unsigned count = seq->len();
+    if (count < expected)
+        return raiseValueError("too few values to unpack");
+
+    if (count > expected)
+        return raiseValueError("too many values to unpack");
+
+    for (unsigned i = 0; i < count; i++)
+        pushStack(seq->getitem(i));
+}
+
 void
 Interpreter::executeInstr_Destructure(Traced<CountInstr*> instr)
 {
     unsigned count = instr->count;
     Stack<Value> iterable(peekStack());
 
-    if (iterable.is<Tuple>()) {
-        popStack();
-        Tuple* tuple = iterable.as<Tuple>();
-
-        unsigned count = tuple->len();
-        if (count < instr->count)
-            return raiseValueError("too few values to unpack");
-
-        if (count > instr->count)
-            return raiseValueError("too many values to unpack");
-
-        for (unsigned i = 0; i < count; i++)
-            pushStack(tuple->getitem(i));
-    } else if (iterable.is<List>()) {
-        popStack();
-        List* list = iterable.as<List>();
-
-        unsigned count = list->len();
-        if (count < instr->count)
-            return raiseValueError("too few values to unpack");
-
-        if (count > instr->count)
-            return raiseValueError("too many values to unpack");
-
-        for (unsigned i = 0; i < count; i++)
-            pushStack(list->getitem(i));
-    } else {
-        executeDestructureFallback(instr->count);
-    }
+    if (iterable.is<Tuple>())
+        executeDestructureBuiltin<Tuple>(count, iterable.as<Tuple>());
+    else if (iterable.is<List>())
+        executeDestructureBuiltin<List>(count, iterable.as<List>());
+    else
+        executeDestructureGeneric(count);
 }
 
 void

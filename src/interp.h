@@ -321,7 +321,11 @@ struct Interpreter : public Cell
     bool executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
                                 bool& isCallableDescriptor);
     bool getIterator(MutableTraced<Value> resultOut);
-    void executeDestructureFallback(unsigned expected);
+
+    template <typename T>
+    void executeDestructureBuiltin(unsigned count, T* seq);
+
+    void executeDestructureGeneric(unsigned count);
 };
 
 extern GlobalRoot<Interpreter*> interp;
