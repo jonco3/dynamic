@@ -1101,20 +1101,20 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
 
     if (ShouldInlineIntAugAssignOp(op) && left.isInt32() && right.isInt32()) {
         // If both arguments are integers, inline the operation.
-        auto code = InstrCode(Instr_AugAssignUpdateInt_Add + op);
+        auto code = InstrCode(Instr_BinaryOpInt_Add + op);
         stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
     } else if (ShouldInlineFloatAugAssignOp(op)
         && left.isDouble() && right.isDouble())
     {
         // If both arguments are doubles, inline the operation.
-        auto code = InstrCode(Instr_AugAssignUpdateFloat_Add + op);
+        auto code = InstrCode(Instr_BinaryOpFloat_Add + op);
         stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
     } else if (left.type()->isFinal() && right.type()->isFinal()) {
         // If both arguments are instances of builtin classes, cache the method.
         assert(isCallableDescriptor);
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
-        auto code = Instr_AugAssignUpdateBuiltin;
+        auto code = Instr_BinaryOpBuiltin;
         stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(),
                                                lc, rc, method);
     }
@@ -1421,47 +1421,6 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
     for_each_compare_op(define_compare_op_float_stub);
 #undef define_compare_op_float_stub
-
-#define define_aug_assign_op_int_stub(name)                                   \
-    start_handle_instr(AugAssignUpdateInt_##name, BinaryOpStubInstr);         \
-        assert(ShouldInlineIntBinaryOp(Binary##name));                        \
-        if (!peekStack(0).isInt32() || !peekStack(1).isInt32())               \
-            dispatchNextStub();                                               \
-                                                                              \
-        int32_t b = popStack().asInt32();                                     \
-        int32_t a = peekStack().asInt32();                                    \
-        if (!Integer::binaryOp<Binary##name>(a, b, refStack()))               \
-            raiseException();                                                 \
-    end_handle_instr()
-
-    for_each_int_aug_assign_op_to_inline(define_aug_assign_op_int_stub);
-#undef define_aug_assign_op_int_stub
-
-#define define_aug_assign_op_float_stub(name)                                 \
-    start_handle_instr(AugAssignUpdateFloat_##name, BinaryOpStubInstr);       \
-    assert(ShouldInlineFloatBinaryOp(Binary##name));                          \
-        if (!peekStack(0).isDouble() || !peekStack(1).isDouble())             \
-            dispatchNextStub();                                               \
-                                                                              \
-        double b = popStack().asDouble();                                     \
-        double a = popStack().asDouble();                                     \
-        pushStack(Float::binaryOp<Binary##name>(a, b));                       \
-    end_handle_instr()
-
-    for_each_float_aug_assign_op_to_inline(define_aug_assign_op_float_stub);
-#undef define_aug_assign_op_float_stub
-
-    start_handle_instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr);
-        Value right = peekStack(0);
-        Value left = peekStack(1);
-        if (left.type() != instr->left() || right.type() != instr->right())
-            dispatchNextStub();
-
-        {
-            Stack<Value> method(instr->method());
-            startCall(method, 2);
-        }
-    end_handle_instr();
 
 #undef fetchInstr
 #undef execInstr

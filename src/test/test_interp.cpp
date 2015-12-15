@@ -308,8 +308,8 @@ testcase(interp)
               "foo(1, 2)", "3",
               "foo('a', 'b')", "'ab'",
               Instr_AugAssignUpdate,
-              Instr_AugAssignUpdateInt_Add,
-              Instr_AugAssignUpdateBuiltin);
+              Instr_BinaryOpInt_Add,
+              Instr_BinaryOpBuiltin);
 
     testStubs("def foo(x, y):\n"
               "  x *= y\n"
@@ -317,8 +317,8 @@ testcase(interp)
               "foo(2.0, 1.25)", "2.5",
               "foo(2, 2)", "4",
               Instr_AugAssignUpdate,
-              Instr_AugAssignUpdateFloat_Mul,
-              Instr_AugAssignUpdateInt_Mul);
+              Instr_BinaryOpFloat_Mul,
+              Instr_BinaryOpInt_Mul);
 
     testReplacements("g = 1\n"
                      "def foo():\n"

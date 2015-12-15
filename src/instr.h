@@ -160,16 +160,7 @@ struct Interpreter;
     instr(CompareOpFloat_GT, CompareOpStubInstr)                             \
     instr(CompareOpFloat_GE, CompareOpStubInstr)                             \
     instr(CompareOpFloat_EQ, CompareOpStubInstr)                             \
-    instr(CompareOpFloat_NE, CompareOpStubInstr)                             \
-    instr(AugAssignUpdateInt_Add, BinaryOpStubInstr)                         \
-    instr(AugAssignUpdateInt_Sub, BinaryOpStubInstr)                         \
-    instr(AugAssignUpdateInt_Mul, BinaryOpStubInstr)                         \
-    instr(AugAssignUpdateInt_TrueDiv, BinaryOpStubInstr)                     \
-    instr(AugAssignUpdateFloat_Add, BinaryOpStubInstr)                       \
-    instr(AugAssignUpdateFloat_Sub, BinaryOpStubInstr)                       \
-    instr(AugAssignUpdateFloat_Mul, BinaryOpStubInstr)                       \
-    instr(AugAssignUpdateFloat_TrueDiv, BinaryOpStubInstr)                   \
-    instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr)
+    instr(CompareOpFloat_NE, CompareOpStubInstr)
 
 #define for_each_instr(instr)                                                \
     for_each_inline_instr(instr)                                             \
