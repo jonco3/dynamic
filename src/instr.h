@@ -52,7 +52,6 @@ struct Interpreter;
     type(GlobalSlotInstr)                                                    \
     type(BuiltinsSlotInstr)                                                  \
     type(CountInstr)                                                         \
-    type(CountStubInstr)                                                     \
     type(IndexInstr)                                                         \
     type(ValueInstr)                                                         \
     type(BuiltinMethodInstr)                                                 \
@@ -170,9 +169,7 @@ struct Interpreter;
     instr(AugAssignUpdateFloat_Sub, BinaryOpStubInstr)                       \
     instr(AugAssignUpdateFloat_Mul, BinaryOpStubInstr)                       \
     instr(AugAssignUpdateFloat_TrueDiv, BinaryOpStubInstr)                   \
-    instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr)                      \
-    instr(DestructureTuple, CountStubInstr)                                  \
-    instr(DestructureList, CountStubInstr)
+    instr(AugAssignUpdateBuiltin, BuiltinBinaryOpInstr)
 
 #define for_each_instr(instr)                                                \
     for_each_inline_instr(instr)                                             \
@@ -435,21 +432,6 @@ struct CountInstr : public Instr
     define_instr_type(CountInstr);
 
     CountInstr(InstrCode code, unsigned count) : Instr(code), count(count) {
-        assert(instrType(code) == Type);
-    }
-
-    void print(ostream& s) const override;
-
-    const unsigned count;
-};
-
-struct CountStubInstr : public StubInstr
-{
-    define_instr_type(CountStubInstr);
-
-    CountStubInstr(InstrCode code, Traced<Instr*> next, unsigned count)
-      : StubInstr(code, next), count(count)
-    {
         assert(instrType(code) == Type);
     }
 

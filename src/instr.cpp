@@ -101,12 +101,6 @@ void CountInstr::print(ostream& s) const
     s << " " << count;
 }
 
-void CountStubInstr::print(ostream& s) const
-{
-    StubInstr::print(s);
-    s << " " << count;
-}
-
 void IndexInstr::print(ostream& s) const
 {
     Instr::print(s);
@@ -833,73 +827,37 @@ void
 Interpreter::executeInstr_Destructure(Traced<CountInstr*> instr)
 {
     unsigned count = instr->count;
-
-    // todo: not sure how much point there is adding a stub here rather than
-    // just switching on iterable type.
-    if (instr->canAddStub()) {
-        Stack<Value> iterable(peekStack());
-        if (iterable.is<Tuple>()) {
-            Stack<Instr*> stub(InstrFactory<Instr_DestructureTuple>::get(
-                                   currentInstr(), count));
-            insertStubInstr(instr, stub);
-            dispatchInstr(stub);
-            return;
-        } else if (iterable.is<List>()) {
-            Stack<Instr*> stub(InstrFactory<Instr_DestructureList>::get(
-                                   currentInstr(), count));
-            insertStubInstr(instr, stub);
-            dispatchInstr(stub);
-            return;
-        }
-    }
-
-    executeDestructureFallback(instr->count);
-}
-
-void
-Interpreter::executeInstr_DestructureTuple(Traced<CountStubInstr*> instr)
-{
     Stack<Value> iterable(peekStack());
-    if (!iterable.is<Tuple>()) {
-        dispatchInstr(instr->next());
-        return;
+
+    if (iterable.is<Tuple>()) {
+        popStack();
+        Tuple* tuple = iterable.as<Tuple>();
+
+        unsigned count = tuple->len();
+        if (count < instr->count)
+            return raiseValueError("too few values to unpack");
+
+        if (count > instr->count)
+            return raiseValueError("too many values to unpack");
+
+        for (unsigned i = 0; i < count; i++)
+            pushStack(tuple->getitem(i));
+    } else if (iterable.is<List>()) {
+        popStack();
+        List* list = iterable.as<List>();
+
+        unsigned count = list->len();
+        if (count < instr->count)
+            return raiseValueError("too few values to unpack");
+
+        if (count > instr->count)
+            return raiseValueError("too many values to unpack");
+
+        for (unsigned i = 0; i < count; i++)
+            pushStack(list->getitem(i));
+    } else {
+        executeDestructureFallback(instr->count);
     }
-
-    popStack();
-    Tuple* tuple = iterable.as<Tuple>();
-
-    unsigned count = tuple->len();
-    if (count < instr->count)
-        return raiseValueError("too few values to unpack");
-
-    if (count > instr->count)
-        return raiseValueError("too many values to unpack");
-
-    for (unsigned i = 0; i < count; i++)
-        pushStack(tuple->getitem(i));
-}
-
-void
-Interpreter::executeInstr_DestructureList(Traced<CountStubInstr*> instr)
-{
-    Stack<Value> iterable(peekStack());
-    if (!iterable.is<List>()) {
-        dispatchInstr(instr->next());
-        return;
-    }
-
-    popStack();
-    List* list = iterable.as<List>();
-
-    unsigned count = list->len();
-    if (count < instr->count)
-        return raiseValueError("too few values to unpack");
-
-    if (count > instr->count)
-        return raiseValueError("too many values to unpack");
-
-    for (unsigned i = 0; i < count; i++)
-        pushStack(list->getitem(i));
 }
 
 void
