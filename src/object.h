@@ -76,7 +76,7 @@ struct Object : public Cell
     bool hasSlot(int slot) const;
     int findOwnAttr(Name name) const;
     Value getSlot(int slot) const;
-    void setSlot(int slot, Traced<Value> value);
+    void setSlot(int slot, Value value);
 
     // Add uninitialised attributes for all names in layout.
     void extend(Traced<Layout*> layout);

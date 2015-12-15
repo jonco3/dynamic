@@ -245,21 +245,33 @@ struct Instr : public Cell
     uint8_t stubCount_;
 };
 
+struct InstrThunk
+{
+    InstrThunk(Traced<Instr*> instr)
+      : code(instr->code()), data(instr)
+    {
+        assert(data);
+    }
+
+    InstrCode code;
+    Heap<Instr*> data;
+};
+
 struct StubInstr : public Instr
 {
     StubInstr(InstrCode code, Traced<Instr*> next)
       : Instr(code), next_(next)
     {
-        assert(next_);
+        assert(next);
     }
 
-    const Heap<Instr*>& next() { return next_; }
+    const InstrThunk& next() { return next_; }
 
     void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;
 
   private:
-    Heap<Instr*> next_;
+    InstrThunk next_;
 };
 
 struct IdentInstrBase : public Instr
@@ -356,7 +368,7 @@ struct SlotGuard
         return slot_;
     }
 
-    int check(Traced<Object*> object) const {
+    int check(Object* object) const {
         return object->layout() == layout_ ? slot_ : Layout::NotFound;
     }
 
@@ -419,7 +431,7 @@ struct BuiltinsSlotInstr : public GlobalSlotInstrBase
         builtinsSlot_.traceChildren(t);
     }
 
-    int builtinsSlot(Traced<Object*> builtins) const {
+    int builtinsSlot(Object* builtins) const {
         return builtinsSlot_.check(builtins);
     }
 

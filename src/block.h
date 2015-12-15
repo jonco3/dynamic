@@ -22,18 +22,6 @@ extern bool assertStackDepth;
 extern bool logCompile;
 #endif
 
-struct InstrThunk
-{
-    InstrThunk(Traced<Instr*> instr)
-      : code(instr->code()), data(instr)
-    {
-        assert(data);
-    }
-
-    InstrCode code;
-    Heap<Instr*> data;
-};
-
 struct Block : public Cell
 {
     Block(Traced<Layout*> layout, unsigned argCount, bool createEnv);

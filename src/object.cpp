@@ -115,7 +115,7 @@ Value Object::getSlot(int slot) const
     return slots_[slot];
 }
 
-void Object::setSlot(int slot, Traced<Value> value)
+void Object::setSlot(int slot, Value value)
 {
     assert(slot >= 0 && static_cast<size_t>(slot) < slots_.size());
     slots_[slot] = value;

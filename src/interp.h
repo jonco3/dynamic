@@ -289,8 +289,6 @@ struct Interpreter : public Cell
     void executeInstr_##name(Traced<cls*> self);
 
     for_each_outofline_instr(declare_instr_method)
-    for_each_stub_instr(declare_instr_method)
-
 #undef declare_instr_method
 
     template <BinaryOp Op>
@@ -310,8 +308,6 @@ struct Interpreter : public Cell
 
     template <BinaryOp Op>
     void executeAugAssignUpdateFloat(Traced<BinaryOpStubInstr*> instr);
-
-    void dispatchInstr(Traced<Instr*> instr);
 
     bool maybeCallBinaryOp(Traced<Value> obj, Name name,
                            Traced<Value> left, Traced<Value> right,
