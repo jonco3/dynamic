@@ -11,6 +11,34 @@
 
 //#define TRACE_GMP_ALLOC
 
+#ifdef DEBUG
+
+bool logBigInt = false;
+
+template <typename T, typename S>
+static void logBinary(const char* op, T&& a, S&& b)
+{
+    if (logBigInt)
+        cout << "bi: " << op << " " << a << " " << b << endl;
+}
+
+template <typename T>
+static void logResult(T&& r)
+{
+    if (logBigInt)
+        cout << "bi:  => " << r << endl;
+}
+
+#else
+
+template <typename T, typename S>
+static inline void log(const char* op, T&& a, S&& b) {}
+
+template <typename T>
+static inline void logResult(T&& r) {}
+
+#endif
+
 GlobalRoot<Class*> Integer::ObjectClass;
 GlobalRoot<Class*> Float::ObjectClass;
 GlobalRoot<Class*> Boolean::ObjectClass;
@@ -284,21 +312,25 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
 
     AutoSupressGC supressGC;
 
+    bool ok;
     if (leftIsInt32) {
-        return Integer::binaryOp<Op>(args[0].asInt32(),
-                                     args[1].as<Integer>()->value(),
-                                     resultOut);
+        ok = Integer::binaryOp<Op>(args[0].asInt32(),
+                                   args[1].as<Integer>()->value(),
+                                   resultOut);
+    } else if (rightIsInt32) {
+        ok = Integer::binaryOp<Op>(args[0].as<Integer>()->value(),
+                                   args[1].asInt32(),
+                                   resultOut);
+    } else {
+        ok = Integer::binaryOp<Op>(args[0].as<Integer>()->value(),
+                                   args[1].as<Integer>()->value(),
+                                   resultOut);
     }
 
-    if (rightIsInt32) {
-        return Integer::binaryOp<Op>(args[0].as<Integer>()->value(),
-                                  args[1].asInt32(),
-                                  resultOut);
-    }
+    logBinary(BinaryOpNames[Op], args[0], args[1]);
+    logResult(resultOut);
 
-    return Integer::binaryOp<Op>(args[0].as<Integer>()->value(),
-                                 args[1].as<Integer>()->value(),
-                                 resultOut);
+    return ok;
 }
 
 template <CompareOp Op>

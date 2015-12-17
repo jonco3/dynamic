@@ -6,6 +6,8 @@
 
 #include <gmpxx.h>
 
+extern bool logBigInt;
+
 struct Integer : public Object
 {
     static void init();
