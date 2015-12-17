@@ -32,7 +32,7 @@ static void logResult(T&& r)
 #else
 
 template <typename T, typename S>
-static inline void log(const char* op, T&& a, S&& b) {}
+static inline void logBinary(const char* op, T&& a, S&& b) {}
 
 template <typename T>
 static inline void logResult(T&& r) {}
