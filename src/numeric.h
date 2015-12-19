@@ -27,23 +27,23 @@ struct Integer : public Object
         return getObject(v);
     }
 
-    static Value get(const mpz_class& v) {
+    static Value get(mpz_class&& v) {
         static_assert(sizeof(long) >= sizeof(int32_t),
                       "This assumes that get_si() returns enough bits");
 
         if (fitsInt32(v))
             return Value(int32_t(v.get_si()));
 
-        return getObject(v);
+        return getObject(move(v));
     }
 
     static Value get(const string& s);
 
     static Object* getObject(int64_t v);
-    static Object* getObject(const mpz_class& v);
+    static Object* getObject(mpz_class&& v);
 
     Integer(int64_t v = 0);
-    Integer(const mpz_class& v);
+    Integer(mpz_class&& v);
     Integer(Traced<Class*> cls, int64_t v);
 
     const mpz_class& value() const { return value_; }

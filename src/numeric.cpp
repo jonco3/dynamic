@@ -98,7 +98,7 @@ Integer::largeLeftShift(int32_t a, int32_t b, MutableTraced<Value> resultOut)
     mpz_init_set_si(aa, a);
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), aa, b);
-    resultOut = Integer::get(r);
+    resultOut = Integer::get(move(r));
     return true;
 }
 
@@ -121,7 +121,7 @@ Integer::binaryOp<BinaryPower>(int32_t a, int32_t b, MutableTraced<Value> result
     mpz_init_set_si(aa, a);
     mpz_class r;
     mpz_pow_ui(r.get_mpz_t(), aa, b);
-    resultOut = Integer::get(r);
+    resultOut = Integer::get(move(r));
     return true;
 }
 
@@ -184,9 +184,9 @@ Integer::binaryOp(int32_t a, const mpz_class& b, MutableTraced<Value> resultOut)
     }
 
 #define define_binary_ops(op, expr)                                           \
-    define_binary_op_mpz_mpz(op, Integer::get(expr))                          \
-    define_binary_op_mpz_int(op, Integer::get(expr))                          \
-    define_binary_op_int_mpz(op, Integer::get(expr))
+    define_binary_op_mpz_mpz(op, Integer::get(move(expr)))                    \
+    define_binary_op_mpz_int(op, Integer::get(move(expr)))                    \
+    define_binary_op_int_mpz(op, Integer::get(move(expr)))
 
 define_binary_ops(BinaryAdd, a + b)
 define_binary_ops(BinarySub, a - b)
@@ -216,7 +216,7 @@ Integer::binaryOp<BinaryPower>(const mpz_class& a, int32_t b,
 
     mpz_class r;
     mpz_pow_ui(r.get_mpz_t(), a.get_mpz_t(), b);
-    resultOut = Integer::get(r);
+    resultOut = Integer::get(move(r));
     return true;
 }
 
@@ -236,7 +236,7 @@ Integer::binaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b,
 
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
-    resultOut = Integer::get(r);
+    resultOut = Integer::get(move(r));
     return true;
 }
 
@@ -253,7 +253,7 @@ Integer::binaryOp<BinaryRightShift>(const mpz_class& a, int32_t b,
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
     // todo: rounds towards zero
-    resultOut = Integer::get(r);
+    resultOut = Integer::get(move(r));
     return true;
 }
 
@@ -559,8 +559,8 @@ inline Integer::Integer(int64_t v)
   : Object(ObjectClass), value_(mpzFromInt64(v))
 {}
 
-inline Integer::Integer(const mpz_class& v)
-  : Object(ObjectClass), value_(v)
+Integer::Integer(mpz_class&& v)
+  : Object(ObjectClass), value_(move(v))
 {}
 
 Integer::Integer(Traced<Class*> cls, int64_t v)
@@ -572,9 +572,9 @@ Object* Integer::getObject(int64_t v)
     return gc.create<Integer>(v);
 }
 
-Object* Integer::getObject(const mpz_class& v)
+Object* Integer::getObject(mpz_class&& v)
 {
-    return gc.create<Integer>(v);
+    return gc.create<Integer>(move(v));
 }
 
 /* static */ Value Integer::get(const string& s)
@@ -582,7 +582,7 @@ Object* Integer::getObject(const mpz_class& v)
     // todo: this probably doesn't correctly parse all python integers
     AutoSupressGC supressGC;
     mpz_class i(s);
-    return get(i);
+    return get(move(i));
 }
 
 void Integer::print(ostream& s) const {
