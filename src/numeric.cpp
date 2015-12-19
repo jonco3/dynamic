@@ -435,7 +435,7 @@ struct GMPData : public Cell
 #endif
 
   private:
-    char data[0];
+    uintptr_t data[0];
 };
 
 /* static */ GMPData* GMPData::fromPtrUnchecked(void* data) {
@@ -453,15 +453,18 @@ struct GMPData : public Cell
 
 static void* AllocGMPData(size_t bytes)
 {
-#ifdef TRACE_GMP_ALLOC
-    printf("AllocGMPData %lu\n", bytes);
-#endif
     GMPData* cell = gc.createSized<GMPData>(sizeof(GMPData) + bytes);
+#ifdef TRACE_GMP_ALLOC
+    printf("AllocGMPData %lu => %p\n", bytes, cell->toPtr());
+#endif
     return cell->toPtr();
 }
 
 static void FreeGMPData(void* data, size_t bytes)
 {
+#ifdef TRACE_GMP_ALLOC
+    printf("FreeGMPData %p %lu\n", data, bytes);
+#endif
 #ifdef DEBUG
     if (!gc.currentlySweeping()) {
         GMPData::fromPtr(data)->markFree();
