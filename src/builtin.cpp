@@ -108,25 +108,12 @@ static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> result
 
     Stack<Dict*> dict(gc.create<Dict>());
     Frame* frame = interp->getFrame();
-    Stack<Env*> env(frame->env());
-    if (env) {
-        Stack<Layout*> layout(env->layout());
-        while (layout != Layout::Empty) {
-            unsigned index = layout->slotIndex();
-            Stack<Value> name(String::get(layout->name()));
-            Stack<Value> value(env->getSlot(index));
-            dict->setitem(name, value);
-            layout = layout->parent();
-        }
-        resultOut = Value(dict);
-        return true;
-    }
-
     Stack<Layout*> layout(frame->block()->layout());
+    Stack<Env*> env(frame->env());
     while (layout != Layout::Empty) {
         unsigned index = layout->slotIndex();
         Stack<Value> name(String::get(layout->name()));
-        Stack<Value> value(interp->getStackLocal(index));
+        Stack<Value> value(env ? env->getSlot(index) : interp->getStackLocal(index));
         dict->setitem(name, value);
         layout = layout->parent();
     }
