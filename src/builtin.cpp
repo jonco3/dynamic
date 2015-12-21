@@ -98,6 +98,42 @@ static Value make_builtin_iter()
     return gc.create<Function>("iter", info, EmptyValueArray, env);
 }
 
+static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    // "Update and return a dictionary representing the current local symbol
+    //  table.
+    //  Note: The contents of this dictionary should not be modified; changes
+    //  may not affect the values of local and free variables used by the
+    //  interpreter."
+
+    Stack<Dict*> dict(gc.create<Dict>());
+    Frame* frame = interp->getFrame();
+    Stack<Env*> env(frame->env());
+    if (env) {
+        Stack<Layout*> layout(env->layout());
+        while (layout != Layout::Empty) {
+            unsigned index = layout->slotIndex();
+            Stack<Value> name(String::get(layout->name()));
+            Stack<Value> value(env->getSlot(index));
+            dict->setitem(name, value);
+            layout = layout->parent();
+        }
+        resultOut = Value(dict);
+        return true;
+    }
+
+    Stack<Layout*> layout(frame->block()->layout());
+    while (layout != Layout::Empty) {
+        unsigned index = layout->slotIndex();
+        Stack<Value> name(String::get(layout->name()));
+        Stack<Value> value(interp->getStackLocal(index));
+        dict->setitem(name, value);
+        layout = layout->parent();
+    }
+    resultOut = Value(dict);
+    return true;
+}
+
 void initBuiltins(const string& libDir)
 {
     Builtin.init(Object::create());
@@ -109,6 +145,7 @@ void initBuiltins(const string& libDir)
     initNativeMethod(Builtin, "compile", builtin_compile, 1);
     initNativeMethod(Builtin, "parse", builtin_parse, 1);
     value = make_builtin_iter(); Builtin->setAttr("iter", value);
+    initNativeMethod(Builtin, "locals", builtin_locals, 0);
 
     // Constants
     value = Boolean::True; Builtin->setAttr("True", value);

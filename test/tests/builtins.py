@@ -88,4 +88,37 @@ for c in builtinClasses:
     assert checkException(lambda: addAttr(c()), AttributeError,
                           "object has no attribute")
 
+
+# locals
+def locals1():
+    return locals()
+assert locals1() == {}
+
+def locals2():
+    a = 1
+    b = 2
+    return locals()
+x = locals2()
+assert x['a'] == 1
+assert x['b'] == 2
+
+def locals3(z):
+    a = 1
+    b = 2
+    return locals()
+x = locals3(3)
+assert x['a'] == 1
+assert x['b'] == 2
+assert x['z'] == 3
+
+def locals4():
+    a = 1
+    b = 2
+    def x():
+        return a
+    return locals()
+x = locals4()
+assert x['a'] == 1
+assert x['b'] == 2
+
 print('ok')

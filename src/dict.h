@@ -19,7 +19,7 @@ struct Dict : public Object
     bool len(MutableTraced<Value> resultOut);
     bool contains(Traced<Value> key, MutableTraced<Value> resultOut);
     bool getitem(Traced<Value> key, MutableTraced<Value> resultOut);
-    bool setitem(Traced<Value> key, Traced<Value> value, MutableTraced<Value> resultOut);
+    void setitem(Traced<Value> key, Traced<Value> value);
     bool delitem(Traced<Value> key, MutableTraced<Value> resultOut);
     bool keys(MutableTraced<Value> resultOut);
     bool values(MutableTraced<Value> resultOut);

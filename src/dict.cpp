@@ -32,7 +32,9 @@ static bool dict_getitem(TracedVector<Value> args, MutableTraced<Value> resultOu
 static bool dict_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     Dict* dict = args[0].as<Dict>();
-    return dict->setitem(args[1], args[2], resultOut);
+    dict->setitem(args[1], args[2]);
+    resultOut = args[2];
+    return true;
 }
 
 static bool dict_delitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
@@ -134,11 +136,9 @@ bool Dict::getitem(Traced<Value> key, MutableTraced<Value> resultOut)
     return true;
 }
 
-bool Dict::setitem(Traced<Value> key, Traced<Value> value, MutableTraced<Value> resultOut)
+void Dict::setitem(Traced<Value> key, Traced<Value> value)
 {
     entries_[key] = value;
-    resultOut = value;
-    return true;
 }
 
 bool Dict::delitem(Traced<Value> key, MutableTraced<Value> resultOut)
