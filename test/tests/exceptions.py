@@ -159,6 +159,7 @@ except TestError as e:
 assert caught
 assert finals == 1
 
+# else clause runs at the end
 elseRan = False
 try:
     pass
@@ -167,5 +168,19 @@ except:
 else:
     elseRan = True
 assert elseRan
+
+# Binding in except block deletes shadowed name?
+foo = 0
+try:
+    raise Exception()
+except Exception as foo:
+    pass
+
+caught = False
+try:
+    foo
+except NameError as e:
+    caught = True
+assert caught
 
 print('ok')

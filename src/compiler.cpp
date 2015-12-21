@@ -859,7 +859,7 @@ struct ByteCompiler : public SyntaxVisitor
             finallyBranch = emit<Instr_EnterFinallyRegion>();
         }
         if (s.excepts.size() != 0) {
-            emitTryCatch(s);
+            emitTryExcept(s);
         } else {
             compile(s.trySuite);
             emit<Instr_Pop>();
@@ -876,7 +876,7 @@ struct ByteCompiler : public SyntaxVisitor
         emit<Instr_Const>(None);
     }
 
-    virtual void emitTryCatch(const SyntaxTry& s) {
+    void emitTryExcept(const SyntaxTry& s) {
         unsigned handlerBranch = emit<Instr_EnterCatchRegion>();
         compile(s.trySuite);
         emit<Instr_Pop>();
@@ -904,6 +904,11 @@ struct ByteCompiler : public SyntaxVisitor
             }
             compile(e->suite);
             emit<Instr_Pop>();
+            if (e->as) {
+                AutoPushContext enterDelete(contextStack, Context::Delete);
+                compile(e->as);
+                emit<Instr_Pop>();
+            }
             exceptEndBranches.push_back(emit<Instr_BranchAlways>());
         }
 
