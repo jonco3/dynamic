@@ -148,6 +148,9 @@ struct Class : public Object
 
 extern bool object_new(TracedVector<Value> args, MutableTraced<Value> resultOut);
 
+extern void initAttr(Traced<Object*> cls, const string& name,
+                     Traced<Value> value);
+
 extern void initNativeMethod(Traced<Object*> cls, const string& name,
                              NativeFunc func,
                              unsigned minArgs, unsigned maxArgs = 0);

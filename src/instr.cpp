@@ -1141,7 +1141,7 @@ Interpreter::executeInstr_ResumeGenerator(Traced<Instr*> instr)
 {
     // todo: get slot 0
     Stack<GeneratorIter*> gen(
-        env()->getAttr("self").asObject()->as<GeneratorIter>());
+        env()->getAttr(Name::self).asObject()->as<GeneratorIter>());
     gen->resume(*this);
 }
 

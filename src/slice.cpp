@@ -11,9 +11,9 @@ void Slice::init()
 {
     ObjectClass.init(Class::createNative<Slice>("slice"));
 
-    static const Name StartAttr = "start";
-    static const Name StopAttr = "stop";
-    static const Name StepAttr = "step";
+    static const Name StartAttr("start");
+    static const Name StopAttr("stop");
+    static const Name StepAttr("step");
 
     Stack<Layout*> layout(Object::InitialLayout);
     layout = layout->addName(StartAttr);

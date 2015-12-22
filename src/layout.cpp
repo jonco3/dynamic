@@ -80,7 +80,7 @@ inline Layout* Layout::Children::get(Name name)
 }
 
 Layout::Layout()
-  : parent_(nullptr), slot_(-1), name_("")
+  : parent_(nullptr), slot_(-1)
 {
     assert(!layoutInitialized);
 }

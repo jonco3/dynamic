@@ -30,7 +30,7 @@ static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resul
             "hasattr(): attribute name must be string");
         return false;
     }
-    Name name = n->as<String>()->value();
+    Name name(n->as<String>()->value());
     resultOut = Boolean::get(args[0].toObject()->hasAttr(name));
     return true;
 }
@@ -86,16 +86,17 @@ static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resul
 static Value make_builtin_iter()
 {
     Stack<Layout*> layout(Env::InitialLayout);
-    layout = layout->addName("iterable");
+    layout = layout->addName(Name::iterable);
     Stack<Block*> block(gc.create<Block>(layout, 1, false));
     block->append<Instr_InitStackLocals>();
     block->append<Instr_GetIterator>();
     block->append<Instr_Return>();
     block->setMaxStackDepth(1);
     Stack<Env*> env; // todo: allow construction of traced for nullptr
-    vector<Name> args = { "iterable" };
+    vector<Name> args = { Name::iterable };
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(args, block));
-    return gc.create<Function>("iter", info, EmptyValueArray, env);
+    Name name("iter");
+    return gc.create<Function>(name, info, EmptyValueArray, env);
 }
 
 static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> resultOut)
@@ -131,29 +132,29 @@ void initBuiltins(const string& libDir)
     initNativeMethod(Builtin, "isinstance", builtin_isinstance, 2);
     initNativeMethod(Builtin, "compile", builtin_compile, 1);
     initNativeMethod(Builtin, "parse", builtin_parse, 1);
-    value = make_builtin_iter(); Builtin->setAttr("iter", value);
+    value = make_builtin_iter(); initAttr(Builtin, "iter", value);
     initNativeMethod(Builtin, "locals", builtin_locals, 0);
 
     // Constants
-    value = Boolean::True; Builtin->setAttr("True", value);
-    value = Boolean::False; Builtin->setAttr("False", value);
-    value = None; Builtin->setAttr("None", value);
-    value = NotImplemented; Builtin->setAttr("NotImplemented", value);
+    initAttr(Builtin, "True", Boolean::True);
+    initAttr(Builtin, "False", Boolean::False);
+    initAttr(Builtin, "None", None);
+    initAttr(Builtin, "NotImplemented", NotImplemented);
 
     // Classes
-    value = Object::ObjectClass; Builtin->setAttr("object", value);
-    value = List::ObjectClass; Builtin->setAttr("list", value);
-    value = Tuple::ObjectClass; Builtin->setAttr("tuple", value);
-    value = Dict::ObjectClass; Builtin->setAttr("dict", value);
-    value = Boolean::ObjectClass; Builtin->setAttr("bool", value);
-    value = Integer::ObjectClass; Builtin->setAttr("int", value);
-    value = Float::ObjectClass; Builtin->setAttr("float", value);
-    value = String::ObjectClass; Builtin->setAttr("str", value);
+    initAttr(Builtin, "object", Object::ObjectClass);
+    initAttr(Builtin, "list", List::ObjectClass);
+    initAttr(Builtin, "tuple", Tuple::ObjectClass);
+    initAttr(Builtin, "dict", Dict::ObjectClass);
+    initAttr(Builtin, "bool", Boolean::ObjectClass);
+    initAttr(Builtin, "int", Integer::ObjectClass);
+    initAttr(Builtin, "float", Float::ObjectClass);
+    initAttr(Builtin, "str", String::ObjectClass);
 
     // Exceptions
-    Builtin->setAttr("Exception", Exception::ObjectClass);
+    initAttr(Builtin, "Exception", Exception::ObjectClass);
 #define set_exception_attr(cls)                                              \
-    Builtin->setAttr(#cls, cls::ObjectClass);
+    initAttr(Builtin, #cls, cls::ObjectClass);
 for_each_exception_class(set_exception_attr)
 #undef set_exception_attr
 
@@ -168,10 +169,10 @@ for_each_exception_class(set_exception_attr)
     if (!runModule(text, filename, internals))
         exit(1);
 
-    value = internals->getAttr("SequenceIterator");
+    value = internals->getAttr(Name("SequenceIterator"));
     SequenceIterator.init(value.as<Class>());
 
-    value = internals->getAttr("iterableToList");
+    value = internals->getAttr(Name("iterableToList"));
     IterableToList.init(value.as<Function>());
 
     builtinsInitialised = true;

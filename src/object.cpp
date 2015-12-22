@@ -357,10 +357,16 @@ bool Class::isDerivedFrom(Class* cls) const
     return true;
 }
 
-void initNativeMethod(Traced<Object*> cls, const string& name,
-                      NativeFunc func,
-                      unsigned minArgs, unsigned maxArgs)
+void initAttr(Traced<Object*> cls, const string& nameString, Traced<Value> value)
 {
+    Name name(nameString);
+    cls->initAttr(name, value);
+}
+
+void initNativeMethod(Traced<Object*> cls, const string& nameString,
+                      NativeFunc func, unsigned minArgs, unsigned maxArgs)
+{
+    Name name(nameString);
     Stack<Value> value(None);
     if (func)
         value = gc.create<Native>(name, func, minArgs, maxArgs);
@@ -423,6 +429,8 @@ void initObject()
     // methods to objects.
     Native::ObjectClass.init(gc.create<Class>("Native"));
     Function::ObjectClass.init(gc.create<Class>("function"));
+
+    initNames();
 
     initNativeMethod(Object::ObjectClass, "__new__", object_new, 1, -1);
     initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);

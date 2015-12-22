@@ -33,9 +33,9 @@ void crash(const char* message)
 
 void init1()
 {
-    initNames();
     Layout::init();
     initObject();
+    //initNames();
     initCallable();
     Env::init();
     Integer::init();
@@ -62,7 +62,6 @@ void final()
     // todo
     finalBuiltins();
     gc.shutdown();
-    shutdownNames();
 }
 
 string readFile(string filename)

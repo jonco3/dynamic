@@ -265,7 +265,7 @@ struct ByteCompiler : public SyntaxVisitor
         block->setMaxStackDepth(maxStackDepth + 1);
     }
 
-    void callUnaryMethod(const UnarySyntax& s, string name) {
+    void callUnaryMethod(const UnarySyntax& s, Name name) {
         compile(s.right);
         incStackDepth();
         emit<Instr_GetMethod>(name);
@@ -276,7 +276,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     template <typename BaseType>
     void callBinaryMethod(const BinarySyntax<BaseType, Syntax, Syntax>& s,
-                          string name)
+                          Name name)
     {
         compile(s.left);
         incStackDepth();
@@ -784,7 +784,8 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxLambda& s) {
         Stack<Block*> exprBlock(
             ByteCompiler().buildLambda(this, s.params, *s.expr));
-        emitLambda("(lambda)", s.params, exprBlock, false);
+        Name name("(lambda)"); // does this need to be a Name?
+        emitLambda(name, s.params, exprBlock, false);
     }
 
     virtual void visit(const SyntaxDef& s) {
@@ -971,7 +972,8 @@ struct ByteCompiler : public SyntaxVisitor
         // call to a local function.
         Stack<Block*> exprBlock(ByteCompiler().buildListComp(this, s));
         vector<Parameter> params;
-        emitLambda("(list comprehension)", params, exprBlock, false);
+        Name name("(list comprehension)");
+        emitLambda(name, params, exprBlock, false);
         emit<Instr_Call>(0);
     }
 

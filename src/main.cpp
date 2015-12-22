@@ -80,8 +80,8 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     // todo: this is a hack until we can |import sys|
     Stack<Value> argv(gc.create<List>(argStrings));
     Stack<Value> sys(Object::create());
-    sys.asObject()->setAttr("argv", argv);
-    topLevel->setAttr("sys", sys);
+    sys.asObject()->setAttr(Name::argv, argv);
+    topLevel->setAttr(Name::sys, sys);
     Stack<Value> main(gc.create<String>("__main__"));
     topLevel->setAttr(Name::__name__, main);
     if (!runModule(readFile(filename), filename, topLevel))

@@ -5,11 +5,6 @@
 
 #include "assert.h"
 
-/*
- * Currently just use std::sring for names, but this could be changed to
- * something more lightweight.
- */
-
 #include <string>
 
 using namespace std;
@@ -38,7 +33,14 @@ using namespace std;
     name(__iter__)                                                            \
     name(__next__)                                                            \
     name(__str__)                                                             \
-    name(__repr__)
+    name(__repr__)                                                            \
+    name(self)                                                                \
+    name(sys)                                                                 \
+    name(argv)                                                                \
+    name(message)                                                             \
+    name(iterable)                                                            \
+
+struct InternedString;
 
 struct Name
 {
@@ -57,20 +59,17 @@ struct Name
     Name()
       : string_(nullptr) {}
 
-    Name(const string& str)
+    explicit Name(const string& str)
       : string_(intern(str)) {}
 
-    Name(const char* str)
+    explicit Name(const char* str)
       : string_(str ? intern(str) : nullptr) {}
 
     bool isNull() const {
         return string_ == nullptr;
     }
 
-    const string& get() const {
-        assert(!isNull());
-        return *string_;
-    }
+    const string& get() const;
 
     operator const string&() const { return get(); }
 
@@ -98,9 +97,9 @@ struct Name
     size_t asBits() { return size_t(string_); }
 
   private:
-    const string* string_;
+    InternedString* string_;
 
-    static string* intern(const string& s);
+    InternedString* intern(const string& s);
 };
 
 inline ostream& operator<<(ostream& s, Name name)

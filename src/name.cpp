@@ -1,11 +1,26 @@
 #include "name.h"
 
+#include "string.h"
+
 #include <unordered_map>
 #include <iostream>
 #include <string>
 
-static bool namesInitialised = false;
-static unordered_map<string, string*> internedNames;
+struct InternedString : public String
+{
+    static InternedString* get(const string& str);
+
+    InternedString() = delete;
+};
+
+struct InternedStringMap : public Cell
+{
+    void traceChildren(Tracer& t) override;
+    InternedString* get(const string& s);
+    unordered_map<string, Heap<InternedString*>> strings_;
+};
+
+static GlobalRoot<InternedStringMap*> InternedStrings;
 
 #define define_name(name)                                                     \
     Name Name::name;
@@ -21,8 +36,8 @@ Name Name::listCompResult;
 
 void initNames()
 {
-    assert(!namesInitialised); // Stop Name being used before map initialised.
-    namesInitialised = true;
+    assert(!InternedStrings); // Stop Name being used before map initialised.
+    InternedStrings.init(gc.create<InternedStringMap>());
 
 #define init_name(name)                                                       \
     Name::name = Name(#name);
@@ -51,27 +66,34 @@ void initNames()
     Name::listCompResult = Name("%result");
 }
 
-void shutdownNames()
+const string& Name::get() const
 {
-    assert(namesInitialised);
-    for (const auto& i : internedNames)
-        delete i.second;
-    internedNames.clear();
-    namesInitialised = false;
+    assert(!isNull());
+    return string_->value();
 }
 
-/* static */ string* Name::intern(const string& s)
+void InternedStringMap::traceChildren(Tracer& t)
 {
-    assert(namesInitialised);
+    for (auto i : strings_)
+        gc.trace(t, &i.second);
+}
 
-    auto i = internedNames.find(s);
-    if (i != internedNames.end()) {
-        assert(*i->second == s);
+InternedString* InternedStringMap::get(const string& s)
+{
+    auto i = strings_.find(s);
+    if (i != strings_.end()) {
+        assert(i->second->value() == s);
         return i->second;
     }
 
-    string* interned = new string(s);
-    internedNames.emplace(s, interned);
-    assert(internedNames.find(s) != internedNames.end());
+    Stack<InternedString*> interned;
+    interned = static_cast<InternedString*>(String::get(s));
+    strings_[s] = interned;
+    assert(strings_.find(s) != strings_.end());
     return interned;
+}
+
+InternedString* Name::intern(const string& s)
+{
+    return InternedStrings->get(s);
 }
