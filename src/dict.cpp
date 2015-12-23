@@ -181,7 +181,7 @@ size_t Dict::ValueHash::operator()(Value vArg) const
     Stack<Value> value(vArg);
     Stack<Value> hashFunc;
     Stack<Value> result;
-    if (!value.maybeGetAttr(Name::__hash__, hashFunc)) {
+    if (!value.maybeGetAttr(Names::__hash__, hashFunc)) {
         result = gc.create<TypeError>("Object has no __hash__ method");
         throw PythonException(result);
     }
@@ -205,7 +205,7 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
 {
     Stack<Value> result;
     Stack<Value> eqFunc;
-    if (!a.maybeGetAttr(Name::__eq__, eqFunc)) {
+    if (!a.maybeGetAttr(Names::__eq__, eqFunc)) {
         result = gc.create<TypeError>("Object has no __eq__ method");
         throw PythonException(result);
     }

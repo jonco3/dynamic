@@ -292,7 +292,7 @@ static bool compareElements(Value aArg, Value bArg)
     Stack<Value> b(bArg);
     Stack<Value> compare;
     Stack<Value> result;
-    if (!a.maybeGetAttr(Name::compareMethod[CompareLT], compare)) {
+    if (!a.maybeGetAttr(Names::compareMethod[CompareLT], compare)) {
         result = gc.create<TypeError>("Object has no __lt__ method");
         throw PythonException(result);
     }
@@ -526,8 +526,8 @@ template<typename T>
 void ListIterImpl<T>::init()
 {
     ObjectClass.init(Class::createNative("listiterator", nullptr));
-    initNativeMethod(ObjectClass, Name::__iter__, listIter_iter<T>, 1);
-    initNativeMethod(ObjectClass, Name::__next__, listIter_next<T>, 1);
+    initNativeMethod(ObjectClass, Names::__iter__, listIter_iter<T>, 1);
+    initNativeMethod(ObjectClass, Names::__next__, listIter_next<T>, 1);
 }
 
 void initList()

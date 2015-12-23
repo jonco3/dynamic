@@ -86,14 +86,14 @@ static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resul
 static Value make_builtin_iter()
 {
     Stack<Layout*> layout(Env::InitialLayout);
-    layout = layout->addName(Name::iterable);
+    layout = layout->addName(Names::iterable);
     Stack<Block*> block(gc.create<Block>(layout, 1, false));
     block->append<Instr_InitStackLocals>();
     block->append<Instr_GetIterator>();
     block->append<Instr_Return>();
     block->setMaxStackDepth(1);
     Stack<Env*> env; // todo: allow construction of traced for nullptr
-    vector<Name> args = { Name::iterable };
+    vector<Name> args = { Names::iterable };
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(args, block));
     Name name("iter");
     return gc.create<Function>(name, info, EmptyValueArray, env);

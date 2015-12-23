@@ -411,7 +411,7 @@ struct BuiltinsSlotInstr : public GlobalSlotInstrBase
     BuiltinsSlotInstr(InstrCode code, Traced<Instr*> next,
                       Traced<Object*> global, Traced<Object*> builtins,
                       Name ident)
-      : GlobalSlotInstrBase(code, next, global, Name::__builtins__),
+      : GlobalSlotInstrBase(code, next, global, Names::__builtins__),
         builtinsSlot_(builtins, ident)
     {
         assert(instrType(code) == Type);

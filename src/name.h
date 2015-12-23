@@ -44,17 +44,6 @@ struct InternedString;
 
 struct Name
 {
-#define declare_name(name)                                                    \
-    static Name name;
-    for_each_predeclared_name(declare_name)
-#undef declare_name
-
-    static Name binMethod[CountBinaryOp];
-    static Name binMethodReflected[CountBinaryOp];
-    static Name augAssignMethod[CountBinaryOp];
-    static Name compareMethod[CountCompareOp];
-    static Name compareMethodReflected[CountCompareOp];
-    static Name listCompResult;
 
     Name()
       : string_(nullptr) {}
@@ -125,6 +114,21 @@ struct hash<Name>
     }
 };
 } /* namespace std */
+
+namespace Names
+{
+#define declare_name(name)                                                    \
+    extern Name name;
+    for_each_predeclared_name(declare_name)
+#undef declare_name
+
+    extern Name binMethod[CountBinaryOp];
+    extern Name binMethodReflected[CountBinaryOp];
+    extern Name augAssignMethod[CountBinaryOp];
+    extern Name compareMethod[CountCompareOp];
+    extern Name compareMethodReflected[CountCompareOp];
+    extern Name listCompResult;
+} /* namespace Names */
 
 extern void initNames();
 extern void shutdownNames();

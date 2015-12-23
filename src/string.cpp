@@ -26,8 +26,8 @@ static bool valueToString(Traced<Value> value, MutableTraced<Value> resultOut)
     }
 
     Stack<Value> strFunc;
-    if (!value.maybeGetAttr(Name::__str__, strFunc) &&
-        !value.maybeGetAttr(Name::__repr__, strFunc))
+    if (!value.maybeGetAttr(Names::__str__, strFunc) &&
+        !value.maybeGetAttr(Names::__repr__, strFunc))
     {
         resultOut = gc.create<TypeError>(
             "Object has no __str__ or __repr__ method");

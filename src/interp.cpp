@@ -690,7 +690,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         // todo: this is messy and needs refactoring
         Stack<Class*> cls(target->as<Class>());
         Stack<Value> func;
-        if (!target->maybeGetAttr(Name::__new__, func) || func.isNone()) {
+        if (!target->maybeGetAttr(Names::__new__, func) || func.isNone()) {
             string message = "cannot create '" + cls->name() + "' instances";
             return raiseTypeError(message, resultOut);
         }
@@ -700,7 +700,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             return CallError;
         if (resultOut.isInstanceOf(cls)) {
             Stack<Value> initFunc;
-            if (target->maybeGetAttr(Name::__init__, initFunc)) {
+            if (target->maybeGetAttr(Names::__init__, initFunc)) {
                 Stack<Value> initResult;
                 funcArgs[0] = resultOut;
                 if (!call(initFunc, funcArgs, initResult))
@@ -719,7 +719,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return setupCall(callable, argCount + 1, extraPopCount, resultOut);
     } else {
         Stack<Value> callHook;
-        if (!getAttr(targetValue, Name::__call__, callHook)) {
+        if (!getAttr(targetValue, Names::__call__, callHook)) {
             return raiseTypeError(
                 "object is not callable:" + repr(target), resultOut);
         }

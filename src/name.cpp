@@ -23,16 +23,16 @@ struct InternedStringMap : public Cell
 static GlobalRoot<InternedStringMap*> InternedStrings;
 
 #define define_name(name)                                                     \
-    Name Name::name;
+    Name Names::name;
 for_each_predeclared_name(define_name)
 #undef define_name
 
-Name Name::binMethod[CountBinaryOp];
-Name Name::binMethodReflected[CountBinaryOp];
-Name Name::augAssignMethod[CountBinaryOp];
-Name Name::compareMethod[CountCompareOp];
-Name Name::compareMethodReflected[CountCompareOp];
-Name Name::listCompResult;
+Name Names::binMethod[CountBinaryOp];
+Name Names::binMethodReflected[CountBinaryOp];
+Name Names::augAssignMethod[CountBinaryOp];
+Name Names::compareMethod[CountCompareOp];
+Name Names::compareMethodReflected[CountCompareOp];
+Name Names::listCompResult;
 
 void initNames()
 {
@@ -40,30 +40,30 @@ void initNames()
     InternedStrings.init(gc.create<InternedStringMap>());
 
 #define init_name(name)                                                       \
-    Name::name = Name(#name);
+    Names::name = Name(#name);
 
     for_each_predeclared_name(init_name)
 
 #undef init_name
 
 #define init_name(name, token, method, rmethod, imethod)                      \
-    Name::binMethod[Binary##name] = Name(method);                             \
-    Name::binMethodReflected[Binary##name] = Name(rmethod);                   \
-    Name::augAssignMethod[Binary##name] = Name(imethod);
+    Names::binMethod[Binary##name] = Name(method);                             \
+    Names::binMethodReflected[Binary##name] = Name(rmethod);                   \
+    Names::augAssignMethod[Binary##name] = Name(imethod);
 
     for_each_binary_op(init_name)
 
 #undef init_name
 
 #define init_name(name, token, method, rmethod)                               \
-    Name::compareMethod[Compare##name] = Name(method);                        \
-    Name::compareMethodReflected[Compare##name] = Name(rmethod);
+    Names::compareMethod[Compare##name] = Name(method);                        \
+    Names::compareMethodReflected[Compare##name] = Name(rmethod);
 
     for_each_compare_op(init_name)
 
 #undef init_name
 
-    Name::listCompResult = Name("%result");
+    Names::listCompResult = Name("%result");
 }
 
 const string& Name::get() const

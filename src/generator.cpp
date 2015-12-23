@@ -30,18 +30,18 @@ void GeneratorIter::init()
     initNativeMethod(ObjectClass, "__iter__", generatorIter_iter, 1);
 
     Stack<Layout*> layout(Env::InitialLayout);
-    layout = layout->addName(Name::self);
+    layout = layout->addName(Names::self);
     Stack<Block*> block(gc.create<Block>(layout, 1, true));
     block->append<Instr_CreateEnv>(); // todo: eventually we can remove this
     block->append<Instr_ResumeGenerator>();
     block->append<Instr_Return>();
     block->setMaxStackDepth(1);
-    static vector<Name> params = { Name::self };
+    static vector<Name> params = { Names::self };
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
-    Stack<Value> value(gc.create<Function>(Name::__next__, info, EmptyValueArray,
+    Stack<Value> value(gc.create<Function>(Names::__next__, info, EmptyValueArray,
                                            env));
-    ObjectClass->setAttr(Name::__next__, value);
+    ObjectClass->setAttr(Names::__next__, value);
 }
 
 GeneratorIter::GeneratorIter(Traced<Block*> block,

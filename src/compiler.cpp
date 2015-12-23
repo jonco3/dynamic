@@ -96,7 +96,7 @@ struct ByteCompiler : public SyntaxVisitor
         kind = Kind::ClassBlock;
         this->parent = parent;
         topLevel = parent->topLevel;
-        layout = layout->addName(Name::__bases__);
+        layout = layout->addName(Names::__bases__);
         useLexicalEnv = true;
         build(s, 1);
         emit<Instr_Pop>();
@@ -130,7 +130,7 @@ struct ByteCompiler : public SyntaxVisitor
         kind = Kind::ListComp;
         this->parent = parent;
         topLevel = parent->topLevel;
-        layout = layout->addName(Name::listCompResult);
+        layout = layout->addName(Names::listCompResult);
         build(*s.expr, 0);
         emit<Instr_Return>();
         log(block);
@@ -378,15 +378,15 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxPos& s) {
-        callUnaryMethod(s, Name::__pos__);
+        callUnaryMethod(s, Names::__pos__);
     }
 
     virtual void visit(const SyntaxNeg& s) {
-        callUnaryMethod(s, Name::__neg__);
+        callUnaryMethod(s, Names::__neg__);
     }
 
     virtual void visit(const SyntaxInvert& s) {
-        callUnaryMethod(s, Name::__invert__);
+        callUnaryMethod(s, Names::__invert__);
     }
 
     virtual void visit(const SyntaxBinaryOp& s) {
@@ -551,7 +551,7 @@ struct ByteCompiler : public SyntaxVisitor
             AutoPushContext clearContext(contextStack, Context::None);
             compile(s.left);
             incStackDepth();
-            emit<Instr_GetMethod>(Name::__setitem__);
+            emit<Instr_GetMethod>(Names::__setitem__);
             incStackDepth(3);
             compile(s.right);
             incStackDepth(1);
@@ -567,12 +567,12 @@ struct ByteCompiler : public SyntaxVisitor
 
           case Context::Delete: {
             AutoPushContext clearContext(contextStack, Context::None);
-            callBinaryMethod(s, Name::__delitem__);
+            callBinaryMethod(s, Names::__delitem__);
             break;
           }
 
           default:
-            callBinaryMethod(s, Name::__getitem__);
+            callBinaryMethod(s, Names::__getitem__);
             break;
         }
     }
@@ -719,7 +719,7 @@ struct ByteCompiler : public SyntaxVisitor
         // 1. Get iterator
         compile(s.exprs);
         emit<Instr_GetIterator>();
-        emit<Instr_GetMethod>(Name::__next__);
+        emit<Instr_GetMethod>(Names::__next__);
         incStackDepth(3); // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop head)
@@ -808,7 +808,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxClass& s) {
         Stack<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
-        vector<Name> params = { Name::__bases__ };
+        vector<Name> params = { Names::__bases__ };
         incStackDepth();
         emit<Instr_Lambda>(s.id, params, suite);
         compile(s.bases);
@@ -830,7 +830,7 @@ struct ByteCompiler : public SyntaxVisitor
             if (s.message) {
                 compile(s.message);
                 incStackDepth();
-                emit<Instr_GetMethod>(Name::__str__);
+                emit<Instr_GetMethod>(Names::__str__);
                 incStackDepth(3);
                 emit<Instr_CallMethod>(0);
                 decStackDepth(4);
@@ -982,19 +982,19 @@ struct ByteCompiler : public SyntaxVisitor
 #ifdef DEBUG
         if (useLexicalEnv) {
             unsigned frame;
-            assert(lookupLexical(Name::listCompResult, frame));
+            assert(lookupLexical(Names::listCompResult, frame));
             assert(frame == 0);
         } else {
             int slot;
-            assert(lookupLocal(Name::listCompResult, slot));
+            assert(lookupLocal(Names::listCompResult, slot));
             assert(slot == 0);
         }
 #endif
         emit<Instr_List>(0);
         if (useLexicalEnv)
-            emit<Instr_SetLexical>(0, Name::listCompResult);
+            emit<Instr_SetLexical>(0, Names::listCompResult);
         else
-            emit<Instr_SetStackLocal>(Name::listCompResult, 0);
+            emit<Instr_SetStackLocal>(Names::listCompResult, 0);
         incStackDepth();
 
         // Compile expression to generate results
@@ -1003,18 +1003,18 @@ struct ByteCompiler : public SyntaxVisitor
         // Fetch result
         emit<Instr_Pop>();
         if (useLexicalEnv)
-            emit<Instr_GetLexical>(0, Name::listCompResult);
+            emit<Instr_GetLexical>(0, Names::listCompResult);
         else
-            emit<Instr_GetStackLocal>(Name::listCompResult, 0);
+            emit<Instr_GetStackLocal>(Names::listCompResult, 0);
         decStackDepth();
     }
 
     virtual void visit(const SyntaxCompIterand& s) {
         assert(kind == Kind::ListComp);
         if (useLexicalEnv)
-            emit<Instr_GetLexical>(0, Name::listCompResult);
+            emit<Instr_GetLexical>(0, Names::listCompResult);
         else
-            emit<Instr_GetStackLocal>(Name::listCompResult, 0);
+            emit<Instr_GetStackLocal>(Names::listCompResult, 0);
         incStackDepth();
         compile(*s.expr);
         emit<Instr_ListAppend>();

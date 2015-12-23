@@ -89,7 +89,7 @@ void printException(Value value)
 Object* createTopLevel()
 {
     Stack<Object*> topLevel(Object::create());
-    topLevel->setAttr(Name::__builtins__, Builtin);
+    topLevel->setAttr(Names::__builtins__, Builtin);
     return topLevel;
 }
 

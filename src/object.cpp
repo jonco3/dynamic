@@ -475,13 +475,13 @@ static bool isNonDataDescriptor(Traced<Value> value)
 
     // Don't check for descriptors here as that could go recursive.
     Stack<Object*> obj(value.asObject());
-    return obj->hasAttr(Name::__get__);
+    return obj->hasAttr(Names::__get__);
 }
 
 static bool isDataDescriptor(Traced<Value> value)
 {
     return isNonDataDescriptor(value) &&
-        value.asObject()->hasAttr(Name::__set__);
+        value.asObject()->hasAttr(Names::__set__);
 }
 
 static bool findAttrForGet(Traced<Value> value, Name name,
@@ -536,15 +536,15 @@ static bool raiseAttrError(Traced<Value> value, Name name,
 static bool getSpecialAttr(Traced<Value> value, Name name,
                            MutableTraced<Value> resultOut)
 {
-    if (name == Name::__class__) {
+    if (name == Names::__class__) {
         resultOut = value.type();
         return true;
     } else if (value.is<Class>()) {
         Stack<Object*> obj(value.asObject());
-        if (name == Name::__name__) {
+        if (name == Names::__name__) {
             resultOut = gc.create<String>(obj->as<Class>()->name());
             return true;
-        } else if (name == Name::__bases__) {
+        } else if (name == Names::__bases__) {
             RootVector<Value> bases(1);
             bases[0] = obj->as<Class>()->base();
             resultOut = Tuple::get(bases);
@@ -573,7 +573,7 @@ static bool getAttrOrDescriptor(Traced<Value> value, Name name,
 static bool getDescriptorValue(Traced<Value> value, MutableTraced<Value> valueInOut)
 {
     Stack<Object*> desc(valueInOut.asObject());
-    Stack<Value> func(desc->getAttr(Name::__get__));
+    Stack<Value> func(desc->getAttr(Names::__get__));
     bool isClass = value.is<Class>();
     interp->pushStack(desc);
     interp->pushStack(isClass ? None : value);
@@ -670,7 +670,7 @@ bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
     }
 
     Stack<Object*> desc(descValue.asObject());
-    Stack<Value> func(desc->getAttr(Name::__set__));
+    Stack<Value> func(desc->getAttr(Names::__set__));
     interp->pushStack(desc);
     interp->pushStack(obj);
     interp->pushStack(value);
@@ -688,7 +688,7 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
     }
 
     Stack<Object*> desc(descValue.asObject());
-    Stack<Value> func(desc->getAttr(Name::__delete__));
+    Stack<Value> func(desc->getAttr(Names::__delete__));
     interp->pushStack(desc);
     interp->pushStack(obj);
     return interp->call(func, 2, resultOut);

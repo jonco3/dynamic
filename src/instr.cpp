@@ -295,7 +295,7 @@ Interpreter::executeInstr_GetGlobal(Traced<GlobalNameInstr*> instr)
         return;
     }
 
-    int builtinsSlot = global->findOwnAttr(Name::__builtins__);
+    int builtinsSlot = global->findOwnAttr(Names::__builtins__);
     if (builtinsSlot != Layout::NotFound) {
         Stack<Object*> builtins(global->getSlot(builtinsSlot).toObject());
         slot = builtins->findOwnAttr(ident);
@@ -487,7 +487,7 @@ Interpreter::executeInstr_In(Traced<Instr*> instr)
     Stack<Value> type(container->type());
     Stack<Value> contains;
     bool isCallableDescriptor;
-    if (!getMethodAttr(type, Name::__contains__, contains,
+    if (!getMethodAttr(type, Names::__contains__, contains,
                        isCallableDescriptor))
     {
         pushStack(gc.create<TypeError>("Argument is not iterable"));
@@ -667,7 +667,7 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<IdentInstr*> instr)
         layout = layout->addName(*i);
 
     Stack<Value> bases;
-    if (!env->maybeGetAttr(Name::__bases__, bases)) {
+    if (!env->maybeGetAttr(Names::__bases__, bases)) {
         pushStack(gc.create<AttributeError>("Missing __bases__"));
         raiseException();
         return;
@@ -712,7 +712,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
     bool isCallableDescriptor;
 
     // Call __iter__ method to get iterator if it's present.
-    if (getSpecialMethodAttr(target, Name::__iter__, method,
+    if (getSpecialMethodAttr(target, Names::__iter__, method,
                              isCallableDescriptor))
     {
         if (isCallableDescriptor)
@@ -721,7 +721,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
     }
 
     // Otherwise create a SequenceIterator wrapping the target iterable.
-    if (!getMethodAttr(target, Name::__getitem__, method, isCallableDescriptor))
+    if (!getMethodAttr(target, Names::__getitem__, method, isCallableDescriptor))
     {
         resultOut = gc.create<TypeError>("Object not iterable");
         return false;
@@ -742,7 +742,7 @@ Interpreter::executeDestructureGeneric(unsigned expected)
     Stack<Value> type(iterator.type());
     Stack<Value> nextMethod;
     bool isCallableDescriptor;
-    if (!getMethodAttr(type, Name::__next__, nextMethod, isCallableDescriptor)) {
+    if (!getMethodAttr(type, Names::__next__, nextMethod, isCallableDescriptor)) {
         return raiseTypeError(string("Argument is not iterable: ") +
                               type.as<Class>()->name());
     }
@@ -878,8 +878,8 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
 
     Stack<Class*> ltype(left.type());
     Stack<Class*> rtype(right.type());
-    const Name* names = Name::binMethod;
-    const Name* rnames = Name::binMethodReflected;
+    const Name* names = Names::binMethod;
+    const Name* rnames = Names::binMethodReflected;
     bool ok = false;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
@@ -971,8 +971,8 @@ Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
     // __le__() and __ge__() are each other's reflection, and __eq__() and
     // __ne__() are their own reflection."
 
-    const Name* names = Name::compareMethod;
-    const Name* rnames = Name::compareMethodReflected;
+    const Name* names = Names::compareMethod;
+    const Name* rnames = Names::compareMethodReflected;
     bool ok = false;
     if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
         return ok;
@@ -1047,9 +1047,9 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
     Stack<Value> value(popStack());
 
     Stack<Value> type(value.type());
-    if (!getMethodAttr(type, Name::augAssignMethod[op], method,
+    if (!getMethodAttr(type, Names::augAssignMethod[op], method,
                        isCallableDescriptor) &&
-        !getMethodAttr(type, Name::binMethod[op], method,
+        !getMethodAttr(type, Names::binMethod[op], method,
                        isCallableDescriptor))
     {
         string message = "unsupported operand type(s) for augmented assignment";
@@ -1141,7 +1141,7 @@ Interpreter::executeInstr_ResumeGenerator(Traced<Instr*> instr)
 {
     // todo: get slot 0
     Stack<GeneratorIter*> gen(
-        env()->getAttr(Name::self).asObject()->as<GeneratorIter>());
+        env()->getAttr(Names::self).asObject()->as<GeneratorIter>());
     gen->resume(*this);
 }
 

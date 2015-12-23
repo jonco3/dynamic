@@ -72,7 +72,7 @@ Exception::Exception(Traced<Class*> cls, Traced<String*> message)
 void Exception::init(Traced<String*> message)
 {
     maybeAbortTests(className() + " " + message->value());
-    setAttr(Name::message, message);
+    setAttr(Names::message, message);
 }
 
 string Exception::className() const
@@ -82,7 +82,7 @@ string Exception::className() const
 
 string Exception::message() const
 {
-    Stack<Value> value(getAttr(Name::message));
+    Stack<Value> value(getAttr(Names::message));
     return value.get().as<String>()->value();
 }
 
