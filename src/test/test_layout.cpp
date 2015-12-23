@@ -4,9 +4,9 @@
 
 testcase(layout)
 {
-    Name root("root");
-    Name a("a");
-    Name b("b");
+    Name root(internString("root"));
+    Name a(internString("a"));
+    Name b(internString("b"));
 
     Stack<Layout*> l1(Layout::Empty->addName(root));
 

@@ -359,14 +359,14 @@ bool Class::isDerivedFrom(Class* cls) const
 
 void initAttr(Traced<Object*> cls, const string& nameString, Traced<Value> value)
 {
-    Name name(nameString);
+    Name name(internString(nameString));
     cls->initAttr(name, value);
 }
 
 void initNativeMethod(Traced<Object*> cls, const string& nameString,
                       NativeFunc func, unsigned minArgs, unsigned maxArgs)
 {
-    Name name(nameString);
+    Name name(internString(nameString));
     Stack<Value> value(None);
     if (func)
         value = gc.create<Native>(name, func, minArgs, maxArgs);

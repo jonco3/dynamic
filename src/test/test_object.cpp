@@ -8,9 +8,9 @@ testcase(object)
 {
     Stack<Object*> o(Object::create());
 
-    Name foo("foo");
-    Name bar("bar");
-    Name baz("baz");
+    Name foo(internString("foo"));
+    Name bar(internString("bar"));
+    Name baz(internString("baz"));
 
     Stack<Value> v;
     testFalse(o->hasAttr(foo));
@@ -31,7 +31,7 @@ testcase(object)
     testTrue(o->hasAttr(bar));
     testTrue(o->hasAttr(baz));
 
-    Name missing("missing");
+    Name missing(internString("missing"));
     testFalse(o->maybeDelOwnAttr(missing));
 
     testTrue(o->maybeDelOwnAttr(bar));

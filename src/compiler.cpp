@@ -784,7 +784,8 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxLambda& s) {
         Stack<Block*> exprBlock(
             ByteCompiler().buildLambda(this, s.params, *s.expr));
-        Name name("(lambda)"); // does this need to be a Name?
+        // todo: does this need to be a Name?
+        Name name(internString("(lambda)"));
         emitLambda(name, s.params, exprBlock, false);
     }
 
@@ -972,7 +973,7 @@ struct ByteCompiler : public SyntaxVisitor
         // call to a local function.
         Stack<Block*> exprBlock(ByteCompiler().buildListComp(this, s));
         vector<Parameter> params;
-        Name name("(list comprehension)");
+        Name name(internString("(list comprehension)"));
         emitLambda(name, params, exprBlock, false);
         emit<Instr_Call>(0);
     }

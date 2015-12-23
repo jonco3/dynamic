@@ -30,7 +30,7 @@ static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resul
             "hasattr(): attribute name must be string");
         return false;
     }
-    Name name(n->as<String>()->value());
+    Name name(internString(n->as<String>()->value()));
     resultOut = Boolean::get(args[0].toObject()->hasAttr(name));
     return true;
 }
@@ -95,8 +95,7 @@ static Value make_builtin_iter()
     Stack<Env*> env; // todo: allow construction of traced for nullptr
     vector<Name> args = { Names::iterable };
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(args, block));
-    Name name("iter");
-    return gc.create<Function>(name, info, EmptyValueArray, env);
+    return gc.create<Function>(Names::iter, info, EmptyValueArray, env);
 }
 
 static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> resultOut)
@@ -169,10 +168,10 @@ for_each_exception_class(set_exception_attr)
     if (!runModule(text, filename, internals))
         exit(1);
 
-    value = internals->getAttr(Name("SequenceIterator"));
+    value = internals->getAttr(Names::SequenceIterator);
     SequenceIterator.init(value.as<Class>());
 
-    value = internals->getAttr(Name("iterableToList"));
+    value = internals->getAttr(Names::iterableToList);
     IterableToList.init(value.as<Function>());
 
     builtinsInitialised = true;

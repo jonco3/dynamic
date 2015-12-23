@@ -257,7 +257,7 @@ struct SyntaxName : public SyntaxSingleTarget
     define_syntax_members(Name, "name");
 
     SyntaxName(const Token& token)
-      : SyntaxSingleTarget(token), id(token.text) {}
+      : SyntaxSingleTarget(token), id(internString(token.text)) {}
 
     const Name id;
 };

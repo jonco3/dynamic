@@ -8,8 +8,6 @@
 
 struct InternedString : public String
 {
-    static InternedString* get(const string& str);
-
     InternedString() = delete;
 };
 
@@ -34,41 +32,46 @@ Name Names::compareMethod[CountCompareOp];
 Name Names::compareMethodReflected[CountCompareOp];
 Name Names::listCompResult;
 
+Name internString(const string& s)
+{
+    return InternedStrings->get(s);
+}
+
 void initNames()
 {
     assert(!InternedStrings); // Stop Name being used before map initialised.
     InternedStrings.init(gc.create<InternedStringMap>());
 
 #define init_name(name)                                                       \
-    Names::name = Name(#name);
+    Names::name = internString(#name);
 
     for_each_predeclared_name(init_name)
 
 #undef init_name
 
 #define init_name(name, token, method, rmethod, imethod)                      \
-    Names::binMethod[Binary##name] = Name(method);                            \
-    Names::binMethodReflected[Binary##name] = Name(rmethod);                  \
-    Names::augAssignMethod[Binary##name] = Name(imethod);
+    Names::binMethod[Binary##name] = internString(method);                    \
+    Names::binMethodReflected[Binary##name] = internString(rmethod);          \
+    Names::augAssignMethod[Binary##name] = internString(imethod);
 
     for_each_binary_op(init_name)
 
 #undef init_name
 
 #define init_name(name, token, method, rmethod)                               \
-    Names::compareMethod[Compare##name] = Name(method);                       \
-    Names::compareMethodReflected[Compare##name] = Name(rmethod);
+    Names::compareMethod[Compare##name] = internString(method);               \
+    Names::compareMethodReflected[Compare##name] = internString(rmethod);
 
     for_each_compare_op(init_name)
 
 #undef init_name
 
-    Names::listCompResult = Name("%result");
+    Names::listCompResult = internString("%result");
 }
 
 const string& Name::get() const
 {
-    assert(!isNull());
+    assert(string_);
     return string_->value();
 }
 
@@ -91,9 +94,4 @@ InternedString* InternedStringMap::get(const string& s)
     strings_[s] = interned;
     assert(strings_.find(s) != strings_.end());
     return interned;
-}
-
-InternedString* Name::intern(const string& s)
-{
-    return InternedStrings->get(s);
 }

@@ -448,11 +448,11 @@ unique_ptr<ImportInfo> SyntaxParser::parseModuleImport()
 {
     // todo: parse |(identifier ".")* identifier| here
     Token t = match(Token_Identifier);
-    Name moduleName(t.text);
+    Name moduleName(internString(t.text));
     Name localName(moduleName);
     if (opt(Token_As)) {
         t = match(Token_Identifier);
-        localName = Name(t.text);
+        localName = internString(t.text);
     }
     return make_unique<ImportInfo>(moduleName, localName);
 }
@@ -460,11 +460,11 @@ unique_ptr<ImportInfo> SyntaxParser::parseModuleImport()
 unique_ptr<ImportInfo> SyntaxParser::parseIdImport()
 {
     Token t = match(Token_Identifier);
-    Name idName(t.text);
+    Name idName(internString(t.text));
     Name localName(idName);
     if (opt(Token_As)) {
         t = match(Token_Identifier);
-        localName = Name(t.text);
+        localName = internString(t.text);
     }
     return make_unique<ImportInfo>(idName, localName);
 }
@@ -490,14 +490,14 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         vector<Name> names;
         do {
             Token t = match(Token_Identifier);
-            names.push_back(Name(t.text));
+            names.push_back(internString(t.text));
         } while (opt(Token_Comma));
         return make_unique<SyntaxGlobal>(token, move(names));
     } else if (opt(Token_NonLocal)) {
         vector<Name> names;
         do {
             Token t = match(Token_Identifier);
-            names.push_back(Name(t.text));
+            names.push_back(internString(t.text));
         } while (opt(Token_Comma));
         return make_unique<SyntaxNonLocal>(token, move(names));
     } else if (opt(Token_Yield)) {
@@ -519,7 +519,7 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_From)) {
         // todo: parse |"."* module | "."+| here
         Token t = match(Token_Identifier);
-        Name moduleName(t.text);
+        Name moduleName(internString(t.text));
         match(Token_Import);
         bool brackets = opt(Token_Bra);
         vector<unique_ptr<ImportInfo>> imports;
@@ -577,7 +577,7 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         Token t = match(Token_Identifier);
         if (hadRest)
             throw ParseError(t, "Parameter following rest parameter");
-        Name name(t.text);
+        Name name(internString(t.text));
         unique_ptr<Syntax> defaultExpr;
         if (opt(Token_Assign)) {
             if (takesRest)
@@ -671,7 +671,7 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
         AutoSetAndRestore asar1(inFunction, true);
         AutoSetAndRestore asar2(isGenerator, false);
         unique_ptr<SyntaxBlock> suite(parseSuite());
-        Name name(id.text);
+        Name name(internString(id.text));
         return make_unique<SyntaxDef>(token, name, move(params), move(suite),
                                       move(isGenerator));
     } else if (opt(Token_Class)) {
@@ -682,7 +682,7 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
         unique_ptr<SyntaxExprList> baseList(
             make_unique<SyntaxExprList>(token, move(bases)));
         unique_ptr<SyntaxBlock> suite(parseSuite());
-        Name name(id.text);
+        Name name(internString(id.text));
         return make_unique<SyntaxClass>(token, name, move(baseList),
                                         move(suite));
     } else {

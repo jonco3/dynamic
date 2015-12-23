@@ -39,20 +39,21 @@ using namespace std;
     name(argv)                                                                \
     name(message)                                                             \
     name(iterable)                                                            \
+    name(start)                                                               \
+    name(stop)                                                                \
+    name(slice)                                                               \
+    name(iter)                                                                \
+    name(SequenceIterator)                                                    \
+    name(iterableToList)                                                      \
 
 struct InternedString;
 
 struct Name
 {
-
     Name()
       : string_(nullptr) {}
 
-    explicit Name(const string& str)
-      : string_(intern(str)) {}
-
-    explicit Name(const char* str)
-      : string_(str ? intern(str) : nullptr) {}
+    Name(InternedString* s) : string_(s) {}
 
     bool isNull() const {
         return string_ == nullptr;
@@ -87,8 +88,6 @@ struct Name
 
   private:
     InternedString* string_;
-
-    InternedString* intern(const string& s);
 };
 
 inline ostream& operator<<(ostream& s, Name name)
@@ -129,6 +128,8 @@ namespace Names
     extern Name compareMethodReflected[CountCompareOp];
     extern Name listCompResult;
 } /* namespace Names */
+
+extern Name internString(const string& str);
 
 extern void initNames();
 extern void shutdownNames();

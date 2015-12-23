@@ -11,17 +11,13 @@ void Slice::init()
 {
     ObjectClass.init(Class::createNative<Slice>("slice"));
 
-    static const Name StartAttr("start");
-    static const Name StopAttr("stop");
-    static const Name StepAttr("step");
-
     Stack<Layout*> layout(Object::InitialLayout);
-    layout = layout->addName(StartAttr);
-    layout = layout->addName(StopAttr);
-    layout = layout->addName(StepAttr);
-    assert(layout->lookupName(StartAttr) == StartSlot);
-    assert(layout->lookupName(StopAttr) == StopSlot);
-    assert(layout->lookupName(StepAttr) == StepSlot);
+    layout = layout->addName(Names::start);
+    layout = layout->addName(Names::stop);
+    layout = layout->addName(Names::slice);
+    assert(layout->lookupName(Names::start) == StartSlot);
+    assert(layout->lookupName(Names::stop) == StopSlot);
+    assert(layout->lookupName(Names::slice) == StepSlot);
     InitialLayout.init(layout);
 }
 
