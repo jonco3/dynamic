@@ -47,8 +47,8 @@ void initNames()
 #undef init_name
 
 #define init_name(name, token, method, rmethod, imethod)                      \
-    Names::binMethod[Binary##name] = Name(method);                             \
-    Names::binMethodReflected[Binary##name] = Name(rmethod);                   \
+    Names::binMethod[Binary##name] = Name(method);                            \
+    Names::binMethodReflected[Binary##name] = Name(rmethod);                  \
     Names::augAssignMethod[Binary##name] = Name(imethod);
 
     for_each_binary_op(init_name)
@@ -56,7 +56,7 @@ void initNames()
 #undef init_name
 
 #define init_name(name, token, method, rmethod)                               \
-    Names::compareMethod[Compare##name] = Name(method);                        \
+    Names::compareMethod[Compare##name] = Name(method);                       \
     Names::compareMethodReflected[Compare##name] = Name(rmethod);
 
     for_each_compare_op(init_name)
