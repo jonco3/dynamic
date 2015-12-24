@@ -24,7 +24,7 @@ Callable::Callable(Traced<Class*> cls, Name name,
 void Callable::print(ostream& s) const
 {
     s << "<" << type()->name();
-    s << " object '" << name_.get();
+    s << " object '" << *name_;
     s << "' at 0x" << hex << reinterpret_cast<uintptr_t>(this) << ">";
 }
 

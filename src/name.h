@@ -48,57 +48,11 @@ using namespace std;
 
 struct InternedString;
 
-struct Name
-{
-    Name()
-      : string_(nullptr) {}
+using Name = InternedString*;
 
-    Name(InternedString* s) : string_(s) {}
-
-    bool isNull() const {
-        return string_ == nullptr;
-    }
-
-    const string& get() const;
-
-    operator const string&() const { return get(); }
-
-    bool operator==(const Name& other) const {
-        return string_ == other.string_;
-    }
-    bool operator!=(const Name& other) const {
-        return string_ != other.string_;
-    }
-
-    bool operator==(const string& other) const {
-        return get() == other;
-    }
-    bool operator!=(const string& other) const {
-        return get() != other;
-    }
-
-    bool operator==(const char* other) const {
-        return get() == other;
-    }
-    bool operator!=(const char* other) const {
-        return get() != other;
-    }
-
-    size_t asBits() { return size_t(string_); }
-
-  private:
-    InternedString* string_;
-};
-
-inline ostream& operator<<(ostream& s, Name name)
-{
-    s << name.get();
-    return s;
-}
-
-inline string operator+(const string& a, Name b) {
-    return a + b.get();
-}
+#ifdef DEBUG
+extern bool isSpecialName(Name name);
+#endif
 
 namespace std {
 template<>
@@ -109,7 +63,7 @@ struct hash<Name>
 
     size_t operator()(Name n) const
     {
-        return n.asBits();
+        return uintptr_t(n);
     }
 };
 } /* namespace std */
@@ -133,5 +87,8 @@ extern Name internString(const string& str);
 
 extern void initNames();
 extern void shutdownNames();
+
+extern ostream& operator<<(ostream& s, const Name str);
+extern string operator+(const string& a, const Name b);
 
 #endif

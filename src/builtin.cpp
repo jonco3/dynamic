@@ -112,7 +112,7 @@ static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> result
     Stack<Env*> env(frame->env());
     while (layout != Layout::Empty) {
         unsigned index = layout->slotIndex();
-        Stack<Value> name(String::get(layout->name()));
+        Stack<Value> name(layout->name());
         Stack<Value> value(env ? env->getSlot(index) : interp->getStackLocal(index));
         dict->setitem(name, value);
         layout = layout->parent();

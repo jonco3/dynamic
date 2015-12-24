@@ -6,11 +6,6 @@
 #include <iostream>
 #include <string>
 
-struct InternedString : public String
-{
-    InternedString() = delete;
-};
-
 struct InternedStringMap : public Cell
 {
     void traceChildren(Tracer& t) override;
@@ -69,12 +64,6 @@ void initNames()
     Names::listCompResult = internString("%result");
 }
 
-const string& Name::get() const
-{
-    assert(string_);
-    return string_->value();
-}
-
 void InternedStringMap::traceChildren(Tracer& t)
 {
     for (auto i : strings_)
@@ -83,6 +72,8 @@ void InternedStringMap::traceChildren(Tracer& t)
 
 InternedString* InternedStringMap::get(const string& s)
 {
+    assert(s != "");
+
     auto i = strings_.find(s);
     if (i != strings_.end()) {
         assert(i->second->value() == s);
@@ -94,4 +85,22 @@ InternedString* InternedStringMap::get(const string& s)
     strings_[s] = interned;
     assert(strings_.find(s) != strings_.end());
     return interned;
+}
+
+bool isSpecialName(Name name)
+{
+    const string& s = name->value();
+    return s.size() > 4 &&
+           s.substr(0, 2) == "__" && s.substr(s.size() - 2, 2) == "__";
+}
+
+ostream& operator<<(ostream& s, const Name str)
+{
+    s << str->value();
+    return s;
+}
+
+string operator+(const string& a, const Name b)
+{
+    return a + b->value();
 }

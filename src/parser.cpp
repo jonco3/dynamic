@@ -589,7 +589,8 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         }
         for (auto i = params.begin(); i != params.end(); i++)
             if (name == i->name)
-                throw ParseError(t, "Duplicate parameter name: " + name);
+                throw ParseError(t, "Duplicate parameter name: " +
+                                 name->value());
         params.push_back({name, move(defaultExpr), takesRest});
         if (opt(endToken))
             break;

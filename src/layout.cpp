@@ -89,7 +89,6 @@ Layout::Layout(Traced<Layout*> parent, Name name)
   : parent_(parent), name_(name)
 {
     assert(parent);
-    assert(name != "");
     parent->children_.add(this);
     slot_ = parent_->slotIndex() + 1;
 }
@@ -134,7 +133,6 @@ bool Layout::subsumes(Traced<Layout*> other)
 
 Layout* Layout::findAncestor(Name name)
 {
-    assert(name != "");
     Layout* layout = this;
     while (layout != Empty) {
         assert(layout);
@@ -148,14 +146,12 @@ Layout* Layout::findAncestor(Name name)
 
 int Layout::lookupName(Name name)
 {
-    assert(name != "");
     Layout* layout = findAncestor(name);
     return layout ? layout->slotIndex() : NotFound;
 }
 
 Layout* Layout::addName(Name name)
 {
-    assert(name != "");
     assert(!hasName(name));
     Layout* child = children_.get(name);
     if (child)
@@ -167,8 +163,6 @@ Layout* Layout::addName(Name name)
 
 Layout* Layout::maybeAddName(Name name)
 {
-    assert(name != "");
-
     if (hasName(name))
         return this;
 

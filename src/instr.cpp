@@ -696,7 +696,7 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<IdentInstr*> instr)
         base = value.as<Class>();
     }
 
-    Class* cls = gc.create<Class>(instr->ident, base, layout);
+    Class* cls = gc.create<Class>(instr->ident->value(), base, layout);
     Stack<Value> value;
     for (auto i = names.begin(); i != names.end(); i++) {
         value = env->getAttr(*i);
@@ -977,11 +977,8 @@ Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
     if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
         return ok;
 
-    if (!rnames[op].isNull() &&
-        maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
-    {
+    if (maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
         return ok;
-    }
 
     if (op == CompareNE &&
         maybeCallBinaryOp(left, names[CompareEQ], left, right, method, ok))

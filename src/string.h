@@ -27,4 +27,9 @@ struct String : public Object
     string value_;
 };
 
+struct InternedString : public String
+{
+    InternedString() = delete;
+};
+
 #endif

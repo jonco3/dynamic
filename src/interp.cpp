@@ -123,7 +123,8 @@ static void logValue(const Value& value)
             return;
         }
 
-        cout << obj->type()->name() << " at 0x" << hex << obj;
+        cout << obj->type()->name();
+        cout << " at 0x" << hex << static_cast<void*>(obj);
         return;
     }
 
@@ -533,7 +534,7 @@ void Interpreter::raiseAttrError(Traced<Value> value, Name ident)
 
 void Interpreter::raiseNameError(Name ident)
 {
-    string message = "name '" + ident + "' is not defined";
+    string message = string("name '") + ident + "' is not defined";
     pushStack(gc.create<NameError>(message));
     raiseException();
 }

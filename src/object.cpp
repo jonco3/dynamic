@@ -264,7 +264,7 @@ void Object::dump(ostream& s) const
     s << " { ";
     Layout* layout = layout_;
     while (layout != Layout::Empty) {
-        s << layout->name() << ": ";
+        s << *layout->name() << ": ";
         unsigned slot = layout->slotIndex();
         if (slot < slots_.size())
             s << slots_[slot];
@@ -619,14 +619,14 @@ bool getMethodAttr(Traced<Value> value, Name name,
 }
 
 /*
- * Get a special method.  For reason python looks at the class but not at the
- * object for these.
+ * Get a special method.  For some reason python looks at the class but not at
+ * the object for these.
  */
 bool getSpecialMethodAttr(Traced<Value> value, Name name,
                           MutableTraced<Value> resultOut,
                           bool& isCallableDescriptor)
 {
-    assert(name.get().size() > 2 && name.get().substr(0, 2) == "__");
+    assert(isSpecialName(name));
     Stack<Value> type(value.type());
     return getMethodAttr(type, name, resultOut, isCallableDescriptor);
 }

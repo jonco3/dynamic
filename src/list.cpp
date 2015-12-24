@@ -526,8 +526,8 @@ template<typename T>
 void ListIterImpl<T>::init()
 {
     ObjectClass.init(Class::createNative("listiterator", nullptr));
-    initNativeMethod(ObjectClass, Names::__iter__, listIter_iter<T>, 1);
-    initNativeMethod(ObjectClass, Names::__next__, listIter_next<T>, 1);
+    initNativeMethod(ObjectClass, "__iter__", listIter_iter<T>, 1);
+    initNativeMethod(ObjectClass, "__next__", listIter_next<T>, 1);
 }
 
 void initList()
