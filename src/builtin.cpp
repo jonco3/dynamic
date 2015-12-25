@@ -85,9 +85,10 @@ static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resul
 
 static Value make_builtin_iter()
 {
+    Stack<Object*> global;
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName(Names::iterable);
-    Stack<Block*> block(gc.create<Block>(layout, 1, false));
+    Stack<Block*> block(gc.create<Block>(global, layout, 1, false));
     block->append<Instr_InitStackLocals>();
     block->append<Instr_GetIterator>();
     block->append<Instr_Return>();

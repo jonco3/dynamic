@@ -239,7 +239,7 @@ struct ByteCompiler : public SyntaxVisitor
             topLevel->extend(layout);
         layout = defs->layout();
         assert(layout->slotCount() >= argCount);
-        block = gc.create<Block>(layout, argCount, useLexicalEnv);
+        block = gc.create<Block>(topLevel, layout, argCount, useLexicalEnv);
         if (parent) {
             if (useLexicalEnv) {
                 emit<Instr_CreateEnv>();

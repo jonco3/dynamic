@@ -372,23 +372,19 @@ struct GlobalSlotInstrBase : public StubInstr
 {
     GlobalSlotInstrBase(InstrCode code, Traced<Instr*> next,
                         Traced<Object*> global, Name ident)
-      : StubInstr(code, next), global_(global), globalSlot_(global, ident)
+      : StubInstr(code, next), globalSlot_(global, ident)
     {}
 
     void traceChildren(Tracer& t) override {
         StubInstr::traceChildren(t);
-        gc.trace(t, &global_);
         globalSlot_.traceChildren(t);
     }
 
-    Object* global() const { return global_; }
-
-    int globalSlot() const {
-        return globalSlot_.check(global_);
+    int globalSlot(Object* global) const {
+        return globalSlot_.check(global);
     }
 
   protected:
-    Heap<Object*> global_;
     SlotGuard globalSlot_;
 };
 

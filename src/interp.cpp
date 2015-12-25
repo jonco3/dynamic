@@ -52,7 +52,9 @@ Interpreter::Interpreter()
 void Interpreter::init()
 {
     // Create a block that will cause the interpreter loop to exit.
-    AbortTrampoline.init(gc.create<Block>(Env::InitialLayout, 1, false));
+    Stack<Object*> global;
+    AbortTrampoline.init(gc.create<Block>(global, Env::InitialLayout,
+                                          1, false));
     AbortTrampoline->append<Instr_Abort>();
     AbortTrampoline->setMaxStackDepth(1);
 

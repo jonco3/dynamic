@@ -1,8 +1,12 @@
 #include "block.h"
 #include "instr.h"
 
-Block::Block(Traced<Layout*> layout, unsigned argCount, bool createEnv)
-  : layout_(layout),
+Block::Block(Traced<Object*> global,
+             Traced<Layout*> layout,
+             unsigned argCount,
+             bool createEnv)
+  : global_(global),
+    layout_(layout),
     argCount_(argCount),
     maxStackDepth_(0),
     createEnv_(createEnv)

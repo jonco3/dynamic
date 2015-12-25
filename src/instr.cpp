@@ -281,7 +281,7 @@ Interpreter::executeInstr_DelLexical(Traced<LexicalFrameInstr*> instr)
 void
 Interpreter::executeInstr_GetGlobal(Traced<GlobalNameInstr*> instr)
 {
-    Stack<Object*> global(instr->global());
+    Stack<Object*> global(getFrame()->block()->global());
     Name ident = instr->ident;
     int slot = global->findOwnAttr(ident);
     if (slot != Layout::NotFound) {
@@ -318,8 +318,8 @@ void
 Interpreter::executeInstr_SetGlobal(Traced<GlobalNameInstr*> instr)
 {
     Stack<Value> value(peekStack());
-    Stack<Object*> global(instr->global());
-    instr->global()->setAttr(instr->ident, value);
+    Stack<Object*> global(getFrame()->block()->global());
+    global->setAttr(instr->ident, value);
 
     if (!instr->canAddStub())
         return;
@@ -332,7 +332,8 @@ Interpreter::executeInstr_SetGlobal(Traced<GlobalNameInstr*> instr)
 void
 Interpreter::executeInstr_DelGlobal(Traced<GlobalNameInstr*> instr)
 {
-    if (!instr->global()->maybeDelOwnAttr(instr->ident))
+    Stack<Object*> global(getFrame()->block()->global());
+    if (!global->maybeDelOwnAttr(instr->ident))
         raiseNameError(instr->ident);
 }
 
@@ -1315,19 +1316,21 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
     } while (false)
 
     start_handle_instr(GetGlobalSlot, GlobalSlotInstr);
-        int slot = instr->globalSlot();
+        Object* global = getFrame()->block()->global();
+        int slot = instr->globalSlot(global);
         if (slot == Layout::NotFound)
             dispatchNextStub();
 
-        pushStack(instr->global()->getSlot(slot));
+        pushStack(global->getSlot(slot));
     end_handle_instr();
 
     start_handle_instr(GetBuiltinsSlot, BuiltinsSlotInstr);
-        int slot = instr->globalSlot();
+        Object* global = getFrame()->block()->global();
+        int slot = instr->globalSlot(global);
         if (slot == Layout::NotFound)
             dispatchNextStub();
 
-        Object* builtins = instr->global()->getSlot(slot).toObject();
+        Object* builtins = global->getSlot(slot).toObject();
         slot = instr->builtinsSlot(builtins);
         if (slot == Layout::NotFound)
             dispatchNextStub();
@@ -1336,11 +1339,12 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
     end_handle_instr();
 
     start_handle_instr(SetGlobalSlot, GlobalSlotInstr);
-        int slot = instr->globalSlot();
+        Object* global = getFrame()->block()->global();
+        int slot = instr->globalSlot(global);
         if (slot == Layout::NotFound)
             dispatchNextStub();
 
-        instr->global()->setSlot(slot, peekStack());
+        global->setSlot(slot, peekStack());
     end_handle_instr();
 
     start_handle_instr(GetMethodBuiltin, BuiltinMethodInstr);

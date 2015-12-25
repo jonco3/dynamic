@@ -24,8 +24,12 @@ extern bool logCompile;
 
 struct Block : public Cell
 {
-    Block(Traced<Layout*> layout, unsigned argCount, bool createEnv);
+    Block(Traced<Object*> global,
+          Traced<Layout*> layout,
+          unsigned argCount,
+          bool createEnv);
 
+    Object* global() const { return global_; }
     Layout* layout() const { return layout_; }
     unsigned argCount() const { return argCount_; }
     unsigned stackLocalCount() const;
@@ -66,6 +70,7 @@ struct Block : public Cell
     InstrThunk* findInstr(unsigned code);
 
   private:
+    Heap<Object*> global_;
     Heap<Layout*> layout_;
     unsigned argCount_;
     unsigned maxStackDepth_;
