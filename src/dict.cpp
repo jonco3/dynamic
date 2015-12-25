@@ -14,19 +14,28 @@ GlobalRoot<Class*> Dict::ObjectClass;
 static bool dict_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     Dict* dict = args[0].as<Dict>();
-    return dict->len(resultOut);
+    resultOut = Integer::get(dict->len());
+    return true;
 }
 
 static bool dict_contains(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     Dict* dict = args[0].as<Dict>();
-    return dict->contains(args[1], resultOut);
+    resultOut = Boolean::get(dict->contains(args[1]));
+    return true;
 }
 
-static bool dict_getitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool dict_getitem(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
 {
     Dict* dict = args[0].as<Dict>();
-    return dict->getitem(args[1], resultOut);
+
+    if (!dict->getitem(args[1], resultOut)) {
+        resultOut = gc.create<KeyError>(repr(args[1]));
+        return false;
+    }
+
+    return true;
 }
 
 static bool dict_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
@@ -46,13 +55,15 @@ static bool dict_delitem(TracedVector<Value> args, MutableTraced<Value> resultOu
 static bool dict_keys(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     Dict* dict = args[0].as<Dict>();
-    return dict->keys(resultOut);
+    resultOut = dict->keys();
+    return true;
 }
 
 static bool dict_values(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
     Dict* dict = args[0].as<Dict>();
-    return dict->values(resultOut);
+    resultOut = dict->values();
+    return true;
 }
 
 void Dict::init()
@@ -111,26 +122,11 @@ void Dict::print(ostream& s) const
     s << "}";
 }
 
-bool Dict::len(MutableTraced<Value> resultOut)
-{
-    resultOut = Integer::get(entries_.size());
-    return true;
-}
-
-bool Dict::contains(Traced<Value> key, MutableTraced<Value> resultOut)
-{
-    bool found = entries_.find(key) != entries_.end();
-    resultOut = Boolean::get(found);
-    return true;
-}
-
-bool Dict::getitem(Traced<Value> key, MutableTraced<Value> resultOut)
+bool Dict::getitem(Traced<Value> key, MutableTraced<Value> resultOut) const
 {
     auto i = entries_.find(key);
-    if (i == entries_.end()) {
-        resultOut = gc.create<KeyError>(repr(key));
+    if (i == entries_.end())
         return false;
-    }
 
     resultOut = i->second;
     return true;
@@ -154,26 +150,24 @@ bool Dict::delitem(Traced<Value> key, MutableTraced<Value> resultOut)
     return true;
 }
 
-bool Dict::keys(MutableTraced<Value> resultOut)
+Value Dict::keys() const
 {
     // todo: should be some kind of iterator?
     Stack<Tuple*> keys(Tuple::get(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         keys->initElement(index++, i.first);
-    resultOut = Value(keys);
-    return true;
+    return Value(keys);
 }
 
-bool Dict::values(MutableTraced<Value> resultOut)
+Value Dict::values() const
 {
     // todo: should be some kind of iterator?
     Stack<Tuple*> values(Tuple::get(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         values->initElement(index++, i.second);
-    resultOut = Value(values);
-    return true;
+    return Value(values);
 }
 
 size_t Dict::ValueHash::operator()(Value vArg) const

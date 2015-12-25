@@ -16,13 +16,19 @@ struct Dict : public Object
     void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;
 
-    bool len(MutableTraced<Value> resultOut);
-    bool contains(Traced<Value> key, MutableTraced<Value> resultOut);
-    bool getitem(Traced<Value> key, MutableTraced<Value> resultOut);
+    size_t len() const {
+        return entries_.size();
+    }
+
+    bool contains(Traced<Value> key) const {
+        return entries_.find(key) != entries_.end();
+    }
+
+    bool getitem(Traced<Value> key, MutableTraced<Value> resultOut) const;
     void setitem(Traced<Value> key, Traced<Value> value);
     bool delitem(Traced<Value> key, MutableTraced<Value> resultOut);
-    bool keys(MutableTraced<Value> resultOut);
-    bool values(MutableTraced<Value> resultOut);
+    Value keys() const;
+    Value values() const;
 
     // Methods __eq__ and __ne__ are supplied by lib/internals.py
 
