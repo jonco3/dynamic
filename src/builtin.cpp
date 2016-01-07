@@ -122,6 +122,14 @@ static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> result
     return true;
 }
 
+static bool builtin_globals(TracedVector<Value> args, MutableTraced<Value> resultOut)
+{
+    Stack<Object*> global(interp->getFrame()->block()->global());
+    Stack<DictView*> dict(gc.create<DictView>(global));
+    resultOut = Value(dict);
+    return true;
+}
+
 void initBuiltins(const string& libDir)
 {
     Builtin.init(Object::create());
@@ -134,6 +142,7 @@ void initBuiltins(const string& libDir)
     initNativeMethod(Builtin, "parse", builtin_parse, 1);
     value = make_builtin_iter(); initAttr(Builtin, "iter", value);
     initNativeMethod(Builtin, "locals", builtin_locals, 0);
+    initNativeMethod(Builtin, "globals", builtin_globals, 0);
 
     // Constants
     initAttr(Builtin, "True", Boolean::True);

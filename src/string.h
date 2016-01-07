@@ -5,6 +5,8 @@
 
 #include <string>
 
+struct InternedString;
+
 struct String : public Object
 {
     static void init();

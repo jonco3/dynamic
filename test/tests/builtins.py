@@ -121,4 +121,16 @@ x = locals4()
 assert x['a'] == 1
 assert x['b'] == 2
 
+# globals
+foo = 1
+g = globals()
+assert g['foo'] == 1
+g['foo'] = 2
+assert g['foo'] == 2
+assert foo == 2
+
+#assert 'foo' in g.keys()
+assert 2 in g.values()
+assert len(g.values()) == len(g.keys())
+
 print('ok')

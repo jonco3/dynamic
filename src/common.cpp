@@ -46,6 +46,7 @@ void init1()
     initList();
     Slice::init();
     Dict::init();
+    DictView::init();
     initSingletons();
     GeneratorIter::init();
     initReflect();

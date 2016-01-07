@@ -180,9 +180,11 @@ String* String::get(const string& v)
     return gc.create<String>(v);
 }
 
-void String::print(ostream& s) const {
+void String::print(ostream& s) const
+{
     s << "'" << value_ << "'";
 }
+
 
 static bool raiseOutOfRange(MutableTraced<Value> resultOut)
 {

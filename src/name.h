@@ -47,6 +47,7 @@ using namespace std;
     name(iterableToList)                                                      \
 
 struct InternedString;
+struct String;
 
 using Name = InternedString*;
 
