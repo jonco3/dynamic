@@ -41,15 +41,15 @@ AC_DEFUN([CHECK_ENABLE_DEBUG],[
       ],
       [profile],[
     AC_MSG_RESULT(profile)
-	CFLAGS="${CFLAGS} -g -pg -O3"
-	CXXFLAGS="${CXXFLAGS} -g -pg -O3"
-	LDFLAGS="${LDFLAGS} -pg -O3"
+	CFLAGS="${CFLAGS} -g -pg -O3 -flto"
+	CXXFLAGS="${CXXFLAGS} -g -pg -O3 -flto"
+	LDFLAGS="${LDFLAGS} -pg -O3 -flto"
       ],
       [
 	AC_MSG_RESULT(no)
-	CFLAGS="${CFLAGS} -O3"
-	CXXFLAGS="${CXXFLAGS} -O3"
-	LDFLAGS="${LDFLAGS} -O3"
+	CFLAGS="${CFLAGS} -O3 -flto"
+	CXXFLAGS="${CXXFLAGS} -O3 -flto"
+	LDFLAGS="${LDFLAGS} -O3 -flto"
       ])
 
     dnl Define various variables if debugging is disabled.
