@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 {
     int pos = 1;
 
-    string libDir = ".";
+    string libDir = "lib";
 
     while (pos != argc && argv[pos][0] == '-') {
         const char* opt = argv[pos++];
