@@ -154,7 +154,7 @@ void Tokenizer::start(const Input& input)
 {
     source = input.text;
     index = 0;
-    pos.file = input.file;
+    pos.file = input.filename;
     pos.line = 1;
     pos.column = 0;
     tokenQueue.clear();

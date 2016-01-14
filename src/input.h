@@ -7,11 +7,20 @@ using namespace std;
 
 struct Input
 {
-    Input(string text, string file = "") : text(text), file(file) {}
-    Input(const char* text) : text(text), file("") {}
+    Input(const string& text, const string& filename)
+      : text(text), filename(filename)
+    {}
+
+    Input(const string& text)
+      : text(text), filename("<unknown>")
+    {}
+
+    Input(const char* text)
+      : text(text), filename("<unknown>")
+    {}
 
     const string text;
-    const string file;
+    const string filename;
 };
 
 #endif
