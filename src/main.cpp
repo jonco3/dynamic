@@ -133,7 +133,7 @@ int main(int argc, const char* argv[])
     int pos = 1;
 
     bool expr = false;
-    string libDir = ".";
+    string libDir = "lib";
 
     while (pos != argc && argv[pos][0] == '-') {
         const char* opt = argv[pos++];
