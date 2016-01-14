@@ -74,7 +74,7 @@ void Instr::print(ostream& s) const
 {
     s << instrName(code_);
     if (stubCount_)
-        s << " " << dec << stubCount_;
+        s << " " << dec << size_t(stubCount_);
 }
 
 void IdentInstrBase::print(ostream& s) const
@@ -149,8 +149,7 @@ void LambdaInstr::traceChildren(Tracer& t)
 
 void StubInstr::print(ostream& s) const
 {
-    next_.data->print(s);
-    s << " <- ";
+    s << *next_.data << " <- ";
     Instr::print(s);
 }
 
@@ -184,11 +183,6 @@ void CompareOpInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << CompareOpNames[op];
-}
-
-void CompareOpStubInstr::print(ostream& s) const
-{
-    StubInstr::print(s);
 }
 
 void LoopControlJumpInstr::print(ostream& s) const

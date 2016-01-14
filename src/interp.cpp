@@ -192,7 +192,7 @@ void Interpreter::logInstr(Instr* instr)
         AutoAssertNoGC noGC;
         logStart();
         cout << *instr;
-        cout << " at line " << dec << currentPos().line << endl;
+        cout << " at " << currentPos() << endl;
     }
 }
 #endif

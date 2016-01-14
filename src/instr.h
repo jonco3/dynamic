@@ -629,8 +629,6 @@ struct CompareOpStubInstr : public StubInstr
     {
         assert(instrType(code) == Type);
     }
-
-    void print(ostream& s) const override;
 };
 
 struct LoopControlJumpInstr : public Instr
