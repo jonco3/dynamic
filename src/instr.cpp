@@ -403,14 +403,13 @@ Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
 {
     // Attempt to get the method.
     Stack<Value> value(popStack());
-    Stack<Value> result;
-    bool isCallableDescriptor;
-    if (!getMethodAttr(value, instr->ident, result, isCallableDescriptor)) {
+    StackMethodAttr result;
+    if (!getMethodAttr(value, instr->ident, result)) {
         raiseAttrError(value, instr->ident);
         return;
     }
 
-    pushStack(result, Boolean::get(isCallableDescriptor), value);
+    pushStack(result.method, Boolean::get(result.isCallable), value);
 
     // Check stub count before attempting to optimise.
     if (!instr->canAddStub())
@@ -419,8 +418,8 @@ Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
     if (value.type()->isFinal()) {
         // Builtin classes cannot be changed, so we can cache the lookup.
         Stack<Class*> cls(value.type());
-        auto stub = InstrFactory<Instr_GetMethodBuiltin>::get(currentInstr(),
-                                                              cls, result);
+        auto stub = InstrFactory<Instr_GetMethodBuiltin>::get(
+            currentInstr(), cls, result.method);
         insertStubInstr(instr, stub);
     }
 }
@@ -480,10 +479,8 @@ Interpreter::executeInstr_In(Traced<Instr*> instr)
     Stack<Value> value(popStack());
 
     Stack<Value> type(container->type());
-    Stack<Value> contains;
-    bool isCallableDescriptor;
-    if (!getMethodAttr(type, Names::__contains__, contains,
-                       isCallableDescriptor))
+    StackMethodAttr contains;
+    if (!getMethodAttr(type, Names::__contains__, contains))
     {
         pushStack(gc.create<TypeError>("Argument is not iterable"));
         raiseException();
@@ -491,10 +488,10 @@ Interpreter::executeInstr_In(Traced<Instr*> instr)
     }
 
     // todo: invert the condition
-    if (isCallableDescriptor)
+    if (contains.isCallable)
         pushStack(container);
     pushStack(value);
-    startCall(contains, isCallableDescriptor ? 2 : 1);
+    startCall(contains.method, 1 + contains.extraArgs());
 }
 
 void
@@ -703,20 +700,19 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<IdentInstr*> instr)
 bool Interpreter::getIterator(MutableTraced<Value> resultOut)
 {
     Stack<Value> target(popStack());
-    Stack<Value> method;
-    bool isCallableDescriptor;
+    StackMethodAttr method;
 
     // Call __iter__ method to get iterator if it's present.
-    if (getSpecialMethodAttr(target, Names::__iter__, method,
-                             isCallableDescriptor))
+    if (getSpecialMethodAttr(target, Names::__iter__, method))
     {
-        if (isCallableDescriptor)
+        if (method.isCallable)
             pushStack(target);
-        return call(method, isCallableDescriptor ? 1 : 0, resultOut);
+        return call(method.method, method.extraArgs(), resultOut);
     }
 
     // Otherwise create a SequenceIterator wrapping the target iterable.
-    if (!getMethodAttr(target, Names::__getitem__, method, isCallableDescriptor))
+    // todo: add hasMethodAttr, or just hasAttr?
+    if (!getMethodAttr(target, Names::__getitem__, method))
     {
         resultOut = gc.create<TypeError>("Object not iterable");
         return false;
@@ -735,17 +731,16 @@ Interpreter::executeDestructureGeneric(unsigned expected)
 
     Stack<Value> iterator(result);
     Stack<Value> type(iterator.type());
-    Stack<Value> nextMethod;
-    bool isCallableDescriptor;
-    if (!getMethodAttr(type, Names::__next__, nextMethod, isCallableDescriptor)) {
+    StackMethodAttr nextMethod;
+    if (!getMethodAttr(type, Names::__next__, nextMethod)) {
         return raiseTypeError(string("Argument is not iterable: ") +
                               type.as<Class>()->name());
     }
 
     for (size_t count = 0; count < expected; count++) {
-        if (isCallableDescriptor)
+        if (nextMethod.isCallable)
             pushStack(iterator);
-        if (!call(nextMethod, isCallableDescriptor ? 1 : 0, result)) {
+        if (!call(nextMethod.method, nextMethod.extraArgs(), result)) {
             if (result.is<StopIteration>())
                 return raiseValueError("too few values to unpack");
             return raiseException(result);
@@ -753,9 +748,9 @@ Interpreter::executeDestructureGeneric(unsigned expected)
         pushStack(result);
     }
 
-    if (isCallableDescriptor)
+    if (nextMethod.isCallable)
         pushStack(iterator);
-    if (call(nextMethod, isCallableDescriptor ? 1 : 0, result))
+    if (call(nextMethod.method, nextMethod.extraArgs(), result))
         return raiseValueError("too many values to unpack");
     if (!result.is<StopIteration>())
         return raiseException(result);
@@ -1032,17 +1027,14 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
 }
 
 bool
-Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
-                                    bool& isCallableDescriptor)
+Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& method)
 {
     Stack<Value> update(popStack());
     Stack<Value> value(popStack());
 
     Stack<Value> type(value.type());
-    if (!getMethodAttr(type, Names::augAssignMethod[op], method,
-                       isCallableDescriptor) &&
-        !getMethodAttr(type, Names::binMethod[op], method,
-                       isCallableDescriptor))
+    if (!getMethodAttr(type, Names::augAssignMethod[op], method) &&
+        !getMethodAttr(type, Names::binMethod[op], method))
     {
         string message = "unsupported operand type(s) for augmented assignment";
         pushStack(gc.create<TypeError>(message));
@@ -1050,11 +1042,11 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, MutableTraced<Value> method,
         return false;
     }
 
-    if (isCallableDescriptor)
+    if (method.isCallable)
         pushStack(value);
     pushStack(update);
     Stack<Value> result;
-    bool ok = call(method, isCallableDescriptor ? 2 : 1, result);
+    bool ok = call(method.method, 1 + method.extraArgs(), result);
     pushStack(result);
     if (!ok)
         raiseException();
@@ -1080,9 +1072,8 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
     Stack<Value> left(peekStack(1));
 
     // Find the method to call and execute it.
-    Stack<Value> method;
-    bool isCallableDescriptor;
-    if (!executeAugAssignUpdate(op, method, isCallableDescriptor))
+    StackMethodAttr method;
+    if (!executeAugAssignUpdate(op, method))
         return;
 
     // Check stub count before attempting to optimise.
@@ -1103,12 +1094,12 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
         stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
     } else if (left.type()->isFinal() && right.type()->isFinal()) {
         // If both arguments are instances of builtin classes, cache the method.
-        assert(isCallableDescriptor);
+        assert(method.isCallable);
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
         auto code = Instr_BinaryOpBuiltin;
         stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(),
-                                               lc, rc, method);
+                                               lc, rc, method.method);
     }
 
     if (stub)

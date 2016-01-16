@@ -175,15 +175,29 @@ template <typename T>
     return cls;
 }
 
+// Abstraction for the result of looking up a method attribute.
+//
+// If the attribute is a descriptor but is a Callable (i.e. a Fuction or a
+// Native), then don't call the descriptor's __get__ method which will create a
+// new Method object.  Instead return the Callable as-is and set the isCallable
+// flag.  We use this to skip the unnecessary object creation.
+struct StackMethodAttr
+{
+    Stack<Value> method;
+    bool isCallable;
+
+    unsigned extraArgs() const {
+        return isCallable ? 1 : 0;
+    }
+};
+
 // Full attribute accessors including descriptors
 extern bool getAttr(Traced<Value> value, Name name,
                     MutableTraced<Value> resultOut);
 extern bool getMethodAttr(Traced<Value> value, Name name,
-                          MutableTraced<Value> resultOut,
-                          bool& isCallableDescriptor);
+                          StackMethodAttr& resultOut);
 extern bool getSpecialMethodAttr(Traced<Value> value, Name name,
-                                 MutableTraced<Value> resultOut,
-                                 bool& isCallableDescriptor);
+                                 StackMethodAttr& resultOut);
 extern bool setAttr(Traced<Object*> obj, Name name, Traced<Value> value,
                     MutableTraced<Value> resultOut);
 extern bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value>

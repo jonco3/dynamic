@@ -599,23 +599,23 @@ bool getAttr(Traced<Value> value, Name name, MutableTraced<Value> resultOut)
  * don't call its __get__ method but indicate this by setting
  * isCallableDescriptor.
  */
-bool getMethodAttr(Traced<Value> value, Name name,
-                   MutableTraced<Value> resultOut, bool& isCallableDescriptor)
+bool getMethodAttr(Traced<Value> value, Name name, StackMethodAttr& resultOut)
 {
     bool isDescriptor;
-    if (!getAttrOrDescriptor(value, name, resultOut, isDescriptor))
+    if (!getAttrOrDescriptor(value, name, resultOut.method, isDescriptor))
         return false;
 
     if (!isDescriptor) {
-        isCallableDescriptor = false;
+        resultOut.isCallable = false;
         return true;
     }
 
-    isCallableDescriptor = resultOut.is<Function>() || resultOut.is<Native>();
-    if (isCallableDescriptor)
+    resultOut.isCallable = resultOut.method.is<Function>() ||
+                           resultOut.method.is<Native>();
+    if (resultOut.isCallable)
         return true;
 
-    return getDescriptorValue(value, resultOut);
+    return getDescriptorValue(value, resultOut.method);
 }
 
 /*
@@ -623,12 +623,11 @@ bool getMethodAttr(Traced<Value> value, Name name,
  * the object for these.
  */
 bool getSpecialMethodAttr(Traced<Value> value, Name name,
-                          MutableTraced<Value> resultOut,
-                          bool& isCallableDescriptor)
+                          StackMethodAttr& resultOut)
 {
     assert(isSpecialName(name));
     Stack<Value> type(value.type());
-    return getMethodAttr(type, name, resultOut, isCallableDescriptor);
+    return getMethodAttr(type, name, resultOut);
 }
 
 /*
@@ -693,4 +692,3 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
     interp->pushStack(obj);
     return interp->call(func, 2, resultOut);
 }
-
