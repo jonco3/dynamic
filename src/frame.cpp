@@ -78,3 +78,15 @@ void GCTraits<Frame>::trace(Tracer& t, Frame* frame)
 {
     frame->traceChildren(t);
 }
+
+#ifdef DEBUG
+void GCTraits<Frame>::checkValid(const Frame& frame)
+{
+    if (frame.block())
+        frame.block()->checkValid();
+    if (frame.env())
+        frame.env()->checkValid();
+    if (frame.exceptionHandlers())
+        frame.exceptionHandlers()->checkValid();
+}
+#endif

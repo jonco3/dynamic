@@ -28,7 +28,7 @@ struct GCTraits<Frame>
 {
     static void trace(Tracer& t, Frame* frame);
 #ifdef DEBUG
-    static void checkValid(const Frame& frame) {}
+    static void checkValid(const Frame& frame);
 #endif
 };
 
