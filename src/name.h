@@ -45,6 +45,8 @@ using namespace std;
     name(iter)                                                                \
     name(SequenceIterator)                                                    \
     name(iterableToList)                                                      \
+    name(inUsingIteration)                                                    \
+    name(inUsingSubscript)
 
 struct InternedString;
 struct String;

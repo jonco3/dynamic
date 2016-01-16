@@ -438,14 +438,6 @@ static bool generic_getitem(TracedVector<Value> args,
 }
 
 template <class T>
-static bool generic_contains(TracedVector<Value> args,
-                             MutableTraced<Value> resultOut)
-{
-    resultOut = Boolean::get(args[0].as<T>()->contains(args[1]));
-    return true;
-}
-
-template <class T>
 static bool generic_iter(TracedVector<Value> args,
                          MutableTraced<Value> resultOut)
 {
@@ -484,7 +476,6 @@ static void generic_initNatives(Traced<Class*> cls)
     Stack<Value> value;
     initNativeMethod(cls, "__len__", generic_len<T>, 1);
     initNativeMethod(cls, "__getitem__", generic_getitem<T>, 2);
-    initNativeMethod(cls, "__contains__", generic_contains<T>, 2);
     initNativeMethod(cls, "__iter__", generic_iter<T>, 1);
     // __eq__ and __ne__ are supplied by lib/internal.py
 }

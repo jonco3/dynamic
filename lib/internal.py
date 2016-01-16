@@ -25,6 +25,8 @@ def tupleNotEqual(a, b):
     return not tupleEqual(a, b)
 
 def dictEqual(a, b):
+    if not isinstance(b, dict):
+        return False
     if len(a) != len(b):
         return False
     for key in a.keys():
@@ -66,3 +68,19 @@ def iterableToList(iterable):
     for x in iterable:
         result.append(x)
     return result
+
+def inUsingIteration(iterable, object):
+    for x in iterable:
+        if x == object:
+            return True
+    return False
+
+def inUsingSubscript(container, object):
+    i = 0
+    try:
+        while True:
+            if container[i] == object:
+                return True
+            i += 1
+    except IndexError:
+        return False

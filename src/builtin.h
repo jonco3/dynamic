@@ -10,6 +10,8 @@ extern GlobalRoot<Object*> Builtin;
 // Self-hosted classes and functions.
 extern GlobalRoot<Class*> SequenceIterator;
 extern GlobalRoot<Function*> IterableToList;
+extern GlobalRoot<Function*> InUsingIteration;
+extern GlobalRoot<Function*> InUsingSubscript;
 
 extern bool builtinsInitialised;
 

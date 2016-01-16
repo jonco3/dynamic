@@ -475,23 +475,36 @@ Interpreter::executeInstr_In(Traced<Instr*> instr)
     // todo: implement this
     // https://docs.python.org/3/reference/expressions.html#membership-test-details
 
-    Stack<Object*> container(popStack().toObject());
+    Stack<Value> container(popStack());
     Stack<Value> value(popStack());
 
-    Stack<Value> type(container->type());
-    StackMethodAttr contains;
-    if (!getMethodAttr(type, Names::__contains__, contains))
-    {
-        pushStack(gc.create<TypeError>("Argument is not iterable"));
-        raiseException();
+    StackMethodAttr method;
+    if (getSpecialMethodAttr(container, Names::__contains__, method)) {
+        if (method.isCallable)
+            pushStack(container);
+        pushStack(value);
+        startCall(method.method, 1 + method.extraArgs());
         return;
     }
 
-    // todo: invert the condition
-    if (contains.isCallable)
+    // todo: hasAttr
+    if (getSpecialMethodAttr(container, Names::__iter__, method)) {
         pushStack(container);
-    pushStack(value);
-    startCall(contains.method, 1 + contains.extraArgs());
+        pushStack(value);
+        startCall(InUsingIteration, 2);
+        return;
+    }
+
+    // todo: hasAttr
+    if (getSpecialMethodAttr(container, Names::__getitem__, method)) {
+        pushStack(container);
+        pushStack(value);
+        startCall(InUsingSubscript, 2);
+        return;
+    }
+
+    pushStack(gc.create<TypeError>("Argument is not iterable"));
+    raiseException();
 }
 
 void
@@ -1021,6 +1034,8 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
         auto code = InstrCode(Instr_CompareOpFloat_LT + op);
         stub = gc.create<CompareOpStubInstr>(code, currentInstr());
     }
+
+    // todo: optimise for builtin classes
 
     if (stub)
         insertStubInstr(instr, stub);
