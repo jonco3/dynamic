@@ -143,16 +143,6 @@ void Tuple::traceChildren(Tracer& t)
         gc.trace(t, &elements_[i]);
 }
 
-inline bool Tuple::contains(Traced<Value> value)
-{
-    for (size_t i = 0; i < size_; i++) {
-        if (elements_[i] == value)
-            return true;
-    }
-
-    return false;
-}
-
 template <typename... Args>
 /* static */ List* List::get(Args&&... args)
 {
@@ -219,11 +209,6 @@ void List::print(ostream& s) const
 void List::traceChildren(Tracer& t)
 {
     gc.traceVector(t, &elements_);
-}
-
-bool List::contains(Traced<Value> value)
-{
-    return find(elements_.begin(), elements_.end(), value) != elements_.end();
 }
 
 static bool raiseOutOfRange(MutableTraced<Value> resultOut)

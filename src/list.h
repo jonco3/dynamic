@@ -23,7 +23,6 @@ struct Tuple : public Object
     void traceChildren(Tracer& t) override;
 
     int32_t len() { return size_; }
-    bool contains(Traced<Value> value);
     Value getitem(size_t index) {
         assert(index < size_);
         return elements_[index];
@@ -61,7 +60,6 @@ struct List : public Object
     void traceChildren(Tracer& t) override;
 
     int32_t len() { return (int32_t)elements_.size(); }
-    bool contains(Traced<Value> value);
     Value getitem(size_t index) { return elements_.at(index); }
     const HeapVector<Value>& elements() const { return elements_; }
 
