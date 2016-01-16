@@ -540,7 +540,9 @@ struct ByteCompiler : public SyntaxVisitor
             break;
 
           default:
+            incStackDepth(3);
             emit<Instr_GetAttr>(id);
+            decStackDepth(3);
             break;
         }
     }
