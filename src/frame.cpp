@@ -12,6 +12,10 @@ void Env::init()
     InitialLayout.init(Object::InitialLayout);
 }
 
+Env::Env()
+  : Object(ObjectClass, Layout::Empty), parent_(nullptr)
+{}
+
 Env::Env(Traced<Env*> parent, Traced<Layout*> layout)
   : Object(ObjectClass, layout), parent_(parent)
 {}

@@ -92,7 +92,8 @@ for c in builtinClasses:
 # locals
 def locals1():
     return locals()
-assert locals1() == {}
+#assert locals1() == {}
+assert len(locals1().keys()) == 0
 
 def locals2():
     a = 1
@@ -120,6 +121,7 @@ def locals4():
 x = locals4()
 assert x['a'] == 1
 assert x['b'] == 2
+assert 'x' in x
 
 # globals
 foo = 1

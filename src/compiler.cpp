@@ -6,6 +6,7 @@
 #include "instr.h"
 #include "parser.h"
 #include "repr.h"
+#include "reflect.h"
 #include "utils.h"
 
 #ifdef DEBUG
@@ -45,7 +46,7 @@ struct ByteCompiler : public SyntaxVisitor
         assert(breakInstrs.empty());
     }
 
-    Block* buildModule(Traced<Object*> globals, const SyntaxBlock* s) {
+    Block* buildModule(Traced<Env*> globals, const SyntaxBlock* s) {
         assert(globals);
         assert(!parent);
         kind = Kind::Module;
@@ -63,7 +64,7 @@ struct ByteCompiler : public SyntaxVisitor
     {
         assert(parent);
         kind = Kind::FunctionBody;
-        this->parent = parent;
+        this->parent = parent->block;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
@@ -81,7 +82,7 @@ struct ByteCompiler : public SyntaxVisitor
                        const Syntax& s) {
         assert(parent);
         kind = Kind::Lambda;
-        this->parent = parent;
+        this->parent = parent->block;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
@@ -94,7 +95,7 @@ struct ByteCompiler : public SyntaxVisitor
     Block* buildClass(ByteCompiler* parent, Name id, const Syntax& s) {
         assert(parent);
         kind = Kind::ClassBlock;
-        this->parent = parent;
+        this->parent = parent->block;
         topLevel = parent->topLevel;
         layout = layout->addName(Names::__bases__);
         useLexicalEnv = true;
@@ -112,7 +113,7 @@ struct ByteCompiler : public SyntaxVisitor
     {
         assert(parent);
         kind = Kind::Generator;
-        this->parent = parent;
+        this->parent = parent->block;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
@@ -128,10 +129,52 @@ struct ByteCompiler : public SyntaxVisitor
     Block* buildListComp(ByteCompiler* parent, const SyntaxListComp& s) {
         assert(parent);
         kind = Kind::ListComp;
-        this->parent = parent;
+        this->parent = parent->block;
         topLevel = parent->topLevel;
         layout = layout->addName(Names::listCompResult);
         build(*s.expr, 0);
+        emit<Instr_Return>();
+        log(block);
+        return block;
+    }
+
+    Block* buildEval(Traced<Env*> globals, Traced<Env*> locals,
+                     const Syntax* s) {
+        assert(globals && locals);
+
+        // todo: this is a hack to create a setup where we have the globals in a
+        // separate environements both above the code being compiled
+        Stack<Layout*> blockLayout(globals->layout());
+        parent = gc.create<Block>(nullptr, globals, blockLayout, 0, true);
+
+        useLexicalEnv = true;
+        layout = locals->layout();
+        kind = Kind::Eval;
+        topLevel = globals;
+
+        build(*s, 0, locals);
+        emit<Instr_Return>();
+        log(block);
+        return block;
+    }
+
+    Block* buildExec(Traced<Env*> globals, Traced<Env*> locals,
+                     const Syntax* s) {
+        assert(globals && locals);
+
+        // todo: this is a hack to create a setup where we have the globals in a
+        // separate environements both above the code being compiled
+        Stack<Layout*> blockLayout(globals->layout());
+        parent = gc.create<Block>(nullptr, globals, blockLayout, 0, true);
+
+        useLexicalEnv = true;
+        layout = locals->layout();
+        kind = Kind::Exec;
+        topLevel = globals;
+
+        build(*s, 0, locals);
+        emit<Instr_Pop>();
+        emit<Instr_Const>(None);
         emit<Instr_Return>();
         log(block);
         return block;
@@ -144,7 +187,9 @@ struct ByteCompiler : public SyntaxVisitor
         Lambda,
         ClassBlock,
         Generator,
-        ListComp
+        ListComp,
+        Exec,
+        Eval
     };
 
     enum class Context {
@@ -156,8 +201,8 @@ struct ByteCompiler : public SyntaxVisitor
     };
 
     Kind kind;
-    ByteCompiler* parent;
-    Root<Object*> topLevel;
+    Root<Block*> parent;
+    Root<Env*> topLevel;
     Root<Layout*> layout;
     Root<Object*> defs;
     vector<Name> globals;
@@ -227,28 +272,38 @@ struct ByteCompiler : public SyntaxVisitor
 #endif
     }
 
-    void build(const Syntax& s, unsigned argCount) {
+    void build(const Syntax& s, unsigned argCount, Traced<Env*> localEnv = nullptr) {
         assert(!block);
         assert(topLevel);
         assert(stackDepth == 0);
-        assert(!parent || kind == Kind::ListComp || layout->slotCount() == argCount);
+        assert(!parent || kind == Kind::ListComp ||
+               kind == Kind::Eval || kind == Kind::Exec ||
+               layout->slotCount() == argCount);
         bool hasNestedFuctions;
         defs = FindDefinitions(s, layout, globals, hasNestedFuctions);
         useLexicalEnv = useLexicalEnv || hasNestedFuctions;
-        if (!parent)
+        if (kind == Kind::Module) {
+            assert(!parent);
             topLevel->extend(layout);
+        }
         layout = defs->layout();
         assert(layout->slotCount() >= argCount);
-        block = gc.create<Block>(topLevel, layout, argCount, useLexicalEnv);
+        block = gc.create<Block>(parent, topLevel, layout, argCount,
+                                 useLexicalEnv);
+
         if (parent) {
             if (useLexicalEnv) {
-                emit<Instr_CreateEnv>();
+                if (localEnv)
+                    emit<Instr_SetEnv>(localEnv);
+                else
+                    emit<Instr_CreateEnv>();
                 incStackDepth(argCount);
             } else {
                 emit<Instr_InitStackLocals>();
                 incStackDepth(layout->slotCount());
             }
         }
+
         if (kind == Kind::Generator) {
             emit<Instr_StartGenerator>();
             emit<Instr_Pop>();
@@ -458,18 +513,19 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     bool lookupLexical(Name name, unsigned& frameOut) {
+        // todo: this looks wrong
         if (contains(globals, name))
             return false;
 
         int frame = 0;
-        ByteCompiler* bc = useLexicalEnv ? this : parent;
-        while (bc && bc->parent) {
-            if (bc->layout->hasName(name)) {
+        Stack<Block*> block(useLexicalEnv ? this->block : parent);
+        while (block && block->parent()) {
+            if (block->layout()->hasName(name)) {
                 frameOut = frame;
                 return true;
             }
             ++frame;
-            bc = bc->parent;
+            block = block->parent();
         }
         return false;
     }
@@ -1029,14 +1085,79 @@ struct ByteCompiler : public SyntaxVisitor
     }
 };
 
-void CompileModule(const Input& input, Traced<Object*> globalsArg,
-                   MutableTraced<Block*> blockOut)
+static void CreateSyntaxError(const ParseError& e,
+                              MutableTraced<Value> resultOut)
 {
+    ostringstream s;
+    s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
+    resultOut = gc.create<SyntaxError>(s.str());
+}
+
+bool CompileModule(const Input& input, Traced<Env*> globalsArg,
+                   MutableTraced<Value> resultOut)
+{
+    Stack<Env*> globals(globalsArg);
+    if (!globals)
+        globals = createTopLevel();
+
     SyntaxParser parser;
     parser.start(input);
-    unique_ptr<SyntaxBlock> syntax(parser.parseModule());
-    Stack<Object*> globals(globalsArg);
-    if (globals->isNone())
-        globals = createTopLevel();
-    blockOut = ByteCompiler().buildModule(globals, syntax.get());
+    try {
+        unique_ptr<SyntaxBlock> syntax(parser.parseModule());
+        Stack<Block*> block(ByteCompiler().buildModule(globals, syntax.get()));
+        resultOut = gc.create<CodeObject>(block);
+    } catch (const ParseError& e) {
+        CreateSyntaxError(e, resultOut);
+        return false;
+    }
+
+    return true;
+}
+
+bool CompileEval(const Input& input, Traced<Env*> globals,
+                 Traced<Env*> locals, MutableTraced<Value> resultOut)
+{
+    assert(globals);
+    assert(locals);
+
+    SyntaxParser parser;
+    parser.start(input);
+    try {
+        unique_ptr<Syntax> syntax(parser.parseExpr());
+        Stack<Block*> block;
+        block = ByteCompiler().buildEval(globals, locals, syntax.get());
+        vector<Name> paramNames;
+        Stack<FunctionInfo*> info(gc.create<FunctionInfo>(paramNames, block));
+        resultOut = gc.create<Function>(Names::evalFuncName, info,
+                                        EmptyValueArray, locals);
+    } catch (const ParseError& e) {
+        CreateSyntaxError(e, resultOut);
+        return false;
+    }
+
+    return true;
+}
+
+bool CompileExec(const Input& input, Traced<Env*> globals,
+                 Traced<Env*> locals, MutableTraced<Value> resultOut)
+{
+    assert(globals);
+    assert(locals);
+
+    SyntaxParser parser;
+    parser.start(input);
+    try {
+        unique_ptr<Syntax> syntax(parser.parseModule());
+        Stack<Block*> block;
+        block = ByteCompiler().buildExec(globals, locals, syntax.get());
+        vector<Name> paramNames;
+        Stack<FunctionInfo*> info(gc.create<FunctionInfo>(paramNames, block));
+        resultOut = gc.create<Function>(Names::evalFuncName, info,
+                                        EmptyValueArray, locals);
+    } catch (const ParseError& e) {
+        CreateSyntaxError(e, resultOut);
+        return false;
+    }
+
+    return true;
 }

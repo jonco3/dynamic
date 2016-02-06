@@ -455,6 +455,20 @@ Interpreter::executeInstr_CreateEnv(Traced<Instr*> instr)
 }
 
 void
+Interpreter::executeInstr_SetEnv(Traced<ValueInstr*> instr)
+{
+    // Set the current frame's environment, used for eval/exec with supplied
+    // locals.
+
+    Frame* frame = getFrame();
+    assert(!frame->env());
+    popStack();  // Ignore parent env.
+    Stack<Env*> env(instr->value().as<Env>());
+    assert(frame->block()->argCount() == 0);
+    setFrameEnv(env);
+}
+
+void
 Interpreter::executeInstr_InitStackLocals(Traced<Instr*> instr)
 {
     AutoAssertNoGC nogc;

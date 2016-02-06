@@ -15,11 +15,12 @@ struct Env : public Object
     static GlobalRoot<Layout*> InitialLayout;
     static void init();
 
+    Env(); // a global environment
     Env(Traced<Env*> parent, Traced<Layout*> layout);
 
     Env* parent() const { return parent_; }
 
-    virtual void traceChildren(Tracer& t) override;
+    void traceChildren(Tracer& t) override;
 
   private:
     Heap<Env*> parent_;

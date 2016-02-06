@@ -29,10 +29,11 @@ void GeneratorIter::init()
     ObjectClass.init(Class::createNative("GeneratorIterator", nullptr));
     initNativeMethod(ObjectClass, "__iter__", generatorIter_iter, 1);
 
-    Stack<Object*> global;
+    Stack<Env*> global;
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName(Names::self);
-    Stack<Block*> block(gc.create<Block>(global, layout, 1, true));
+    Stack<Block*> parent;
+    Stack<Block*> block(gc.create<Block>(parent, global, layout, 1, true));
     block->append<Instr_CreateEnv>(); // todo: eventually we can remove this
     block->append<Instr_ResumeGenerator>();
     block->append<Instr_Return>();

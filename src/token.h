@@ -39,7 +39,6 @@ using namespace std;
     token(Import)                                                             \
     token(Print)                                                              \
     token(Class)                                                              \
-    token(Exec)                                                               \
     token(In)                                                                 \
     token(NotIn)                                                              \
     token(Raise)                                                              \

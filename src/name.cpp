@@ -26,6 +26,10 @@ Name Names::augAssignMethod[CountBinaryOp];
 Name Names::compareMethod[CountCompareOp];
 Name Names::compareMethodReflected[CountCompareOp];
 Name Names::listCompResult;
+Name Names::evalFuncName;
+Name Names::execFuncName;
+
+vector<Name> EmptyNameVector;
 
 Name internString(const string& s)
 {
@@ -35,6 +39,8 @@ Name internString(const string& s)
 void initNames()
 {
     assert(!InternedStrings); // Stop Name being used before map initialised.
+    assert(String::ObjectClass);
+
     InternedStrings.init(gc.create<InternedStringMap>());
 
 #define init_name(name)                                                       \
@@ -62,12 +68,17 @@ void initNames()
 #undef init_name
 
     Names::listCompResult = internString("%result");
+    Names::evalFuncName = internString("<eval>");
+    Names::execFuncName = internString("<exec>");
 }
 
 void InternedStringMap::traceChildren(Tracer& t)
 {
-    for (auto i : strings_)
+    for (auto i : strings_) {
+        String* s = i.second;
+        assert(s->type());
         gc.trace(t, &i.second);
+    }
 }
 
 InternedString* InternedStringMap::get(const string& s)
@@ -77,11 +88,14 @@ InternedString* InternedStringMap::get(const string& s)
     auto i = strings_.find(s);
     if (i != strings_.end()) {
         assert(i->second->value() == s);
+        String* s = i->second;
+        assert(s->type());
         return i->second;
     }
 
     Stack<InternedString*> interned;
     interned = static_cast<InternedString*>(String::get(s));
+    assert(interned->type());
     strings_[s] = interned;
     assert(strings_.find(s) != strings_.end());
     return interned;

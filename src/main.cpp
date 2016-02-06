@@ -60,12 +60,14 @@ void maybeAbortTests(string what)
 static int runRepl()
 {
     char* line;
-    Stack<Object*> topLevel(createTopLevel());
+    Stack<Env*> topLevel(createTopLevel());
     while (line = readOneLine(), line != NULL) {
         Stack<Value> result;
-        bool ok = runModule(line, "<none>", topLevel, &result);
+        bool ok = runModule(line, "<none>", topLevel, result);
         if (ok)
             cout << result << endl;
+        else
+            printException(result);
     }
     cout << endl;
     return EX_OK;
@@ -73,7 +75,7 @@ static int runRepl()
 
 static int runProgram(const char* filename, int arg_count, const char* args[])
 {
-    Stack<Object*> topLevel(createTopLevel());
+    Stack<Env*> topLevel(createTopLevel());
     RootVector<Value> argStrings(arg_count);
     for (int i = 0 ; i < arg_count ; ++i)
         argStrings[i] = gc.create<String>(args[i]);
@@ -92,9 +94,10 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
 
 static int runExprs(int count, const char* args[])
 {
+    Stack<Env*> globals;
     for (int i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
-        if (!runModule(args[i], "<none>", None))
+        if (!runModule(args[i], "<none>", globals))
             return EX_SOFTWARE;
     }
 

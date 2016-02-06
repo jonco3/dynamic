@@ -3,9 +3,10 @@
 
 #include "object.h"
 
+struct Env;
 struct Function;
 
-extern GlobalRoot<Object*> Builtin;
+extern GlobalRoot<Env*> Builtin;
 
 // Self-hosted classes and functions.
 extern GlobalRoot<Class*> SequenceIterator;

@@ -143,7 +143,15 @@ GlobalRoot<String*> String::EmptyString;
 
 void String::init()
 {
-    ObjectClass.init(Class::createNative("str", str_new, 2));
+    ObjectClass.init(gc.create<Class>("str",
+                                      Object::ObjectClass,
+                                      Class::InitialLayout,
+                                      true));
+
+    initNames();
+
+    // Can't call Class::createNative before initNames().
+    initNativeMethod(ObjectClass, "__new__", str_new, 1, 2);
 
     initNativeMethod(ObjectClass, "__len__", str_len, 1);
     initNativeMethod(ObjectClass, "__getitem__", str_getitem, 2);
@@ -169,6 +177,7 @@ String::String(const string& v)
 String::String(Traced<Class*> cls)
   : Object(cls)
 {
+    assert(cls);
     assert(cls->isDerivedFrom(ObjectClass));
 }
 

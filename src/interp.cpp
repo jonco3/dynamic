@@ -52,8 +52,9 @@ Interpreter::Interpreter()
 void Interpreter::init()
 {
     // Create a block that will cause the interpreter loop to exit.
-    Stack<Object*> global;
-    AbortTrampoline.init(gc.create<Block>(global, Env::InitialLayout,
+    Stack<Env*> global;
+    Stack<Block*> parent;
+    AbortTrampoline.init(gc. create<Block>(parent, global, Env::InitialLayout,
                                           1, false));
     AbortTrampoline->append<Instr_Abort>();
     AbortTrampoline->setMaxStackDepth(1);
@@ -82,15 +83,14 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
     }
 #endif
 
-    assert(stackPos() == 0);
-    assert(frames.empty());
-    pushFrame(block, 0, 0);
+    AutoSetAndRestoreValue<InstrThunk*> saveInstrp(instrp, nullptr);
+    pushFrame(block, stackPos(), 0);
 #ifdef DEBUG
     unsigned initialPos = stackPos();
 #endif
     bool ok = run(resultOut);
     assert(stackPos() == initialPos);
-    stack.resize(0);
+    stack.resize(stackPos());
     return ok;
 }
 

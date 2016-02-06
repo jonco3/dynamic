@@ -339,6 +339,7 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
     unique_ptr<Syntax> parseSimpleStatement();
     unique_ptr<Syntax> parseCompoundStatement();
     unique_ptr<SyntaxBlock> parseModule();
+    unique_ptr<Syntax> parseExpr();
 
   private:
     Tokenizer tokenizer;
@@ -346,7 +347,6 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
     bool isGenerator;
 
     bool maybeExprToken();
-    unique_ptr<Syntax> parseExpr();
     unique_ptr<Syntax> parseExprOrExprList();
     unique_ptr<Syntax> parseAssignSource();
     unique_ptr<SyntaxBlock> parseBlock();

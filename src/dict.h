@@ -27,6 +27,7 @@ struct Dict : public Object
     bool getitem(Traced<Value> key, MutableTraced<Value> resultOut) const;
     void setitem(Traced<Value> key, Traced<Value> value);
     bool delitem(Traced<Value> key, MutableTraced<Value> resultOut);
+    void clear();
     Value keys() const;
     Value values() const;
 
@@ -41,7 +42,11 @@ struct Dict : public Object
         bool operator()(Value a, Value b) const;
     };
 
-    unordered_map<Value, Heap<Value>, ValueHash, ValuesEqual> entries_;
+    using Map = unordered_map<Value, Heap<Value>, ValueHash, ValuesEqual>;
+    Map entries_;
+
+  public:
+    const Map& entries() { return entries_; }
 };
 
 // An adaptor to access the slots of an object as a dict.
@@ -63,6 +68,7 @@ struct DictView : public Object
     bool delitem(Traced<Value> key, MutableTraced<Value> resultOut);
     Value keys() const;
     Value values() const;
+    Object* target() const { return object_; }
 
   private:
     Heap<Object*> object_;

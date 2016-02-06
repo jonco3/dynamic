@@ -35,13 +35,11 @@ void init1()
 {
     Layout::init();
     initObject();
-    //initNames();
     initCallable();
     Env::init();
     Integer::init();
     Boolean::init();
     Float::init();
-    String::init();
     Exception::init();
     initList();
     Slice::init();
@@ -87,32 +85,30 @@ void printException(Value value)
     cerr << ex->fullMessage() << endl;
 }
 
-Object* createTopLevel()
+Env* createTopLevel()
 {
-    Stack<Object*> topLevel(Object::create());
+    // todo: make the global object the end of the Env chain
+    Stack<Env*> topLevel(gc.create<Env>());
     topLevel->setAttr(Names::__builtins__, Builtin);
     return topLevel;
 }
 
-bool runModule(string text, string filename, Traced<Object*> globals,
-               Stack<Value>* maybeResultOut)
+bool runModule(string text, string filename, Traced<Env*> globals,
+               MutableTraced<Value> resultOut)
+{
+    if (!CompileModule(Input(text, filename), globals, resultOut))
+        return false;
+
+    Stack<Block*> block(resultOut.as<CodeObject>()->block());
+    return interp->exec(block, resultOut);
+}
+
+bool runModule(string text, string filename, Traced<Env*> globals)
 {
     Stack<Value> result;
-    bool ok;
-    try {
-        Stack<Block*> block;
-        CompileModule(Input(text, filename), globals, block);
-        ok = interp->exec(block, result);
-    } catch (const ParseError& e) {
-        ostringstream s;
-        s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
-        result = gc.create<SyntaxError>(s.str());
-        ok = false;
-    }
+    bool ok = runModule(text, filename, globals, result);
 
     if (!ok)
         printException(result);
-    if (maybeResultOut)
-        *maybeResultOut = result;
     return ok;
 }

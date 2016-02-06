@@ -17,14 +17,15 @@
 #include <iostream>
 #include <sstream>
 
-GlobalRoot<Object*> Builtin;
+GlobalRoot<Env*> Builtin;
 GlobalRoot<Class*> SequenceIterator;
 GlobalRoot<Function*> IterableToList;
 GlobalRoot<Function*> InUsingIteration;
 GlobalRoot<Function*> InUsingSubscript;
 bool builtinsInitialised = false;
 
-static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool builtin_hasattr(TracedVector<Value> args,
+                            MutableTraced<Value> resultOut)
 {
     Object* n = args[1].toObject();
     if (!n->is<String>()) {
@@ -37,7 +38,8 @@ static bool builtin_hasattr(TracedVector<Value> args, MutableTraced<Value> resul
     return true;
 }
 
-static bool builtin_isinstance(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool builtin_isinstance(TracedVector<Value> args,
+                               MutableTraced<Value> resultOut)
 {
     // todo: support tuples etc for classInfo
     Stack<Class*> cls(args[1].as<Class>());
@@ -45,7 +47,8 @@ static bool builtin_isinstance(TracedVector<Value> args, MutableTraced<Value> re
     return true;
 }
 
-static bool builtin_parse(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool builtin_parse(TracedVector<Value> args,
+                          MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
         return false;
@@ -65,32 +68,24 @@ static bool builtin_parse(TracedVector<Value> args, MutableTraced<Value> resultO
     return true;
 }
 
-static bool builtin_compile(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool builtin_compile(TracedVector<Value> args,
+                            MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
         return false;
 
     string source = args[0].asObject()->as<String>()->value();
-    Stack<Block*> block;
-    try {
-        CompileModule(source, None, block);
-    } catch (const ParseError& e) {
-        SyntaxError* err = gc.create<SyntaxError>(e.what());
-        err->setPos(e.pos);
-        resultOut = err;
-        return false;
-    }
-
-    resultOut = gc.create<CodeObject>(block);
-    return true;
+    Stack<Env*> globals;
+    return CompileModule(source, globals, resultOut);
 }
 
 static Value make_builtin_iter()
 {
-    Stack<Object*> global;
+    Stack<Env*> global;
     Stack<Layout*> layout(Env::InitialLayout);
     layout = layout->addName(Names::iterable);
-    Stack<Block*> block(gc.create<Block>(global, layout, 1, false));
+    Stack<Block*> parent;
+    Stack<Block*> block(gc.create<Block>(parent, global, layout, 1, false));
     block->append<Instr_InitStackLocals>();
     block->append<Instr_GetIterator>();
     block->append<Instr_Return>();
@@ -100,7 +95,33 @@ static Value make_builtin_iter()
     return gc.create<Function>(Names::iter, info, EmptyValueArray, nullptr);
 }
 
-static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static Env* GetOrCreateLocals()
+{
+    Frame* frame = interp->getFrame();
+    Stack<Env*> env(frame->env());
+    if (env && frame->block()->createEnv())
+        return env;
+
+    // todo: this is a check to see if we're in global scope
+    if (!frame->block()->parent())
+        return frame->block()->global();
+
+    Stack<Layout*> layout(frame->block()->layout());
+    Stack<Env*> parent;
+    env = gc.create<Env>(parent, layout);
+    while (layout != Layout::Empty) {
+        unsigned index = layout->slotIndex();
+        Stack<Value> name(layout->name());
+        Stack<Value> value(interp->getStackLocal(index));
+        env->setSlot(index, value);
+        layout = layout->parent();
+    }
+
+    return env;
+}
+
+static bool builtin_locals(TracedVector<Value> args,
+                           MutableTraced<Value> resultOut)
 {
     // "Update and return a dictionary representing the current local symbol
     //  table.
@@ -108,22 +129,13 @@ static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> result
     //  may not affect the values of local and free variables used by the
     //  interpreter."
 
-    Stack<Dict*> dict(gc.create<Dict>());
-    Frame* frame = interp->getFrame();
-    Stack<Layout*> layout(frame->block()->layout());
-    Stack<Env*> env(frame->env());
-    while (layout != Layout::Empty) {
-        unsigned index = layout->slotIndex();
-        Stack<Value> name(layout->name());
-        Stack<Value> value(env ? env->getSlot(index) : interp->getStackLocal(index));
-        dict->setitem(name, value);
-        layout = layout->parent();
-    }
-    resultOut = Value(dict);
+    Stack<Env*> env(GetOrCreateLocals());
+    resultOut = gc.create<DictView>(env);
     return true;
 }
 
-static bool builtin_globals(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool builtin_globals(TracedVector<Value> args,
+                            MutableTraced<Value> resultOut)
 {
     Stack<Object*> global(interp->getFrame()->block()->global());
     Stack<DictView*> dict(gc.create<DictView>(global));
@@ -131,9 +143,180 @@ static bool builtin_globals(TracedVector<Value> args, MutableTraced<Value> resul
     return true;
 }
 
+static Layout* CreateLayoutForDict(Traced<Dict*> dict)
+{
+    Stack<Layout*> layout(Layout::Empty);
+    for (const auto& i : dict->entries()) {
+        Stack<Value> key(i.first);
+        if (key.is<String>()) {
+            Name name = internString(key.as<String>()->value());
+            layout = layout->addName(name);
+        }
+    }
+    return layout;
+}
+
+static void SetAttrsFromDict(Traced<Dict*> dict, Traced<Object*> object)
+{
+    unsigned slot = 0;
+    for (const auto& i : dict->entries()) {
+        Stack<Value> key(i.first);
+        if (key.is<String>())
+            object->setSlot(slot++, i.second);
+    }
+}
+
+// todo: we create an Env object even for globals, which is currently not
+// required but it doesn't matter.
+static Env* DictToEnv(Traced<Value> arg, MutableTraced<Value> resultOut)
+{
+    if (arg.is<DictView>()) {
+        // todo: currently correct, should drive Env through DictView
+        return arg.as<DictView>()->target()->as<Env>();
+    }
+
+    if (!arg.is<Dict>()) {
+        resultOut = gc.create<TypeError>("eval() arg 2 must be a dict");
+        return nullptr;
+    }
+
+    Stack<Dict*> dict(arg.as<Dict>());
+    Stack<Layout*> layout(CreateLayoutForDict(dict));
+    Stack<Env*> parent;
+    Stack<Env*> result(gc.create<Env>(parent, layout));
+    SetAttrsFromDict(dict, result);
+    return result;
+}
+
+static void UpdateDictFromEnv(Traced<Value> arg, Traced<Env*> env)
+{
+    if (!arg.is<Dict>())
+        return;
+
+    Stack<Dict*> dict(arg.as<Dict>());
+    dict->clear();
+
+    Stack<Layout*> layout;
+    for (layout = env->layout();
+         layout != Layout::Empty;
+         layout = layout->parent())
+    {
+        Stack<Value> key(layout->name());
+        Stack<Value> value(env->getSlot(layout->slotIndex()));
+        dict->setitem(key, value);
+    }
+}
+
+static bool builtin_eval(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
+    Stack<Value> expression(args[0]);
+    if (!expression.is<String>()) {
+        resultOut = gc.create<TypeError>("eval() arg 1 must be a string");
+        // todo: support code objects
+        return false;
+    }
+
+    Stack<Env*> globals;
+    if (args.size() >= 2 && args[1].toObject() != None) {
+        globals = DictToEnv(args[1], resultOut);
+        if (!globals)
+            return false;
+    } else {
+        globals = interp->getFrame()->block()->global();
+    }
+
+    Stack<Env*> locals;
+    if (args.size() == 3) {
+        locals = DictToEnv(args[2], resultOut);
+        if (!locals)
+            return false;
+    } else {
+        locals = GetOrCreateLocals();
+    }
+
+    if (!globals->hasAttr(Names::__builtins__)) {
+        Stack<Object*> current(interp->getFrame()->block()->global());
+        Stack<Value> builtins(current->getAttr(Names::__builtins__));
+        globals->setAttr(Names::__builtins__, builtins);
+    }
+
+    const string& text = expression.as<String>()->value();
+    if (!CompileEval(Input(text, "<eval>"), globals, locals, resultOut))
+        return false;
+
+    Stack<Value> function(resultOut);
+    if (!interp->call(function, 0, resultOut))
+        return false;
+
+    if (args.size() >= 2 && args[1].toObject() != None)
+        UpdateDictFromEnv(args[1], globals);
+
+    if (args.size() == 3)
+        UpdateDictFromEnv(args[2], locals);
+
+    return true;
+}
+
+static bool builtin_exec(TracedVector<Value> args,
+                         MutableTraced<Value> resultOut)
+{
+    // todo:
+    // "Remember that at module level, globals and locals are the same
+    //  dictionary. If exec gets two separate objects as globals and locals, the
+    //  code will be executed as if it were embedded in a class definition."
+
+    Stack<Value> expression(args[0]);
+    if (!expression.is<String>()) {
+        resultOut = gc.create<TypeError>("exec() arg 1 must be a string");
+        // todo: support code objects
+        return false;
+    }
+
+    Stack<Env*> globals;
+    if (args.size() >= 2 && args[1].toObject() != None) {
+        globals = DictToEnv(args[1], resultOut);
+        if (!globals)
+            return false;
+    } else {
+        globals = interp->getFrame()->block()->global();
+    }
+
+    Stack<Env*> locals;
+    if (args.size() == 3) {
+        locals = DictToEnv(args[2], resultOut);
+        if (!locals)
+            return false;
+    } else {
+        locals = GetOrCreateLocals();
+    }
+
+    if (!globals->hasAttr(Names::__builtins__)) {
+        Stack<Object*> current(interp->getFrame()->block()->global());
+        Stack<Value> builtins(current->getAttr(Names::__builtins__));
+        globals->setAttr(Names::__builtins__, builtins);
+    }
+
+    const string& text = expression.as<String>()->value();
+    if (!CompileExec(Input(text, "<exec>"), globals, locals, resultOut))
+        return false;
+
+    Stack<Value> function(resultOut);
+    if (!interp->call(function, 0, resultOut))
+        return false;
+
+    if (args.size() >= 2 && args[1].toObject() != None)
+        UpdateDictFromEnv(args[1], globals);
+
+    if (args.size() == 3)
+        UpdateDictFromEnv(args[2], locals);
+
+    return true;
+}
+
 void initBuiltins(const string& libDir)
 {
-    Builtin.init(Object::create());
+    Builtin.init(gc.create<Env>());
     Stack<Value> value;
 
     // Functions
@@ -144,6 +327,8 @@ void initBuiltins(const string& libDir)
     value = make_builtin_iter(); initAttr(Builtin, "iter", value);
     initNativeMethod(Builtin, "locals", builtin_locals, 0);
     initNativeMethod(Builtin, "globals", builtin_globals, 0);
+    initNativeMethod(Builtin, "eval", builtin_eval, 1, 3);
+    initNativeMethod(Builtin, "exec", builtin_exec, 1, 3);
 
     // Constants
     initAttr(Builtin, "True", Boolean::True);
@@ -173,7 +358,7 @@ for_each_exception_class(set_exception_attr)
     if (!runModule(text, filename, Builtin))
         exit(1);
 
-    Stack<Object*> internals(createTopLevel());
+    Stack<Env*> internals(createTopLevel());
     filename = libDir + "/internal.py";
     text = readFile(filename);
     if (!runModule(text, filename, internals))

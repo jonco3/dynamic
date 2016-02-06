@@ -1,6 +1,7 @@
 #include "src/block.h"
 
 #include "src/compiler.h"
+#include "src/reflect.h"
 #include "src/repr.h"
 #include "src/singletons.h"
 #include "src/test.h"
@@ -13,9 +14,11 @@ static void testBuildModule(const string& input, const string& expected)
     AutoSetAndRestore asar(assertStackDepth, false);
 #endif
 
-    Stack<Block*> block;
-    CompileModule(input, None, block);
-    testEqual(repr(*block), expected);
+    Stack<Value> result;
+    Stack<Env*> globals; // todo: add Traced<T*> constructor from nullptr
+    bool ok = CompileModule(input, globals, result);
+    testTrue(ok);
+    testEqual(repr(*result.as<CodeObject>()->block()), expected);
 }
 
 testcase(block)

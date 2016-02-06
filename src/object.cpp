@@ -430,7 +430,7 @@ void initObject()
     Native::ObjectClass.init(gc.create<Class>("Native"));
     Function::ObjectClass.init(gc.create<Class>("function"));
 
-    initNames();
+    String::init();
 
     initNativeMethod(Object::ObjectClass, "__new__", object_new, 1, -1);
     initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);

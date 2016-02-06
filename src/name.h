@@ -84,6 +84,8 @@ namespace Names
     extern Name compareMethod[CountCompareOp];
     extern Name compareMethodReflected[CountCompareOp];
     extern Name listCompResult;
+    extern Name evalFuncName;
+    extern Name execFuncName;
 } /* namespace Names */
 
 extern Name internString(const string& str);

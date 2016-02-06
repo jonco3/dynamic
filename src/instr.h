@@ -86,6 +86,7 @@ struct Interpreter;
     instr(Call, CountInstr)                                                  \
     instr(CallMethod, CountInstr)                                            \
     instr(CreateEnv, Instr)                                                  \
+    instr(SetEnv, ValueInstr)                                                \
     instr(InitStackLocals, Instr)                                            \
     instr(In, Instr)                                                         \
     instr(Is, Instr)                                                         \

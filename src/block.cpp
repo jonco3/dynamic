@@ -1,11 +1,15 @@
 #include "block.h"
+
+#include "frame.h"
 #include "instr.h"
 
-Block::Block(Traced<Object*> global,
+Block::Block(Traced<Block*> parent,
+             Traced<Env*> global,
              Traced<Layout*> layout,
              unsigned argCount,
              bool createEnv)
-  : global_(global),
+  : parent_(parent),
+    global_(global),
     layout_(layout),
     argCount_(argCount),
     maxStackDepth_(0),
@@ -62,6 +66,8 @@ void Block::print(ostream& s) const {
 
 void Block::traceChildren(Tracer& t)
 {
+    gc.trace(t, &parent_);
+    gc.trace(t, &global_);
     gc.trace(t, &layout_);
     for (auto i = instrs_.begin(); i != instrs_.end(); ++i)
         gc.trace(t, &i->data);

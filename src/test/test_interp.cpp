@@ -11,10 +11,12 @@
 
 void testInterp(const string& input, const string& expected)
 {
-    Stack<Block*> block;
-    CompileModule(input, None, block);
     Stack<Value> result;
-    bool ok = interp->exec(block, result);
+    Stack<Env*> globals;
+    bool ok = CompileModule(input, globals, result);
+    testTrue(ok);
+    Stack<Block*> block(result.as<CodeObject>()->block());
+    ok = interp->exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);
@@ -23,11 +25,13 @@ void testInterp(const string& input, const string& expected)
 
 void testException(const string& input, const string& expected)
 {
-    Stack<Block*> block;
-    CompileModule(input, None, block);
     Stack<Value> result;
+    Stack<Env*> globals;
+    bool ok = CompileModule(input, globals, result);
+    testTrue(ok);
+    Stack<Block*> block(result.as<CodeObject>()->block());
     testExpectingException = true;
-    bool ok = interp->exec(block, result);
+    ok = interp->exec(block, result);
     testExpectingException = false;
     if (ok) {
         cerr << "Expected exception but got: " << result << endl;
@@ -50,8 +54,11 @@ void testReplacement(const string& input,
                      InstrCode next1 = InstrCodeCount,
                      InstrCode next2 = InstrCodeCount)
 {
-    Stack<Block*> block;
-    CompileModule(input, None, block);
+    Stack<Value> result;
+    Stack<Env*> globals;
+    bool ok = CompileModule(input, globals, result);
+    testTrue(ok);
+    Stack<Block*> block(result.as<CodeObject>()->block());
 
     InstrThunk* instrp = block->findInstr(Instr_Lambda);
     assert(instrp);
@@ -61,8 +68,7 @@ void testReplacement(const string& input,
     instrp = lambda->block()->findInstr(initial);
     assert(instrp);
 
-    Stack<Value> result;
-    bool ok = interp->exec(block, result);
+    ok = interp->exec(block, result);
     if (!ok)
         cerr << "Error: " << result.asObject()->as<Exception>()->message() << endl;
     testTrue(ok);

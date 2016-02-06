@@ -165,6 +165,11 @@ bool Dict::delitem(Traced<Value> key, MutableTraced<Value> resultOut)
     return true;
 }
 
+void Dict::clear()
+{
+    entries_.clear();
+}
+
 Value Dict::keys() const
 {
     // todo: should be some kind of iterator?
@@ -183,6 +188,11 @@ Value Dict::values() const
     for (const auto& i : entries_)
         values->initElement(index++, i.second);
     return Value(values);
+}
+
+inline Name internStringValue(Traced<Value> v)
+{
+    return internString(v.as<String>()->value());
 }
 
 size_t Dict::ValueHash::operator()(Value vArg) const
@@ -231,11 +241,6 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
     }
 
     return obj->as<Boolean>()->boolValue();
-}
-
-inline Name internStringValue(Traced<Value> v)
-{
-    return internString(v.as<String>()->value());
 }
 
 void DictView::init()
