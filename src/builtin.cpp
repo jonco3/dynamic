@@ -95,10 +95,9 @@ static Value make_builtin_iter()
     block->append<Instr_GetIterator>();
     block->append<Instr_Return>();
     block->setMaxStackDepth(1);
-    Stack<Env*> env; // todo: allow construction of traced for nullptr
     vector<Name> args = { Names::iterable };
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(args, block));
-    return gc.create<Function>(Names::iter, info, EmptyValueArray, env);
+    return gc.create<Function>(Names::iter, info, EmptyValueArray, nullptr);
 }
 
 static bool builtin_locals(TracedVector<Value> args, MutableTraced<Value> resultOut)

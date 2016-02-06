@@ -185,12 +185,19 @@ inline ostream& operator<<(ostream& s, const Cell& cell) {
 
 template <typename T> struct GCTraits {};
 
+static Cell const * const NullCellPtr = nullptr;
+
 template <typename T>
 struct GCTraits<T*>
 {
     static T* nullValue() {
         static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
         return nullptr;
+    }
+
+    static T const * const & nullValueRef() {
+        static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
+        return reinterpret_cast<T const * const &>(NullCellPtr);
     }
 
     static bool isNonNull(const T* cell) {
@@ -614,6 +621,10 @@ struct Traced : public WrapperMixins<Traced<T>, T>
     Traced(Root<T>& root) : ptr_(root.get()) {}
     Traced(Stack<T>& root) : ptr_(root.get()) {}
     Traced(Heap<T>& ptr) : ptr_(ptr.get()) {}
+
+    Traced(nullptr_t null)
+      : ptr_(const_cast<const T&>(GCTraits<T>::nullValueRef())) {}
+    // todo: T is |S*| for some S, but we need |const S*|, hence the cast.
 
     template <typename S>
     Traced(Root<S>& other)

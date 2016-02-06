@@ -64,7 +64,7 @@ struct Function : public Callable
     Function(Name name,
              Traced<FunctionInfo*> info,
              TracedVector<Value> defaults,
-             Traced<Env*> env);
+             Traced<Env*> env = nullptr);
 
     Name paramName(unsigned i) {
         assert(i < info_->params_.size());

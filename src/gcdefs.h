@@ -68,22 +68,10 @@ struct WrapperMixins<W, Value>
 template <typename W, typename T>
 struct WrapperMixins<W, T*>
 {
-    operator Traced<Value> () const {
-        static_assert(is_base_of<Object, T>::value,
-                      "T must derive from object for this conversion");
-        // Since Traced<T> is immutable and all Objects are Values, we can
-        // safely cast a Stack<Object*> to a Traced<Value>.
-        const Value* ptr = reinterpret_cast<Value const*>(extract());
-        return Traced<Value>::fromTracedLocation(ptr);
-    }
+    operator Traced<Value> () const;
 
     template <typename S>
-    operator Traced<S*> () const {
-        static_assert(is_base_of<S, T>::value,
-                      "T must derive from S for this conversion");
-        S* const * ptr = reinterpret_cast<S* const *>(extract());
-        return Traced<S*>::fromTracedLocation(ptr);
-    }
+    operator Traced<S*> () const;
 
   private:
     T* const * extract() const {

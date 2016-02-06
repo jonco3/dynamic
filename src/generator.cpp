@@ -38,10 +38,9 @@ void GeneratorIter::init()
     block->append<Instr_Return>();
     block->setMaxStackDepth(1);
     static vector<Name> params = { Names::self };
-    Stack<Env*> env; // todo: allow construction of traced for nullptr
     Stack<FunctionInfo*> info(gc.create<FunctionInfo>(params, block));
-    Stack<Value> value(gc.create<Function>(Names::__next__, info, EmptyValueArray,
-                                           env));
+    Stack<Value> value(gc.create<Function>(Names::__next__, info,
+                                           EmptyValueArray));
     ObjectClass->setAttr(Names::__next__, value);
 }
 
