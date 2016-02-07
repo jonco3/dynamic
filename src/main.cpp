@@ -5,6 +5,7 @@
 #include "interp.h"
 #include "input.h"
 #include "list.h"
+#include "module.h"
 #include "string.h"
 
 #include "sysexits.h"
@@ -79,11 +80,8 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     RootVector<Value> argStrings(arg_count);
     for (int i = 0 ; i < arg_count ; ++i)
         argStrings[i] = gc.create<String>(args[i]);
-    // todo: this is a hack until we can |import sys|
     Stack<Value> argv(gc.create<List>(argStrings));
-    Stack<Value> sys(Object::create());
-    sys.asObject()->setAttr(Names::argv, argv);
-    topLevel->setAttr(Names::sys, sys);
+    Module::Sys->setAttr(Names::argv, argv);
     Stack<Value> main(gc.create<String>("__main__"));
     topLevel->setAttr(Names::__name__, main);
     if (!runModule(readFile(filename), filename, topLevel))

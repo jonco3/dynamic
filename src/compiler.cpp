@@ -1,4 +1,5 @@
 #include "analysis.h"
+#include "builtin.h"
 #include "common.h"
 #include "compiler.h"
 #include "exception.h"
@@ -830,6 +831,7 @@ struct ByteCompiler : public SyntaxVisitor
             if (i->maybeDefault) {
                 defaultCount++;
                 compile(i->maybeDefault);
+                incStackDepth();
             }
         }
         bool takesRest = false;
@@ -837,6 +839,7 @@ struct ByteCompiler : public SyntaxVisitor
             takesRest = params.back().takesRest;
         emit<Instr_Lambda>(defName, names, exprBlock, defaultCount, takesRest,
                           isGenerator);
+        decStackDepth(defaultCount);
     }
 
     virtual void visit(const SyntaxLambda& s) {
@@ -1017,12 +1020,45 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxImport& s) {
-        // todo: implement import ...
-        emit<Instr_Const>(None);
+        // Desugar:
+        //   import module as name
+        //   import module.sub as name
+        // into:
+        //   name = __import__('module', globals(), locals(), [], 0)
+        //   name = __import__('module.sub', globals(), locals(), [], 0)
+
+        Token t = s.token;
+        for (const auto& i : s.modules) {
+            incStackDepth(6);
+            emit<Instr_GetGlobal>(topLevel, Names::__import__);
+
+            Stack<Value> value;
+            value = i->name;
+            emit<Instr_Const>(value);
+
+            value = Builtin->getAttr(Names::globals);
+            emit<Instr_Const>(value);
+            emit<Instr_Call>(0);
+
+            value = Builtin->getAttr(Names::locals);
+            emit<Instr_Const>(value);
+            emit<Instr_Call>(0);
+
+            emit<Instr_List>(0);
+
+            value = Value(0);
+            emit<Instr_Const>(value);
+
+            emit<Instr_Call>(5);
+            decStackDepth(6);
+            AutoPushContext enterAssign(contextStack, Context::Assign);
+            compile(SyntaxName(t, i->name));
+        }
     }
 
     virtual void visit(const SyntaxFrom& s) {
         // todo: implement from ... import ...
+        assert(false);
         emit<Instr_Const>(None);
     }
 

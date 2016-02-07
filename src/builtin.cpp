@@ -8,6 +8,7 @@
 #include "interp.h"
 #include "numeric.h"
 #include "list.h"
+#include "module.h"
 #include "parser.h"
 #include "reflect.h"
 #include "singletons.h"
@@ -359,6 +360,8 @@ for_each_exception_class(set_exception_attr)
         exit(1);
 
     Stack<Env*> internals(createTopLevel());
+    internals->setAttr(Names::sys, Module::Sys);
+
     filename = libDir + "/internal.py";
     text = readFile(filename);
     if (!runModule(text, filename, internals))
@@ -375,6 +378,9 @@ for_each_exception_class(set_exception_attr)
 
     value = internals->getAttr(Names::inUsingSubscript);
     InUsingSubscript.init(value.as<Function>());
+
+    value = internals->getAttr(Names::__import__);
+    Builtin->setAttr(Names::__import__, value);
 
     builtinsInitialised = true;
 }

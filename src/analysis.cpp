@@ -67,6 +67,12 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         addName(s.id);
     }
 
+    virtual void visit(const SyntaxImport& s) {
+        for (const auto& i : s.modules) {
+            addName(i->name);
+        }
+    }
+
     void addGlobalOrNonLocalNames(const Token& token,
                                   const vector<Name>& names,
                                   vector<Name>& dest,

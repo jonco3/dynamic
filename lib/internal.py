@@ -84,3 +84,6 @@ def inUsingSubscript(container, object):
             i += 1
     except IndexError:
         return False
+
+def __import__(name, globals = None, locals = None, fromList = (), level = 0):
+    return sys.modules[name]

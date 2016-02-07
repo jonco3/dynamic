@@ -48,7 +48,8 @@ SRCS = \
 	src/instr.cpp \
 	src/specials.cpp \
 	src/generator.cpp \
-	src/reflect.cpp
+	src/reflect.cpp \
+	src/module.cpp
 
 MAINSRCS = src/main.cpp $(SRCS)
 TESTSRCS = src/unittests.cpp $(SRCS)

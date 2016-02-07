@@ -11,6 +11,7 @@
 #include "name.h"
 #include "numeric.h"
 #include "list.h"
+#include "module.h"
 #include "object.h"
 #include "parser.h"
 #include "reflect.h"
@@ -49,6 +50,7 @@ void init1()
     GeneratorIter::init();
     initReflect();
     Interpreter::init();
+    initModules();
 }
 
 void init2(const string& libDir)

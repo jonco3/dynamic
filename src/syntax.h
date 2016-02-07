@@ -249,6 +249,9 @@ struct SyntaxString : public Syntax
     define_syntax_members(String, "string");
     SyntaxString(const Token& token) : Syntax(token), value(token.text) {}
 
+    SyntaxString(const Token& token, const string& s)
+      : Syntax(token), value(s) {}
+
     const string value;
 };
 
@@ -258,6 +261,9 @@ struct SyntaxName : public SyntaxSingleTarget
 
     SyntaxName(const Token& token)
       : SyntaxSingleTarget(token), id(internString(token.text)) {}
+
+    SyntaxName(const Token& token, Name name)
+      : SyntaxSingleTarget(token), id(name) {}
 
     const Name id;
 };
@@ -434,7 +440,7 @@ struct SyntaxCall : public Syntax
 
     SyntaxCall(const Token& token,
                unique_ptr<Syntax> l,
-               vector<unique_ptr<Syntax>> r)
+               vector<unique_ptr<Syntax>> r = {})
       : Syntax(token), left(move(l)), right(move(r))
     {}
 

@@ -46,7 +46,12 @@ using namespace std;
     name(SequenceIterator)                                                    \
     name(iterableToList)                                                      \
     name(inUsingIteration)                                                    \
-    name(inUsingSubscript)
+    name(inUsingSubscript)                                                    \
+    name(__import__)                                                          \
+    name(locals)                                                              \
+    name(globals)                                                             \
+    name(__path__)                                                            \
+    name(modules)
 
 struct InternedString;
 struct String;
