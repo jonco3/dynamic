@@ -24,7 +24,11 @@ if not args.commands:
     sys.exit("No commands to test")
 
 if not args.dirs:
-    sys.exit("No test directories")
+    baseDir = os.path.dirname(os.path.dirname(sys.argv[0]))
+    args.dirs = []
+    if not args.benchmark:
+        args.dirs.append(os.path.join(baseDir, 'test', 'tests'))
+    args.dirs.append(os.path.join(baseDir, 'bench', 'tests'))
 
 runCount = 0
 passCount = 0

@@ -97,14 +97,14 @@ unittest: unittests # gcapitest
 
 .PHONY: pythontest
 pythontest: dynamic unittest
-	$(RUN-TESTS) --command "./dynamic -l $(srcdir)/lib" --dir $(srcdir)/test/tests --dir $(srcdir)/bench/tests --verbose
+	$(RUN-TESTS) --command "./dynamic -l $(srcdir)/lib" --verbose
 
 .PHONY: test
 test: pythontest
 
 .PHONY: bench
 bench: dynamic
-	$(RUN-TESTS) --benchmark --dir $(srcdir)/bench/tests --command "./dynamic -l $(srcdir)/lib" --command python3 --command pypy3
+	$(RUN-TESTS) --benchmark --command "./dynamic -l $(srcdir)/lib" --command python3 --command pypy3
 
 .PHONY: clean
 clean:
