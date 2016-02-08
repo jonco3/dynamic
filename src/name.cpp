@@ -75,8 +75,7 @@ void initNames()
 void InternedStringMap::traceChildren(Tracer& t)
 {
     for (auto i : strings_) {
-        String* s = i.second;
-        assert(s->type());
+        assert(i.second->type());
         gc.trace(t, &i.second);
     }
 }
@@ -88,8 +87,7 @@ InternedString* InternedStringMap::get(const string& s)
     auto i = strings_.find(s);
     if (i != strings_.end()) {
         assert(i->second->value() == s);
-        String* s = i->second;
-        assert(s->type());
+        assert(i->second->type());
         return i->second;
     }
 

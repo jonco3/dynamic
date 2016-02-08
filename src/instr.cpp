@@ -460,11 +460,10 @@ Interpreter::executeInstr_SetEnv(Traced<ValueInstr*> instr)
     // Set the current frame's environment, used for eval/exec with supplied
     // locals.
 
-    Frame* frame = getFrame();
-    assert(!frame->env());
+    assert(!getFrame()->env());
     popStack();  // Ignore parent env.
     Stack<Env*> env(instr->value().as<Env>());
-    assert(frame->block()->argCount() == 0);
+    assert(getFrame()->block()->argCount() == 0);
     setFrameEnv(env);
 }
 
