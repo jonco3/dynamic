@@ -4,6 +4,7 @@
 #include "compiler.h"
 #include "dict.h"
 #include "exception.h"
+#include "file.h"
 #include "input.h"
 #include "interp.h"
 #include "numeric.h"
@@ -330,6 +331,7 @@ void initBuiltins(const string& libDir)
     initNativeMethod(Builtin, "globals", builtin_globals, 0);
     initNativeMethod(Builtin, "eval", builtin_eval, 1, 3);
     initNativeMethod(Builtin, "exec", builtin_exec, 1, 3);
+    initNativeMethod(Builtin, "open", File::Open, 1, 2);
 
     // Constants
     initAttr(Builtin, "True", Boolean::True);

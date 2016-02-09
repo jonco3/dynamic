@@ -6,6 +6,7 @@
 #include "dict.h"
 #include "exception.h"
 #include "frame.h"
+#include "file.h"
 #include "input.h"
 #include "interp.h"
 #include "name.h"
@@ -51,6 +52,7 @@ void init1()
     initReflect();
     Interpreter::init();
     initModules();
+    File::Init();
 }
 
 void init2(const string& libDir)

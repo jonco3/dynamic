@@ -175,9 +175,15 @@ inline int32_t WrapperMixins<W, Value>::asInt32() const
 }
 
 template <typename W>
-inline bool WrapperMixins<W, Value>::toInt32(int32_t* out) const
+inline bool WrapperMixins<W, Value>::toInt32(int32_t& out) const
 {
     return extract()->toInt32(out);
+}
+
+template <typename W>
+inline bool WrapperMixins<W, Value>::toSize(size_t& out) const
+{
+    return extract()->toSize(out);
 }
 
 template <typename W>

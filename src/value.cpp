@@ -24,22 +24,28 @@ ostream& operator<<(ostream& s, const Value& v) {
     return s;
 }
 
-bool Value::toInt32(int32_t* out) const
+bool Value::toInt32(int32_t& out) const
 {
-    static_assert(sizeof(long) >= sizeof(int32_t),
-                  "This assumes that get_si() returns enough bits");
-
     assert(isInt());
     if (isInt32()) {
-        *out = asInt32();
+        out = asInt32();
         return true;
     }
 
-    mpz_class v = as<Integer>()->value();
-    if (v < INT32_MIN || v > INT32_MAX)
-        return false;
+    return as<Integer>()->toSigned(out);
+}
 
-    assert(v.fits_sint_p());
-    *out = v.get_si();
-    return true;
+bool Value::toSize(size_t& out) const
+{
+    assert(isInt());
+    if (isInt32()) {
+        int32_t i = asInt32();
+        if (i < 0)
+            return false;
+
+        out = asInt32();
+        return true;
+    }
+
+    return as<Integer>()->toUnsigned(out);
 }

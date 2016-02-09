@@ -49,7 +49,8 @@ SRCS = \
 	src/specials.cpp \
 	src/generator.cpp \
 	src/reflect.cpp \
-	src/module.cpp
+	src/module.cpp \
+	src/file.cpp
 
 MAINSRCS = src/main.cpp $(SRCS)
 TESTSRCS = src/unittests.cpp $(SRCS)
@@ -62,7 +63,7 @@ ALLOBJS = $(subst src,build,$(ALLSRCS:.cpp=.o))
 DEPS = $(ALLOBJS:.o=.d)
 
 WRAPPER = python $(srcdir)/test/debug-wrapper
-RUN-TESTS = python3 $(srcdir)/test/run-tests
+TARGET = $(realpath ./dynamic)
 
 .PHONY: all
 all: dynamic
@@ -97,14 +98,16 @@ unittest: unittests # gcapitest
 
 .PHONY: pythontest
 pythontest: dynamic unittest
-	$(RUN-TESTS) --command "./dynamic -l $(srcdir)/lib" --verbose
+	cd $(srcdir) && \
+	python3 test/run-tests --command $(TARGET) --verbose
 
 .PHONY: test
 test: pythontest
 
 .PHONY: bench
 bench: dynamic
-	$(RUN-TESTS) --benchmark --command "./dynamic -l $(srcdir)/lib" --command python3 --command pypy3
+	cd $(srcdir) && \
+	python3 test/run-tests --benchmark --command $(TARGET) --command python3 --command pypy3
 
 .PHONY: clean
 clean:

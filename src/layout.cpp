@@ -150,15 +150,17 @@ int Layout::lookupName(Name name)
     return layout ? layout->slotIndex() : NotFound;
 }
 
-Layout* Layout::addName(Name name)
+Layout* Layout::addName(Name name, int expectedSlot)
 {
     assert(!hasName(name));
-    Layout* child = children_.get(name);
-    if (child)
-        return child;
+    Layout* layout = children_.get(name);
+    if (!layout) {
+        Stack<Layout*> self(this);
+        layout = gc.create<Layout>(self, name);
+    }
 
-    Stack<Layout*> self(this);
-    return gc.create<Layout>(self, name);
+    assert(expectedSlot == -1 || expectedSlot == layout->slotIndex());
+    return layout;
 }
 
 Layout* Layout::maybeAddName(Name name)

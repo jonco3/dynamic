@@ -38,6 +38,7 @@ struct Exception : public Object
     cls(MemoryError)                                                          \
     cls(NameError)                                                            \
     cls(NotImplementedError)                                                  \
+    cls(OSError)                                                              \
     cls(RuntimeError)                                                         \
     cls(StopIteration)                                                        \
     cls(SyntaxError)                                                          \

@@ -15,13 +15,14 @@ struct Integer : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    template <typename T>
-    static bool fitsInt32(T&& v) {
-        return v >= INT32_MIN && v <= INT32_MAX;
+    template <typename T, typename S>
+    static bool fits(S&& v) {
+        return v >= numeric_limits<T>::min() &&
+               v <= numeric_limits<T>::max();
     }
 
     static Value get(int64_t v) {
-        if (fitsInt32(v))
+        if (fits<int32_t>(v))
             return Value(int32_t(v));
 
         return getObject(v);
@@ -31,7 +32,7 @@ struct Integer : public Object
         static_assert(sizeof(long) >= sizeof(int32_t),
                       "This assumes that get_si() returns enough bits");
 
-        if (fitsInt32(v))
+        if (fits<int32_t>(v))
             return Value(int32_t(v.get_si()));
 
         return getObject(move(v));
@@ -47,6 +48,30 @@ struct Integer : public Object
     Integer(Traced<Class*> cls, int64_t v);
 
     const mpz_class& value() const { return value_; }
+
+    template <class T>
+    bool toSigned(T& out) {
+        static_assert(sizeof(value_.get_si()) >= sizeof(T),
+                      "get_si() doesn't return enough bits");
+
+        if (!fits<T>(value_))
+            return false;
+
+        out = static_cast<T>(value_.get_si());
+        return true;
+    }
+
+    template <class T>
+    bool toUnsigned(T& out) {
+        static_assert(sizeof(value_.get_ui()) >= sizeof(T),
+                      "get_ui() doesn't return enough bits");
+
+        if (!fits<T>(value_))
+            return false;
+
+        out = static_cast<T>(value_.get_ui());
+        return true;
+    }
 
     void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;

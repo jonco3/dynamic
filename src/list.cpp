@@ -228,7 +228,7 @@ GetIndex(T* self, Traced<Value> index,
     }
 
     int32_t i;
-    if (!index.toInt32(&i))
+    if (!index.toInt32(i))
         return raiseOutOfRange(resultOut);
 
     size_t len = self->len();

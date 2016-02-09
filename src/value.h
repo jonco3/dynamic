@@ -100,7 +100,8 @@ struct Value
     inline bool isFloat() const;
 
     inline Object *toObject() const;
-    bool toInt32(int32_t* out) const;
+    bool toInt32(int32_t& out) const;
+    bool toSize(size_t& out) const;
     inline double toFloat() const;
 
     inline Value getAttr(Name name) const;

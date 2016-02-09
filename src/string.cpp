@@ -206,7 +206,7 @@ bool String::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
     size_t len = value_.size();
     if (index.isInt()) {
         int32_t i;
-        if (!index.toInt32(&i))
+        if (!index.toInt32(i))
             return raiseOutOfRange(resultOut);
         i = WrapIndex(i, len);
         if (i < 0 || size_t(i) >= len)
