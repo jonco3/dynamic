@@ -1232,8 +1232,8 @@ Interpreter::executeInstr_ListAppend(Traced<Instr*> instr)
     Stack<Value> value(popStack());
     Stack<Value> list(popStack());
     Stack<Value> result;
-    list.as<List>()->append(value, result);
-    pushStack(result);
+    list.as<List>()->append(value);
+    pushStack(None);
 }
 
 void

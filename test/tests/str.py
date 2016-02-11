@@ -75,4 +75,18 @@ assert(exc)
 
 assert("foo" + str(1) == "foo1")
 
+assert("foo bar".split(" ") == ["foo", "bar"])
+assert("foo bar".split("o") == ['f', '', ' bar'])
+assert("fo".split("o") == ['f', ''])
+assert("of".split("o") == ['', 'f'])
+assert("o".split("o") == ['', ''])
+assert("".split("o") == [''])
+
+assert("foo bar".split() == ["foo", "bar"])
+assert("foo\n \nbar".split() == ["foo", "bar"])
+assert(" foo".split() == ["foo"])
+assert("foo ".split() == ["foo"])
+assert("    ".split() == [])
+assert("".split() == [])
+
 print('ok')

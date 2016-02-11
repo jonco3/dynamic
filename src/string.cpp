@@ -3,9 +3,11 @@
 #include "callable.h"
 #include "exception.h"
 #include "interp.h"
-#include "value-inl.h"
+#include "list.h"
 #include "singletons.h"
 #include "slice.h"
+
+#include "value-inl.h"
 
 #include <iostream>
 
@@ -138,6 +140,53 @@ static bool str_print(TracedVector<Value> args, MutableTraced<Value> resultOut) 
     return true;
 }
 
+static bool str_split(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+    if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
+        return false;
+
+    const string& str = args[0].as<String>()->value();
+    Stack<List*> result(gc.create<List>(0));
+    Stack<Value> value;
+
+    if (args.size() == 1) {
+        // Split on whitespace.
+        // todo: check whether this matches python's concept of whitespace.
+        const string spaces = " \t\n\r";
+        size_t pos = str.find_first_not_of(spaces, 0);
+        size_t last = pos;
+        while (pos = str.find_first_of(spaces, pos), pos != string::npos) {
+            value = gc.create<String>(str.substr(last, pos - last));
+            result->append(value);
+            pos = str.find_first_not_of(spaces, pos);
+            last = pos;
+        }
+        if (last != string::npos) {
+            value = gc.create<String>(str.substr(last, pos - last));
+            result->append(value);
+        }
+
+        resultOut = Value(result);
+        return true;
+    }
+
+    if (!checkInstanceOf(args[1], String::ObjectClass, resultOut))
+        return false;
+
+    const string& sep = args[1].as<String>()->value();
+    size_t pos = 0;
+    size_t last = 0;
+    while (pos = str.find(sep, pos), pos != string::npos) {
+        value = gc.create<String>(str.substr(last, pos - last));
+        result->append(value);
+        pos += sep.size();
+        last = pos;
+    }
+    value = gc.create<String>(str.substr(last, pos - last));
+    result->append(value);
+    resultOut = Value(result);
+    return true;
+}
+
 GlobalRoot<Class*> String::ObjectClass;
 GlobalRoot<String*> String::EmptyString;
 
@@ -166,6 +215,7 @@ void String::init()
     initNativeMethod(ObjectClass, "__hash__", str_hash, 1);
     initNativeMethod(ObjectClass, "__contains__", str_contains, 2);
     initNativeMethod(ObjectClass, "_print", str_print, 1);
+    initNativeMethod(ObjectClass, "split", str_split, 1, 2);
 
     EmptyString.init(gc.create<String>(""));
 }

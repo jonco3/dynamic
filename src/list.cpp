@@ -264,11 +264,9 @@ bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
     return true;
 }
 
-bool List::append(Traced<Value> element, MutableTraced<Value> resultOut)
+void List::append(Traced<Value> element)
 {
     elements_.push_back(element);
-    resultOut = None;
-    return true;
 }
 
 static bool compareElements(Value aArg, Value bArg)
@@ -445,7 +443,9 @@ static bool list_delitem(TracedVector<Value> args,
 
 static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut)
 {
-    return args[0].as<List>()->append(args[1], resultOut);
+    args[0].as<List>()->append(args[1]);
+    resultOut = None;
+    return true;
 }
 
 static bool list_sort(TracedVector<Value> args, MutableTraced<Value> resultOut)
