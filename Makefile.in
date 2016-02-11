@@ -107,7 +107,7 @@ test: pythontest
 .PHONY: bench
 bench: dynamic
 	cd $(srcdir) && \
-	python3 test/run-tests --benchmark --command $(TARGET) --command python3 --command pypy3
+	python3 test/run-tests --benchmark --command $(TARGET) --command "python3 -O" --command pypy3
 
 .PHONY: clean
 clean:
