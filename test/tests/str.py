@@ -75,6 +75,8 @@ assert(exc)
 
 assert("foo" + str(1) == "foo1")
 
+# split
+
 assert("foo bar".split(" ") == ["foo", "bar"])
 assert("foo bar".split("o") == ['f', '', ' bar'])
 assert("fo".split("o") == ['f', ''])
@@ -88,5 +90,12 @@ assert(" foo".split() == ["foo"])
 assert("foo ".split() == ["foo"])
 assert("    ".split() == [])
 assert("".split() == [])
+
+# join
+
+assert("".join(()) == "")
+assert("".join(["a", "b", "c"]) == "abc")
+assert("_".join(["a", "b", "c"]) == "a_b_c")
+assert("_".join(["", "b", ""]) == "_b_")
 
 print('ok')

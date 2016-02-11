@@ -50,6 +50,24 @@ def listExtend(a, b):
 
 list.extend = listExtend
 
+def strJoin(self, seq):
+    if not isinstance(self, str):
+        raise TypeError("Expecting string")
+
+    result = ""
+    first = True
+    for s in seq:
+        if not isinstance(s, str):
+            raise TypeError("Expecting string")
+        if not first:
+            result += self
+        result += s
+        first = False
+
+    return result
+
+str.join = strJoin
+
 class SequenceIterator:
     def __init__(self, target):
         self.target = target
