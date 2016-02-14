@@ -86,7 +86,7 @@ static void DictInit(const char* name)
     initNativeMethod(T::ObjectClass, "__delitem__", dict_delitem<T>, 2);
     initNativeMethod(T::ObjectClass, "keys", dict_keys<T>, 1);
     initNativeMethod(T::ObjectClass, "values", dict_values<T>, 1);
-    // __eq__ and __ne__ are supplied by lib/internal.py
+    // __eq__ and __ne__ are supplied by internals/internal.py
 }
 
 void Dict::init()

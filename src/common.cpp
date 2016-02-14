@@ -55,9 +55,9 @@ void init1()
     File::Init();
 }
 
-void init2(const string& libDir)
+void init2(const string& internalsPath)
 {
-    initBuiltins(libDir);
+    initBuiltins(internalsPath);
 }
 
 void final()

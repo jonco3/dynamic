@@ -462,7 +462,7 @@ static void generic_initNatives(Traced<Class*> cls)
     initNativeMethod(cls, "__len__", generic_len<T>, 1);
     initNativeMethod(cls, "__getitem__", generic_getitem<T>, 2);
     initNativeMethod(cls, "__iter__", generic_iter<T>, 1);
-    // __eq__ and __ne__ are supplied by lib/internal.py
+    // __eq__ and __ne__ are supplied by internals/internal.py
 }
 
 void Tuple::init()

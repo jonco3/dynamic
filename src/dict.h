@@ -31,8 +31,6 @@ struct Dict : public Object
     Value keys() const;
     Value values() const;
 
-    // Methods __eq__ and __ne__ are supplied by lib/internals.py
-
   private:
     struct ValueHash {
         size_t operator()(Value v) const;

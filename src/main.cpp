@@ -108,7 +108,7 @@ const char* usageMessage =
     "  dynamic FILE ARG*  -- run script from file\n"
     "  dynamic -e EXPRS   -- execute expressions from commandline\n"
     "options:\n"
-    "  -l LIBDIR          -- set directory to load libraries from\n"
+    "  -i INTERNALSDIR    -- set directory to load internals from\n"
 #ifdef LOG_EXECUTION
     "  -le                -- log interpreter execution\n"
     "  -lf                -- log interpreter frames only\n"
@@ -134,14 +134,14 @@ int main(int argc, const char* argv[])
     int pos = 1;
 
     bool expr = false;
-    string libDir = "lib";
+    string internalsDir = "internals";
 
     while (pos != argc && argv[pos][0] == '-') {
         const char* opt = argv[pos++];
         if (strcmp("-e", opt) == 0)
             expr = true;
-        else if (strcmp("-l", opt) == 0 && pos != argc)
-            libDir = argv[pos++];
+        else if (strcmp("-i", opt) == 0 && pos != argc)
+            internalsDir = argv[pos++];
 #ifdef LOG_EXECUTION
         else if (strcmp("-le", opt) == 0)
             logFrames = logExecution = true;
@@ -165,7 +165,7 @@ int main(int argc, const char* argv[])
     }
 
     init1();
-    init2(libDir);
+    init2(internalsDir);
 
     if (expr)
         r = runExprs(argc - pos, &argv[pos]);

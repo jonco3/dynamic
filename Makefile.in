@@ -94,7 +94,7 @@ gcapitest: build/gcapitest
 .PHONY: unittest
 unittest: unittests # gcapitest
 	@echo "Entering directory \`@srcdir@/src'"
-	$(WRAPPER) unittests -l $(srcdir)/lib
+	$(WRAPPER) unittests -i $(srcdir)/internals
 
 .PHONY: pythontest
 pythontest: dynamic unittest

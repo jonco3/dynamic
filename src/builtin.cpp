@@ -316,7 +316,7 @@ static bool builtin_exec(TracedVector<Value> args,
     return true;
 }
 
-void initBuiltins(const string& libDir)
+void initBuiltins(const string& internalsPath)
 {
     Builtin.init(gc.create<Env>());
     Stack<Value> value;
@@ -356,7 +356,7 @@ void initBuiltins(const string& libDir)
 for_each_exception_class(set_exception_attr)
 #undef set_exception_attr
 
-    string filename = libDir + "/builtin.py";
+    string filename = internalsPath + "/builtin.py";
     string text = readFile(filename);
     if (!runModule(text, filename, Builtin))
         exit(1);
@@ -364,7 +364,7 @@ for_each_exception_class(set_exception_attr)
     Stack<Env*> internals(createTopLevel());
     internals->setAttr(Names::sys, Module::Sys);
 
-    filename = libDir + "/internal.py";
+    filename = internalsPath + "/internal.py";
     text = readFile(filename);
     if (!runModule(text, filename, internals))
         exit(1);

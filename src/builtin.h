@@ -16,7 +16,7 @@ extern GlobalRoot<Function*> InUsingSubscript;
 
 extern bool builtinsInitialised;
 
-extern void initBuiltins(const string& libDir);
+extern void initBuiltins(const string& internalsPath);
 extern void finalBuiltins();
 
 #endif

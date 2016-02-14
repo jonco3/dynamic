@@ -14,7 +14,7 @@ extern bool debugMode;
 extern void crash(const char* message);
 
 extern void init1();
-extern void init2(const string& libDir);
+extern void init2(const string& internalsPath);
 extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
