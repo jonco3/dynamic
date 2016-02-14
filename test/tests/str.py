@@ -98,4 +98,9 @@ assert("".join(["a", "b", "c"]) == "abc")
 assert("_".join(["a", "b", "c"]) == "a_b_c")
 assert("_".join(["", "b", ""]) == "_b_")
 
+# multiline strings
+
+assert """foo
+bar""" == "foo\nbar"
+
 print('ok')

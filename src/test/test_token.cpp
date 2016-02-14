@@ -171,6 +171,13 @@ testcase(tokenizer)
 
     testThrows(tokenize("'string\""), TokenError);
     testThrows(tokenize("\"string'"), TokenError);
+    testThrows(tokenize("\"\"\"string'"), TokenError);
+
+    testThrows(tokenize("'un"), TokenError);
+    testThrows(tokenize("\"term"), TokenError);
+    testThrows(tokenize("\"\"\"in\"\""), TokenError);
+    testThrows(tokenize("\"\"\"at\""), TokenError);
+    testThrows(tokenize("\"\"\"ed"), TokenError);
 
     tz.start("'$tring'");
     t = tz.nextToken();
@@ -182,10 +189,22 @@ testcase(tokenizer)
     testEqual(t.type, Token_String);
     testEqual(t.text, "gnirts");
 
+    tz.start("\"\"\"str\ning\"\"\"");
+    t = tz.nextToken();
+    testEqual(t.type, Token_String);
+    testEqual(t.text, "str\ning");
+    testEqual(tz.nextToken().type, Token_EOF);
+
     tz.start("\"\\n\\t\"");
     t = tz.nextToken();
     testEqual(t.type, Token_String);
     testEqual(t.text, "\n\t");
+
+    testThrows(tokenize("\"foo\nbar\""), TokenError);
+    tz.start("\"foo\\\nbar\"");
+    t = tz.nextToken();
+    testEqual(t.type, Token_String);
+    testEqual(t.text, "foobar");
 
     tz.start("\"\\:\"");
     t = tz.nextToken();

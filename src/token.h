@@ -159,6 +159,7 @@ private:
 
     bool atEnd();
     char peekChar();
+    char peekChar2();
     char nextChar();
     void ungetChar(char c);
     string stringFrom(unsigned startIndex);

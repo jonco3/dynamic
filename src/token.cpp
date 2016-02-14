@@ -173,6 +173,15 @@ char Tokenizer::peekChar()
     return source[index];
 }
 
+char Tokenizer::peekChar2()
+{
+    assert(!atEnd());
+    if (index + 1 >= source.size())
+        return '\0';
+
+    return source[index + 1];
+}
+
 char Tokenizer::nextChar()
 {
     char c = peekChar();
@@ -418,28 +427,50 @@ Token Tokenizer::findNextToken()
 
     // String literals
     if (peekChar() == '\'' || peekChar() == '"') {
-        // todo: r u and b prefixes, long strings
+        // todo: r u and b prefixes
         char delimiter = nextChar();
+
+        bool multiline = false;
+        if (delimiter == '"' && peekChar() == '"' && peekChar2() == '"') {
+            nextChar();
+            nextChar();
+            multiline = true;
+        }
+
         ostringstream s;
         char c;
-        while (c = nextChar(), c && c != delimiter) {
+        while (c = nextChar(), c && (!isNewline(c) || multiline)) {
+            if (c == delimiter &&
+                (!multiline || (peekChar() == delimiter &&
+                                peekChar2() == delimiter)))
+            {
+                if (multiline) {
+                    nextChar();
+                    nextChar();
+                }
+                return {Token_String, s.str(), startPos};
+            }
+
             if (c != '\\') {
                 s << c;
-            } else {
-                char c2 = nextChar();
-                if (!c2)
-                    break;
-                if (c2 == 'n')
-                    s << "\n";
-                else if (c2 == 't')
-                    s << "\t";
-                else
-                    s << c << c2;
+                continue;
             }
+
+            char c2 = nextChar();
+            if (!c2)
+                break;
+
+            if (c2 == '\n')
+                continue;
+            else if (c2 == 'n')
+                s << "\n";
+            else if (c2 == 't')
+                s << "\t";
+            else
+                s << c << c2;
         }
-        if (c != delimiter)
-            throw TokenError("Unterminated string", pos);
-        return {Token_String, s.str(), startPos};
+
+        throw TokenError("Unterminated string", pos);
     }
 
     // Identifiers and keywords
