@@ -316,6 +316,29 @@ static bool builtin_exec(TracedVector<Value> args,
     return true;
 }
 
+static bool internal_execModule(TracedVector<Value> args,
+                                MutableTraced<Value> resultOut)
+{
+    // Like exec, but creates a global environment and returns it.
+
+    Stack<Value> source(args[0]);
+    Stack<Value> filename(args[1]);
+    if (!source.is<String>() || !filename.is<String>()) {
+        resultOut = gc.create<TypeError>("execModule() args must be strings");
+        return false;
+    }
+
+    Stack<Env*> globals(createTopLevel());
+    if (!runModule(source.as<String>()->value(), filename.as<String>()->value(),
+                   globals, resultOut))
+    {
+        return false;
+    }
+
+    resultOut = Value(globals);
+    return true;
+}
+
 void initBuiltins(const string& internalsPath)
 {
     Builtin.init(gc.create<Env>());
@@ -363,6 +386,7 @@ for_each_exception_class(set_exception_attr)
 
     Stack<Env*> internals(createTopLevel());
     internals->setAttr(Names::sys, Module::Sys);
+    initNativeMethod(internals, "execModule", internal_execModule, 2);
 
     filename = internalsPath + "/internal.py";
     text = readFile(filename);

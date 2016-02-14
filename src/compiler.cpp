@@ -538,43 +538,56 @@ struct ByteCompiler : public SyntaxVisitor
             contains(globals, name);
     }
 
-    virtual void visit(const SyntaxName& s) {
-        Name name = s.id;
+    void compileAssign(Name name) {
         int slot;
         unsigned frame;
+        if (lookupLocal(name, slot)) {
+            emit<Instr_SetStackLocal>(name, slot);
+        } else if (lookupLexical(name, frame)) {
+            emit<Instr_SetLexical>(frame, name);
+        } else {
+            assert(lookupGlobal(name));
+            emit<Instr_SetGlobal>(topLevel, name);
+        }
+    }
+
+    void compileDelete(Name name) {
+        int slot;
+        unsigned frame;
+        if (lookupLocal(name, slot)) {
+            emit<Instr_DelStackLocal>(name, slot);
+        } else if (lookupLexical(name, frame)) {
+            emit<Instr_DelLexical>(frame, name);
+        } else {
+            assert(lookupGlobal(name));
+            emit<Instr_DelGlobal>(topLevel, name);
+        }
+        emit<Instr_Const>(None);
+    }
+
+    void compileReference(Name name) {
+        int slot;
+        unsigned frame;
+        if (lookupLocal(name, slot))
+            emit<Instr_GetStackLocal>(name, slot);
+        else if (lookupLexical(name, frame))
+            emit<Instr_GetLexical>(frame, name);
+        else
+            emit<Instr_GetGlobal>(topLevel, name);
+    }
+
+    virtual void visit(const SyntaxName& s) {
         switch(contextStack.back()) {
           case Context::Assign:
-            if (lookupLocal(name, slot))
-                emit<Instr_SetStackLocal>(name, slot);
-            else if (lookupLexical(name, frame))
-                emit<Instr_SetLexical>(frame, name);
-            else if (lookupGlobal(name))
-                emit<Instr_SetGlobal>(topLevel, name);
-            else
-                throw ParseError(s.token,
-                                 string("Name is not defined: ") + name);
+            compileAssign(s.id);
             break;
 
           case Context::Delete:
-            if (lookupLocal(name, slot))
-                emit<Instr_DelStackLocal>(name, slot);
-            else if (lookupLexical(name, frame))
-                emit<Instr_DelLexical>(frame, name);
-            else if (lookupGlobal(name))
-                emit<Instr_DelGlobal>(topLevel, name);
-            else
-                throw ParseError(s.token,
-                                 string("Name is not defined: ") + name);
-            emit<Instr_Const>(None);
+            compileDelete(s.id);
             break;
 
           default:
-            if (lookupLocal(name, slot))
-                emit<Instr_GetStackLocal>(name, slot);
-            else if (lookupLexical(name, frame))
-                emit<Instr_GetLexical>(frame, name);
-            else
-                emit<Instr_GetGlobal>(topLevel, name);
+            compileReference(s.id);
             break;
         }
     }
@@ -858,14 +871,7 @@ struct ByteCompiler : public SyntaxVisitor
         else
             exprBlock = compiler.buildFunctionBody(this, s.params, *s.suite);
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
-        int slot;
-        unsigned frame;
-        if (lookupLocal(s.id, slot))
-            emit<Instr_SetStackLocal>(s.id, slot);
-        else if (lookupLexical(s.id, frame))
-            emit<Instr_SetLexical>(frame, s.id);
-        else
-            emit<Instr_SetGlobal>(topLevel, s.id);
+        compileAssign(s.id);
     }
 
     virtual void visit(const SyntaxClass& s) {
@@ -1027,12 +1033,13 @@ struct ByteCompiler : public SyntaxVisitor
         //   name = __import__('module', globals(), locals(), [], 0)
         //   name = __import__('module.sub', globals(), locals(), [], 0)
 
-        Token t = s.token;
         for (const auto& i : s.modules) {
-            incStackDepth(6);
-            emit<Instr_GetGlobal>(topLevel, Names::__import__);
-
             Stack<Value> value;
+            incStackDepth(6);
+
+            value = Builtin->getAttr(Names::__import__);
+            emit<Instr_Const>(value);
+
             value = i->name;
             emit<Instr_Const>(value);
 
@@ -1051,14 +1058,69 @@ struct ByteCompiler : public SyntaxVisitor
 
             emit<Instr_Call>(5);
             decStackDepth(6);
-            AutoPushContext enterAssign(contextStack, Context::Assign);
-            compile(SyntaxName(t, i->name));
+
+            compileAssign(i->name);
+            emit<Instr_Pop>();
         }
+        emit<Instr_Const>(None);
     }
 
     virtual void visit(const SyntaxFrom& s) {
-        // todo: implement from ... import ...
-        assert(false);
+        // Desugar:
+        //   from module import a, b as c
+        //   from module.sub import *
+        // into:
+        //   temp = __import__('module', globals(), locals(), ['a', 'b'], 0)
+        //   a = temp.a
+        //   c = temp.b
+        //
+        //   temp = __import__('module.sub', globals(), locals(), [], 0)
+        //   ???
+        Token t = s.token;
+        Stack<Value> value;
+        incStackDepth(6);
+
+        value = Builtin->getAttr(Names::__import__);
+        emit<Instr_Const>(value);
+
+        value = s.module;
+        emit<Instr_Const>(value);
+
+        value = Builtin->getAttr(Names::globals);
+        emit<Instr_Const>(value);
+        emit<Instr_Call>(0);
+
+        value = Builtin->getAttr(Names::locals);
+        emit<Instr_Const>(value);
+        emit<Instr_Call>(0);
+
+        incStackDepth(s.ids.size());
+        for (const auto& i : s.ids) {
+            value = i->name;
+            emit<Instr_Const>(value);
+        }
+        emit<Instr_List>(s.ids.size());
+        decStackDepth(s.ids.size());
+
+        value = Value(0);
+        emit<Instr_Const>(value);
+
+        emit<Instr_Call>(5);
+        decStackDepth(6);
+
+        if (s.ids.empty()) {
+            value = gc.create<String>("import * not implemented");
+            emit<Instr_Const>(value);
+            emit<Instr_AssertionFailed>();
+        } else {
+            for (const auto& i : s.ids) {
+                emit<Instr_GetAttr>(i->name);
+                compileAssign(i->localName);
+                emit<Instr_Pop>();
+            }
+        }
+
+        emit<Instr_Pop>();
         emit<Instr_Const>(None);
     }
 

@@ -88,9 +88,10 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 #ifdef DEBUG
     unsigned initialPos = stackPos();
 #endif
+    size_t initialSize = stack.size();
     bool ok = run(resultOut);
     assert(stackPos() == initialPos);
-    stack.resize(stackPos());
+    stack.resize(initialSize);
     return ok;
 }
 

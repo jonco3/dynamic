@@ -33,6 +33,7 @@ struct Exception : public Object
 #define for_each_exception_class(cls)                                         \
     cls(AssertionError)                                                       \
     cls(AttributeError)                                                       \
+    cls(ImportError)                                                          \
     cls(IndexError)                                                           \
     cls(KeyError)                                                             \
     cls(MemoryError)                                                          \

@@ -521,13 +521,15 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         Token t = match(Token_Identifier);
         Name moduleName(internString(t.text));
         match(Token_Import);
-        bool brackets = opt(Token_Bra);
         vector<unique_ptr<ImportInfo>> imports;
-        do {
-            imports.emplace_back(parseIdImport());
-        } while (opt(Token_Comma));
-        if (brackets)
-            match(Token_Ket);
+        if (!opt(Token_Times)) {
+            bool brackets = opt(Token_Bra);
+            do {
+                imports.emplace_back(parseIdImport());
+            } while (opt(Token_Comma));
+            if (brackets)
+                match(Token_Ket);
+        }
         return make_unique<SyntaxFrom>(token, moduleName, move(imports));
     }
 

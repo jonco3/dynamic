@@ -740,7 +740,7 @@ struct SyntaxFrom : public Syntax
     {}
 
     const Name module;
-    const vector<unique_ptr<ImportInfo>> ids;
+    const vector<unique_ptr<ImportInfo>> ids; // empty list => import *
 };
 
 struct SyntaxListComp : public Syntax

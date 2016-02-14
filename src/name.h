@@ -55,7 +55,8 @@ using namespace std;
     _(name)                                                                   \
     _(mode)                                                                   \
     _(closed)                                                                 \
-    _(softSpace)
+    _(softSpace)                                                              \
+    _(path)
 
 struct InternedString;
 struct String;

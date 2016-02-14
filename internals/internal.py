@@ -104,4 +104,42 @@ def inUsingSubscript(container, object):
         return False
 
 def __import__(name, globals = None, locals = None, fromList = (), level = 0):
-    return sys.modules[name]
+    if not isinstance(name, str):
+        raise ValueError("Bad module name: " + str(name))
+
+    def load(modpath):
+        name = ".".join(modpath)
+        if name in sys.modules:
+            return sys.modules[name]
+
+        for dirpath in sys.path:
+            filename = dirpath
+            # todo: obvs needs os.path.join here
+            for path in modpath:
+                filename += "/" + path
+            filename += ".py"
+            try:
+                f = open(filename)
+                source = f.read()
+                f.close()
+            except OSError:
+                continue
+
+            module = execModule(source, filename)
+            sys.modules[name] = module
+            return module
+
+        return None
+
+    names = name.split(".")
+
+    if name not in sys.modules:
+        # Load ancestors up to requested module
+        path = []
+        for name in names:
+            path.append(name)
+            module = load(path)
+            if not module:
+                raise ImportError("Module not found: " + ".".join(path))
+
+    return sys.modules[name] if fromList else sys.modules[names[0]]

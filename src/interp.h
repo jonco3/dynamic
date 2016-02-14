@@ -60,26 +60,26 @@ struct Interpreter : public Cell
 
     template <typename S>
     void pushStack(S&& element) {
-        assert(stackPos_ + 1 <= stack.size());
         Value value(element);
         logStackPush(value);
+        assert(stackPos_ + 1 <= stack.size());
         stack[stackPos_++] = value;
     }
 
     template <typename S1, typename S2>
     void pushStack(S1&& element1, S2&& element2) {
-        assert(stackPos_ + 2 <= stack.size());
         Value values[2] = { Value(element1), Value(element2) };
         logStackPush(&values[0], values + 2);
+        assert(stackPos_ + 2 <= stack.size());
         stack[stackPos_++] = values[0];
         stack[stackPos_++] = values[1];
     }
 
     template <typename S1, typename S2, typename S3>
     void pushStack(S1&& element1, S2&& element2, S3&& element3) {
-        assert(stackPos_ + 3 <= stack.size());
         Value values[3] = { Value(element1), Value(element2), Value(element3) };
         logStackPush(&values[0], values + 3);
+        assert(stackPos_ + 3 <= stack.size());
         stack[stackPos_++] = values[0];
         stack[stackPos_++] = values[1];
         stack[stackPos_++] = values[2];

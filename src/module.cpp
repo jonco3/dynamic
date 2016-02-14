@@ -2,6 +2,7 @@
 
 #include "dict.h"
 #include "exception.h"
+#include "list.h"
 
 #include "value-inl.h"
 
@@ -23,8 +24,16 @@ void Module::Init()
 
     Sys->setAttr(Names::modules, Cache);
 
+    // todo: get this from command line or env
+    Stack<String*> defaultPath(gc.create<String>("lib"));
+
+    Stack<List*> path(gc.create<List>(1));
+    path->initElement(0, Value(defaultPath));
+    Stack<Value> value(path);
+    Sys->setAttr(Names::path, value);
+
     Stack<Value> key(name);
-    Stack<Value> value(Sys);
+    value = Sys;
     Cache->setitem(key, value);
 }
 
