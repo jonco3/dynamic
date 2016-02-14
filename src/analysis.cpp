@@ -69,7 +69,7 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
 
     virtual void visit(const SyntaxImport& s) {
         for (const auto& i : s.modules) {
-            addName(i->name);
+            addName(i->localName);
         }
     }
 

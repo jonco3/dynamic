@@ -1059,7 +1059,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_Call>(5);
             decStackDepth(6);
 
-            compileAssign(i->name);
+            compileAssign(i->localName);
             emit<Instr_Pop>();
         }
         emit<Instr_Const>(None);
