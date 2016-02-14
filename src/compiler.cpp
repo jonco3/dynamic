@@ -1109,11 +1109,13 @@ struct ByteCompiler : public SyntaxVisitor
         decStackDepth(6);
 
         if (s.ids.empty()) {
+            // todo
             value = gc.create<String>("import * not implemented");
             emit<Instr_Const>(value);
             emit<Instr_AssertionFailed>();
         } else {
             for (const auto& i : s.ids) {
+                emit<Instr_Dup>(0);
                 emit<Instr_GetAttr>(i->name);
                 compileAssign(i->localName);
                 emit<Instr_Pop>();
