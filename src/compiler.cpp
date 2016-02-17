@@ -214,7 +214,6 @@ struct ByteCompiler : public SyntaxVisitor
     vector<unsigned> breakInstrs;
     unsigned stackDepth;
     unsigned maxStackDepth;
-    TokenPos currentPos;
 
     using AutoPushContext = AutoPushStack<Context>;
     using AutoSetAndRestoreOffset = AutoSetAndRestoreValue<unsigned>;
