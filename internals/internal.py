@@ -103,33 +103,33 @@ def inUsingSubscript(container, object):
     except IndexError:
         return False
 
+def loadModule(name):
+    if name in sys.modules:
+        return sys.modules[name]
+
+    modpath = name.split(".")
+    for dirpath in sys.path:
+        filename = dirpath
+        # todo: obvs needs os.path.join here
+        for path in modpath:
+            filename += "/" + path
+        filename += ".py"
+        try:
+            f = open(filename)
+            source = f.read()
+            f.close()
+        except OSError:
+            continue
+
+        module = execModule(source, filename)
+        sys.modules[name] = module
+        return module
+
+    return None
+
 def __import__(name, globals = None, locals = None, fromList = (), level = 0):
     if not isinstance(name, str):
         raise ValueError("Bad module name: " + str(name))
-
-    def load(modpath):
-        name = ".".join(modpath)
-        if name in sys.modules:
-            return sys.modules[name]
-
-        for dirpath in sys.path:
-            filename = dirpath
-            # todo: obvs needs os.path.join here
-            for path in modpath:
-                filename += "/" + path
-            filename += ".py"
-            try:
-                f = open(filename)
-                source = f.read()
-                f.close()
-            except OSError:
-                continue
-
-            module = execModule(source, filename)
-            sys.modules[name] = module
-            return module
-
-        return None
 
     names = name.split(".")
 
@@ -138,7 +138,7 @@ def __import__(name, globals = None, locals = None, fromList = (), level = 0):
         path = []
         for name in names:
             path.append(name)
-            module = load(path)
+            module = loadModule(".".join(path))
             if not module:
                 raise ImportError("Module not found: " + ".".join(path))
 

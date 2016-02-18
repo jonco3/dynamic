@@ -13,6 +13,7 @@ extern GlobalRoot<Class*> SequenceIterator;
 extern GlobalRoot<Function*> IterableToList;
 extern GlobalRoot<Function*> InUsingIteration;
 extern GlobalRoot<Function*> InUsingSubscript;
+extern GlobalRoot<Function*> LoadModule;
 
 extern bool builtinsInitialised;
 

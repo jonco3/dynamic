@@ -97,7 +97,7 @@ Env* createTopLevel()
     return topLevel;
 }
 
-bool runModule(string text, string filename, Traced<Env*> globals,
+bool execModule(string text, string filename, Traced<Env*> globals,
                MutableTraced<Value> resultOut)
 {
     if (!CompileModule(Input(text, filename), globals, resultOut))
@@ -107,10 +107,10 @@ bool runModule(string text, string filename, Traced<Env*> globals,
     return interp->exec(block, resultOut);
 }
 
-bool runModule(string text, string filename, Traced<Env*> globals)
+bool execModule(string text, string filename, Traced<Env*> globals)
 {
     Stack<Value> result;
-    bool ok = runModule(text, filename, globals, result);
+    bool ok = execModule(text, filename, globals, result);
 
     if (!ok)
         printException(result);

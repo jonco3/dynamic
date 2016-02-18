@@ -24,6 +24,7 @@ GlobalRoot<Class*> SequenceIterator;
 GlobalRoot<Function*> IterableToList;
 GlobalRoot<Function*> InUsingIteration;
 GlobalRoot<Function*> InUsingSubscript;
+GlobalRoot<Function*> LoadModule;
 bool builtinsInitialised = false;
 
 static bool builtin_hasattr(TracedVector<Value> args,
@@ -329,7 +330,7 @@ static bool internal_execModule(TracedVector<Value> args,
     }
 
     Stack<Env*> globals(createTopLevel());
-    if (!runModule(source.as<String>()->value(), filename.as<String>()->value(),
+    if (!execModule(source.as<String>()->value(), filename.as<String>()->value(),
                    globals, resultOut))
     {
         return false;
@@ -381,7 +382,7 @@ for_each_exception_class(set_exception_attr)
 
     string filename = internalsPath + "/builtin.py";
     string text = readFile(filename);
-    if (!runModule(text, filename, Builtin))
+    if (!execModule(text, filename, Builtin))
         exit(1);
 
     Stack<Env*> internals(createTopLevel());
@@ -390,7 +391,7 @@ for_each_exception_class(set_exception_attr)
 
     filename = internalsPath + "/internal.py";
     text = readFile(filename);
-    if (!runModule(text, filename, internals))
+    if (!execModule(text, filename, internals))
         exit(1);
 
     value = internals->getAttr(Names::SequenceIterator);
@@ -404,6 +405,9 @@ for_each_exception_class(set_exception_attr)
 
     value = internals->getAttr(Names::inUsingSubscript);
     InUsingSubscript.init(value.as<Function>());
+
+    value = internals->getAttr(Names::loadModule);
+    LoadModule.init(value.as<Function>());
 
     value = internals->getAttr(Names::__import__);
     Builtin->setAttr(Names::__import__, value);

@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include "block.h"
+#include "builtin.h"
 #include "compiler.h"
 #include "dict.h"
 #include "interp.h"
@@ -65,7 +66,7 @@ static int runRepl()
     Stack<Env*> topLevel(createTopLevel());
     while (line = readOneLine(), line != NULL) {
         Stack<Value> result;
-        bool ok = runModule(line, "<none>", topLevel, result);
+        bool ok = execModule(line, "<none>", topLevel, result);
         if (ok)
             cout << result << endl;
         else
@@ -85,8 +86,26 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
     Module::Sys->setAttr(Names::argv, argv);
     Stack<Value> main(gc.create<String>("__main__"));
     topLevel->setAttr(Names::__name__, main);
-    if (!runModule(readFile(filename), filename, topLevel))
+    if (!execModule(readFile(filename), filename, topLevel))
         return EX_SOFTWARE;
+
+    return EX_OK;
+}
+
+static int runModule(const char* name, int arg_count, const char* args[])
+{
+    Stack<String*> nameStr(gc.create<String>(name));
+    interp->pushStack(Value(nameStr));
+    Stack<Value> result;
+    bool ok = interp->call(LoadModule, 1, result);
+    if (!ok) {
+        printException(result);
+        return EX_SOFTWARE;
+    }
+    if (result.isNone()) {
+        cerr << "Module not found: " << name << endl;
+        return EX_SOFTWARE;
+    }
 
     return EX_OK;
 }
@@ -96,7 +115,7 @@ static int runExprs(int count, const char* args[])
     Stack<Env*> globals;
     for (int i = 0 ; i < count ; ++i) {
         // todo: should probably parse thse as expressions
-        if (!runModule(args[i], "<none>", globals))
+        if (!execModule(args[i], "<none>", globals))
             return EX_SOFTWARE;
     }
 
@@ -109,6 +128,7 @@ const char* usageMessage =
     "  dynamic FILE ARG*  -- run script from file\n"
     "  dynamic -e EXPRS   -- execute expressions from commandline\n"
     "options:\n"
+    "  -m MODULENAME      -- locate and execute module\n"
     "  -i INTERNALSDIR    -- set directory to load internals from\n"
 #ifdef LOG_EXECUTION
     "  -le                -- log interpreter execution\n"
@@ -135,12 +155,15 @@ int main(int argc, const char* argv[])
     int pos = 1;
 
     bool expr = false;
-    string internalsDir = "internals";
+    const char* moduleName = nullptr;
+    const char* internalsDir = "internals";
 
     while (pos != argc && argv[pos][0] == '-') {
         const char* opt = argv[pos++];
-        if (strcmp("-e", opt) == 0)
+        if (strcmp("-e", opt) == 0 && !moduleName)
             expr = true;
+        else if (strcmp("-m", opt) == 0 && pos != argc && !expr)
+            moduleName = argv[pos++];
         else if (strcmp("-i", opt) == 0 && pos != argc)
             internalsDir = argv[pos++];
 #ifdef LOG_EXECUTION
@@ -168,7 +191,9 @@ int main(int argc, const char* argv[])
     init1();
     init2(internalsDir);
 
-    if (expr)
+    if (moduleName)
+        r = runModule(moduleName, argc - pos, &argv[pos]);
+    else if (expr)
         r = runExprs(argc - pos, &argv[pos]);
     else if ((argc - pos) == 0)
         r = runRepl();

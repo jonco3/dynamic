@@ -19,7 +19,7 @@ extern void final();
 extern string readFile(string filename);
 extern void printException(Value value);
 extern Env* createTopLevel();
-extern bool runModule(string text, string filename, Traced<Env*> global,
-                      MutableTraced<Value> resultOut);
-extern bool runModule(string text, string filename, Traced<Env*> global);
+extern bool execModule(string text, string filename, Traced<Env*> global,
+                       MutableTraced<Value> resultOut);
+extern bool execModule(string text, string filename, Traced<Env*> global);
 #endif
