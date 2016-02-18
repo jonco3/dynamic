@@ -329,8 +329,8 @@ Interpreter::suspendGenerator(HeapVector<Value>& savedStack,
     assert(savedStack.empty());
     savedStack.resize(len);
     // todo: probably a better way to do this with STL
-    for (unsigned i = 0; i < len; i++)
-        savedStack[i] = stack[i + frame->stackPos()];
+    for (unsigned i = len; i != 0; i--)
+        savedStack[i - 1] = popStack();
     unsigned ipOffset = instrp - frame->block()->startInstr();
     assert(!savedHandlers);
     savedHandlers = frame->takeHandlers();

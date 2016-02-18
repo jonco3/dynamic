@@ -17,11 +17,6 @@ struct Layout;
 struct Object;
 struct Syntax;
 
-#ifdef DEBUG
-extern bool assertStackDepth;
-extern bool logCompile;
-#endif
-
 struct Block : public Cell
 {
     Block(Traced<Block*> parent,

@@ -5,6 +5,11 @@
 #include "input.h"
 #include "object.h"
 
+#ifdef DEBUG
+extern bool logCompile;
+extern bool assertStackDepth;
+#endif
+
 // Compile source and return a CodeObject or an Exception.
 extern bool CompileModule(const Input& input, Traced<Env*> globalsArg,
                           MutableTraced<Value> resultOut);

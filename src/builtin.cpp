@@ -88,7 +88,7 @@ static Value make_builtin_iter()
     layout = layout->addName(Names::iterable);
     Stack<Block*> parent;
     Stack<Block*> block(gc.create<Block>(parent, global, layout, 1, false));
-    block->append<Instr_InitStackLocals>();
+    block->append<Instr_InitStackLocals>(0);
     block->append<Instr_GetIterator>();
     block->append<Instr_Return>();
     block->setMaxStackDepth(1);

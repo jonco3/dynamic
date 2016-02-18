@@ -452,6 +452,7 @@ Interpreter::executeInstr_CreateEnv(Traced<Instr*> instr)
         setStackLocal(i, UninitializedSlot);
     }
     setFrameEnv(callEnv);
+    // todo: could pop and reuse stack
 }
 
 void
@@ -468,18 +469,16 @@ Interpreter::executeInstr_SetEnv(Traced<ValueInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_InitStackLocals(Traced<Instr*> instr)
+Interpreter::executeInstr_InitStackLocals(Traced<CountInstr*> instr)
 {
     AutoAssertNoGC nogc;
-    Frame* frame = getFrame();
-    assert(!frame->env());
+    assert(!getFrame()->env());
 
     Object* obj = popStack().asObject();
     Env* parentEnv = obj ? obj->as<Env>() : nullptr;
     setFrameEnv(parentEnv);
 
-    Block* block = frame->block();
-    fillStack(block->stackLocalCount(), UninitializedSlot);
+    fillStack(instr->count, UninitializedSlot);
 }
 
 void
@@ -577,8 +576,6 @@ Interpreter::executeInstr_Or(Traced<BranchInstr*> instr)
         branch(instr->offset());
         return;
     }
-
-    popStack();
 }
 
 void
@@ -593,8 +590,6 @@ Interpreter::executeInstr_And(Traced<BranchInstr*> instr)
         branch(instr->offset());
         return;
     }
-
-    popStack();
 }
 
 void
@@ -838,19 +833,12 @@ Interpreter::executeInstr_IteratorNext(Traced<Instr*> instr)
     Stack<Value> result;
     pushStack(peekStack());
     bool ok = call(target, 1, result);
-    if (!ok) {
-        Stack<Object*> exc(result.toObject());
-        if (exc->is<StopIteration>()) {
-            pushStack(Boolean::False);
-            return;
-        }
-    }
-
     pushStack(result);
-    if (ok)
-        pushStack(Boolean::True);
-    else
-        raiseException();
+    bool finished = !ok && result.isObject() && result.is<StopIteration>();
+    if (!finished && !ok)
+        return raiseException();
+
+    pushStack(Boolean::get(!finished));
 }
 
 bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
@@ -1189,16 +1177,14 @@ Interpreter::executeInstr_MatchCurrentException(Traced<Instr*> instr)
     Stack<Object*> obj(popStack().toObject());
     Stack<Exception*> exception(currentException());
     bool match = obj->is<Class>() && exception->isInstanceOf(obj->as<Class>());
-    if (match) {
-        finishHandlingException();
-        pushStack(exception);
-    }
     pushStack(Boolean::get(match));
 }
 
 void
 Interpreter::executeInstr_HandleCurrentException(Traced<Instr*> instr)
 {
+    Stack<Exception*> exception(currentException());
+    pushStack(exception);
     finishHandlingException();
 }
 

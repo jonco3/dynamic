@@ -20,9 +20,41 @@ static inline void log(const Block* block) {
         cout << "bc: " << repr(*block) << endl;
 }
 
+static inline void log(const char* message) {
+    if (logCompile)
+        cout << "bc: " << message << endl;
+}
+
+static inline void logBuild(unsigned argCount) {
+    if (logCompile)
+        cout << "bc:   build " << dec << argCount << endl;
+}
+
+static inline void logEmit(unsigned index, Instr* instr, int stackDepth)
+{
+    if (logCompile) {
+        cout << "bc:   emit " << dec << index << " " << *instr;
+        cout << " " << stackDepth << endl;
+    }
+}
+
+static inline void logBranchHere(unsigned index, int stackDepth,
+                                 int sourceStackDepth)
+{
+    if (logCompile) {
+        cout << "bc:   branchHereFrom " << dec << index << " " << stackDepth;
+        cout << " " << sourceStackDepth << endl;
+    }
+}
+
 #else
 
 static inline void log(const Block* block) {}
+static inline void log(const char* message) {}
+static inline void logBuild(unsigned argCount) {}
+static inline void logEmit(unsigned index, Instr* instr, int stackDepth) {}
+static inline void logBranchHere(unsigned index, int stackDepth,
+                                 int sourceStackDepth) {}
 
 #endif
 
@@ -48,6 +80,7 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildModule(Traced<Env*> globals, const SyntaxBlock* s) {
+        log("buildModule");
         assert(globals);
         assert(!parent);
         kind = Kind::Module;
@@ -63,12 +96,14 @@ struct ByteCompiler : public SyntaxVisitor
                              const vector<Parameter>& params,
                              const Syntax& s)
     {
+        log("buildFunctionBody");
         assert(parent);
         kind = Kind::FunctionBody;
         this->parent = parent->block;
         topLevel = parent->topLevel;
         for (auto i = params.begin(); i != params.end(); ++i)
             layout = layout->addName(i->name);
+        // Environment and parameters passed on stack
         build(s, params.size());
         if (block->lastInstr().data->code() != Instr_Return) {
             emit<Instr_Pop>();
@@ -80,7 +115,9 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildLambda(ByteCompiler* parent, const vector<Parameter>& params,
-                       const Syntax& s) {
+                       const Syntax& s)
+    {
+        log("buildLambda");
         assert(parent);
         kind = Kind::Lambda;
         this->parent = parent->block;
@@ -94,6 +131,7 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildClass(ByteCompiler* parent, Name id, const Syntax& s) {
+        log("buildClass");
         assert(parent);
         kind = Kind::ClassBlock;
         this->parent = parent->block;
@@ -112,6 +150,7 @@ struct ByteCompiler : public SyntaxVisitor
                           const vector<Parameter>& params,
                           const Syntax& s)
     {
+        log("buildGenerator");
         assert(parent);
         kind = Kind::Generator;
         this->parent = parent->block;
@@ -128,6 +167,7 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildListComp(ByteCompiler* parent, const SyntaxListComp& s) {
+        log("buildListComp");
         assert(parent);
         kind = Kind::ListComp;
         this->parent = parent->block;
@@ -140,7 +180,9 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildEval(Traced<Env*> globals, Traced<Env*> locals,
-                     const Syntax* s) {
+                     const Syntax* s)
+    {
+        log("buildEval");
         assert(globals && locals);
 
         // todo: this is a hack to create a setup where we have the globals in a
@@ -160,7 +202,9 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     Block* buildExec(Traced<Env*> globals, Traced<Env*> locals,
-                     const Syntax* s) {
+                     const Syntax* s)
+    {
+        log("buildExec");
         assert(globals && locals);
 
         // todo: this is a hack to create a setup where we have the globals in a
@@ -212,8 +256,9 @@ struct ByteCompiler : public SyntaxVisitor
     vector<Context> contextStack;
     unsigned loopHeadOffset;
     vector<unsigned> breakInstrs;
-    unsigned stackDepth;
-    unsigned maxStackDepth;
+    int stackDepth; // -1 => unknown, e.g. after BranchAlways
+    int maxStackDepth;
+    vector<unsigned> stackDepthAtInstr;
 
     using AutoPushContext = AutoPushStack<Context>;
     using AutoSetAndRestoreOffset = AutoSetAndRestoreValue<unsigned>;
@@ -229,7 +274,36 @@ struct ByteCompiler : public SyntaxVisitor
 
     template <InstrCode Type, typename... Args>
     unsigned emit(Args&& ...args) {
-        return block->append<Type>(forward<Args>(args)...);
+        assert(stackDepth >= 0);
+        using Factory = InstrFactory<Type>;
+        using Class = typename Factory::Class;
+        Stack<Class*> instr(Factory::get(forward<Args>(args)...));
+        unsigned index = block->append(instr);
+
+        stackDepth += InstrStackAdjustment<Type>::value;
+        int countMultiple = InstrStackAdjustmentCountMultiple<Type>::value;
+        if (countMultiple)
+            stackDepth += countMultiple * getInstrCountField(instr);
+        assert(stackDepthAtInstr.size() == index);
+        stackDepthAtInstr.push_back(stackDepth);
+        maxStackDepth = max(stackDepth, maxStackDepth);
+
+        logEmit(index, instr, stackDepth);
+
+        if (InstrIsUnconditionalBranch<Type>::value)
+            stackDepth = -1;
+        return index;
+    }
+
+    void branchHereFrom(unsigned index) {
+        assert(block->instrCount() != 0);
+        assert(index < block->instrCount());
+        logBranchHere(index, stackDepth, stackDepthAtInstr[index]);
+        if (stackDepth == -1)
+            stackDepth = stackDepthAtInstr[index];
+        else
+            assert(stackDepth == stackDepthAtInstr[index]);
+        block->branchHere(index);
     }
 
     void compile(const Syntax* s) {
@@ -251,28 +325,22 @@ struct ByteCompiler : public SyntaxVisitor
             Instr *instr = block->instr(source).data;
             assert(instr->code() == Instr_LoopControlJump);
             static_cast<LoopControlJumpInstr*>(instr)->setTarget(pos);
+            // todo: check stack depth
         }
         breakInstrs.clear();
     }
 
-    void incStackDepth(unsigned increment = 1) {
-        stackDepth += increment;
-        maxStackDepth = max(stackDepth, maxStackDepth);
-    }
-
-    void decStackDepth(unsigned decrement = 1) {
-        assert(stackDepth >= decrement);
-        stackDepth -= decrement;
-    }
-
-    void maybeAssertStackDepth(unsigned delta = 0) {
+    void maybeAssertStackDepth() {
 #if defined(DEBUG)
-        if (assertStackDepth)
-            emit<Instr_AssertStackDepth>(stackDepth + delta);
+        if (assertStackDepth && stackDepth != -1)
+            emit<Instr_AssertStackDepth>(stackDepth);
 #endif
     }
 
-    void build(const Syntax& s, unsigned argCount, Traced<Env*> localEnv = nullptr) {
+    void build(const Syntax& s, unsigned argCount,
+               Traced<Env*> localEnv = nullptr)
+    {
+        logBuild(argCount);
         assert(!block);
         assert(topLevel);
         assert(stackDepth == 0);
@@ -291,23 +359,24 @@ struct ByteCompiler : public SyntaxVisitor
         block = gc.create<Block>(parent, topLevel, layout, argCount,
                                  useLexicalEnv);
 
+        stackDepth = (kind != Kind::Module ? 1 : 0) + argCount;
+        maybeAssertStackDepth();
+
         if (parent) {
             if (useLexicalEnv) {
                 if (localEnv)
                     emit<Instr_SetEnv>(localEnv);
                 else
                     emit<Instr_CreateEnv>();
-                incStackDepth(argCount);
             } else {
-                emit<Instr_InitStackLocals>();
-                incStackDepth(layout->slotCount());
+                emit<Instr_InitStackLocals>(block->stackLocalCount());
             }
+            maybeAssertStackDepth();
         }
 
         if (kind == Kind::Generator) {
             emit<Instr_StartGenerator>();
             emit<Instr_Pop>();
-            incStackDepth(); // InstrStartGenerator leaves iterator on stack
         }
 #ifdef DEBUG
         unsigned initialStackDepth = stackDepth;
@@ -316,17 +385,15 @@ struct ByteCompiler : public SyntaxVisitor
             compileListComp(s);
         else
             compile(s);
-        assert(stackDepth == initialStackDepth);
-        block->setMaxStackDepth(maxStackDepth + 1);
+
+        assert(stackDepth == initialStackDepth + 1);
+        block->setMaxStackDepth(maxStackDepth + 2);
     }
 
     void callUnaryMethod(const UnarySyntax& s, Name name) {
         compile(s.right);
-        incStackDepth();
         emit<Instr_GetMethod>(name);
-        incStackDepth(3);
         emit<Instr_CallMethod>(0);
-        decStackDepth(4);
     }
 
     template <typename BaseType>
@@ -334,13 +401,9 @@ struct ByteCompiler : public SyntaxVisitor
                           Name name)
     {
         compile(s.left);
-        incStackDepth();
         emit<Instr_GetMethod>(name);
-        incStackDepth(3);
         compile(s.right);
-        incStackDepth();
         emit<Instr_CallMethod>(1);
-        decStackDepth(5);
     }
 
     virtual void visit(const SyntaxPass& s) {
@@ -362,7 +425,7 @@ struct ByteCompiler : public SyntaxVisitor
             if (!first)
                 emit<Instr_Pop>();
             compile(i);
-            maybeAssertStackDepth(1);
+            maybeAssertStackDepth();
             first = false;
         }
         if (first)
@@ -385,46 +448,39 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxExprList& s) {
-        for (const auto& i : s.elements) {
+        for (const auto& i : s.elements)
             compile(*i);
-            incStackDepth();
-        }
         emit<Instr_Tuple>(s.elements.size());
-        decStackDepth(s.elements.size());
     }
 
     virtual void visit(const SyntaxList& s) {
-        for (const auto& i : s.elements) {
+        for (const auto& i : s.elements)
             compile(*i);
-            incStackDepth();
-        }
         emit<Instr_List>(s.elements.size());
-        decStackDepth(s.elements.size());
     }
 
     virtual void visit(const SyntaxDict& s) {
         for (const auto& i : s.entries) {
             compile(i.first);
-            incStackDepth();
             compile(i.second);
-            incStackDepth();
         }
         emit<Instr_Dict>(s.entries.size());
-        decStackDepth(s.entries.size() * 2);
     }
 
     virtual void visit(const SyntaxOr& s) {
         compile(s.left);
         unsigned branch = emit<Instr_Or>();
+        emit<Instr_Pop>();
         compile(s.right);
-        block->branchHere(branch);
+        branchHereFrom(branch);
     }
 
     virtual void visit(const SyntaxAnd& s) {
         compile(s.left);
         unsigned branch = emit<Instr_And>();
+        emit<Instr_Pop>();
         compile(s.right);
-        block->branchHere(branch);
+        branchHereFrom(branch);
     }
 
     virtual void visit(const SyntaxNot& s) {
@@ -446,18 +502,13 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxBinaryOp& s) {
         compile(s.left);
-        incStackDepth();
         compile(s.right);
-        incStackDepth();
         emit<Instr_BinaryOp>(s.op);
-        decStackDepth(2);
     }
 
     virtual void visit(const SyntaxAugAssign& s) {
         compile(s.left);
-        incStackDepth();
         compile(s.right);
-        incStackDepth();
         emit<Instr_AugAssignUpdate>(s.op);
         {
             AutoPushContext enterAssign(contextStack, Context::Assign);
@@ -465,26 +516,20 @@ struct ByteCompiler : public SyntaxVisitor
         }
         emit<Instr_Pop>();
         emit<Instr_Const>(None);
-        decStackDepth(2);
     }
 
     virtual void visit(const SyntaxCompareOp& s) {
         compile(s.left);
-        incStackDepth();
         compile(s.right);
         emit<Instr_CompareOp>(s.op);
-        decStackDepth();
     }
 
 
 #define define_visit_binary_instr(syntax, instr)                              \
     virtual void visit(const syntax& s) {                                     \
         compile(s.left);                                                      \
-        incStackDepth();                                                      \
         compile(s.right);                                                     \
-        incStackDepth();                                                      \
         emit<instr>();                                                        \
-        decStackDepth(2);                                                     \
     }
 
     define_visit_binary_instr(SyntaxIn, Instr_In);
@@ -494,10 +539,8 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxAssign& s) {
         compile(s.right);
-        incStackDepth();
         AutoPushContext enterAssign(contextStack, Context::Assign);
         compile(s.left);
-        decStackDepth();
     }
 
     virtual void visit(const SyntaxDel& s) {
@@ -609,9 +652,7 @@ struct ByteCompiler : public SyntaxVisitor
             break;
 
           default:
-            incStackDepth(3);
             emit<Instr_GetAttr>(id);
-            decStackDepth(3);
             break;
         }
     }
@@ -621,18 +662,13 @@ struct ByteCompiler : public SyntaxVisitor
           case Context::Assign: {
             AutoPushContext clearContext(contextStack, Context::None);
             compile(s.left);
-            incStackDepth();
             emit<Instr_GetMethod>(Names::__setitem__);
-            incStackDepth(3);
             compile(s.right);
-            incStackDepth(1);
             // todo: there may be a better way than this stack manipulation
             emit<Instr_Dup>(4);
-            incStackDepth(1);
             emit<Instr_CallMethod>(2);
             emit<Instr_Swap>();
             emit<Instr_Pop>();
-            decStackDepth(6);
             break;
           }
 
@@ -654,17 +690,13 @@ struct ByteCompiler : public SyntaxVisitor
         assert(contextStack.back() == Context::Assign ||
                contextStack.back() == Context::Delete);
         bool isAssign = contextStack.back() == Context::Assign;
-        if (isAssign) {
+        if (isAssign)
             emit<Instr_Destructure>(targets.size());
-            incStackDepth(targets.size());
-        }
         // Reverse order here becuase destructure reverses the order when
         // pushing onto the stack.
         for (unsigned i = targets.size(); i != 0; i--) {
             compile(targets[i - 1]);
             emit<Instr_Pop>();
-            if (isAssign)
-                decStackDepth();
         }
         emit<Instr_Const>(None);
     }
@@ -699,11 +731,9 @@ struct ByteCompiler : public SyntaxVisitor
         } else {
             compile(s.left);
         }
-        incStackDepth(3);
 
         for (const auto& i : s.right) {
             compile(*i);
-            incStackDepth();
         }
 
         unsigned count = s.right.size();
@@ -711,7 +741,6 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_CallMethod>(count);
         else
             emit<Instr_Call>(count);
-        decStackDepth(count + 3);
     }
 
     virtual void visit(const SyntaxReturn& s) {
@@ -740,9 +769,9 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned altBranch = emit<Instr_BranchIfFalse>();
         compile(s.cons);
         unsigned endBranch = emit<Instr_BranchAlways>();
-        block->branchHere(altBranch);
+        branchHereFrom(altBranch);
         compile(s.alt);
-        block->branchHere(endBranch);
+        branchHereFrom(endBranch);
     }
 
     virtual void visit(const SyntaxIf& s) {
@@ -752,19 +781,21 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned lastCondFailed = 0;
         for (unsigned i = 0; i != suites.size(); ++i) {
             if (i != 0)
-                block->branchHere(lastCondFailed);
+                branchHereFrom(lastCondFailed);
             compile(suites[i].cond);
             lastCondFailed = emit<Instr_BranchIfFalse>();
             compile(suites[i].suite);
             branchesToEnd.push_back(emit<Instr_BranchAlways>());
+            //stackDepth -= 1;
         }
-        block->branchHere(lastCondFailed);
+        branchHereFrom(lastCondFailed);
+
         if (s.elseSuite)
             compile(s.elseSuite);
         else
             emit<Instr_Const>(None);
         for (unsigned i = 0; i < branchesToEnd.size(); ++i)
-            block->branchHere(branchesToEnd[i]);
+            branchHereFrom(branchesToEnd[i]);
     }
 
     virtual void visit(const SyntaxWhile& s) {
@@ -779,7 +810,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_Pop>();
         }
         emit<Instr_BranchAlways>(block->offsetTo(loopHeadOffset));
-        block->branchHere(branchToEnd);
+        branchHereFrom(branchToEnd);
         setBreakTargets();
         breakInstrs = move(oldBreakInstrs);
         emit<Instr_Const>(None);
@@ -791,7 +822,6 @@ struct ByteCompiler : public SyntaxVisitor
         compile(s.exprs);
         emit<Instr_GetIterator>();
         emit<Instr_GetMethod>(Names::__next__);
-        incStackDepth(3); // Leave the iterator and next method on the stack
 
         // 2. Call next on iterator and break if end (loop head)
         AutoSetAndRestoreOffset setLoopHead(loopHeadOffset, block->nextIndex());
@@ -816,7 +846,8 @@ struct ByteCompiler : public SyntaxVisitor
         emit<Instr_BranchAlways>(block->offsetTo(loopHeadOffset));
 
         // 5. Exit
-        block->branchHere(exitBranch);
+        branchHereFrom(exitBranch);
+        emit<Instr_Pop>();
 
         // 6. Else clause
         if (s.elseSuite) {
@@ -829,7 +860,6 @@ struct ByteCompiler : public SyntaxVisitor
         emit<Instr_Pop>();
         emit<Instr_Pop>();
         emit<Instr_Pop>();
-        decStackDepth(3);
         emit<Instr_Const>(None);
     }
 
@@ -843,7 +873,6 @@ struct ByteCompiler : public SyntaxVisitor
             if (i->maybeDefault) {
                 defaultCount++;
                 compile(i->maybeDefault);
-                incStackDepth();
             }
         }
         bool takesRest = false;
@@ -851,7 +880,6 @@ struct ByteCompiler : public SyntaxVisitor
             takesRest = params.back().takesRest;
         emit<Instr_Lambda>(defName, names, exprBlock, defaultCount, takesRest,
                           isGenerator);
-        decStackDepth(defaultCount);
     }
 
     virtual void visit(const SyntaxLambda& s) {
@@ -876,7 +904,6 @@ struct ByteCompiler : public SyntaxVisitor
     virtual void visit(const SyntaxClass& s) {
         Stack<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
         vector<Name> params = { Names::__bases__ };
-        incStackDepth();
         emit<Instr_Lambda>(s.id, params, suite);
         compile(s.bases);
         emit<Instr_Call>(1);
@@ -887,7 +914,6 @@ struct ByteCompiler : public SyntaxVisitor
         } else {
             emit<Instr_SetGlobal>(topLevel, s.id);
         }
-        decStackDepth();
     }
 
     virtual void visit(const SyntaxAssert& s) {
@@ -896,16 +922,13 @@ struct ByteCompiler : public SyntaxVisitor
             unsigned endBranch = emit<Instr_BranchIfTrue>();
             if (s.message) {
                 compile(s.message);
-                incStackDepth();
                 emit<Instr_GetMethod>(Names::__str__);
-                incStackDepth(3);
                 emit<Instr_CallMethod>(0);
-                decStackDepth(4);
             } else {
                 emit<Instr_Const>(None);
             }
             emit<Instr_AssertionFailed>();
-            block->branchHere(endBranch);
+            branchHereFrom(endBranch);
         }
         emit<Instr_Const>(None);
     }
@@ -917,6 +940,7 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxYield& s) {
         compile(s.right);
+        maybeAssertStackDepth();
         emit<Instr_SuspendGenerator>();
     }
 
@@ -934,7 +958,7 @@ struct ByteCompiler : public SyntaxVisitor
         }
         if (s.finallySuite) {
             emit<Instr_LeaveFinallyRegion>();
-            block->branchHere(finallyBranch);
+            branchHereFrom(finallyBranch);
             compile(s.finallySuite);
             emit<Instr_Pop>();
             emit<Instr_FinishExceptionHandler>();
@@ -955,11 +979,12 @@ struct ByteCompiler : public SyntaxVisitor
         vector<unsigned> exceptEndBranches;
         for (const auto& e : s.excepts) {
             assert(!fullyHandled);
-            block->branchHere(handlerBranch);
+            branchHereFrom(handlerBranch);
             if (e->expr) {
                 compile(e->expr);
                 emit<Instr_MatchCurrentException>();
                 handlerBranch = emit<Instr_BranchIfFalse>();
+                emit<Instr_HandleCurrentException>();
                 if (e->as) {
                     AutoPushContext enterAssign(contextStack, Context::Assign);
                     compile(e->as);
@@ -969,6 +994,7 @@ struct ByteCompiler : public SyntaxVisitor
                 assert(!e->as);
                 fullyHandled = true;
                 emit<Instr_HandleCurrentException>();
+                emit<Instr_Pop>();
             }
             compile(e->suite);
             emit<Instr_Pop>();
@@ -980,17 +1006,17 @@ struct ByteCompiler : public SyntaxVisitor
             exceptEndBranches.push_back(emit<Instr_BranchAlways>());
         }
 
-        block->branchHere(suiteEndBranch);
+        branchHereFrom(suiteEndBranch);
         if (s.elseSuite) {
             compile(s.elseSuite);
             emit<Instr_Pop>();
         }
 
         if (!fullyHandled)
-            block->branchHere(handlerBranch);
+            branchHereFrom(handlerBranch);
         emit<Instr_FinishExceptionHandler>();
         for (unsigned offset: exceptEndBranches)
-            block->branchHere(offset);
+            branchHereFrom(offset);
     }
 
     enum class LoopExit {
@@ -1034,7 +1060,6 @@ struct ByteCompiler : public SyntaxVisitor
 
         for (const auto& i : s.modules) {
             Stack<Value> value;
-            incStackDepth(6);
 
             value = Builtin->getAttr(Names::__import__);
             emit<Instr_Const>(value);
@@ -1056,7 +1081,6 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_Const>(value);
 
             emit<Instr_Call>(5);
-            decStackDepth(6);
 
             compileAssign(i->localName);
             emit<Instr_Pop>();
@@ -1077,7 +1101,6 @@ struct ByteCompiler : public SyntaxVisitor
         //   ???
         Token t = s.token;
         Stack<Value> value;
-        incStackDepth(6);
 
         value = Builtin->getAttr(Names::__import__);
         emit<Instr_Const>(value);
@@ -1093,32 +1116,30 @@ struct ByteCompiler : public SyntaxVisitor
         emit<Instr_Const>(value);
         emit<Instr_Call>(0);
 
-        incStackDepth(s.ids.size());
         for (const auto& i : s.ids) {
             value = i->name;
             emit<Instr_Const>(value);
         }
         emit<Instr_List>(s.ids.size());
-        decStackDepth(s.ids.size());
 
         value = Value(0);
         emit<Instr_Const>(value);
 
         emit<Instr_Call>(5);
-        decStackDepth(6);
 
         if (s.ids.empty()) {
             // todo
             value = gc.create<String>("import * not implemented");
             emit<Instr_Const>(value);
             emit<Instr_AssertionFailed>();
-        } else {
-            for (const auto& i : s.ids) {
-                emit<Instr_Dup>(0);
-                emit<Instr_GetAttr>(i->name);
-                compileAssign(i->localName);
-                emit<Instr_Pop>();
-            }
+            return;
+        }
+
+        for (const auto& i : s.ids) {
+            emit<Instr_Dup>(0);
+            emit<Instr_GetAttr>(i->name);
+            compileAssign(i->localName);
+            emit<Instr_Pop>();
         }
 
         emit<Instr_Pop>();
@@ -1153,7 +1174,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_SetLexical>(0, Names::listCompResult);
         else
             emit<Instr_SetStackLocal>(Names::listCompResult, 0);
-        incStackDepth();
+        emit<Instr_Pop>();
 
         // Compile expression to generate results
         compile(s);
@@ -1164,7 +1185,6 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_GetLexical>(0, Names::listCompResult);
         else
             emit<Instr_GetStackLocal>(Names::listCompResult, 0);
-        decStackDepth();
     }
 
     virtual void visit(const SyntaxCompIterand& s) {
@@ -1173,10 +1193,8 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_GetLexical>(0, Names::listCompResult);
         else
             emit<Instr_GetStackLocal>(Names::listCompResult, 0);
-        incStackDepth();
         compile(*s.expr);
         emit<Instr_ListAppend>();
-        decStackDepth();
     }
 
     virtual void setPos(const TokenPos& pos) {

@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include "block.h"
+#include "compiler.h"
 #include "dict.h"
 #include "interp.h"
 #include "input.h"

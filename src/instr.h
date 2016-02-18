@@ -87,7 +87,7 @@ struct Interpreter;
     instr(CallMethod, CountInstr)                                            \
     instr(CreateEnv, Instr)                                                  \
     instr(SetEnv, ValueInstr)                                                \
-    instr(InitStackLocals, Instr)                                            \
+    instr(InitStackLocals, CountInstr)                                       \
     instr(In, Instr)                                                         \
     instr(Is, Instr)                                                         \
     instr(Not, Instr)                                                        \
@@ -168,6 +168,56 @@ struct Interpreter;
     for_each_outofline_instr(instr)                                          \
     for_each_stub_instr(instr)
 
+#define for_each_instr_stack_adjustment(_)                                  \
+    _(Const, 1)                                                              \
+    _(GetStackLocal, 1)                                                      \
+    _(GetLexical, 1)                                                         \
+    _(GetGlobal, 1)                                                          \
+    _(SetAttr, -1)                                                           \
+    _(DelAttr, -1)                                                           \
+    _(GetMethod, 2)                                                          \
+    _(CallMethod, -2)                                                        \
+    _(CreateEnv, -1)                                                         \
+    _(SetEnv, -1)                                                            \
+    _(InitStackLocals, -1)                                                   \
+    _(BranchIfTrue, -1)                                                      \
+    _(BranchIfFalse, -1)                                                     \
+    _(In, -1)                                                                \
+    _(Is, -1)                                                                \
+    _(Lambda, 1)                                                             \
+    _(Dup, 1)                                                                \
+    _(Pop, -1)                                                               \
+    _(Tuple, 1)                                                              \
+    _(List, 1)                                                               \
+    _(Dict, 1)                                                               \
+    _(Slice, -2)                                                             \
+    _(AssertionFailed, -1) /* to balance stack depth calculations */         \
+    _(MakeClassFromFrame, 1)                                                 \
+    _(Destructure, -1)                                                       \
+    _(IteratorNext, 2)                                                       \
+    _(BinaryOp, -1)                                                          \
+    _(CompareOp, -1)                                                         \
+    _(AugAssignUpdate, -1)                                                   \
+    _(StartGenerator, 2) /* for generator and value pushed on resume */      \
+    _(LeaveGenerator, 1)                                                     \
+    _(LoopControlJump, 1) /* to balance stack depth calculations */          \
+    _(HandleCurrentException, 1)                                             \
+    _(ListAppend, -1)
+
+#define for_each_instr_stack_adjust_count_multiple(_)                        \
+    _(Call, -1)                                                              \
+    _(CallMethod, -1)                                                        \
+    _(InitStackLocals, 1)                                                    \
+    _(Lambda, -1)                                                            \
+    _(Tuple, -1)                                                             \
+    _(List, -1)                                                              \
+    _(Dict, -2)                                                              \
+    _(Destructure, 1)
+
+#define for_each_unconditonal_branch_instr(_)                                \
+    _(BranchAlways)
+// todo: also AssertionFailed, LoopControlJump, Raise
+
 enum InstrType
 {
 #define define_instr_type_enum(type)                                         \
@@ -189,6 +239,36 @@ enum InstrCode : uint8_t
 
 #undef define_instr_code_enum
 };
+
+template <InstrCode Code>
+struct InstrStackAdjustment { static const int value = 0; };
+#define define_instr_stack_adjustment(name, v)                                \
+    template <>                                                               \
+    struct InstrStackAdjustment<Instr_##name> {                               \
+        static const int value = v;                                           \
+    };
+for_each_instr_stack_adjustment(define_instr_stack_adjustment)
+#undef define_instr_stack_adjustment
+
+template <InstrCode Code>
+struct InstrStackAdjustmentCountMultiple { static const int value = 0; };
+#define define_instr_stack_adjustment_count_multiple(name, v)                 \
+    template <>                                                               \
+    struct InstrStackAdjustmentCountMultiple<Instr_##name> {                  \
+        static const int value = v;                                           \
+    };
+for_each_instr_stack_adjust_count_multiple(define_instr_stack_adjustment_count_multiple)
+#undef define_instr_stack_adjustment_count_multiple
+
+template <InstrCode Code>
+struct InstrIsUnconditionalBranch { static const bool value = false; };
+#define define_unconditional_branch_instr(name)                               \
+    template <>                                                               \
+    struct InstrIsUnconditionalBranch<Instr_##name> {                         \
+        static const bool value = true;                                       \
+    };
+for_each_unconditonal_branch_instr(define_unconditional_branch_instr)
+#undef define_unconditional_branch_instr
 
 extern InstrType instrType(InstrCode code);
 extern const char* instrName(InstrCode code);
@@ -671,8 +751,9 @@ struct InstrFactory
     template <>                                                               \
     struct InstrFactory<Instr_##code>                                         \
     {                                                                         \
+        using Class = cls;                                                    \
         template <typename... Args>                                           \
-        static Instr* get(Args&&... args) {                                   \
+        static cls* get(Args&&... args) {                                     \
             return gc.create<cls>(Instr_##code, forward<Args>(args)...);      \
         }                                                                     \
     };
@@ -685,5 +766,15 @@ for_each_stub_instr(define_instr_factory)
 
 extern Instr* getNextInstr(Instr* instr);
 extern Instr* getFinalInstr(Instr* instr);
+
+inline unsigned getInstrCountField(Instr* instr) {
+    return 0;
+}
+inline unsigned getInstrCountField(CountInstr* instr) {
+    return instr->count;
+}
+inline unsigned getInstrCountField(LambdaInstr* instr) {
+    return instr->defaultCount();
+}
 
 #endif
