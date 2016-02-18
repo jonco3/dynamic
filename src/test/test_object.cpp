@@ -51,7 +51,9 @@ testcase(object)
 
     testFalse(o->maybeDelOwnAttr(foo));
 
-    testFalse(None->isTrue());
-    testFalse(Integer::get(0).isTrue());
-    testTrue(Integer::get(1).isTrue());
+    testFalse(Object::IsTrue(None));
+    value = Integer::get(0);
+    testFalse(Value::IsTrue(value));
+    value = Integer::get(1);
+    testTrue(Value::IsTrue(value));
 }

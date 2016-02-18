@@ -278,7 +278,7 @@ void Object::dump(ostream& s) const
     s << " } ";
 }
 
-bool Object::isTrue() const
+/* static */ bool Object::IsTrue(Traced<Object*> obj)
 {
     // the following values are interpreted as false: False, None, numeric zero
     // of all types, and empty strings and containers (including strings,
@@ -286,9 +286,10 @@ bool Object::isTrue() const
     // https://docs.python.org/2/reference/expressions.html#boolean-operations
     // todo: call __nonzero__ and __empty__
     return
-        this != None &&
-        this != Boolean::False &&
-        !(is<Integer>() && as<Integer>()->value() == 0);
+        obj != None &&
+        obj != Boolean::False &&
+        !(obj->is<Integer>() && obj->as<Integer>()->value() == 0) &&
+        !(obj->is<Float>() && obj->as<Float>()->value() == 0);
 }
 
 bool Object::isInstanceOf(Class* cls) const

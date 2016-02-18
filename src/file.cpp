@@ -219,7 +219,8 @@ File::File(FILE* file, Traced<String*> name, Traced<String*> mode)
 
 bool File::closed() const
 {
-    return getSlot(ClosedSlot).isTrue();
+    Stack<Value> value(getSlot(ClosedSlot));
+    return Value::IsTrue(value);
 }
 
 int File::fileno() const

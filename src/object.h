@@ -81,7 +81,7 @@ struct Object : public Cell
     // Add uninitialised attributes for all names in layout.
     void extend(Traced<Layout*> layout);
 
-    bool isTrue() const;
+    static bool IsTrue(Traced<Object*> obj);
     bool isInstanceOf(Class* cls) const;
 
   protected:

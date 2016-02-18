@@ -64,14 +64,16 @@ bool Value::isNone() const
     return isObject() && asObject()->isNone();
 }
 
-inline bool Value::isTrue() const
+/* static */ inline bool Value::IsTrue(Traced<Value> value)
 {
-    if (isInt32())
-        return asInt32() != 0;
-    else if (isDouble())
-        return asDouble() != 0.0;
-    else
-        return toObject()->isTrue();
+    if (value.isInt32())
+        return value.asInt32() != 0;
+
+    if (value.isDouble())
+        return value.asDouble() != 0.0;
+
+    Stack<Object*> obj(value.asObject());
+    return Object::IsTrue(obj);
 }
 
 inline bool Value::isInstanceOf(Traced<Class*> cls) const
@@ -175,6 +177,12 @@ inline int32_t WrapperMixins<W, Value>::asInt32() const
 }
 
 template <typename W>
+inline double WrapperMixins<W, Value>::asDouble() const
+{
+    return extract()->asDouble();
+}
+
+template <typename W>
 inline bool WrapperMixins<W, Value>::toInt32(int32_t& out) const
 {
     return extract()->toInt32(out);
@@ -246,12 +254,6 @@ template <typename W>
 inline bool WrapperMixins<W, Value>::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
     return extract()->maybeGetAttr(name, valueOut);
-}
-
-template <typename W>
-inline bool WrapperMixins<W, Value>::isTrue() const
-{
-    return extract()->isTrue();
 }
 
 template <typename W>

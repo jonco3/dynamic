@@ -535,8 +535,8 @@ Interpreter::executeInstr_Not(Traced<Instr*> instr)
     // of all types, and empty strings and containers (including strings,
     // tuples, lists, dictionaries, sets and frozensets).
 
-    Object* obj = popStack().toObject();
-    pushStack(Boolean::get(!obj->isTrue()));
+    Stack<Object*> obj(popStack().toObject());
+    pushStack(Boolean::get(!Object::IsTrue(obj)));
 }
 
 void
@@ -550,8 +550,8 @@ void
 Interpreter::executeInstr_BranchIfTrue(Traced<BranchInstr*> instr)
 {
     assert(instr->offset());
-    Object *x = popStack().toObject();
-    if (x->isTrue())
+    Stack<Object*> x(popStack().toObject());
+    if (Object::IsTrue(x))
         branch(instr->offset());
 }
 
@@ -559,8 +559,8 @@ void
 Interpreter::executeInstr_BranchIfFalse(Traced<BranchInstr*> instr)
 {
     assert(instr->offset());
-    Object *x = popStack().toObject();
-    if (!x->isTrue())
+    Stack<Object*> x(popStack().toObject());
+    if (!Object::IsTrue(x))
         branch(instr->offset());
 }
 
@@ -571,8 +571,8 @@ Interpreter::executeInstr_Or(Traced<BranchInstr*> instr)
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     assert(instr->offset());
-    Object *x = peekStack().toObject();
-    if (x->isTrue()) {
+    Stack<Object*> x(peekStack().toObject());
+    if (Object::IsTrue(x)) {
         branch(instr->offset());
         return;
     }
@@ -585,8 +585,8 @@ Interpreter::executeInstr_And(Traced<BranchInstr*> instr)
     // returned; otherwise, y is evaluated and the resulting value is returned.
 
     assert(instr->offset());
-    Object *x = peekStack().toObject();
-    if (!x->isTrue()) {
+    Stack<Object*> x(peekStack().toObject());
+    if (!Object::IsTrue(x)) {
         branch(instr->offset());
         return;
     }

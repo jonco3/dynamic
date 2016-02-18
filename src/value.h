@@ -95,7 +95,6 @@ struct Value
     template <typename T> inline T* as() const;
 
     inline bool isNone() const;
-    inline bool isTrue() const;
     inline bool isInt() const;
     inline bool isFloat() const;
 
@@ -110,6 +109,8 @@ struct Value
     // Not python equality!
     bool operator==(const Value& other) const { return bits == other.bits; }
     bool operator!=(const Value& other) const { return !(*this == other); }
+
+    static bool IsTrue(Traced<Value> value);
 
   private:
     enum

@@ -285,7 +285,7 @@ static bool compareElements(Value aArg, Value bArg)
     if (!interp->call(compare, 2, result))
         throw PythonException(result);
 
-    return result.isTrue();
+    return Value::IsTrue(result);
 }
 
 void List::sort()
