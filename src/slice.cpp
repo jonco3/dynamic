@@ -46,25 +46,37 @@ Slice::Slice(Traced<Class*> cls)
     assert(cls->isDerivedFrom(ObjectClass));
 }
 
-int32_t Slice::getSlotOrDefault(unsigned slot, int32_t def)
+bool Slice::getSlotIfNotNone(unsigned slot, int32_t& resultOut)
 {
     Value value = getSlot(slot);
     if (value == Value(None))
-        return def;
-    return value.asInt32();
+        return false;
+
+    resultOut = value.asInt32();
+    return true;
 }
 
 void Slice::indices(int32_t length, int32_t& start, int32_t& stop, int32_t& step)
 {
     // todo: should be a python method
-    start = getSlotOrDefault(StartSlot, 0);
-    stop = getSlotOrDefault(StopSlot, length);
-    step = getSlotOrDefault(StepSlot, 1);
+    if (!getSlotIfNotNone(StepSlot, step))
+        step = 1;
     if (step == 0)
         return;
 
-    start = ClampIndex(WrapIndex(start, length), length, true);
-    stop = ClampIndex(WrapIndex(stop, length), length, false);
+    if (getSlotIfNotNone(StartSlot, start))
+        start = ClampIndex(WrapIndex(start, length), length, true);
+    else if (step > 0)
+        start = 0;
+    else
+        start = length - 1;
+
+    if (getSlotIfNotNone(StopSlot, stop))
+        stop = ClampIndex(WrapIndex(stop, length), length, false);
+    else if (step > 0)
+        stop = length;
+    else
+        stop = length > 0 ? -1 : 0;
 }
 
 bool Slice::getIterationData(int32_t length,

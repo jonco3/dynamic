@@ -27,7 +27,7 @@ struct Slice : public Object
         StepSlot
     };
 
-    int32_t getSlotOrDefault(unsigned slot, int32_t def);
+    bool getSlotIfNotNone(unsigned slot, int32_t& resultOut);
 };
 
 inline int32_t WrapIndex(int32_t index, int32_t length)

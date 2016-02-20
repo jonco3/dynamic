@@ -473,11 +473,11 @@ static bool list_setitem(TracedVector<Value> args,
                 return false;
             }
 
-            int32_t src = start;
+            int32_t dest = start;
             for (size_t i = 0; i < count; i++) {
-                assert(src < self->len());
-                self->setitem(i, list->getitem(i));
-                src += step;
+                assert(dest < self->len());
+                self->setitem(dest, list->getitem(i));
+                dest += step;
             }
         }
 
