@@ -481,7 +481,7 @@ static bool list_setitem(TracedVector<Value> args,
             }
         }
 
-        resultOut = Value(None);
+        resultOut = args[2];
         return true;
     }
 

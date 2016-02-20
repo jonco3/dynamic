@@ -102,6 +102,8 @@ data[:1] = [1, 2]
 assert data == [1, 2, 3]
 data [:-1] = []
 assert data == [3]
+x = data[:] = [4, 5]
+assert x == [4, 5]
 
 data = [0, 1, 2, 3, 4]
 data[:2] = data[1::-1]
@@ -118,5 +120,7 @@ data[:1] = [1, 2]
 assert data.values == [1, 2, 3]
 data [:-1] = []
 assert data.values == [3]
+x = data2[:] = [5, 6]
+assert x == [5, 6]
 
 print('ok')
