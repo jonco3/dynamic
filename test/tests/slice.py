@@ -7,6 +7,7 @@ class Listy:
         return self.values[x]
     def __setitem__(self, x, y):
         self.values[x] = y
+        return y
 
 # test subscript reference
 
@@ -27,12 +28,16 @@ data[0] = 3
 assert data == [3, 1, 2]
 data[-2] = 0
 assert data == [3, 0, 2]
+x = data[1] = -1
+assert x == -1
 
 data2 = Listy([1, 2, 3])
 data2[0] = 4
 assert data2.values == [4, 2, 3]
 data2[-2] = 1
 assert data2.values == [4, 1, 3]
+x = data2[1] = -1
+assert x == -1
 
 # test subscript reference with slice
 

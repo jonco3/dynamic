@@ -443,7 +443,7 @@ static bool list_setitem(TracedVector<Value> args,
             return false;
 
         self->setitem(i, args[2]);
-        resultOut = None;
+        resultOut = args[2];
         return true;
     }
 
