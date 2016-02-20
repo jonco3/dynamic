@@ -115,6 +115,10 @@ def formatTime(secs):
 def formatResult(result):
     return "%-20s" % result
 
+def formatExeName(command):
+    exeName = os.path.basename(command.split()[0])
+    return formatResult(exeName)
+
 def runTestDir(dirname, names):
     for name in names:
         if name.endswith('.py'):
@@ -138,7 +142,7 @@ def runTestDir(dirname, names):
                         print(extra)
 
 line = 'Running tests:         '
-line += "".join(map(lambda c: formatResult(c.split()[0]), args.commands))
+line += "".join(map(formatExeName, args.commands))
 print(line)
 
 for testDir in args.dirs:
