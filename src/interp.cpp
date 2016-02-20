@@ -707,8 +707,10 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             if (target->maybeGetAttr(Names::__init__, initFunc)) {
                 Stack<Value> initResult;
                 funcArgs[0] = resultOut;
-                if (!call(initFunc, funcArgs, initResult))
+                if (!call(initFunc, funcArgs, initResult)) {
+                    resultOut = initResult;
                     return CallError;
+                }
                 if (initResult.get().toObject() != None) {
                     return raiseTypeError(
                         "__init__() should return None", resultOut);

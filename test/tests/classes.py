@@ -155,4 +155,16 @@ G.foo = 1
 assert G.foo == 1
 del G.foo
 
+# Test error thrown in constructor
+class Bad:
+  def __init__(self):
+    raise OSError()
+
+threw = False
+try:
+  Bad()
+except OSError:
+  threw = True
+assert threw
+
 print("ok")
