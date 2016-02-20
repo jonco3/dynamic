@@ -59,13 +59,13 @@ struct List : public Object
     void print(ostream& os) const override;
     void traceChildren(Tracer& t) override;
 
-    int32_t len() { return (int32_t)elements_.size(); }
-    Value getitem(size_t index) { return elements_.at(index); }
+    int32_t len() const { return (int32_t)elements_.size(); }
+    Value getitem(size_t index) const { return elements_.at(index); }
     const HeapVector<Value>& elements() const { return elements_; }
 
-    bool setitem(Traced<Value> index, Traced<Value> value,
-                 MutableTraced<Value> resultOut);
+    void setitem(int32_t index, Value value);
     bool delitem(Traced<Value> index, MutableTraced<Value> resultOut);
+    void replaceitems(int32_t start, int32_t count, Traced<List*> list);
     void append(Traced<Value> element);
     void sort();
 

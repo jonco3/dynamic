@@ -37,7 +37,7 @@ testcase(list)
     testInterp("[1][0]", "1");
     testInterp("[1,2][1]", "2");
     testInterp("[1,2][-1]", "2");
-    testInterp("[1][0] = 2", "2");
+    testInterp("[1][0] = 2", "None");
     testInterp("a = [1]; a[0] = 3; a", "[3]");
     testInterp("2 in [1]", "False");
     testInterp("2 in [1, 2, 3]", "True");

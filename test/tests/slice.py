@@ -71,4 +71,34 @@ assert data[1::] == [1, 2]
 assert data[:2:] == [0, 1]
 assert data[::2] == [0, 2]
 
+data2 = Listy([1, 2, 3])
+assert data2[0:2] == [1, 2]
+assert data2[1:-1] == [2]
+
+# test subscript assignment with slice
+
+data = [0, 1, 2]
+data[2:] = [0]
+assert data == [0, 1, 0]
+data[-1:] = [2, 3]
+assert data == [0, 1, 2, 3]
+data[1:3] = []
+assert data == [0, 3]
+data[:1] = [1, 2]
+assert data == [1, 2, 3]
+data [:-1] = []
+assert data == [3]
+
+data = Listy([0, 1, 2])
+data[2:] = [0]
+assert data.values == [0, 1, 0]
+data[-1:] = [2, 3]
+assert data.values == [0, 1, 2, 3]
+data[1:3] = []
+assert data.values == [0, 3]
+data[:1] = [1, 2]
+assert data.values == [1, 2, 3]
+data [:-1] = []
+assert data.values == [3]
+
 print('ok')

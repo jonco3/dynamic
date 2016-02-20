@@ -240,16 +240,10 @@ GetIndex(T* self, Traced<Value> index,
     return true;
 }
 
-bool List::setitem(Traced<Value> index, Traced<Value> value,
-                   MutableTraced<Value> resultOut)
+void List::setitem(int32_t index, Value value)
 {
-    int32_t i;
-    if (!GetIndex(this, index, &i, resultOut))
-        return false;
-
-    elements_[i] = value;
-    resultOut = value;
-    return true;
+    assert(index < elements_.size());
+    elements_[index] = value;
 }
 
 bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
@@ -262,6 +256,15 @@ bool List::delitem(Traced<Value> index, MutableTraced<Value> resultOut)
     elements_.erase(elements_.begin() + i);
     resultOut = None;
     return true;
+}
+
+void List::replaceitems(int32_t start, int32_t count, Traced<List*> list)
+{
+    // todo: could be more clever here.
+    assert(start + count <= len());
+    auto i = elements_.begin() + start;
+    elements_.erase(i, i + count);
+    elements_.insert(i, list->elements_.begin(), list->elements_.end());
 }
 
 void List::append(Traced<Value> element)
@@ -432,7 +435,58 @@ static bool generic_iter(TracedVector<Value> args,
 static bool list_setitem(TracedVector<Value> args,
                          MutableTraced<Value> resultOut)
 {
-    return args[0].as<List>()->setitem(args[1], args[2], resultOut);
+    Stack<List*> self(args[0].as<List>());
+    Stack<Value> index(args[1]);
+    if (index.isInt()) {
+        int32_t i;
+        if (!GetIndex(self.get(), index, &i, resultOut))
+            return false;
+
+        self->setitem(i, args[2]);
+        resultOut = None;
+        return true;
+    }
+
+    if (index.isInstanceOf(Slice::ObjectClass)) {
+        if (!args[2].is<List>()) {
+            // todo: reference says this should be the same type, but cpython
+            // accepts e.g. tuples.
+            resultOut = gc.create<TypeError>("expecting list");
+            return false;
+        }
+
+        Stack<Slice*> slice(index.as<Slice>());
+        int32_t start, count, step;
+        if (!slice->getIterationData(self->len(), start, count, step,
+                                     resultOut))
+        {
+            return false;
+        }
+
+        Stack<List*> list(args[2].as<List>());
+        if (step == 1) {
+            self->replaceitems(start, count, list);
+        } else {
+            if (count != list->len()) {
+                resultOut = gc.create<ValueError>(
+                    "Assigned list is the wrong size");
+                return false;
+            }
+
+            int32_t src = start;
+            for (size_t i = 0; i < count; i++) {
+                assert(src < self->len());
+                self->setitem(i, list->getitem(i));
+                src += step;
+            }
+        }
+
+        resultOut = Value(None);
+        return true;
+    }
+
+    resultOut = gc.create<TypeError>("indices must be integers or slices");
+    return false;
 }
 
 static bool list_delitem(TracedVector<Value> args,
