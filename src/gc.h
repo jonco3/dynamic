@@ -2,6 +2,7 @@
 #define __GC_H__
 
 #include "utils.h"
+#include "vector.h"
 
 #include <cassert>
 #include <cstddef>
@@ -29,8 +30,8 @@ struct RootBase;
 struct StackBase;
 struct SweptCell;
 template <typename T> struct Heap;
-template <typename T> struct HeapVector;
-template <typename T> struct VectorBase;
+template <typename T, typename V = Vector<T, 0>> struct VectorBase;
+template <typename T, typename V = Vector<T, 0>> struct HeapVector;
 template <typename T> struct MutableTraced;
 
 // A visitor that visits edges in the object graph.
@@ -58,14 +59,14 @@ struct GC
     template <typename T>
     inline void traceUnbarriered(Tracer& t, T* ptr);
 
-    template <typename T>
-    inline void traceVectorUnbarriered(Tracer& t, VectorBase<T>* ptr);
+    template <typename T, typename V>
+    inline void traceVectorUnbarriered(Tracer& t, VectorBase<T, V>* ptr);
 
     template <typename T>
     inline void trace(Tracer& t, Heap<T>* ptr);
 
-    template <typename T>
-    inline void traceVector(Tracer& t, HeapVector<T>* ptrs);
+    template <typename T, typename V>
+    inline void traceVector(Tracer& t, HeapVector<T, V>* ptrs);
 
 #ifdef DEBUG
     bool currentlySweeping() const {
@@ -230,8 +231,8 @@ void GC::traceUnbarriered(Tracer& t, T* ptr) {
     GCTraits<T>::trace(t, ptr);
 }
 
-template <typename T>
-void GC::traceVectorUnbarriered(Tracer& t, VectorBase<T>* ptrs) {
+template <typename T, typename V>
+void GC::traceVectorUnbarriered(Tracer& t, VectorBase<T, V>* ptrs) {
     for (auto i: *ptrs)
         GCTraits<T>::trace(t, &i);
 }
@@ -241,13 +242,13 @@ void GC::trace(Tracer& t, Heap<T>* ptr) {
     GCTraits<T>::trace(t, &ptr->get());
 }
 
-template <typename T>
-void GC::traceVector(Tracer& t, HeapVector<T>* ptrs) {
+template <typename T, typename V>
+ void GC::traceVector(Tracer& t, HeapVector<T, V>* ptrs) {
     for (auto i: *ptrs)
         GCTraits<T>::trace(t, &i);
 }
 
-template <typename T>
+template <typename T, typename V = Vector<T, 0>>
 struct TracedVector;
 
 // Provides usage count in debug builds so we can assert references don't live
@@ -282,7 +283,7 @@ struct UseCountBase
 #endif
     }
 
-    template <typename T>
+    template <typename T, typename V>
     friend struct TracedVector;
 
   private:
@@ -322,14 +323,17 @@ struct PointerBase : public UseCountBase
 };
 
 // Base class for wrapper classes a vector of GC pointers.
-template <typename T>
-struct VectorBase : public UseCountBase, protected vector<T>
+template <typename T, typename V>
+struct VectorBase : public UseCountBase, protected V
 {
     VectorBase() {}
-    VectorBase(size_t count) : vector<T>(count, GCTraits<T>::nullValue()) {}
-    VectorBase(size_t count, T fill) : vector<T>(count, fill) {}
+    VectorBase(size_t count) : V(count, GCTraits<T>::nullValue()) {}
+    VectorBase(size_t count, T fill) : V(count, fill) {}
 
-    typedef vector<T> Base;
+    using Base = V;
+
+    using typename Base::iterator;
+    using typename Base::const_iterator;
 
     using Base::front;
     using Base::back;
@@ -743,18 +747,18 @@ struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
     T& ptr_;
 };
 
-template <typename T>
-struct RootVector : public VectorBase<T>, protected RootBase
+template <typename T, typename V = Vector<T, 0>>
+struct RootVector : public VectorBase<T, V>, protected RootBase
 {
-    typedef VectorBase<T> Base;
+    using Base = VectorBase<T, V>;
 
     RootVector() {}
 
     RootVector(size_t initialSize)
-      : VectorBase<T>(initialSize)
+      : VectorBase<T, V>(initialSize)
     {}
 
-    RootVector(const TracedVector<T>& v);
+    RootVector(const TracedVector<T, V>& v);
 
     virtual void clear() override {
         Base::resize(0);
@@ -764,38 +768,38 @@ struct RootVector : public VectorBase<T>, protected RootBase
         gc.traceVectorUnbarriered(t, this);
     }
 
-    template <typename S> friend struct TracedVector;
+    friend struct TracedVector<T, V>;
 };
 
-template <typename T>
-struct HeapVector : public VectorBase<T>
+template <typename T, typename V>
+struct HeapVector : public VectorBase<T, V>
 {
     HeapVector() {}
-    HeapVector(size_t count) : VectorBase<T>(count) {}
-    HeapVector(size_t count, T fill) : VectorBase<T>(count, fill) {}
+    HeapVector(size_t count) : VectorBase<T, V>(count) {}
+    HeapVector(size_t count, T fill) : VectorBase<T, V>(count, fill) {}
 
-    HeapVector(const TracedVector<T>& other);
+    HeapVector(const TracedVector<T, V>& other);
 };
 
-template <typename T>
+template <typename T, typename V>
 struct TracedVector
 {
-    typedef vector<T> Base;
+    typedef VectorBase<T, V> Base;
 
-    TracedVector(VectorBase<T>& source)
+    TracedVector(VectorBase<T, V>& source)
       : vector_(source), offset_(0), size_(source.size())
     {
         vector_.addUse();
     }
 
-    TracedVector(VectorBase<T>& source, size_t offset, size_t size)
+    TracedVector(VectorBase<T, V>& source, size_t offset, size_t size)
       : vector_(source), offset_(offset), size_(size)
     {
         assert(offset + size <= source.size());
         vector_.addUse();
     }
 
-    TracedVector(const TracedVector<T>& source, size_t offset, size_t size)
+    TracedVector(const TracedVector& source, size_t offset, size_t size)
       : vector_(source.vector_), offset_(source.offset_ + offset), size_(size)
     {
         assert(offset + size <= source.size());
@@ -830,25 +834,25 @@ struct TracedVector
     }
 
   private:
-    VectorBase<T>& vector_;
+    VectorBase<T, V>& vector_;
     size_t offset_;
     size_t size_;
 
     TracedVector& operator=(const TracedVector& other) = delete;
 };
 
-template <typename T>
-RootVector<T>::RootVector(const TracedVector<T>& v)
-  : VectorBase<T>(v.size())
+template <typename T, typename V>
+RootVector<T, V>::RootVector(const TracedVector<T, V>& v)
+  : VectorBase<T, V>(v.size())
 {
     // todo: use proper STLness for this
     for (size_t i = 0; i < v.size(); i++)
         (*this)[i] = v[i];
 }
 
-template <typename T>
-HeapVector<T>::HeapVector(const TracedVector<T>& v)
-  : VectorBase<T>(v.size())
+template <typename T, typename V>
+HeapVector<T, V>::HeapVector(const TracedVector<T, V>& v)
+  : VectorBase<T, V>(v.size())
 {
     // todo: use proper STLness for this
     for (size_t i = 0; i < v.size(); i++)

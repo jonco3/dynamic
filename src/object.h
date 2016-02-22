@@ -2,19 +2,18 @@
 #define __OBJECT_H__
 
 #include "gcdefs.h"
-#include "value.h"
 #include "layout.h"
 #include "name.h"
+#include "vector.h"
+#include "value.h"
 
 #include <cassert>
 #include <ostream>
-#include <vector>
 
 using namespace std;
 
 struct Class;
 struct Native;
-struct Object;
 
 typedef bool (*NativeFunc)(TracedVector<Value>, MutableTraced<Value>);
 
@@ -97,7 +96,7 @@ struct Object : public Cell
   private:
     Heap<Class*> class_;
     Heap<Layout*> layout_;
-    HeapVector<Value> slots_;
+    HeapVector<Value, Vector<Value, 4>> slots_;
 
     friend void initObject();
 };

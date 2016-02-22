@@ -12,7 +12,6 @@ using namespace std;
 
 struct Class;
 struct Integer;
-struct Object;
 struct Tracer;
 
 struct Value

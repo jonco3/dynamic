@@ -11,6 +11,7 @@
 #include "test.cpp"
 #include "test/test_token.cpp"
 #include "test/test_parser.cpp"
+#include "test/test_vector.cpp"
 #include "test/test_gc.cpp"
 #include "test/test_block.cpp"
 #include "test/test_layout.cpp"
