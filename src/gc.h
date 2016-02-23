@@ -30,8 +30,8 @@ struct RootBase;
 struct StackBase;
 struct SweptCell;
 template <typename T> struct Heap;
-template <typename T, typename V = Vector<T, 0>> struct VectorBase;
-template <typename T, typename V = Vector<T, 0>> struct HeapVector;
+template <typename T, typename V = Vector<T>> struct VectorBase;
+template <typename T, typename V = Vector<T>> struct HeapVector;
 template <typename T> struct MutableTraced;
 
 // A visitor that visits edges in the object graph.
@@ -248,7 +248,7 @@ template <typename T, typename V>
         GCTraits<T>::trace(t, &i);
 }
 
-template <typename T, typename V = Vector<T, 0>>
+template <typename T, typename V = Vector<T>>
 struct TracedVector;
 
 // Provides usage count in debug builds so we can assert references don't live
@@ -747,7 +747,7 @@ struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
     T& ptr_;
 };
 
-template <typename T, typename V = Vector<T, 0>>
+template <typename T, typename V = Vector<T>>
 struct RootVector : public VectorBase<T, V>, protected RootBase
 {
     using Base = VectorBase<T, V>;

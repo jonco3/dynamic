@@ -148,7 +148,7 @@ struct VectorIteratorBase
     }
 };
 
-template <typename T, size_t N = 0>
+template <typename T>
 struct Vector
 {
     static const size_t InitialHeapCapacity = 16;
@@ -156,29 +156,63 @@ struct Vector
 
     Vector()
       : size_(0),
-        capacity_(N),
+        capacity_(0),
+        inlineCapacity_(0),
         heapElements_(nullptr)
     {}
 
-    Vector(const Vector<T, N>& other)
+    Vector(const Vector<T>& other)
       : size_(0),
-        capacity_(N),
+        capacity_(0),
+        inlineCapacity_(0),
         heapElements_(nullptr)
     {
-        reserve(other.size());
-        for (size_t i = 0; i < other.size(); i++)
-            construct_back(other.ref(i));
+        copy(other);
     }
 
     template <typename S>
     Vector(size_t size, const S& fillValue)
       : size_(0),
-        capacity_(N),
+        capacity_(0),
+        inlineCapacity_(0),
         heapElements_(nullptr)
     {
-        reserve(size);
-        for (size_t i = 0; i < size; i++)
-            construct_back(fillValue);
+        fill(size, fillValue);
+    }
+
+    template <size_t N>
+    Vector(uint8_t (&inlineData)[N])
+      : size_(0),
+        capacity_(N / sizeof(T)),
+        inlineCapacity_(N / sizeof(T)),
+        heapElements_(nullptr)
+    {
+        assert(static_cast<void*>(&inlineData[0]) ==
+               static_cast<void*>(this + 1));
+    }
+
+    template <size_t N>
+    Vector(uint8_t (&inlineData)[N], const Vector<T>& other)
+      : size_(0),
+        capacity_(N / sizeof(T)),
+        inlineCapacity_(N / sizeof(T)),
+        heapElements_(nullptr)
+    {
+        assert(static_cast<void*>(&inlineData[0]) ==
+               static_cast<void*>(this + 1));
+        copy(other);
+    }
+
+    template <size_t N, typename S>
+    Vector(uint8_t (&inlineData)[N], size_t size, const S& fillValue)
+      : size_(0),
+        capacity_(N / sizeof(T)),
+        inlineCapacity_(N / sizeof(T)),
+        heapElements_(nullptr)
+    {
+        assert(static_cast<void*>(&inlineData[0]) ==
+               static_cast<void*>(this + 1));
+        fill(size, fillValue);
     }
 
     ~Vector() {
@@ -196,9 +230,9 @@ struct Vector
     using size_type = size_t;
 
     struct iterator
-      : public VectorIteratorBase<Vector<T, N>, T, iterator>
+      : public VectorIteratorBase<Vector<T>, T, iterator>
     {
-        using Base = VectorIteratorBase<Vector<T, N>, T, iterator>;
+        using Base = VectorIteratorBase<Vector<T>, T, iterator>;
 
         iterator() : Base(nullptr, 0) {}
 
@@ -206,18 +240,18 @@ struct Vector
           : Base(other.vector(), other.index()) {}
 
       private:
-        iterator(Vector<T, N>* vector, size_t index)
+        iterator(Vector<T>* vector, size_t index)
           : Base(vector, index) {}
 
         friend Base;
-        friend struct Vector<T, N>;
+        friend struct Vector<T>;
     };
 
     struct const_iterator
-      : public VectorIteratorBase<const Vector<T, N>, const T, const_iterator>
+      : public VectorIteratorBase<const Vector<T>, const T, const_iterator>
     {
         using Base =
-            VectorIteratorBase<const Vector<T, N>, const T, const_iterator>;
+            VectorIteratorBase<const Vector<T>, const T, const_iterator>;
 
         const_iterator() : Base(nullptr, 0) {}
 
@@ -232,7 +266,7 @@ struct Vector
           : Base(vector, index) {}
 
         friend Base;
-        friend struct Vector<T, N>;
+        friend struct Vector<T>;
     };
 
     const_iterator begin() const noexcept {
@@ -386,8 +420,8 @@ struct Vector
   private:
     size_t size_;
     size_t capacity_;
+    size_t inlineCapacity_;
     T* heapElements_;
-    uint8_t inlineData_[N * sizeof(T)];
 
     void checkIndex(size_t index) const {
         if (index >= size_)
@@ -418,53 +452,90 @@ struct Vector
     const T* ptr(size_t i) const {
         assert(size_ <= capacity_);
         assert(i < size_);
-        return i < N ? inlinePtr(i) : &heapElements_[i - N];
+        return i < inlineCapacity_ ? inlinePtr(i)
+                                   : &heapElements_[i - inlineCapacity_];
     }
 
     T* ptr(size_t i) {
         assert(size_ <= capacity_);
         assert(i < size_);
-        return i < N ? inlinePtr(i) : &heapElements_[i - N];
+        return i < inlineCapacity_ ? inlinePtr(i)
+                                   : &heapElements_[i - inlineCapacity_];
     }
 
     const T* inlinePtr(size_t i) const {
-        assert(i < N);
+        assert(i < inlineCapacity_);
         assert(i < size_);
-        return reinterpret_cast<const T*>(&inlineData_[i * sizeof(T)]);
+        const T* inlineElements = reinterpret_cast<const T*>(this + 1);
+        return &inlineElements[i];
     }
 
     T* inlinePtr(size_t i) {
-        assert(i < N);
+        assert(i < inlineCapacity_);
         assert(i < size_);
-        return reinterpret_cast<T*>(&inlineData_[i * sizeof(T)]);
+        T* inlineElements = reinterpret_cast<T*>(this + 1);
+        return &inlineElements[i];
     }
 
     void reserve(size_t newSize) {
-        assert(capacity_ >= N);
+        assert(capacity_ >= inlineCapacity_);
         assert(size_ <= capacity_);
-        assert((capacity_ == N) == (heapElements_ == nullptr));
+        assert((capacity_ == inlineCapacity_) == (heapElements_ == nullptr));
 
         if (newSize <= capacity_)
             return;
 
-        size_t heapCapacity = capacity_ - N;
+        size_t heapCapacity = capacity_ - inlineCapacity_;
         size_t newHeapCapacity =
           heapCapacity != 0 ? heapCapacity : InitialHeapCapacity;
-        while (newSize > newHeapCapacity + N)
+        while (newSize > newHeapCapacity + inlineCapacity_)
             newHeapCapacity = size_t(newHeapCapacity * GrowthFactor);
         assert(newHeapCapacity > heapCapacity);
         T* newHeapElements =
           static_cast<T*>(malloc(sizeof(T) * newHeapCapacity));
-        if (size_ > N) {
-            for (size_t i = 0; i < size_ - N; i++) {
+        if (size_ > inlineCapacity_) {
+            for (size_t i = 0; i < size_ - inlineCapacity_; i++) {
                 new (&newHeapElements[i])T(heapElements_[i]);
                 heapElements_[i].~T();
             }
         }
         free(heapElements_);
         heapElements_ = newHeapElements;
-        capacity_ = newHeapCapacity + N;
+        capacity_ = newHeapCapacity + inlineCapacity_;
     }
+
+    void copy(const Vector<T>& other) {
+        assert(size_ == 0);
+        reserve(other.size());
+        for (size_t i = 0; i < other.size(); i++)
+            construct_back(other.ref(i));
+    }
+
+    template <typename S>
+    void fill(size_t size, const S& fillValue) {
+        assert(size_ == 0);
+        reserve(size);
+        for (size_t i = 0; i < size; i++)
+            construct_back(fillValue);
+    }
+};
+
+template <typename T, size_t N>
+struct InlineVector : public Vector<T>
+{
+    InlineVector() : Vector<T>(inlineData_) {}
+
+    InlineVector(const Vector<T>& other)
+      : Vector<T>(inlineData_, other)
+    {}
+
+    template <typename S>
+    InlineVector(size_t size, const S& fillValue)
+      : Vector<T>(inlineData_, size, fillValue)
+    {}
+
+  private:
+    uint8_t inlineData_[N * sizeof(T)];
 };
 
 #endif

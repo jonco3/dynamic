@@ -96,7 +96,7 @@ struct Object : public Cell
   private:
     Heap<Class*> class_;
     Heap<Layout*> layout_;
-    HeapVector<Value, Vector<Value, 4>> slots_;
+    HeapVector<Value, InlineVector<Value, 4>> slots_;
 
     friend void initObject();
 };
