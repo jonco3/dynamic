@@ -98,12 +98,12 @@ static void testPush(int max)
 }
 
 template <typename V>
-static void testFill(size_t size, int value)
+static void testFill(size_t size)
 {
-    V v(size, value);
+    V v(size, 99);
     testEqual(v.size(), size);
     for (size_t i = 0; i < size; i++)
-        testEqual(v[i], value);
+        testEqual(v[i], 99);
 }
 
 template <typename V>
@@ -291,81 +291,48 @@ static void testEmplaceBack()
     testEqual(v[0], 0);
 }
 
+template <typename V>
+void runVectorTests()
+{
+    testPush<V>(50);
+    testEqual(Element::Count, 0);
+
+    testFill<V>(0);
+    testEqual(Element::Count, 0);
+    testFill<V>(3);
+    testEqual(Element::Count, 0);
+    testFill<V>(50);
+    testEqual(Element::Count, 0);
+
+    testCopy<V>();
+    testEqual(Element::Count, 0);
+
+    testResize<V>();
+    testEqual(Element::Count, 0);
+
+    testIterators<V>();
+    testEqual(Element::Count, 0);
+
+    testErase1<V>();
+    testEqual(Element::Count, 0);
+
+    testErase2<V>();
+    testEqual(Element::Count, 0);
+
+    testInsert1<V>();
+    testEqual(Element::Count, 0);
+
+    testInsert2<V>();
+    testEqual(Element::Count, 0);
+
+    testEmplaceBack<V>();
+    testEqual(Element::Count, 0);
+}
+
 testcase(vector)
 {
-    testPush<std::vector<Element>>(30);
-    testEqual(Element::Count, 0);
-    testPush<Vector<Element>>(30);
-    testEqual(Element::Count, 0);
-    testPush<InlineVector<Element, 10>>(100);
-    testEqual(Element::Count, 0);
-
-    testFill<std::vector<Element>>(0, 0);
-    testEqual(Element::Count, 0);
-    testFill<std::vector<Element>>(10, 9);
-    testEqual(Element::Count, 0);
-    testFill<Vector<Element>>(0, 0);
-    testEqual(Element::Count, 0);
-    testFill<Vector<Element>>(10, 9);
-    testEqual(Element::Count, 0);
-    testFill<InlineVector<Element, 4>>(2, 9);
-    testEqual(Element::Count, 0);
-    testFill<InlineVector<Element, 4>>(10, 9);
-    testEqual(Element::Count, 0);
-    testFill<InlineVector<Element, 4>>(100, 9);
-    testEqual(Element::Count, 0);
-
-    testCopy<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testCopy<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testCopy<InlineVector<Element, 4>>();
-    testEqual(Element::Count, 0);
-
-    testResize<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testResize<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testResize<InlineVector<Element, 10>>();
-    testEqual(Element::Count, 0);
-
-    testIterators<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testIterators<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testIterators<InlineVector<Element, 10>>();
-    testEqual(Element::Count, 0);
-
-    testErase1<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testErase1<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testErase1<InlineVector<Element, 3>>();
-    testEqual(Element::Count, 0);
-
-    testErase2<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testErase2<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testErase2<InlineVector<Element, 10>>();
-    testEqual(Element::Count, 0);
-
-    testInsert1<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testInsert1<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testInsert1<InlineVector<Element, 4>>();
-    testEqual(Element::Count, 0);
-
-    testInsert2<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testInsert2<Vector<Element>>();
-    testEqual(Element::Count, 0);
-    testInsert2<InlineVector<Element, 10>>();
-    testEqual(Element::Count, 0);
-
-    testEmplaceBack<std::vector<Element>>();
-    testEqual(Element::Count, 0);
-    testEmplaceBack<InlineVector<Element, 4>>();
-    testEqual(Element::Count, 0);
+    runVectorTests<std::vector<Element>>();
+    runVectorTests<Vector<Element>>();
+    runVectorTests<InlineVector<Element, 4>>();
+    runVectorTests<InlineVector<Element, 9>>();
 }
