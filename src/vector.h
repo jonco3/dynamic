@@ -277,7 +277,7 @@ struct VectorStorage
         capacity_ = newHeapCapacity + inlineCapacity_;
     }
 
-  protected:
+  private:
     size_t size_;
     size_t capacity_;
     size_t inlineCapacity_;
