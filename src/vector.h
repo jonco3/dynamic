@@ -148,40 +148,21 @@ struct VectorIteratorBase
 };
 
 template <typename T>
-struct Vector
+struct VectorStorage
 {
     static const size_t InitialHeapCapacity = 16;
     static constexpr double GrowthFactor = 1.5;
     static constexpr double ShrinkThreshold = 0.5;
 
-    Vector()
+    VectorStorage()
       : size_(0),
         capacity_(0),
         inlineCapacity_(0),
         heapElements_(nullptr)
     {}
 
-    Vector(const Vector<T>& other)
-      : size_(0),
-        capacity_(0),
-        inlineCapacity_(0),
-        heapElements_(nullptr)
-    {
-        copy(other);
-    }
-
-    template <typename S>
-    Vector(size_t size, const S& fillValue)
-      : size_(0),
-        capacity_(0),
-        inlineCapacity_(0),
-        heapElements_(nullptr)
-    {
-        fill(size, fillValue);
-    }
-
     template <size_t N>
-    Vector(uint8_t (&inlineData)[N])
+    VectorStorage(uint8_t (&inlineData)[N])
       : size_(0),
         capacity_(N / sizeof(T)),
         inlineCapacity_(N / sizeof(T)),
@@ -191,36 +172,121 @@ struct Vector
                static_cast<void*>(this + 1));
     }
 
-    template <size_t N>
-    Vector(uint8_t (&inlineData)[N], const Vector<T>& other)
-      : size_(0),
-        capacity_(N / sizeof(T)),
-        inlineCapacity_(N / sizeof(T)),
-        heapElements_(nullptr)
-    {
-        assert(static_cast<void*>(&inlineData[0]) ==
-               static_cast<void*>(this + 1));
-        copy(other);
-    }
-
-    template <size_t N, typename S>
-    Vector(uint8_t (&inlineData)[N], size_t size, const S& fillValue)
-      : size_(0),
-        capacity_(N / sizeof(T)),
-        inlineCapacity_(N / sizeof(T)),
-        heapElements_(nullptr)
-    {
-        assert(static_cast<void*>(&inlineData[0]) ==
-               static_cast<void*>(this + 1));
-        fill(size, fillValue);
-    }
-
-    ~Vector() {
-        while (size_ != 0)
-            destruct_back();
+    ~VectorStorage() {
         free(heapElements_);
     }
 
+    size_t size() const {
+        return size_;
+    }
+
+    size_t capacity() const {
+        return capacity_;
+    }
+
+    void reserve(size_t newSize) {
+        assert(capacity_ >= inlineCapacity_);
+        assert(size_ <= capacity_);
+        assert((capacity_ == inlineCapacity_) == (heapElements_ == nullptr));
+
+        if (newSize <= capacity_)
+            return;
+
+        size_t heapCapacity = capacity_ - inlineCapacity_;
+        size_t newHeapCapacity =
+          heapCapacity != 0 ? heapCapacity : InitialHeapCapacity;
+        while (newSize > newHeapCapacity + inlineCapacity_)
+            newHeapCapacity = size_t(newHeapCapacity * GrowthFactor);
+        assert(newHeapCapacity > heapCapacity);
+        changeHeapCapacity(newHeapCapacity);
+    }
+
+  protected:
+    const T* ptr(size_t i) const {
+        assert(size_ <= capacity_);
+        assert(i < size_);
+        return i < inlineCapacity_ ? inlinePtr(i)
+                                   : &heapElements_[i - inlineCapacity_];
+    }
+
+    T* ptr(size_t i) {
+        assert(size_ <= capacity_);
+        assert(i < size_);
+        return i < inlineCapacity_ ? inlinePtr(i)
+                                   : &heapElements_[i - inlineCapacity_];
+    }
+
+    T* incSize() {
+        assert(size() < capacity());
+        return ptr(size_++);
+    }
+
+    T* decSize() {
+        assert(size_ != 0);
+        T* result = ptr(size_ - 1);
+        size_--;
+        return result;
+    }
+
+    void maybeShrink() {
+        if (capacity_ > inlineCapacity_ && size_ >= capacity_ * ShrinkThreshold)
+            return;
+
+        size_t newHeapCapacity = 0;
+        if (size_ > inlineCapacity_) {
+            newHeapCapacity = InitialHeapCapacity;
+            while (newHeapCapacity + inlineCapacity_ < size_)
+                newHeapCapacity *= GrowthFactor;
+        }
+        changeHeapCapacity(newHeapCapacity);
+    }
+
+  private:
+    const T* inlinePtr(size_t i) const {
+        assert(i < inlineCapacity_);
+        assert(i < size_);
+        const T* inlineElements = reinterpret_cast<const T*>(this + 1);
+        return &inlineElements[i];
+    }
+
+    T* inlinePtr(size_t i) {
+        assert(i < inlineCapacity_);
+        assert(i < size_);
+        T* inlineElements = reinterpret_cast<T*>(this + 1);
+        return &inlineElements[i];
+    }
+
+    void changeHeapCapacity(size_t newHeapCapacity) {
+        if (newHeapCapacity == capacity_ - inlineCapacity_)
+            return;
+
+        T* newHeapElements = nullptr;
+        if (newHeapCapacity) {
+            size_t bytes = sizeof(T) * newHeapCapacity;
+            newHeapElements = static_cast<T*>(malloc(bytes));
+        }
+        if (size_ > inlineCapacity_) {
+            assert(newHeapCapacity);
+            for (size_t i = 0; i < size_ - inlineCapacity_; i++) {
+                new (&newHeapElements[i])T(heapElements_[i]);
+                heapElements_[i].~T();
+            }
+        }
+        free(heapElements_);
+        heapElements_ = newHeapElements;
+        capacity_ = newHeapCapacity + inlineCapacity_;
+    }
+
+  protected:
+    size_t size_;
+    size_t capacity_;
+    size_t inlineCapacity_;
+    T* heapElements_;
+};
+
+template <typename T>
+struct Vector : public VectorStorage<T>
+{
     using value_type = T;
     using reference = T&;
     using const_reference = const T&;
@@ -228,6 +294,54 @@ struct Vector
     using const_pointer = const T*;
     using difference_type = ptrdiff_t;
     using size_type = size_t;
+
+    Vector() {}
+
+    Vector(const Vector<T>& other) {
+        copy(other);
+    }
+
+    template <typename S>
+    Vector(size_t size, const S& fillValue) {
+        fill(size, fillValue);
+    }
+
+    template <size_t N>
+    Vector(uint8_t (&inlineData)[N])
+      : VectorStorage<T>(inlineData)
+    {}
+
+    template <size_t N>
+    Vector(uint8_t (&inlineData)[N], const Vector<T>& other)
+      : VectorStorage<T>(inlineData)
+    {
+        copy(other);
+    }
+
+    template <size_t N, typename S>
+    Vector(uint8_t (&inlineData)[N], size_t size, const S& fillValue)
+      : VectorStorage<T>(inlineData)
+    {
+        fill(size, fillValue);
+    }
+
+    ~Vector() {
+        while (size() != 0)
+            destruct_back();
+    }
+
+    using Base = VectorStorage<T>;
+    using Base::size;
+    using Base::capacity;
+    using Base::ptr;
+    using Base::incSize;
+    using Base::decSize;
+    using Base::reserve;
+    using Base::maybeShrink;
+
+    bool empty() const {
+        return size() == 0;
+    }
 
     struct iterator
       : public VectorIteratorBase<Vector<T>, T, iterator>
@@ -278,23 +392,11 @@ struct Vector
     }
 
     const_iterator end() const noexcept {
-        return const_iterator(this, size_);
+        return const_iterator(this, size());
     }
 
     iterator end() noexcept {
-        return iterator(this, size_);
-    }
-
-    size_t size() const {
-        return size_;
-    }
-
-    bool empty() const {
-        return size_ == 0;
-    }
-
-    size_t capacity() const {
-        return capacity_;
+        return iterator(this, size());
     }
 
     const T& operator[](size_t i) const {
@@ -327,32 +429,32 @@ struct Vector
 
     T& back() {
         assert(!empty());
-        return ref(size_ - 1);
+        return ref(size() - 1);
     }
 
     const T& back() const {
         assert(!empty());
-        return ref(size_ - 1);
+        return ref(size() - 1);
     }
 
-    void resize(size_t size) {
-        if (size_ == size)
+    void resize(size_t newSize) {
+        if (size() == newSize)
             return;
 
-        if (size < size_) {
-            while (size_ > size)
+        if (newSize < size()) {
+            while (size() > newSize)
                 destruct_back();
             maybeShrink();
             return;
         }
 
-        reserve(size);
-        while (size_ < size)
+        reserve(newSize);
+        while (size() < newSize)
             construct_back();
     }
 
     void push_back(const T& value) {
-        reserve(size_ + 1);
+        reserve(size() + 1);
         construct_back(value);
     }
 
@@ -369,10 +471,10 @@ struct Vector
         assert(first.vector() == this);
         assert(last.vector() == this);
         assert(first.index() <= last.index());
-        assert(last.index() <= size_);
+        assert(last.index() <= size());
 
         size_t count = last.index() - first.index();
-        for (size_t i = last.index(); i < size_; i++)
+        for (size_t i = last.index(); i < size(); i++)
             ref(i - count) = ref(i);
         for (size_t i = 0; i < count; i++)
             destruct_back();
@@ -382,11 +484,11 @@ struct Vector
 
     iterator insert(const_iterator pos, const_reference value) {
         assert(pos.vector() == this);
-        assert(pos.index() <= size_);
+        assert(pos.index() <= size());
 
-        reserve(size_ + 1);
+        reserve(size() + 1);
         construct_back();
-        for (size_t i = size_; i != pos.index() + 1; i--)
+        for (size_t i = size(); i != pos.index() + 1; i--)
             ref(i - 1) = ref(i - 2);
         ref(pos.index()) = value;
         return iterator(this, pos.index());
@@ -394,16 +496,16 @@ struct Vector
 
     iterator insert(const_iterator pos, const_iterator first, iterator last) {
         assert(pos.vector() == this);
-        assert(pos.index() <= size_);
+        assert(pos.index() <= size());
         assert(first.vector() == last.vector());
         assert(first.index() <= last.index());
         assert(last.index() <= last.vector()->size());
 
         size_t count = last.index() - first.index();
-        reserve(size_ + count);
+        reserve(size() + count);
         for (size_t i = 0; i < count; i++)
             construct_back();
-        for (size_t i = size_; i != pos.index() + count; i--)
+        for (size_t i = size(); i != pos.index() + count; i--)
             ref(i - 1) = ref(i - count - 1);
         auto source = first.vector();
         for (size_t i = 0; i < count; i++)
@@ -413,18 +515,13 @@ struct Vector
 
     template <class... Args>
     void emplace_back(Args&&... args) {
-        reserve(size_ + 1);
+        reserve(size() + 1);
         construct_back(std::forward<Args>(args)...);
     }
 
   private:
-    size_t size_;
-    size_t capacity_;
-    size_t inlineCapacity_;
-    T* heapElements_;
-
     void checkIndex(size_t index) const {
-        if (index >= size_)
+        if (index >= size())
             throw std::out_of_range("Vector index out of range");
     }
 
@@ -438,108 +535,25 @@ struct Vector
 
     template <class... Args>
     void construct_back(Args&&... args) {
-        assert(size_ < capacity_);
-        size_++;
-        new (ptr(size_ - 1)) T(std::forward<Args>(args)...);
+        new (incSize()) T(std::forward<Args>(args)...);
     }
 
     void destruct_back() {
-        assert(size_ != 0);
-        ref(size_ - 1).~T();
-        size_--;
-    }
-
-    const T* ptr(size_t i) const {
-        assert(size_ <= capacity_);
-        assert(i < size_);
-        return i < inlineCapacity_ ? inlinePtr(i)
-                                   : &heapElements_[i - inlineCapacity_];
-    }
-
-    T* ptr(size_t i) {
-        assert(size_ <= capacity_);
-        assert(i < size_);
-        return i < inlineCapacity_ ? inlinePtr(i)
-                                   : &heapElements_[i - inlineCapacity_];
-    }
-
-    const T* inlinePtr(size_t i) const {
-        assert(i < inlineCapacity_);
-        assert(i < size_);
-        const T* inlineElements = reinterpret_cast<const T*>(this + 1);
-        return &inlineElements[i];
-    }
-
-    T* inlinePtr(size_t i) {
-        assert(i < inlineCapacity_);
-        assert(i < size_);
-        T* inlineElements = reinterpret_cast<T*>(this + 1);
-        return &inlineElements[i];
-    }
-
-    void reserve(size_t newSize) {
-        assert(capacity_ >= inlineCapacity_);
-        assert(size_ <= capacity_);
-        assert((capacity_ == inlineCapacity_) == (heapElements_ == nullptr));
-
-        if (newSize <= capacity_)
-            return;
-
-        size_t heapCapacity = capacity_ - inlineCapacity_;
-        size_t newHeapCapacity =
-          heapCapacity != 0 ? heapCapacity : InitialHeapCapacity;
-        while (newSize > newHeapCapacity + inlineCapacity_)
-            newHeapCapacity = size_t(newHeapCapacity * GrowthFactor);
-        assert(newHeapCapacity > heapCapacity);
-        changeHeapCapacity(newHeapCapacity);
-    }
-
-    void maybeShrink() {
-        if (capacity_ > inlineCapacity_ && size_ >= capacity_ * ShrinkThreshold)
-            return;
-
-        size_t newHeapCapacity = 0;
-        if (size_ > inlineCapacity_) {
-            newHeapCapacity = InitialHeapCapacity;
-            while (newHeapCapacity + inlineCapacity_ < size_)
-                newHeapCapacity *= GrowthFactor;
-        }
-        changeHeapCapacity(newHeapCapacity);
-    }
-
-    void changeHeapCapacity(size_t newHeapCapacity) {
-        if (newHeapCapacity == capacity_ - inlineCapacity_)
-            return;
-
-        T* newHeapElements = nullptr;
-        if (newHeapCapacity) {
-            size_t bytes = sizeof(T) * newHeapCapacity;
-            newHeapElements = static_cast<T*>(malloc(bytes));
-        }
-        if (size_ > inlineCapacity_) {
-            assert(newHeapCapacity);
-            for (size_t i = 0; i < size_ - inlineCapacity_; i++) {
-                new (&newHeapElements[i])T(heapElements_[i]);
-                heapElements_[i].~T();
-            }
-        }
-        free(heapElements_);
-        heapElements_ = newHeapElements;
-        capacity_ = newHeapCapacity + inlineCapacity_;
+        decSize()->~T();
     }
 
     void copy(const Vector<T>& other) {
-        assert(size_ == 0);
+        assert(size() == 0);
         reserve(other.size());
         for (size_t i = 0; i < other.size(); i++)
             construct_back(other.ref(i));
     }
 
     template <typename S>
-    void fill(size_t size, const S& fillValue) {
-        assert(size_ == 0);
-        reserve(size);
-        for (size_t i = 0; i < size; i++)
+    void fill(size_t newSize, const S& fillValue) {
+        assert(size() == 0);
+        reserve(newSize);
+        for (size_t i = 0; i < newSize; i++)
             construct_back(fillValue);
     }
 };
