@@ -4,7 +4,6 @@
 // Dynamically resizable vector with inline storage.
 //
 // todo:
-//  - allow inline memory to be passed in constructor
 //  - GC allocate the heap memory
 //  - memcpy where possible
 
@@ -153,6 +152,7 @@ struct Vector
 {
     static const size_t InitialHeapCapacity = 16;
     static constexpr double GrowthFactor = 1.5;
+    static constexpr double ShrinkThreshold = 0.5;
 
     Vector()
       : size_(0),
@@ -340,9 +340,9 @@ struct Vector
             return;
 
         if (size < size_) {
-            // todo: maybe shrink storage
             while (size_ > size)
                 destruct_back();
+            maybeShrink();
             return;
         }
 
@@ -358,7 +358,7 @@ struct Vector
 
     void pop_back() {
         destruct_back();
-        // todo: maybe shrink
+        maybeShrink();
     }
 
     iterator erase(const_iterator pos) {
@@ -376,7 +376,7 @@ struct Vector
             ref(i - count) = ref(i);
         for (size_t i = 0; i < count; i++)
             destruct_back();
-        // todo: maybe shrink
+        maybeShrink();
         return iterator(this, first.index());
     }
 
@@ -491,9 +491,33 @@ struct Vector
         while (newSize > newHeapCapacity + inlineCapacity_)
             newHeapCapacity = size_t(newHeapCapacity * GrowthFactor);
         assert(newHeapCapacity > heapCapacity);
-        T* newHeapElements =
-          static_cast<T*>(malloc(sizeof(T) * newHeapCapacity));
+        changeHeapCapacity(newHeapCapacity);
+    }
+
+    void maybeShrink() {
+        if (capacity_ > inlineCapacity_ && size_ >= capacity_ * ShrinkThreshold)
+            return;
+
+        size_t newHeapCapacity = 0;
         if (size_ > inlineCapacity_) {
+            newHeapCapacity = InitialHeapCapacity;
+            while (newHeapCapacity + inlineCapacity_ < size_)
+                newHeapCapacity *= GrowthFactor;
+        }
+        changeHeapCapacity(newHeapCapacity);
+    }
+
+    void changeHeapCapacity(size_t newHeapCapacity) {
+        if (newHeapCapacity == capacity_ - inlineCapacity_)
+            return;
+
+        T* newHeapElements = nullptr;
+        if (newHeapCapacity) {
+            size_t bytes = sizeof(T) * newHeapCapacity;
+            newHeapElements = static_cast<T*>(malloc(bytes));
+        }
+        if (size_ > inlineCapacity_) {
+            assert(newHeapCapacity);
             for (size_t i = 0; i < size_ - inlineCapacity_; i++) {
                 new (&newHeapElements[i])T(heapElements_[i]);
                 heapElements_[i].~T();
