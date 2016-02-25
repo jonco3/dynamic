@@ -289,8 +289,6 @@ struct VectorImpl : public VectorStorage
     using size_type = size_t;
 
     static const size_t InitialHeapCapacity = 16;
-    static constexpr double GrowthFactor = 1.5;
-    static constexpr double ShrinkThreshold = 0.5;
 
     VectorImpl() {}
 
@@ -456,7 +454,7 @@ struct VectorImpl : public VectorStorage
         size_t newHeapCapacity =
             heapCapacity() != 0 ? heapCapacity() : InitialHeapCapacity;
         while (newSize > newHeapCapacity + inlineCapacity())
-            newHeapCapacity = size_t(newHeapCapacity * GrowthFactor);
+            newHeapCapacity += newHeapCapacity / 2;
         assert(newHeapCapacity > heapCapacity());
         changeHeapCapacity(newHeapCapacity);
     }
@@ -585,7 +583,7 @@ struct VectorImpl : public VectorStorage
 
     void maybeShrink() {
         assert(capacity() >= inlineCapacity());
-        if (size() >= capacity() * ShrinkThreshold)
+        if (size() >= capacity() / 2)
             return;
 
         if (heapCapacity() == 0)
@@ -598,7 +596,7 @@ struct VectorImpl : public VectorStorage
         if (size() > inlineCapacity()) {
             newHeapCapacity = InitialHeapCapacity;
             while (newHeapCapacity + inlineCapacity() < size())
-                newHeapCapacity *= GrowthFactor;
+                newHeapCapacity += newHeapCapacity / 2;
         }
 
         changeHeapCapacity(newHeapCapacity);
