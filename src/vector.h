@@ -584,11 +584,15 @@ struct VectorImpl : public VectorStorage
     }
 
     void maybeShrink() {
-        if (capacity() > inlineCapacity() &&
-            size() >= capacity() * ShrinkThreshold)
-        {
+        assert(capacity() >= inlineCapacity());
+        if (size() >= capacity() * ShrinkThreshold)
             return;
-        }
+
+        if (heapCapacity() == 0)
+            return;
+
+        if (heapCapacity() == InitialHeapCapacity && size() > inlineCapacity())
+            return;
 
         size_t newHeapCapacity = 0;
         if (size() > inlineCapacity()) {
@@ -597,8 +601,7 @@ struct VectorImpl : public VectorStorage
                 newHeapCapacity *= GrowthFactor;
         }
 
-        if (newHeapCapacity != heapCapacity())
-            changeHeapCapacity(newHeapCapacity);
+        changeHeapCapacity(newHeapCapacity);
     }
 
     void changeHeapCapacity(size_t newHeapCapacity) {
