@@ -236,7 +236,8 @@ struct Interpreter : public Cell
     static GlobalRoot<Block*> AbortTrampoline;
 
     InstrThunk *instrp;
-    HeapVector<Frame> frames;
+    HeapVector<Frame, std::vector<Frame>> frames;
+    // todo: why is std::vector significantly faster?
     HeapVector<Value> stack;
     unsigned stackPos_;
 
