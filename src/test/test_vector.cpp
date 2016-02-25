@@ -292,6 +292,28 @@ static void testEmplaceBack()
 }
 
 template <typename V>
+static void testShrinkToFit()
+{
+    V v;
+    v.shrink_to_fit();
+    testTrue(v.capacity() >= v.size());
+
+    populate(v, 20);
+    v.shrink_to_fit();
+    testTrue(v.capacity() >= v.size());
+
+    v.erase(v.begin() + 3, v.end());
+    v.shrink_to_fit();
+    testTrue(v.capacity() >= v.size());
+
+    populate(v, 100);
+    while (!v.empty())
+        v.pop_back();
+    v.shrink_to_fit();
+    testTrue(v.capacity() >= v.size());
+}
+
+template <typename V>
 void runVectorTests()
 {
     testPush<V>(50);
@@ -326,6 +348,9 @@ void runVectorTests()
     testEqual(Element::Count, 0);
 
     testEmplaceBack<V>();
+    testEqual(Element::Count, 0);
+
+    testShrinkToFit<V>();
     testEqual(Element::Count, 0);
 }
 

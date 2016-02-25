@@ -427,19 +427,18 @@ struct VectorImpl : public VectorStorage
     }
 
     void resize(size_t newSize) {
-        if (size() == newSize)
+        if (newSize > size()) {
+            reserve(newSize);
+            while (size() < newSize)
+                construct_back();
             return;
+        }
 
         if (newSize < size()) {
             while (size() > newSize)
                 destruct_back();
-            maybeShrink();
             return;
         }
-
-        reserve(newSize);
-        while (size() < newSize)
-            construct_back();
     }
 
     void reserve(size_t newSize) {
@@ -466,7 +465,6 @@ struct VectorImpl : public VectorStorage
 
     void pop_back() {
         destruct_back();
-        maybeShrink();
     }
 
     iterator erase(const_iterator pos) {
@@ -484,7 +482,6 @@ struct VectorImpl : public VectorStorage
             ref(i - count) = ref(i);
         for (size_t i = 0; i < count; i++)
             destruct_back();
-        maybeShrink();
         return iterator(this, first.index());
     }
 
@@ -523,6 +520,26 @@ struct VectorImpl : public VectorStorage
     void emplace_back(Args&&... args) {
         reserve(size() + 1);
         construct_back(std::forward<Args>(args)...);
+    }
+
+    void shrink_to_fit() {
+        assert(capacity() >= inlineCapacity());
+
+        if (heapCapacity() == 0 ||
+            (heapCapacity() == InitialHeapCapacity && size() > inlineCapacity()))
+        {
+            return;
+        }
+
+        size_t newHeapCapacity = 0;
+        if (size() > inlineCapacity()) {
+            newHeapCapacity = InitialHeapCapacity;
+            while (newHeapCapacity + inlineCapacity() < size())
+                newHeapCapacity += newHeapCapacity / 2;
+        }
+
+        if (newHeapCapacity != heapCapacity())
+            changeHeapCapacity(newHeapCapacity);
     }
 
   private:
@@ -579,27 +596,6 @@ struct VectorImpl : public VectorStorage
         reserve(newSize);
         for (size_t i = 0; i < newSize; i++)
             construct_back(fillValue);
-    }
-
-    void maybeShrink() {
-        assert(capacity() >= inlineCapacity());
-        if (size() >= capacity() / 2)
-            return;
-
-        if (heapCapacity() == 0)
-            return;
-
-        if (heapCapacity() == InitialHeapCapacity && size() > inlineCapacity())
-            return;
-
-        size_t newHeapCapacity = 0;
-        if (size() > inlineCapacity()) {
-            newHeapCapacity = InitialHeapCapacity;
-            while (newHeapCapacity + inlineCapacity() < size())
-                newHeapCapacity += newHeapCapacity / 2;
-        }
-
-        changeHeapCapacity(newHeapCapacity);
     }
 
     void changeHeapCapacity(size_t newHeapCapacity) {
