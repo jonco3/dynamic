@@ -359,6 +359,11 @@ struct VectorBase : public UseCountBase, public V
     // forwards to Base:
     //   opeator=, assign, clear, emplace, emplace_back, resize, swap
 
+    void assign(size_t count, const T& fillValue) {
+        assert(!this->hasUses());
+        Base::assign(count, fillValue);
+    }
+
     typename Base::iterator erase(typename Base::iterator position) {
         assert(!this->hasUses());
         return Base::erase(position);

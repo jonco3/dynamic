@@ -300,7 +300,7 @@ struct VectorImpl : public VectorStorage
 
     template <typename S>
     VectorImpl(size_t size, const S& fillValue) {
-        fill(size, fillValue);
+        assign(size, fillValue);
     }
 
     ~VectorImpl() {
@@ -533,8 +533,7 @@ struct VectorImpl : public VectorStorage
             construct_back(other.ref(i));
     }
 
-    // todo: turn this into assign
-    void fill(size_t newSize, const T& fillValue) {
+    void assign(size_t newSize, const T& fillValue) {
         assert(size() == 0);
         reserve(newSize);
         for (size_t i = 0; i < newSize; i++)
@@ -633,7 +632,7 @@ template <typename T, size_t N>
     InlineVector(size_t size, const T& fillValue)
     {
         this->initInlineData(inlineData_);
-        this->fill(size, fillValue);
+        this->assign(size, fillValue);
     }
 
   private:

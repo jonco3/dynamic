@@ -98,7 +98,7 @@ static void testPush(int max)
 }
 
 template <typename V>
-static void testFill(size_t size)
+static void testFillConstructor(size_t size)
 {
     V v(size, 99);
     testEqual(v.size(), size);
@@ -319,11 +319,11 @@ void runVectorTests()
     testPush<V>(50);
     testEqual(Element::Count, 0);
 
-    testFill<V>(0);
+    testFillConstructor<V>(0);
     testEqual(Element::Count, 0);
-    testFill<V>(3);
+    testFillConstructor<V>(3);
     testEqual(Element::Count, 0);
-    testFill<V>(50);
+    testFillConstructor<V>(50);
     testEqual(Element::Count, 0);
 
     testCopy<V>();

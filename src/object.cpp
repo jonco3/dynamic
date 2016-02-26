@@ -62,7 +62,7 @@ void Object::init(Traced<Class*> cls, Traced<Layout*> layout)
 {
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
-    slots_.fill(layout_->slotCount(), UninitializedSlot.get());
+    slots_.assign(layout_->slotCount(), UninitializedSlot.get());
     if (Class::ObjectClass)
         class_ = cls;
 }
