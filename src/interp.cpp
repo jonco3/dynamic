@@ -680,8 +680,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         return ok ? CallFinished : CallError;
     } else if (target->is<Function>()) {
         Stack<Function*> function(target->as<Function>());
-        TracedVector<Value> args(stackSlice(argCount));
-        if (!checkArguments(function, args, resultOut))
+        if (!checkArguments(function, stackSlice(argCount), resultOut))
             return CallError;
         Stack<Block*> block(function->block());
         argCount = mungeArguments(function, argCount);

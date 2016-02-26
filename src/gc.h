@@ -326,7 +326,10 @@ struct PointerBase : public UseCountBase
     T ptr_;
 };
 
-// Base class for wrapper classes a vector of GC pointers.
+// Base class for wrapper classes containing a vector of GC pointers.
+//
+// Methods that mutate the vector call checkUses() to assert there are no
+// TracedVector instances that currently reference it.
 template <typename T, typename V>
 struct VectorBase : public UseCountBase, public V
 {
@@ -334,10 +337,13 @@ struct VectorBase : public UseCountBase, public V
     VectorBase(size_t count) : V(count, GCTraits<T>::nullValue()) {}
     VectorBase(size_t count, const T& fill) : V(count, fill) {}
 
+    using Type = VectorBase<T, V>;
+
     using Base = V;
     using Base::size;
     using Base::begin;
     using Base::end;
+
     using UseCountBase::checkUses;
 
     T& operator[](size_t index) {
@@ -358,9 +364,10 @@ struct VectorBase : public UseCountBase, public V
         return MutableTraced<T>::fromTracedLocation(&(*this)[index]);
     }
 
-    // todo: the following need an implementation that calls checkUses and
-    // forwards to Base:
-    //   opeator=, clear, emplace, emplace_back, resize, swap
+    Type& operator=(const Type& other) {
+        checkUses();
+        return Base::operator=(other);
+    }
 
     void push_back(T element) {
         maybeCheckValid(T, element);
@@ -406,6 +413,35 @@ struct VectorBase : public UseCountBase, public V
         checkUses();
         return Base::insert(pos, std::forward<I>(first), std::forward<I>(last));
     }
+
+    void clear() {
+        checkUses();
+        Base::clear();
+    }
+
+    template <class... Args>
+    typename Base::iterator emplace(typename Base::const_iterator position,
+                                    Args&&... args)
+    {
+        checkUses();
+        return Base::emplace(position, forward<Args>(args)...);
+    }
+
+    template <class... Args>
+    void emplace_back(Args&&... args) {
+        checkUses();
+        Base::emplace_back(forward<Args>(args)...);
+    }
+
+    void resize(size_t n) {  // todo: should take defaulted value_type
+        //checkUses();
+        Base::resize(n);
+    }
+
+    void swap(Type& other) {
+        checkUses();
+        Base::swap(other);
+    }
 };
 
 struct RootBase
@@ -434,7 +470,7 @@ struct RootBase
     }
 
     virtual void trace(Tracer& t) = 0;
-    virtual void clear() = 0;
+    virtual void clear() = 0; // todo: conflicts with vectors, rename
 
     RootBase* nextRoot() {
         return next_;
@@ -769,7 +805,7 @@ struct RootVector : public VectorBase<T, V>, protected RootBase
     RootVector(const TracedVector<T, V>& v);
 
     virtual void clear() override {
-        Base::resize(0);
+        Base::clear();
     }
 
     void trace(Tracer& t) override {
@@ -798,6 +834,7 @@ struct TracedVector
       : vector_(source), offset_(0), size_(source.size())
     {
         vector_.addUse();
+        setValid();
     }
 
     TracedVector(VectorBase<T, V>& source, size_t offset, size_t size)
@@ -805,6 +842,7 @@ struct TracedVector
     {
         assert(offset + size <= source.size());
         vector_.addUse();
+        setValid();
     }
 
     TracedVector(const TracedVector& source, size_t offset, size_t size)
@@ -812,37 +850,67 @@ struct TracedVector
     {
         assert(offset + size <= source.size());
         vector_.addUse();
+        setValid();
     }
 
     TracedVector(const TracedVector& other)
       : vector_(other.vector_), offset_(other.offset_), size_(other.size_)
     {
         vector_.addUse();
+        setValid();
     }
 
     ~TracedVector() {
+#ifdef DEBUG
+        if (valid_)
+            release();
+#endif
+    }
+
+    void setValid() {
+#ifdef DEBUG
+        valid_ = true;
+#endif
+    }
+
+    void checkValid() const {
+        assert(valid_);
+    }
+
+    void release() {
+#ifdef DEBUG
+        checkValid();
         vector_.removeUse();
+        valid_ = false;
+#endif
     }
 
     size_t size() const {
+        checkValid();
         return size_;
     }
 
     Traced<T> operator[](unsigned index) const {
+        checkValid();
         assert(index < size_);
         return Traced<T>::fromTracedLocation(&vector_[index + offset_]);
     }
 
     typename Base::iterator begin() {
+        checkValid();
         return vector_.begin() + offset_;
     }
 
     typename Base::iterator end() {
+        checkValid();
         return begin() + size_;
     }
 
   private:
     VectorBase<T, V>& vector_;
+#ifdef DEBUG
+    bool valid_;
+#endif
     size_t offset_;
     size_t size_;
 

@@ -361,6 +361,7 @@ static bool generic_new(TracedVector<Value> args,
         return true;
     }
 
+    args.release();
     Stack<Value> result;
     interp->pushStack(arg);
     if (!interp->call(IterableToList, 1, result)) {
