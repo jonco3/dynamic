@@ -328,7 +328,7 @@ struct VectorBase : public UseCountBase, public V
 {
     VectorBase() {}
     VectorBase(size_t count) : V(count, GCTraits<T>::nullValue()) {}
-    VectorBase(size_t count, T fill) : V(count, fill) {}
+    VectorBase(size_t count, const T& fill) : V(count, fill) {}
 
     using Base = V;
 
@@ -743,10 +743,8 @@ struct RootVector : public VectorBase<T, V>, protected RootBase
     using Base = VectorBase<T, V>;
 
     RootVector() {}
-
-    RootVector(size_t initialSize)
-      : VectorBase<T, V>(initialSize)
-    {}
+    RootVector(size_t count) : VectorBase<T, V>(count) {}
+    RootVector(size_t count, const T& fill) : VectorBase<T, V>(count, fill) {}
 
     RootVector(const TracedVector<T, V>& v);
 
@@ -766,7 +764,7 @@ struct HeapVector : public VectorBase<T, V>
 {
     HeapVector() {}
     HeapVector(size_t count) : VectorBase<T, V>(count) {}
-    HeapVector(size_t count, T fill) : VectorBase<T, V>(count, fill) {}
+    HeapVector(size_t count, const T& fill) : VectorBase<T, V>(count, fill) {}
 
     HeapVector(const TracedVector<T, V>& other);
 };

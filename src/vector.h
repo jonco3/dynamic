@@ -534,8 +534,7 @@ struct VectorImpl : public VectorStorage
     }
 
     // todo: turn this into assign
-    template <typename S>
-    void fill(size_t newSize, const S& fillValue) {
+    void fill(size_t newSize, const T& fillValue) {
         assert(size() == 0);
         reserve(newSize);
         for (size_t i = 0; i < newSize; i++)
@@ -610,11 +609,8 @@ struct Vector : public VectorImpl<T, VectorStorageHeap<T>>
     using Base = VectorImpl<T, VectorStorageHeap<T>>;
 
     Vector() {}
-
     Vector(const Vector<T>& other) : Base(other) {}
-
-    template <typename S>
-    Vector(size_t size, const S& fillValue) : Base(size, fillValue) {}
+    Vector(size_t size, const T& fillValue) : Base(size, fillValue) {}
 };
 
 template <typename T>
@@ -634,8 +630,7 @@ template <typename T, size_t N>
         this->copy(other);
     }
 
-    template <typename S>
-    InlineVector(size_t size, const S& fillValue)
+    InlineVector(size_t size, const T& fillValue)
     {
         this->initInlineData(inlineData_);
         this->fill(size, fillValue);
