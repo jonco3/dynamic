@@ -295,7 +295,7 @@ struct VectorImpl : public VectorStorage
     VectorImpl() {}
 
     VectorImpl(const Self& other) {
-        copy(other);
+        assign(other.begin(), other.end());
     }
 
     template <typename S>
@@ -304,8 +304,7 @@ struct VectorImpl : public VectorStorage
     }
 
     ~VectorImpl() {
-        while (size() != 0)
-            destruct_back();
+        clear();
     }
 
     using Base::size;
@@ -499,6 +498,11 @@ struct VectorImpl : public VectorStorage
         return iterator(this, pos.index());
     }
 
+    void clear() {
+        while (size() != 0)
+            destruct_back();
+    }
+
     template <class... Args>
     void emplace_back(Args&&... args) {
         reserve(size() + 1);
@@ -525,12 +529,13 @@ struct VectorImpl : public VectorStorage
             changeHeapCapacity(newHeapCapacity);
     }
 
-    // todo: turn this into assign
-    void copy(const Self& other) {
-        assert(size() == 0);
-        reserve(other.size());
-        for (size_t i = 0; i < other.size(); i++)
-            construct_back(other.ref(i));
+    template <class InputIterator>
+    void assign(InputIterator first, InputIterator last) {
+        clear();
+        size_t count = last - first;
+        reserve(count);
+        for (InputIterator i = first; i != last; i++)
+            construct_back(*i);
     }
 
     void assign(size_t newSize, const T& fillValue) {
@@ -619,20 +624,22 @@ template <typename T, size_t N>
     struct InlineVector : public InlineVectorBase<T>
 {
     using Base = VectorImpl<T, VectorStorageInline<T>>;
+    using Base::initInlineData;
+    using Base::assign;
 
     InlineVector() {
-        this->initInlineData(inlineData_);
+        initInlineData(inlineData_);
     }
 
     InlineVector(const Vector<T>& other) {
-        this->initInlineData(inlineData_);
-        this->copy(other);
+        initInlineData(inlineData_);
+        assign(other.first(), other.last());
     }
 
     InlineVector(size_t size, const T& fillValue)
     {
-        this->initInlineData(inlineData_);
-        this->assign(size, fillValue);
+        initInlineData(inlineData_);
+        assign(size, fillValue);
     }
 
   private:

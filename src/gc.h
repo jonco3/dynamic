@@ -357,7 +357,13 @@ struct VectorBase : public UseCountBase, public V
 
     // todo: the following need an implementation that asserts !hasUses() and
     // forwards to Base:
-    //   opeator=, assign, clear, emplace, emplace_back, resize, swap
+    //   opeator=, clear, emplace, emplace_back, resize, swap
+
+    template <class InputIterator>
+    void assign(InputIterator first, InputIterator last) {
+        assert(!this->hasUses());
+        Base::assign(first, last);
+    }
 
     void assign(size_t count, const T& fillValue) {
         assert(!this->hasUses());
