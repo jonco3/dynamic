@@ -265,7 +265,7 @@ struct UseCountBase
 
   protected:
 #ifdef DEBUG
-    bool hasUses() {
+    bool hasUses() const {
         return useCount_ != 0;
     }
 #endif
@@ -281,6 +281,10 @@ struct UseCountBase
         assert(useCount_ > 0);
         useCount_--;
 #endif
+    }
+
+    void checkUses() const {
+        assert(!hasUses());
     }
 
     template <typename T, typename V>
@@ -331,22 +335,21 @@ struct VectorBase : public UseCountBase, public V
     VectorBase(size_t count, const T& fill) : V(count, fill) {}
 
     using Base = V;
-
-    void push_back(T element) {
-        maybeCheckValid(T, element);
-        Base::push_back(element);
-    }
+    using Base::size;
+    using Base::begin;
+    using Base::end;
+    using UseCountBase::checkUses;
 
     T& operator[](size_t index) {
-        assert(index < this->size());
-        T& element = *(this->begin() + index);
+        assert(index < size());
+        T& element = *(begin() + index);
         maybeCheckValid(T, element);
         return element;
     }
 
     const T& operator[](size_t index) const {
-        assert(index < this->size());
-        const T& element = *(this->begin() + index);
+        assert(index < size());
+        const T& element = *(begin() + index);
         maybeCheckValid(T, element);
         return element;
     }
@@ -355,46 +358,52 @@ struct VectorBase : public UseCountBase, public V
         return MutableTraced<T>::fromTracedLocation(&(*this)[index]);
     }
 
-    // todo: the following need an implementation that asserts !hasUses() and
+    // todo: the following need an implementation that calls checkUses and
     // forwards to Base:
     //   opeator=, clear, emplace, emplace_back, resize, swap
 
+    void push_back(T element) {
+        maybeCheckValid(T, element);
+        checkUses();
+        Base::push_back(element);
+    }
+
     template <class InputIterator>
     void assign(InputIterator first, InputIterator last) {
-        assert(!this->hasUses());
+        checkUses();
         Base::assign(first, last);
     }
 
     void assign(size_t count, const T& fillValue) {
-        assert(!this->hasUses());
+        checkUses();
         Base::assign(count, fillValue);
     }
 
     typename Base::iterator erase(typename Base::iterator position) {
-        assert(!this->hasUses());
+        checkUses();
         return Base::erase(position);
     }
 
     typename Base::iterator erase(typename Base::iterator first,
                                   typename Base::iterator last) {
-        assert(!this->hasUses());
+        checkUses();
         return Base::erase(first, last);
     }
 
     typename Base::iterator insert(typename Base::iterator pos, const T& val) {
-        assert(!this->hasUses());
+        checkUses();
         return Base::insert(pos, val);
     }
 
     void insert(typename Base::iterator pos, size_t count, const T& value) {
-        assert(!this->hasUses());
+        checkUses();
         Base::insert(pos, count, value);
     }
 
     template <typename I>
     typename Base::iterator insert(typename Base::iterator pos,
                                    I&& first, I&& last) {
-        assert(!this->hasUses());
+        checkUses();
         return Base::insert(pos, std::forward<I>(first), std::forward<I>(last));
     }
 };
