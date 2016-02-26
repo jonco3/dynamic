@@ -29,6 +29,7 @@ struct Object : public Cell
     static Object* create();
 
     Object(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout);
+
     virtual ~Object() {}
 
     template <typename T> bool is() const {
@@ -86,8 +87,17 @@ struct Object : public Cell
   protected:
     Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout);
 
+    template <size_t N>
+    Object(uint8_t (&inlineData)[N], Traced<Class*> cls, Traced<Layout*> layout)
+      : class_(nullptr),
+        layout_(layout)
+    {
+        slots_.initInlineData(inlineData);
+        init(cls, layout);
+    }
+
     // Only for use during initialization
-    void init(Traced<Class*> cls);
+    void finishInit(Traced<Class*> cls);
 
     void traceChildren(Tracer& t) override;
 
@@ -96,9 +106,22 @@ struct Object : public Cell
   private:
     Heap<Class*> class_;
     Heap<Layout*> layout_;
-    HeapVector<Value, InlineVector<Value, 4>> slots_;
+    HeapVector<Value, InlineVectorBase<Value>> slots_;
+
+    void init(Traced<Class*> cls, Traced<Layout*> layout);
 
     friend void initObject();
+};
+
+template <size_t N>
+struct ObjectInline : public Object
+{
+    ObjectInline(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout)
+      : Object(inlineData_, cls, layout)
+    {}
+
+  private:
+    uint8_t inlineData_[N * sizeof(Value)];
 };
 
 struct Class : public Object
@@ -140,7 +163,7 @@ struct Class : public Object
     bool final_;
 
     // Only for use during initialization
-    void init(Traced<Object*> base);
+    void finishInit(Traced<Object*> base);
 
     friend void initObject();
 };

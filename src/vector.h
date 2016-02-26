@@ -208,20 +208,21 @@ struct VectorStorageInline : public VectorStorageBase<T>
 {
     VectorStorageInline()
       : inlineCapacity_(0)
-    {} // todo: remove
-
-    template <size_t N>
-    VectorStorageInline(uint8_t (&inlineData)[N])
-      : inlineCapacity_(N / sizeof(T))
-    {
-        assert(static_cast<void*>(&inlineData[0]) ==
-               static_cast<void*>(this + 1));
-        this->capacity_ = inlineCapacity_;
-    }
+    {}
 
     using Base = VectorStorageBase<T>;
     using Base::size;
     using Base::capacity;
+
+    template <size_t N>
+    void initInlineData(uint8_t (&inlineData)[N]) {
+        assert(capacity() == 0);
+        assert(inlineCapacity_ == 0);
+        assert(static_cast<void*>(&inlineData[0]) ==
+               static_cast<void*>(this + 1));
+        this->inlineCapacity_ = N / sizeof(T);
+        this->capacity_ = inlineCapacity_;
+    }
 
   protected:
     using Base::heapElements_;
@@ -237,16 +238,17 @@ struct VectorStorageInline : public VectorStorageBase<T>
 
     const T* ptr(size_t i) const {
         assert(i < size());
-        return i < inlineCapacity_ ? inlinePtr(i) : heapPtr(i - inlineCapacity_);
+        return i < inlineCapacity_ ? inlinePtr(i)
+                                   : heapPtr(i - inlineCapacity_);
     }
 
     T* ptr(size_t i) {
         assert(i < size());
-        return i < inlineCapacity_ ? inlinePtr(i) : heapPtr(i - inlineCapacity_);
+        return i < inlineCapacity_ ? inlinePtr(i)
+                                   : heapPtr(i - inlineCapacity_);
     }
 
   private:
-
     size_t inlineCapacity_;
 
     const T* inlinePtr(size_t i) const {
@@ -298,25 +300,6 @@ struct VectorImpl : public VectorStorage
 
     template <typename S>
     VectorImpl(size_t size, const S& fillValue) {
-        fill(size, fillValue);
-    }
-
-    template <size_t N>
-    VectorImpl(uint8_t (&inlineData)[N])
-      : VectorStorage(inlineData)
-    {}
-
-    template <size_t N>
-    VectorImpl(uint8_t (&inlineData)[N], const Self& other)
-      : VectorStorage(inlineData)
-    {
-        copy(other);
-    }
-
-    template <size_t N, typename S>
-    VectorImpl(uint8_t (&inlineData)[N], size_t size, const S& fillValue)
-      : VectorStorage(inlineData)
-    {
         fill(size, fillValue);
     }
 
@@ -542,6 +525,23 @@ struct VectorImpl : public VectorStorage
             changeHeapCapacity(newHeapCapacity);
     }
 
+    // todo: turn this into assign
+    void copy(const Self& other) {
+        assert(size() == 0);
+        reserve(other.size());
+        for (size_t i = 0; i < other.size(); i++)
+            construct_back(other.ref(i));
+    }
+
+    // todo: turn this into assign
+    template <typename S>
+    void fill(size_t newSize, const S& fillValue) {
+        assert(size() == 0);
+        reserve(newSize);
+        for (size_t i = 0; i < newSize; i++)
+            construct_back(fillValue);
+    }
+
   private:
     using Base::inlineCapacity;
     using Base::heapCapacity;
@@ -583,21 +583,6 @@ struct VectorImpl : public VectorStorage
         decSize()->~T();
     }
 
-    void copy(const Self& other) {
-        assert(size() == 0);
-        reserve(other.size());
-        for (size_t i = 0; i < other.size(); i++)
-            construct_back(other.ref(i));
-    }
-
-    template <typename S>
-    void fill(size_t newSize, const S& fillValue) {
-        assert(size() == 0);
-        reserve(newSize);
-        for (size_t i = 0; i < newSize; i++)
-            construct_back(fillValue);
-    }
-
     void changeHeapCapacity(size_t newHeapCapacity) {
         assert(newHeapCapacity != heapCapacity());
 
@@ -632,19 +617,29 @@ struct Vector : public VectorImpl<T, VectorStorageHeap<T>>
     Vector(size_t size, const S& fillValue) : Base(size, fillValue) {}
 };
 
+template <typename T>
+using InlineVectorBase = VectorImpl<T, VectorStorageInline<T>>;
+
 template <typename T, size_t N>
-    struct InlineVector : public VectorImpl<T, VectorStorageInline<T>>
+    struct InlineVector : public InlineVectorBase<T>
 {
     using Base = VectorImpl<T, VectorStorageInline<T>>;
 
-    InlineVector() : Base(inlineData_) {}
+    InlineVector() {
+        this->initInlineData(inlineData_);
+    }
 
-    InlineVector(const Vector<T>& other) : Base(inlineData_, other) {}
+    InlineVector(const Vector<T>& other) {
+        this->initInlineData(inlineData_);
+        this->copy(other);
+    }
 
     template <typename S>
     InlineVector(size_t size, const S& fillValue)
-      : Base(inlineData_, size, fillValue)
-    {}
+    {
+        this->initInlineData(inlineData_);
+        this->fill(size, fillValue);
+    }
 
   private:
     uint8_t inlineData_[N * sizeof(T)];

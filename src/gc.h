@@ -324,27 +324,13 @@ struct PointerBase : public UseCountBase
 
 // Base class for wrapper classes a vector of GC pointers.
 template <typename T, typename V>
-struct VectorBase : public UseCountBase, protected V
+struct VectorBase : public UseCountBase, public V
 {
     VectorBase() {}
     VectorBase(size_t count) : V(count, GCTraits<T>::nullValue()) {}
     VectorBase(size_t count, T fill) : V(count, fill) {}
 
     using Base = V;
-
-    using typename Base::iterator;
-    using typename Base::const_iterator;
-
-    using Base::front;
-    using Base::back;
-    using Base::empty;
-    using Base::size;
-    using Base::begin;
-    using Base::end;
-    using Base::pop_back;
-    using Base::emplace_back;
-    using Base::resize;
-    using Base::at;
 
     void push_back(T element) {
         maybeCheckValid(T, element);
@@ -368,6 +354,10 @@ struct VectorBase : public UseCountBase, protected V
     MutableTraced<T> ref(unsigned index) {
         return MutableTraced<T>::fromTracedLocation(&(*this)[index]);
     }
+
+    // todo: the following need an implementation that asserts !hasUses() and
+    // forwards to Base:
+    //   opeator=, assign, clear, emplace, emplace_back, resize, swap
 
     typename Base::iterator erase(typename Base::iterator position) {
         assert(!this->hasUses());

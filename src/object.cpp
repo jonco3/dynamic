@@ -43,29 +43,31 @@ Object* Object::create()
 
 Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
   : class_(nullptr),
-    layout_(layout),
-    slots_(layout_->slotCount(), UninitializedSlot.get())
+    layout_(layout)
 {
+    // todo: really, what the hell is this for?
     if (cls != Class::ObjectClass)
         assert(base == cls);
-    assert(layout_);
-    assert(layout_->subsumes(InitialLayout));
-    if (Class::ObjectClass)
-        class_ = cls;
+    init(cls, layout);
 }
 
 Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
   : class_(nullptr),
-    layout_(layout),
-    slots_(layout_->slotCount(), UninitializedSlot.get())
+    layout_(layout)
+{
+    init(cls, layout);
+}
+
+void Object::init(Traced<Class*> cls, Traced<Layout*> layout)
 {
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
+    slots_.fill(layout_->slotCount(), UninitializedSlot.get());
     if (Class::ObjectClass)
         class_ = cls;
 }
 
-void Object::init(Traced<Class*> cls)
+void Object::finishInit(Traced<Class*> cls)
 {
     assert(cls);
     assert(!class_);
@@ -329,9 +331,9 @@ Class::Class(string name,
     assert(initialLayout->subsumes(InitialLayout));
 }
 
-void Class::init(Traced<Object*> base)
+void Class::finishInit(Traced<Object*> base)
 {
-    Object::init(ObjectClass);
+    Object::finishInit(ObjectClass);
     base_ = base;
 }
 
@@ -422,9 +424,9 @@ void initObject()
 
     None.init(gc.create<NoneObject>());
 
-    Class::ObjectClass->init(Object::ObjectClass);
-    Object::ObjectClass->init(None);
-    NoneObject::ObjectClass->init(Object::ObjectClass);
+    Class::ObjectClass->finishInit(Object::ObjectClass);
+    Object::ObjectClass->finishInit(None);
+    NoneObject::ObjectClass->finishInit(Object::ObjectClass);
 
     // Create classes for callables here as this is necessary before we can add
     // methods to objects.
