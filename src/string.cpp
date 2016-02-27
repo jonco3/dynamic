@@ -49,7 +49,7 @@ static bool valueToString(Traced<Value> value, MutableTraced<Value> resultOut)
     return true;
 }
 
-static bool str_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool str_new(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
@@ -62,7 +62,7 @@ static bool str_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return valueToString(args[1], resultOut);
 }
 
-static bool str_add(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool str_add(NativeArgs args, MutableTraced<Value> resultOut) {
     if (!args[0].isInstanceOf<String>() || !args[1].isInstanceOf<String>()) {
         resultOut = NotImplemented;
         return true;
@@ -73,7 +73,7 @@ static bool str_add(TracedVector<Value> args, MutableTraced<Value> resultOut) {
     return true;
 }
 
-static bool str_str(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool str_str(NativeArgs args, MutableTraced<Value> resultOut) {
     resultOut = args[0];
     return true;
 }
@@ -88,7 +88,7 @@ static bool stringValue(Traced<Value> value, string& out)
 }
 
 template <StringCompareOp op>
-static bool stringCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool stringCompareOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     string a;
     if (!stringValue(args[0], a)) {
@@ -106,41 +106,41 @@ static bool stringCompareOp(TracedVector<Value> args, MutableTraced<Value> resul
     return true;
 }
 
-static bool str_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool str_len(NativeArgs args, MutableTraced<Value> resultOut)
 {
     const string& s = args[0].as<String>()->value();
     resultOut = Integer::get(s.size());
     return true;
 }
 
-static bool str_getitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool str_getitem(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Stack<String*> s(args[0].as<String>());
     return s->getitem(args[1], resultOut);
 }
 
-static bool str_hash(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool str_hash(NativeArgs args, MutableTraced<Value> resultOut) {
     const string& a = args[0].as<String>()->value();
     // todo: should probably use python hash algorithm for this.
     resultOut = Integer::get(std::hash<string>()(a));
     return true;
 }
 
-static bool str_contains(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool str_contains(NativeArgs args, MutableTraced<Value> resultOut) {
     const string& a = args[0].as<String>()->value();
     const string& b = args[1].as<String>()->value();
     resultOut = Boolean::get(a.find(b) != string::npos);
     return true;
 }
 
-static bool str_print(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool str_print(NativeArgs args, MutableTraced<Value> resultOut) {
     const string& a = args[0].as<String>()->value();
     cout << a << endl;
     resultOut = None;
     return true;
 }
 
-static bool str_split(TracedVector<Value> args, MutableTraced<Value> resultOut) {
+static bool str_split(NativeArgs args, MutableTraced<Value> resultOut) {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
         return false;
 

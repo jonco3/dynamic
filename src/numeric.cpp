@@ -73,7 +73,7 @@ static inline mpz_class mpzInvert(const mpz_class& a)
 static inline mpz_class mpzHash(const mpz_class& a) { return a; }
 
 template <Int32UnaryOp int32op, MPZUnaryOp mpzOp>
-static bool intUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool intUnaryOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass)) {
         resultOut = NotImplemented;
@@ -294,7 +294,7 @@ define_compare_ops(CompareEQ, a == b)
 define_compare_ops(CompareNE, a != b)
 
 template <BinaryOp Op>
-static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool intBinaryOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
         !args[1].isInstanceOf(Integer::ObjectClass))
@@ -334,7 +334,7 @@ static bool intBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut
 }
 
 template <CompareOp Op>
-static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool intCompareOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!args[0].isInstanceOf(Integer::ObjectClass) ||
         !args[1].isInstanceOf(Integer::ObjectClass))
@@ -368,7 +368,7 @@ static bool intCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOu
     return true;
 }
 
-static bool intNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool intNew(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
@@ -590,7 +590,7 @@ void Integer::print(ostream& s) const {
     s << dec << value_;
 }
 
-static bool boolNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool boolNew(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
@@ -669,7 +669,7 @@ static bool floatOrIntValue(Traced<Value> value, double& out)
 }
 
 template <FloatUnaryOp op>
-static bool floatUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool floatUnaryOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -683,7 +683,7 @@ static bool floatUnaryOp(TracedVector<Value> args, MutableTraced<Value> resultOu
 
 template <BinaryOp Op>
 static bool
-floatBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+floatBinaryOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -703,7 +703,7 @@ floatBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 
 template <BinaryOp Op>
 static bool
-floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+floatRBinaryOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -722,7 +722,7 @@ floatRBinaryOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
 }
 
 template <CompareOp Op>
-static bool floatCompareOp(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool floatCompareOp(NativeArgs args, MutableTraced<Value> resultOut)
 {
     double a;
     if (!floatValue(args[0], a)) {
@@ -740,7 +740,7 @@ static bool floatCompareOp(TracedVector<Value> args, MutableTraced<Value> result
     return true;
 }
 
-static bool floatNew(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool floatNew(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;

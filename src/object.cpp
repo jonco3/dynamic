@@ -376,7 +376,7 @@ void initNativeMethod(Traced<Object*> cls, const string& nameString,
     cls->initAttr(name, value);
 }
 
-bool object_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
+bool object_new(NativeArgs args, MutableTraced<Value> resultOut)
 {
     // Special case because we can't call Class::createNative in initialization.
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
@@ -386,7 +386,7 @@ bool object_new(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
-static bool object_repr(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool object_repr(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Object* obj = args[0].toObject();
     ostringstream s;
@@ -395,7 +395,7 @@ static bool object_repr(TracedVector<Value> args, MutableTraced<Value> resultOut
     return true;
 }
 
-static bool object_dump(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool object_dump(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Object* obj = args[0].toObject();
     obj->dump(cout);
@@ -403,7 +403,7 @@ static bool object_dump(TracedVector<Value> args, MutableTraced<Value> resultOut
     return true;
 }
 
-static bool object_hash(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool object_hash(NativeArgs args, MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get((int32_t)(uintptr_t)args[0].toObject());
     return true;

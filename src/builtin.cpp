@@ -27,7 +27,7 @@ GlobalRoot<Function*> InUsingSubscript;
 GlobalRoot<Function*> LoadModule;
 bool builtinsInitialised = false;
 
-static bool builtin_hasattr(TracedVector<Value> args,
+static bool builtin_hasattr(NativeArgs args,
                             MutableTraced<Value> resultOut)
 {
     Object* n = args[1].toObject();
@@ -41,7 +41,7 @@ static bool builtin_hasattr(TracedVector<Value> args,
     return true;
 }
 
-static bool builtin_isinstance(TracedVector<Value> args,
+static bool builtin_isinstance(NativeArgs args,
                                MutableTraced<Value> resultOut)
 {
     // todo: support tuples etc for classInfo
@@ -50,7 +50,7 @@ static bool builtin_isinstance(TracedVector<Value> args,
     return true;
 }
 
-static bool builtin_parse(TracedVector<Value> args,
+static bool builtin_parse(NativeArgs args,
                           MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
@@ -71,7 +71,7 @@ static bool builtin_parse(TracedVector<Value> args,
     return true;
 }
 
-static bool builtin_compile(TracedVector<Value> args,
+static bool builtin_compile(NativeArgs args,
                             MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], String::ObjectClass, resultOut))
@@ -123,7 +123,7 @@ static Env* GetOrCreateLocals()
     return env;
 }
 
-static bool builtin_locals(TracedVector<Value> args,
+static bool builtin_locals(NativeArgs args,
                            MutableTraced<Value> resultOut)
 {
     // "Update and return a dictionary representing the current local symbol
@@ -137,7 +137,7 @@ static bool builtin_locals(TracedVector<Value> args,
     return true;
 }
 
-static bool builtin_globals(TracedVector<Value> args,
+static bool builtin_globals(NativeArgs args,
                             MutableTraced<Value> resultOut)
 {
     Stack<Object*> global(interp->getFrame()->block()->global());
@@ -210,7 +210,7 @@ static void UpdateDictFromEnv(Traced<Value> arg, Traced<Env*> env)
     }
 }
 
-static bool builtin_eval(TracedVector<Value> args,
+static bool builtin_eval(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     Stack<Value> expression(args[0]);
@@ -261,7 +261,7 @@ static bool builtin_eval(TracedVector<Value> args,
     return true;
 }
 
-static bool builtin_exec(TracedVector<Value> args,
+static bool builtin_exec(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     // todo:
@@ -317,7 +317,7 @@ static bool builtin_exec(TracedVector<Value> args,
     return true;
 }
 
-static bool internal_execModule(TracedVector<Value> args,
+static bool internal_execModule(NativeArgs args,
                                 MutableTraced<Value> resultOut)
 {
     // Like exec, but creates a global environment and returns it.

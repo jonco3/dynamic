@@ -278,7 +278,7 @@ struct Interpreter : public Cell
                                const TracedVector<Value>& args,
                                MutableTraced<Value> resultOut);
     unsigned mungeArguments(Traced<Function*> function, unsigned argCount);
-    bool call(Traced<Value> callable, TracedVector<Value> args,
+    bool call(Traced<Value> callable, NativeArgs args,
               MutableTraced<Value> resultOut);
     CallStatus setupCall(Traced<Value> target,
                          unsigned argCount, unsigned extraPopCount,

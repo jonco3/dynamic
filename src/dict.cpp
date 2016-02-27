@@ -13,7 +13,7 @@ GlobalRoot<Class*> Dict::ObjectClass;
 GlobalRoot<Class*> DictView::ObjectClass;
 
 template <typename T>
-static bool dict_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool dict_len(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
     resultOut = Integer::get(dict->len());
@@ -21,7 +21,7 @@ static bool dict_len(TracedVector<Value> args, MutableTraced<Value> resultOut)
 }
 
 template <typename T>
-static bool dict_contains(TracedVector<Value> args,
+static bool dict_contains(NativeArgs args,
                           MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
@@ -30,7 +30,7 @@ static bool dict_contains(TracedVector<Value> args,
 }
 
 template <typename T>
-static bool dict_getitem(TracedVector<Value> args,
+static bool dict_getitem(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
@@ -44,7 +44,7 @@ static bool dict_getitem(TracedVector<Value> args,
 }
 
 template <typename T>
-static bool dict_setitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool dict_setitem(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
     dict->setitem(args[1], args[2]);
@@ -53,14 +53,14 @@ static bool dict_setitem(TracedVector<Value> args, MutableTraced<Value> resultOu
 }
 
 template <typename T>
-static bool dict_delitem(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool dict_delitem(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
     return dict->delitem(args[1], resultOut);
 }
 
 template <typename T>
-static bool dict_keys(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool dict_keys(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
     resultOut = dict->keys();
@@ -68,7 +68,7 @@ static bool dict_keys(TracedVector<Value> args, MutableTraced<Value> resultOut)
 }
 
 template <typename T>
-static bool dict_values(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool dict_values(NativeArgs args, MutableTraced<Value> resultOut)
 {
     Stack<T*> dict(args[0].as<T>());;
     resultOut = dict->values();

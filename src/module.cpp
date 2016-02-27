@@ -37,7 +37,7 @@ void Module::Init()
     Cache->setitem(key, value);
 }
 
-/* static */ bool Module::New(TracedVector<Value> args,
+/* static */ bool Module::New(NativeArgs args,
                               MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
@@ -69,7 +69,7 @@ void Package::Init()
     InitialLayout.init(Object::InitialLayout->addName(Names::__path__));
 }
 
-/* static */ bool Package::New(TracedVector<Value> args,
+/* static */ bool Package::New(NativeArgs args,
                                MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))

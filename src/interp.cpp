@@ -560,7 +560,7 @@ void Interpreter::raiseNotImplementedError()
     raiseException();
 }
 
-bool Interpreter::call(Traced<Value> targetValue, TracedVector<Value> args,
+bool Interpreter::call(Traced<Value> targetValue, NativeArgs args,
                        MutableTraced<Value> resultOut)
 {
     unsigned argCount = args.size();
@@ -673,7 +673,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     Stack<Object*> target(targetValue.toObject());
     if (target->is<Native>()) {
         Stack<Native*> native(target->as<Native>());
-        TracedVector<Value> args(stackSlice(argCount));
+        NativeArgs args(stackSlice(argCount));
         if (!checkArguments(native, args, resultOut))
             return CallError;
         bool ok = native->call(args, resultOut);

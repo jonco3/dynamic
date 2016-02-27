@@ -28,7 +28,7 @@ static bool IsInt32OrNone(Value value)
 }
 #endif
 
-Slice::Slice(TracedVector<Value> args) :
+Slice::Slice(NativeArgs args) :
   ObjectInline<3>(ObjectClass, InitialLayout)
 {
     assert(args.size() == 3);

@@ -10,7 +10,7 @@ struct Slice : public ObjectInline<3>
     static GlobalRoot<Class*> ObjectClass;
     static GlobalRoot<Layout*> InitialLayout;
 
-    Slice(TracedVector<Value> args);
+    Slice(NativeArgs args);
     Slice(Traced<Class*> cls);
 
     void indices(int32_t length,

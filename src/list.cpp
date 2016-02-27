@@ -333,7 +333,7 @@ bool ListIterImpl<T>::next(MutableTraced<Value> resultOut)
 }
 
 template <class T>
-static bool generic_new(TracedVector<Value> args,
+static bool generic_new(NativeArgs args,
                         MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
@@ -361,7 +361,6 @@ static bool generic_new(TracedVector<Value> args,
         return true;
     }
 
-    args.release();
     Stack<Value> result;
     interp->pushStack(arg);
     if (!interp->call(IterableToList, 1, result)) {
@@ -377,7 +376,7 @@ static bool generic_new(TracedVector<Value> args,
 }
 
 template <class T>
-static bool generic_len(TracedVector<Value> args,
+static bool generic_len(NativeArgs args,
                         MutableTraced<Value> resultOut)
 {
     resultOut = Integer::get(args[0].as<T>()->len());
@@ -386,7 +385,7 @@ static bool generic_len(TracedVector<Value> args,
 
 
 template <class T>
-static bool generic_getitem(TracedVector<Value> args,
+static bool generic_getitem(NativeArgs args,
                             MutableTraced<Value> resultOut)
 {
     Stack<T*> self(args[0].as<T>());
@@ -425,7 +424,7 @@ static bool generic_getitem(TracedVector<Value> args,
 }
 
 template <class T>
-static bool generic_iter(TracedVector<Value> args,
+static bool generic_iter(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     Stack<T*> self(args[0].as<T>());
@@ -433,7 +432,7 @@ static bool generic_iter(TracedVector<Value> args,
     return true;
 }
 
-static bool list_setitem(TracedVector<Value> args,
+static bool list_setitem(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     Stack<List*> self(args[0].as<List>());
@@ -490,20 +489,20 @@ static bool list_setitem(TracedVector<Value> args,
     return false;
 }
 
-static bool list_delitem(TracedVector<Value> args,
+static bool list_delitem(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     return args[0].as<List>()->delitem(args[1], resultOut);
 }
 
-static bool list_append(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool list_append(NativeArgs args, MutableTraced<Value> resultOut)
 {
     args[0].as<List>()->append(args[1]);
     resultOut = None;
     return true;
 }
 
-static bool list_sort(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool list_sort(NativeArgs args, MutableTraced<Value> resultOut)
 {
     args[0].as<List>()->sort();
     resultOut = None;
@@ -538,7 +537,7 @@ void List::init()
 }
 
 template <typename T>
-static bool listIter_iter(TracedVector<Value> args,
+static bool listIter_iter(NativeArgs args,
                           MutableTraced<Value> resultOut)
 {
     ListIterImpl<T>* i = args[0].as<ListIterImpl<T>>();
@@ -546,7 +545,7 @@ static bool listIter_iter(TracedVector<Value> args,
 }
 
 template <typename T>
-static bool listIter_next(TracedVector<Value> args,
+static bool listIter_next(NativeArgs args,
                           MutableTraced<Value> resultOut)
 {
     ListIterImpl<T>* i = args[0].as<ListIterImpl<T>>();

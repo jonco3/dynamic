@@ -18,7 +18,7 @@ static inline void log(const char* s, void *p, unsigned x) {}
 
 GlobalRoot<Class*> GeneratorIter::ObjectClass;
 
-static bool generatorIter_iter(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool generatorIter_iter(NativeArgs args, MutableTraced<Value> resultOut)
 {
     GeneratorIter* i = args[0].as<GeneratorIter>();
     return i->iter(resultOut);

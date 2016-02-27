@@ -15,7 +15,8 @@ using namespace std;
 struct Class;
 struct Native;
 
-typedef bool (*NativeFunc)(TracedVector<Value>, MutableTraced<Value>);
+using NativeArgs = const TracedVector<Value>&;
+using NativeFunc = bool (*)(NativeArgs, MutableTraced<Value>);
 
 extern GlobalRoot<Object*> None;
 
@@ -168,7 +169,7 @@ struct Class : public Object
     friend void initObject();
 };
 
-extern bool object_new(TracedVector<Value> args, MutableTraced<Value> resultOut);
+extern bool object_new(NativeArgs args, MutableTraced<Value> resultOut);
 
 extern void initAttr(Traced<Object*> cls, const string& name,
                      Traced<Value> value);
@@ -185,7 +186,7 @@ template <typename T>
 {
     Stack<Class*> cls(gc.create<Class>(name, base, InitialLayout, true));
     NativeFunc func =
-        [] (TracedVector<Value> args, MutableTraced<Value> resultOut) -> bool
+        [] (NativeArgs args, MutableTraced<Value> resultOut) -> bool
         {
             if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
                 return false;

@@ -20,7 +20,7 @@ struct Module : public Object
   private:
     friend void initModules();
     static void Init();
-    static bool New(TracedVector<Value> args, MutableTraced<Value> resultOut);
+    static bool New(NativeArgs args, MutableTraced<Value> resultOut);
 
     static const int NameSlot = 0;
     static GlobalRoot<Layout*> InitialLayout;
@@ -37,7 +37,7 @@ struct Package : public Module
   private:
     friend void initModules();
     static void Init();
-    static bool New(TracedVector<Value> args, MutableTraced<Value> resultOut);
+    static bool New(NativeArgs args, MutableTraced<Value> resultOut);
 
     static const int PathSlot = 0;
     static GlobalRoot<Layout*> InitialLayout;

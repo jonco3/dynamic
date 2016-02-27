@@ -14,7 +14,7 @@ struct File : public Object
 
     static void Init();
 
-    static bool Open(TracedVector<Value> args, MutableTraced<Value> resultOut);
+    static bool Open(NativeArgs args, MutableTraced<Value> resultOut);
 
     File(FILE* file, Traced<String*> name, Traced<String*> mode);
 
@@ -48,7 +48,7 @@ struct File : public Object
     };
 
     friend void initFiles();
-    static bool New(TracedVector<Value> args, MutableTraced<Value> resultOut);
+    static bool New(NativeArgs args, MutableTraced<Value> resultOut);
 
     bool checkError(string what, MutableTraced<Value> resultOut);
     bool createError(string what, MutableTraced<Value> resultOut);

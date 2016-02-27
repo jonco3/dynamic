@@ -8,7 +8,7 @@
 GlobalRoot<Class*> File::ObjectClass;
 GlobalRoot<Layout*> File::InitialLayout;
 
-static bool FileFileNo(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileFileNo(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -17,7 +17,7 @@ static bool FileFileNo(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
-static bool FileIsATTY(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileIsATTY(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -26,7 +26,7 @@ static bool FileIsATTY(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
-static bool FileTell(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileTell(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -35,7 +35,7 @@ static bool FileTell(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
-static bool FileClose(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileClose(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -45,7 +45,7 @@ static bool FileClose(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return true;
 }
 
-static bool FileFlush(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileFlush(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -69,7 +69,7 @@ static bool ConvertSize(Traced<Value> arg, size_t& sizeOut,
     return true;
 }
 
-static bool FileRead(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileRead(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -83,7 +83,7 @@ static bool FileRead(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return args[0].as<File>()->read(size, resultOut);
 }
 
-static bool FileSeek(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileSeek(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
         return false;
@@ -109,7 +109,7 @@ static bool FileSeek(TracedVector<Value> args, MutableTraced<Value> resultOut)
     return args[0].as<File>()->seek(offset, whence, resultOut);
 }
 
-static bool FileTruncate(TracedVector<Value> args,
+static bool FileTruncate(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut))
@@ -128,7 +128,7 @@ static bool FileTruncate(TracedVector<Value> args,
     return file->truncate(size, resultOut);
 }
 
-static bool FileWrite(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool FileWrite(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], File::ObjectClass, resultOut) ||
         !checkInstanceOf(args[1], String::ObjectClass, resultOut))
@@ -161,14 +161,14 @@ void File::Init()
     initNativeMethod(ObjectClass, "write", FileWrite, 2);
 };
 
-/* static */ bool File::New(TracedVector<Value> args,
+/* static */ bool File::New(NativeArgs args,
                             MutableTraced<Value> resultOut)
 {
     resultOut = gc.create<NotImplementedError>("Can't create file");
     return false;
 }
 
-/* static */ bool File::Open(TracedVector<Value> args,
+/* static */ bool File::Open(NativeArgs args,
                              MutableTraced<Value> resultOut)
 {
     assert(args.size() == 1 || args.size() == 2);

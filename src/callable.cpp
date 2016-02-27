@@ -28,7 +28,7 @@ void Callable::print(ostream& s) const
     s << "' at 0x" << hex << reinterpret_cast<uintptr_t>(this) << ">";
 }
 
-static bool callable_get(TracedVector<Value> args, MutableTraced<Value> resultOut)
+static bool callable_get(NativeArgs args, MutableTraced<Value> resultOut)
 {
     if (!checkInstanceOf(args[0], Callable::ObjectClass, resultOut))
         return false;
