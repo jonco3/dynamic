@@ -76,4 +76,12 @@ def q(x):
     return foo
 assert(q(1) == 1)
 
+# default arguments
+def r(x, y = []):
+    y.append(x)
+    return y
+assert r(2, [1]) == [1, 2]
+assert r(3) == [3]
+assert r(4) == [3, 4]
+
 print('ok')
