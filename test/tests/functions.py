@@ -84,4 +84,11 @@ assert r(2, [1]) == [1, 2]
 assert r(3) == [3]
 assert r(4) == [3, 4]
 
+def rrr():
+    def rr(a = 1, b = 2, c = 3, d = 4, e = 5):
+        return e
+    return rr()
+
+assert rrr() == 5
+
 print('ok')

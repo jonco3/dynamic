@@ -198,6 +198,12 @@ void Interpreter::logInstr(Instr* instr)
 }
 #endif
 
+void Interpreter::ensureStackSpace(size_t newStackSize)
+{
+    if (newStackSize > stack.size())
+        stack.resize(newStackSize);
+}
+
 void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
                             unsigned extraPopCount)
 {
@@ -207,8 +213,7 @@ void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
 
     unsigned newStackSize = stackStartPos + block->maxStackDepth();
     assert(newStackSize >= stackPos());
-    if (newStackSize > stack.size())
-        stack.resize(newStackSize);
+    ensureStackSpace(newStackSize);
 
 #ifdef LOG_EXECUTION
     if (logFrames) {
@@ -638,9 +643,16 @@ inline unsigned Interpreter::mungeArguments(Traced<Function*> function,
 {
     // Fill in default values for missing arguments
     Stack<Value> value;
-    while (argCount < function->maxNormalArgs()) {
-        value = function->paramDefault(argCount++);
-        pushStack(value);
+    if (argCount < function->maxNormalArgs()) {
+        // Because the number of default arguments depends on the function we
+        // don't know statically how big to make the stack.  Grow it here if
+        // necessary.
+        size_t count = function->maxNormalArgs() - argCount;
+        ensureStackSpace(stackPos_ + count);
+        do {
+            value = function->paramDefault(argCount++);
+            pushStack(value);
+        } while (argCount < function->maxNormalArgs());
     }
 
     // Add rest argument tuple if necessary

@@ -137,6 +137,8 @@ struct Interpreter : public Cell
 
     void insertStackEntry(unsigned offsetFromTop, Value value);
 
+    void ensureStackSpace(size_t newStackSize);
+
     Value getStackLocal(unsigned offset) {
         Frame* frame = getFrame();
         assert(offset < frame->block()->layout()->slotCount());
