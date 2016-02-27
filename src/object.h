@@ -104,6 +104,10 @@ struct Object : public Cell
 
     bool getSlot(Name name, int slot, MutableTraced<Value> valueOut) const;
 
+    bool hasOutOfLineSlots() const {
+        return slots_.hasHeapElements();
+    }
+
   private:
     Heap<Class*> class_;
     Heap<Layout*> layout_;

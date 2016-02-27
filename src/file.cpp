@@ -207,7 +207,7 @@ void File::Init()
 }
 
 File::File(FILE* file, Traced<String*> name, Traced<String*> mode)
-  : Object(ObjectClass, InitialLayout),
+  : ObjectInline<4>(ObjectClass, InitialLayout),
     file_(file)
 {
     assert(file_);
@@ -215,6 +215,7 @@ File::File(FILE* file, Traced<String*> name, Traced<String*> mode)
     setSlot(ModeSlot, Value(mode));
     setSlot(ClosedSlot, Value(Boolean::False));
     setSlot(SoftSpaceSlot, Value(None));
+    assert(!hasOutOfLineSlots());
 }
 
 bool File::closed() const

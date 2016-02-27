@@ -8,7 +8,7 @@
 
 struct Dict;
 
-struct File : public Object
+struct File : public ObjectInline<4>
 {
     static GlobalRoot<Class*> ObjectClass;
 

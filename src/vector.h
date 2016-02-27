@@ -181,6 +181,10 @@ struct VectorStorageHeap : public VectorStorageBase<T>
     using Base::size;
     using Base::capacity;
 
+    bool hasHeapElements() const {
+        return false;
+    }
+
   protected:
     using Base::heapElements_;
 
@@ -222,6 +226,10 @@ struct VectorStorageInline : public VectorStorageBase<T>
                static_cast<void*>(this + 1));
         this->inlineCapacity_ = N / sizeof(T);
         this->capacity_ = inlineCapacity_;
+    }
+
+    bool hasHeapElements() const {
+        return heapCapacity() != 0;
     }
 
   protected:

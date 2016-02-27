@@ -38,6 +38,7 @@ Slice::Slice(NativeArgs args) :
     setSlot(StartSlot, args[0]);
     setSlot(StopSlot, args[1]);
     setSlot(StepSlot, args[2]);
+    assert(!hasOutOfLineSlots());
 }
 
 Slice::Slice(Traced<Class*> cls)
