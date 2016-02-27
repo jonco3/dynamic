@@ -287,8 +287,9 @@ struct UseCountBase
         assert(!hasUses());
     }
 
-    template <typename T, typename V>
-    friend struct TracedVector;
+    template <typename T, typename V> friend struct TracedVector;
+    template <typename T> friend struct Traced;
+    template <typename T> friend struct MutableTraced;
 
   private:
 #ifdef DEBUG
@@ -582,15 +583,35 @@ struct Heap
 template <typename T>
 struct Traced : public WrapperMixins<Traced<T>, T>
 {
-    Traced(const Traced<T>& other) : ptr_(other.ptr_) {}
-    Traced(GlobalRoot<T>& root) : ptr_(root.get()) {}
-    Traced(Root<T>& root) : ptr_(root.get()) {}
-    Traced(Stack<T>& root) : ptr_(root.get()) {}
-    Traced(Heap<T>& ptr) : ptr_(ptr.get()) {}
+    Traced(const Traced<T>& other) : ptr_(other.ptr_) {
+#ifdef DEBUG
+        // todo: I guess add/remove reference should be const
+        initReferent(const_cast<UseCountBase*>(other.referent_));
+#endif
+    }
+
+    Traced(GlobalRoot<T>& root) : ptr_(root.get()) {
+        initReferent(&root);
+    }
+
+    Traced(Root<T>& root) : ptr_(root.get()) {
+        initReferent(&root);
+    }
+
+    Traced(Stack<T>& root) : ptr_(root.get()) {
+        initReferent(&root);
+    }
+
+    Traced(Heap<T>& ptr) : ptr_(ptr.get()) {
+        initReferent(&ptr);
+    }
 
     Traced(nullptr_t null)
-      : ptr_(const_cast<const T&>(GCTraits<T>::nullValueRef())) {}
-    // todo: T is |S*| for some S, but we need |const S*|, hence the cast.
+      : ptr_(const_cast<const T&>(GCTraits<T>::nullValueRef()))
+    {
+        // todo: T is |S*| for some S, but we need |const S*|, hence the cast.
+        initReferent(nullptr);
+    }
 
     template <typename S>
     Traced(Root<S>& other)
@@ -599,6 +620,7 @@ struct Traced : public WrapperMixins<Traced<T>, T>
         static_assert(is_base_of<typename remove_pointer<T>::type,
                                  typename remove_pointer<S>::type>::value,
                       "Invalid conversion");
+        initReferent(&other);
     }
 
     template <typename S>
@@ -608,6 +630,7 @@ struct Traced : public WrapperMixins<Traced<T>, T>
         static_assert(is_base_of<typename remove_pointer<T>::type,
                                  typename remove_pointer<S>::type>::value,
                       "Invalid conversion");
+        initReferent(&other);
     }
 
     template <typename S>
@@ -617,6 +640,16 @@ struct Traced : public WrapperMixins<Traced<T>, T>
         static_assert(is_base_of<typename remove_pointer<T>::type,
                                  typename remove_pointer<S>::type>::value,
                       "Invalid conversion");
+#ifdef DEBUG
+        initReferent(other.referent_);
+#endif
+    }
+
+    ~Traced() {
+#ifdef DEBUG
+        if (referent_)
+            referent_->removeUse();
+#endif
     }
 
     define_comparisions;
@@ -627,20 +660,53 @@ struct Traced : public WrapperMixins<Traced<T>, T>
     }
 
   private:
-    Traced(const T* traced) : ptr_(*traced) {}
+    Traced(const T* traced)
+      : ptr_(*traced)
+    {
+        initReferent(nullptr);
+    }
+
+    void initReferent(UseCountBase* referent) {
+#ifdef DEBUG
+        referent_ = referent;
+        if (referent_)
+            referent_->addUse();
+#endif
+    }
 
     const T& ptr_;
+
+#ifdef DEBUG
+    UseCountBase* referent_;
+#endif
 };
 
 // A mutable handle to a traced location
 template <typename T>
 struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
 {
-    MutableTraced(const MutableTraced<T>& other) : ptr_(other.ptr_) {}
-    MutableTraced(GlobalRoot<T>& root) : ptr_(root.get()) {}
-    MutableTraced(Root<T>& root) : ptr_(root.get()) {}
-    MutableTraced(Stack<T>& root) : ptr_(root.get()) {}
-    MutableTraced(Heap<T>& ptr) : ptr_(ptr.get()) {}
+    MutableTraced(const MutableTraced<T>& other) : ptr_(other.ptr_) {
+#ifdef DEBUG
+        initReferent(other.referent_);
+#endif
+    }
+
+    MutableTraced(GlobalRoot<T>& root) : ptr_(root.get()) {
+        initReferent(&root);
+    }
+
+    MutableTraced(Root<T>& root) : ptr_(root.get()) {
+        initReferent(&root);
+    }
+
+    MutableTraced(Stack<T>& root) : ptr_(root.get()) {
+        initReferent(&root);
+    }
+
+    MutableTraced(Heap<T>& ptr) : ptr_(ptr.get()) {
+        initReferent(&ptr);
+    }
+
 
     template <typename S>
     MutableTraced(Root<S>& other)
@@ -649,6 +715,7 @@ struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
         static_assert(is_base_of<typename remove_pointer<T>::type,
                                  typename remove_pointer<S>::type>::value,
                       "Invalid conversion");
+        initReferent(&other);
     }
 
     template <typename S>
@@ -658,6 +725,14 @@ struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
         static_assert(is_base_of<typename remove_pointer<T>::type,
                                  typename remove_pointer<S>::type>::value,
                       "Invalid conversion");
+        initReferent(&other);
+    }
+
+    ~MutableTraced() {
+#ifdef DEBUG
+        if (referent_)
+            referent_->removeUse();
+#endif
     }
 
     define_comparisions;
@@ -704,9 +779,27 @@ struct MutableTraced : public WrapperMixins<MutableTraced<T>, T>
     }
 
   private:
-    MutableTraced(T* traced) : ptr_(*traced) {}
+    MutableTraced(T* traced)
+      : ptr_(*traced)
+    {
+        initReferent(nullptr);
+    }
+
+    void initReferent(UseCountBase* referent) {
+#ifdef DEBUG
+        referent_ = referent;
+        if (referent_)
+            referent_->addUse();
+#endif
+    }
 
     T& ptr_;
+
+#ifdef DEBUG
+    UseCountBase* referent_;
+#endif
+
+    friend struct Traced<T>;
 };
 
 template <typename T, typename V = Vector<T>>

@@ -1291,8 +1291,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
 #define start_handle_instr(it, cls)                                           \
     instr_##it: {                                                             \
-        cls** ip = reinterpret_cast<cls**>(&thunk->data.get());               \
-        Traced<cls*> instr = Traced<cls*>::fromTracedLocation(ip)
+        Heap<cls*>& instr = reinterpret_cast<Heap<cls*>&>(thunk->data)
 
 #define execute_outofline_instr(it)                                           \
         executeInstr_##it(instr)
