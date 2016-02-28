@@ -27,7 +27,7 @@ void Module::Init()
     // todo: get this from command line or env
     Stack<String*> defaultPath(gc.create<String>("lib"));
 
-    Stack<List*> path(gc.create<List>(1));
+    Stack<List*> path(List::getUninitialised(1));
     path->initElement(0, Value(defaultPath));
     Stack<Value> value(path);
     Sys->setAttr(Names::path, value);

@@ -173,7 +173,7 @@ void Dict::clear()
 Value Dict::keys() const
 {
     // todo: should be some kind of iterator?
-    Stack<Tuple*> keys(Tuple::get(entries_.size()));
+    Stack<Tuple*> keys(Tuple::getUninitialised(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         keys->initElement(index++, i.first);
@@ -183,7 +183,7 @@ Value Dict::keys() const
 Value Dict::values() const
 {
     // todo: should be some kind of iterator?
-    Stack<Tuple*> values(Tuple::get(entries_.size()));
+    Stack<Tuple*> values(Tuple::getUninitialised(entries_.size()));
     size_t index = 0;
     for (const auto& i : entries_)
         values->initElement(index++, i.second);
@@ -346,7 +346,7 @@ bool DictView::delitem(Traced<Value> key, MutableTraced<Value> resultOut)
 Value DictView::keys() const
 {
     // todo: should be some kind of iterator?
-    Stack<Tuple*> keys(Tuple::get(len()));
+    Stack<Tuple*> keys(Tuple::getUninitialised(len()));
     Stack<Layout*> layout(object_->layout());
     size_t index = 0;
     while (layout != Layout::Empty) {
@@ -359,7 +359,7 @@ Value DictView::keys() const
 Value DictView::values() const
 {
     // todo: should be some kind of iterator?
-    Stack<Tuple*> values(Tuple::get(len()));
+    Stack<Tuple*> values(Tuple::getUninitialised(len()));
     for (size_t index = 0; index < len(); index++)
         values->initElement(index, object_->getSlot(index));
     return Value(values);

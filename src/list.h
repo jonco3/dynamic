@@ -13,10 +13,11 @@ struct Tuple : public Object
     static void init();
 
     static Tuple* get(const TracedVector<Value>& values);
-    static Tuple* get(size_t size);
-    static Tuple* get(Traced<Class*> cls, size_t size);
     static Tuple* get(Traced<Class*> cls, Traced<Tuple*> init);
     static Tuple* get(Traced<Class*> cls, Traced<List*> init);
+
+    static Tuple* getUninitialised(size_t size,
+                                   Traced<Class*> cls = ObjectClass);
     void initElement(size_t index, const Value& value);
 
     void print(ostream& s) const override;
@@ -28,12 +29,10 @@ struct Tuple : public Object
         return elements_[index];
     }
 
-
   private:
     friend struct GC;
     Tuple(const TracedVector<Value>& values);
-    Tuple(size_t size);
-    Tuple(Traced<Class*> cls, size_t size);
+    Tuple(size_t size, Traced<Class*> cls);
     Tuple(Traced<Class*> cls, Traced<Tuple*> init);
     Tuple(Traced<Class*> cls, Traced<List*> init);
 
@@ -47,13 +46,10 @@ struct List : public Object
 
     static void init();
 
-    template <typename... Args>
-    static List* get(Args&&... args);
-    List(const TracedVector<Value>& values);
-    List(size_t size);
-    List(Traced<Class*> cls, size_t size);
-    List(Traced<Class*> cls, Traced<Tuple*> init);
-    List(Traced<Class*> cls, Traced<List*> init);
+    static List* get(Traced<Class*> cls, Traced<Tuple*> init);
+    static List* get(Traced<Class*> cls, Traced<List*> init);
+
+    static List* getUninitialised(size_t size, Traced<Class*> cls = ObjectClass);
     void initElement(size_t index, const Value& value);
 
     void print(ostream& os) const override;
@@ -70,6 +66,12 @@ struct List : public Object
     void sort();
 
   private:
+    friend struct GC;
+    List(const TracedVector<Value>& values);
+    List(size_t size, Traced<Class*> cls);
+    List(Traced<Class*> cls, Traced<Tuple*> init);
+    List(Traced<Class*> cls, Traced<List*> init);
+
     HeapVector<Value> elements_;
 };
 

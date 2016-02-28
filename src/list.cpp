@@ -55,16 +55,6 @@ inline static size_t allocSize(size_t size)
     return gc.createSized<Tuple>(allocSize(values.size()), values);
 }
 
-/* static */ Tuple* Tuple::get(size_t size)
-{
-    return gc.createSized<Tuple>(allocSize(size), size);
-}
-
-/* static */ Tuple* Tuple::get(Traced<Class*> cls, size_t size)
-{
-    return gc.createSized<Tuple>(allocSize(size), cls, size);
-}
-
 /* static */ Tuple* Tuple::get(Traced<Class*> cls, Traced<Tuple*> init)
 {
     return gc.createSized<Tuple>(allocSize(init->len()), cls, init);
@@ -75,6 +65,14 @@ inline static size_t allocSize(size_t size)
     return gc.createSized<Tuple>(allocSize(init->len()), cls, init);
 }
 
+/* static */ Tuple* Tuple::getUninitialised(size_t size, Traced<Class*> cls)
+{
+    if (size == 0 && cls == ObjectClass)
+        return Empty;
+
+    return gc.createSized<Tuple>(allocSize(size), size, cls);
+}
+
 Tuple::Tuple(const TracedVector<Value>& values)
   : Object(ObjectClass), size_(values.size())
 {
@@ -82,22 +80,13 @@ Tuple::Tuple(const TracedVector<Value>& values)
         elements_[i] = values[i];
 }
 
-Tuple::Tuple(size_t size)
-  : Object(ObjectClass), size_(size)
-{
-#ifdef DEBUG
-    for (unsigned i = 0; i < size; i++)
-        elements_[i] = None;
-#endif
-}
-
-Tuple::Tuple(Traced<Class*> cls, size_t size)
+Tuple::Tuple(size_t size, Traced<Class*> cls)
   : Object(ObjectClass), size_(size)
 {
     assert(cls->isDerivedFrom(ObjectClass));
 #ifdef DEBUG
     for (unsigned i = 0; i < size; i++)
-        elements_[i] = None;
+        elements_[i] = UninitializedSlot;
 #endif
 }
 
@@ -120,7 +109,7 @@ Tuple::Tuple(Traced<Class*> cls, Traced<List*> init)
 void Tuple::initElement(size_t index, const Value& value)
 {
     assert(index < size_);
-    assert(elements_[index].asObject() == None);
+    assert(elements_[index].asObject() == UninitializedSlot);
     elements_[index] = value;
 }
 
@@ -143,10 +132,19 @@ void Tuple::traceChildren(Tracer& t)
         gc.trace(t, &elements_[i]);
 }
 
-template <typename... Args>
-/* static */ List* List::get(Args&&... args)
+/* static */ List* List::get(Traced<Class*> cls, Traced<Tuple*> init)
 {
-    return gc.create<List>(forward<Args>(args)...);
+    return gc.create<List>(cls, init);
+}
+
+/* static */ List* List::get(Traced<Class*> cls, Traced<List*> init)
+{
+    return gc.create<List>(cls, init);
+}
+
+/* static */ List* List::getUninitialised(size_t size, Traced<Class*> cls)
+{
+    return gc.create<List>(size, cls);
 }
 
 List::List(const TracedVector<Value>& values)
@@ -156,22 +154,13 @@ List::List(const TracedVector<Value>& values)
         elements_[i] = values[i];
 }
 
-List::List(size_t size)
-  : Object(ObjectClass), elements_(size)
-{
-#ifdef DEBUG
-    for (unsigned i = 0; i < size; ++i)
-        elements_[i] = None;
-#endif
-}
-
-List::List(Traced<Class*> cls, size_t size)
+List::List(size_t size, Traced<Class*> cls)
   : Object(ObjectClass), elements_(size)
 {
     assert(cls->isDerivedFrom(ObjectClass));
 #ifdef DEBUG
     for (unsigned i = 0; i < size; ++i)
-        elements_[i] = None;
+        elements_[i] = UninitializedSlot;
 #endif
 }
 
@@ -191,7 +180,7 @@ List::List(Traced<Class*> cls, Traced<Tuple*> init)
 
 void List::initElement(size_t index, const Value& value)
 {
-    assert(elements_[index].asObject() == None);
+    assert(elements_[index].asObject() == UninitializedSlot);
     elements_[index] = value;
 }
 
@@ -344,7 +333,7 @@ static bool generic_new(NativeArgs args,
            cls->isDerivedFrom(Tuple::ObjectClass));
 
     if (args.size() == 1) {
-        resultOut = T::get(cls, 0);
+        resultOut = T::getUninitialised(0, cls);
         return true;
     }
 
@@ -406,7 +395,7 @@ static bool generic_getitem(NativeArgs args,
             return false;
         }
 
-        Stack<T*> result(T::get(count));
+        Stack<T*> result(T::getUninitialised(count));
         int32_t src = start;
         for (size_t i = 0; i < count; i++) {
             assert(src < self->len());

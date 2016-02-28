@@ -145,7 +145,7 @@ static bool str_split(NativeArgs args, MutableTraced<Value> resultOut) {
         return false;
 
     const string& str = args[0].as<String>()->value();
-    Stack<List*> result(gc.create<List>(0));
+    Stack<List*> result(List::getUninitialised(0));
     Stack<Value> value;
 
     if (args.size() == 1) {
