@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import time
+import math
 
 parser = argparse.ArgumentParser(description='Run tests.')
 parser.add_argument('--verbose', action='store_true',
@@ -79,8 +80,7 @@ def runTest(filename, command):
 
     command = command.split() + [filename] + testArgs
 
-    totalTime = 0
-
+    runTimes = []
     for i in range(0, args.repeat):
         ok = True
         startTime = time.perf_counter()
@@ -104,13 +104,20 @@ def runTest(filename, command):
                            '      Actual:   ' + output.replace('\n', '|'))
                 return 'FAIL', message
 
-        totalTime += endTime - startTime
+        runTimes.append(endTime - startTime)
 
     passCount += 1
-    return 'PASS', totalTime / args.repeat
+    return 'PASS', runTimes
 
-def formatTime(secs):
-    return "%-20.2f" % (secs * 1000)
+def calculateTimeStats(runTimes):
+    n = len(runTimes)
+    mean = sum(runTimes) / n
+    stdDev = math.sqrt(sum(map(lambda x: (x - mean) ** 2, runTimes)) / (n - 1))
+    return mean, stdDev
+
+def formatTimes(runTimes):
+    meanSeconds, stdDev = calculateTimeStats(runTimes)
+    return "%-13.2f %-6.2f" % (meanSeconds * 1000, stdDev / meanSeconds * 100)
 
 def formatResult(result):
     return "%-20s" % result
@@ -131,7 +138,7 @@ def runTestDir(dirname, names):
                 elif result != 'PASS':
                     line += formatResult(result)
                 elif args.benchmark:
-                    line += formatTime(extra)
+                    line += formatTimes(extra)
                 else:
                     line += formatResult("ok")
             print(line)
