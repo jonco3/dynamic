@@ -152,9 +152,13 @@ line = 'Running tests:         '
 line += "".join(map(formatExeName, args.commands))
 print(line)
 
-for testDir in args.dirs:
-    for dirpath, dirnames, filenames in os.walk(testDir):
-        runTestDir(dirpath, filenames)
-print("%d tests passed out of %d" % (passCount, runCount))
-if passCount != runCount:
-    sys.exit(1)
+try:
+    for testDir in args.dirs:
+        for dirpath, dirnames, filenames in os.walk(testDir):
+            runTestDir(dirpath, filenames)
+    print("%d tests passed out of %d" % (passCount, runCount))
+    if passCount != runCount:
+        sys.exit(1)
+except KeyboardInterrupt:
+    print("Interrupted!")
+    sys.exit(2)
