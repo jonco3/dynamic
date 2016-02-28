@@ -155,13 +155,10 @@ List::List(const TracedVector<Value>& values)
 }
 
 List::List(size_t size, Traced<Class*> cls)
-  : Object(ObjectClass), elements_(size)
+  : Object(ObjectClass)
 {
     assert(cls->isDerivedFrom(ObjectClass));
-#ifdef DEBUG
-    for (unsigned i = 0; i < size; ++i)
-        elements_[i] = UninitializedSlot;
-#endif
+    elements_.reserve(size);
 }
 
 List::List(Traced<Class*> cls, Traced<List*> init)
@@ -180,8 +177,8 @@ List::List(Traced<Class*> cls, Traced<Tuple*> init)
 
 void List::initElement(size_t index, const Value& value)
 {
-    assert(elements_[index].asObject() == UninitializedSlot);
-    elements_[index] = value;
+    assert(elements_.size() == index);
+    elements_.push_back(value);
 }
 
 void List::print(ostream& s) const
