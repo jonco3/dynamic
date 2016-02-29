@@ -417,35 +417,15 @@ struct VectorImpl : public VectorStorage
     }
 
     void resize(size_t newSize) {
-        if (newSize > size()) {
-            reserve(newSize);
-            while (size() < newSize)
-                construct_back();
-            return;
-        }
-
-        if (newSize < size()) {
-            while (size() > newSize)
-                destruct_back();
-            return;
-        }
+        if (newSize > size())
+            increaseSize(newSize);
+        else if (newSize < size())
+            decreaseSize(newSize);
     }
 
     void reserve(size_t newSize) {
-        assert(capacity() >= inlineCapacity());
-        assert(size() <= capacity());
-        assert((capacity() == inlineCapacity()) ==
-               (this->heapElements_ == nullptr));
-
-        if (newSize <= capacity())
-            return;
-
-        size_t newHeapCapacity =
-            heapCapacity() != 0 ? heapCapacity() : InitialHeapCapacity;
-        while (newSize > newHeapCapacity + inlineCapacity())
-            newHeapCapacity += newHeapCapacity / 2;
-        assert(newHeapCapacity > heapCapacity());
-        changeHeapCapacity(newHeapCapacity);
+        if (newSize > capacity())
+            increaseCapacity(newSize);
     }
 
     void push_back(const T& value) {
@@ -461,50 +441,11 @@ struct VectorImpl : public VectorStorage
         return erase(pos, pos + 1);
     }
 
-    iterator erase(const_iterator first, const_iterator last) {
-        assert(first.vector() == this);
-        assert(last.vector() == this);
-        assert(first.index() <= last.index());
-        assert(last.index() <= size());
+    iterator erase(const_iterator first, const_iterator last);
 
-        size_t count = last.index() - first.index();
-        for (size_t i = last.index(); i < size(); i++)
-            ref(i - count) = ref(i);
-        for (size_t i = 0; i < count; i++)
-            destruct_back();
-        return iterator(this, first.index());
-    }
+    iterator insert(const_iterator pos, const_reference value);
 
-    iterator insert(const_iterator pos, const_reference value) {
-        assert(pos.vector() == this);
-        assert(pos.index() <= size());
-
-        reserve(size() + 1);
-        construct_back();
-        for (size_t i = size(); i != pos.index() + 1; i--)
-            ref(i - 1) = ref(i - 2);
-        ref(pos.index()) = value;
-        return iterator(this, pos.index());
-    }
-
-    iterator insert(const_iterator pos, const_iterator first, iterator last) {
-        assert(pos.vector() == this);
-        assert(pos.index() <= size());
-        assert(first.vector() == last.vector());
-        assert(first.index() <= last.index());
-        assert(last.index() <= last.vector()->size());
-
-        size_t count = last.index() - first.index();
-        reserve(size() + count);
-        for (size_t i = 0; i < count; i++)
-            construct_back();
-        for (size_t i = size(); i != pos.index() + count; i--)
-            ref(i - 1) = ref(i - count - 1);
-        auto source = first.vector();
-        for (size_t i = 0; i < count; i++)
-            ref(i + pos.index()) = source->ref(i + first.index());
-        return iterator(this, pos.index());
-    }
+    iterator insert(const_iterator pos, const_iterator first, iterator last);
 
     void clear() {
         while (size() != 0)
@@ -517,41 +458,12 @@ struct VectorImpl : public VectorStorage
         construct_back(std::forward<Args>(args)...);
     }
 
-    void shrink_to_fit() {
-        assert(capacity() >= inlineCapacity());
-
-        if (heapCapacity() == 0 ||
-            (heapCapacity() == InitialHeapCapacity && size() > inlineCapacity()))
-        {
-            return;
-        }
-
-        size_t newHeapCapacity = 0;
-        if (size() > inlineCapacity()) {
-            newHeapCapacity = InitialHeapCapacity;
-            while (newHeapCapacity + inlineCapacity() < size())
-                newHeapCapacity += newHeapCapacity / 2;
-        }
-
-        if (newHeapCapacity != heapCapacity())
-            changeHeapCapacity(newHeapCapacity);
-    }
+    void shrink_to_fit();
 
     template <class InputIterator>
-    void assign(InputIterator first, InputIterator last) {
-        clear();
-        size_t count = last - first;
-        reserve(count);
-        for (InputIterator i = first; i != last; i++)
-            construct_back(*i);
-    }
+    void assign(InputIterator first, InputIterator last);
 
-    void assign(size_t newSize, const T& fillValue) {
-        assert(size() == 0);
-        reserve(newSize);
-        for (size_t i = 0; i < newSize; i++)
-            construct_back(fillValue);
-    }
+    void assign(size_t newSize, const T& fillValue);
 
   private:
     using Base::inlineCapacity;
@@ -594,26 +506,11 @@ struct VectorImpl : public VectorStorage
         decSize()->~T();
     }
 
-    void changeHeapCapacity(size_t newHeapCapacity) {
-        assert(newHeapCapacity != heapCapacity());
-
-        T* newHeapElements = nullptr;
-        if (newHeapCapacity) {
-            size_t bytes = sizeof(T) * newHeapCapacity;
-            newHeapElements = static_cast<T*>(malloc(bytes));
-        }
-        if (size() > inlineCapacity()) {
-            assert(newHeapCapacity);
-            for (size_t i = 0; i < size() - inlineCapacity(); i++) {
-                new (&newHeapElements[i])T(this->heapElements_[i]);
-                this->heapElements_[i].~T();
-            }
-        }
-        free(this->heapElements_);
-        this->heapElements_ = newHeapElements;
-        this->capacity_ = newHeapCapacity + inlineCapacity();
-    }
-};
+    void increaseCapacity(size_t newSize);
+    void changeHeapCapacity(size_t newHeapCapacity);
+    void increaseSize(size_t newSize);
+    void decreaseSize(size_t newSize);
+ };
 
 template <typename T>
 struct Vector : public VectorImpl<T, VectorStorageHeap<T>>
@@ -653,5 +550,159 @@ template <typename T, size_t N>
   private:
     uint8_t inlineData_[N * sizeof(T)];
 };
+
+template <typename T, typename VectorStorage>
+void VectorImpl<T, VectorStorage>::increaseCapacity(size_t newSize)
+{
+    assert(newSize > capacity());
+    assert(capacity() >= inlineCapacity());
+    assert(size() <= capacity());
+    assert((capacity() == inlineCapacity()) ==
+           (this->heapElements_ == nullptr));
+
+    size_t newHeapCapacity =
+        heapCapacity() != 0 ? heapCapacity() : InitialHeapCapacity;
+    while (newSize > newHeapCapacity + inlineCapacity())
+        newHeapCapacity += newHeapCapacity / 2;
+    assert(newHeapCapacity > heapCapacity());
+    changeHeapCapacity(newHeapCapacity);
+}
+
+template <typename T, typename VectorStorage>
+void VectorImpl<T, VectorStorage>::shrink_to_fit()
+{
+    assert(capacity() >= inlineCapacity());
+
+    if (heapCapacity() == 0 ||
+        (heapCapacity() == InitialHeapCapacity && size() > inlineCapacity()))
+    {
+        return;
+    }
+
+    size_t newHeapCapacity = 0;
+    if (size() > inlineCapacity()) {
+        newHeapCapacity = InitialHeapCapacity;
+        while (newHeapCapacity + inlineCapacity() < size())
+            newHeapCapacity += newHeapCapacity / 2;
+    }
+
+    if (newHeapCapacity != heapCapacity())
+        changeHeapCapacity(newHeapCapacity);
+}
+
+template <typename T, typename VectorStorage>
+void VectorImpl<T, VectorStorage>::changeHeapCapacity(size_t newHeapCapacity)
+{
+    assert(newHeapCapacity != heapCapacity());
+
+    T* newHeapElements = nullptr;
+    if (newHeapCapacity) {
+        size_t bytes = sizeof(T) * newHeapCapacity;
+        newHeapElements = static_cast<T*>(malloc(bytes));
+    }
+    if (size() > inlineCapacity()) {
+        assert(newHeapCapacity);
+        for (size_t i = 0; i < size() - inlineCapacity(); i++) {
+            new (&newHeapElements[i])T(this->heapElements_[i]);
+            this->heapElements_[i].~T();
+        }
+    }
+    free(this->heapElements_);
+    this->heapElements_ = newHeapElements;
+    this->capacity_ = newHeapCapacity + inlineCapacity();
+}
+
+template <typename T, typename VectorStorage>
+void VectorImpl<T, VectorStorage>::increaseSize(size_t newSize)
+{
+    assert(newSize > size());
+    reserve(newSize);
+    while (size() < newSize)
+        construct_back();
+}
+
+template <typename T, typename VectorStorage>
+void VectorImpl<T, VectorStorage>::decreaseSize(size_t newSize)
+{
+    assert(newSize < size());
+    while (size() > newSize)
+        destruct_back();
+}
+
+template <typename T, typename VectorStorage>
+typename VectorImpl<T, VectorStorage>::iterator
+VectorImpl<T, VectorStorage>::erase(const_iterator first, const_iterator last)
+{
+    assert(first.vector() == this);
+    assert(last.vector() == this);
+    assert(first.index() <= last.index());
+    assert(last.index() <= size());
+
+    size_t count = last.index() - first.index();
+    for (size_t i = last.index(); i < size(); i++)
+        ref(i - count) = ref(i);
+    for (size_t i = 0; i < count; i++)
+        destruct_back();
+    return iterator(this, first.index());
+}
+
+template <typename T, typename VectorStorage>
+typename VectorImpl<T, VectorStorage>::iterator
+VectorImpl<T, VectorStorage>::insert(const_iterator pos, const_reference value)
+{
+    assert(pos.vector() == this);
+    assert(pos.index() <= size());
+
+    reserve(size() + 1);
+    construct_back();
+    for (size_t i = size(); i != pos.index() + 1; i--)
+        ref(i - 1) = ref(i - 2);
+    ref(pos.index()) = value;
+    return iterator(this, pos.index());
+}
+
+template <typename T, typename VectorStorage>
+typename VectorImpl<T, VectorStorage>::iterator
+VectorImpl<T, VectorStorage>::insert(const_iterator pos,
+                                     const_iterator first, iterator last)
+{
+    assert(pos.vector() == this);
+    assert(pos.index() <= size());
+    assert(first.vector() == last.vector());
+    assert(first.index() <= last.index());
+    assert(last.index() <= last.vector()->size());
+
+    size_t count = last.index() - first.index();
+    reserve(size() + count);
+    for (size_t i = 0; i < count; i++)
+        construct_back();
+    for (size_t i = size(); i != pos.index() + count; i--)
+        ref(i - 1) = ref(i - count - 1);
+    auto source = first.vector();
+    for (size_t i = 0; i < count; i++)
+        ref(i + pos.index()) = source->ref(i + first.index());
+    return iterator(this, pos.index());
+}
+
+template <typename T, typename VectorStorage>
+template <class InputIterator>
+void VectorImpl<T, VectorStorage>::assign(InputIterator first,
+                                          InputIterator last)
+{
+    clear();
+    size_t count = last - first;
+    reserve(count);
+    for (InputIterator i = first; i != last; i++)
+        construct_back(*i);
+}
+
+template <typename T, typename VectorStorage>
+void VectorImpl<T, VectorStorage>::assign(size_t newSize, const T& fillValue)
+{
+    assert(size() == 0);
+    reserve(newSize);
+    for (size_t i = 0; i < newSize; i++)
+        construct_back(fillValue);
+}
 
 #endif
