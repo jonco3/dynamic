@@ -6,23 +6,7 @@
 
 #include "sysexits.h"
 
-// It's much faster to build all the tests in one go than compiling seperately
-// and then linking.
 #include "test.cpp"
-#include "test/test_token.cpp"
-#include "test/test_parser.cpp"
-#include "test/test_vector.cpp"
-#include "test/test_gc.cpp"
-#include "test/test_block.cpp"
-#include "test/test_layout.cpp"
-#include "test/test_object.cpp"
-#include "test/test_interp.cpp"
-#include "test/test_exception.cpp"
-#include "test/test_numeric.cpp"
-#include "test/test_string.cpp"
-#include "test/test_list.cpp"
-#include "test/test_dict.cpp"
-#include "test/test_builtin.cpp"
 
 const char* usageMessage =
     "usage:\n"

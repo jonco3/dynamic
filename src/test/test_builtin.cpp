@@ -1,6 +1,6 @@
-#include "src/builtin.h"
+#include "../builtin.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 #include "test_interp.h"
 

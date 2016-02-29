@@ -1,6 +1,6 @@
-#include "src/layout.h"
+#include "../layout.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 testcase(layout)
 {

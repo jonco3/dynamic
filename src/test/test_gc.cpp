@@ -1,6 +1,6 @@
-#include "src/gc.h"
+#include "../gc.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 #include <cstring>
 

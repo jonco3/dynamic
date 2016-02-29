@@ -1,6 +1,6 @@
-#include "src/string.h"
+#include "../string.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 #include "test_interp.h"
 

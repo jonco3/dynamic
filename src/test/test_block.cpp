@@ -1,12 +1,13 @@
-#include "src/block.h"
+#include "../block.h"
 
-#include "src/compiler.h"
-#include "src/reflect.h"
-#include "src/repr.h"
-#include "src/singletons.h"
-#include "src/test.h"
-#include "src/utils.h"
-#include "src/value-inl.h"
+#include "../compiler.h"
+#include "../frame.h"
+#include "../reflect.h"
+#include "../repr.h"
+#include "../singletons.h"
+#include "../test.h"
+#include "../utils.h"
+#include "../value-inl.h"
 
 static void testBuildModule(const string& input, const string& expected)
 {
@@ -15,8 +16,7 @@ static void testBuildModule(const string& input, const string& expected)
 #endif
 
     Stack<Value> result;
-    Stack<Env*> globals; // todo: add Traced<T*> constructor from nullptr
-    bool ok = CompileModule(input, globals, result);
+    bool ok = CompileModule(input, nullptr, result);
     testTrue(ok);
     testEqual(repr(*result.as<CodeObject>()->block()), expected);
 }

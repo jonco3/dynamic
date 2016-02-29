@@ -1,7 +1,7 @@
-#include "src/exception.h"
+#include "../exception.h"
 
-#include "src/test.h"
-#include "src/value-inl.h"
+#include "../test.h"
+#include "../value-inl.h"
 
 testcase(exception)
 {

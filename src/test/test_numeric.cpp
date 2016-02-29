@@ -1,7 +1,7 @@
-#include "src/numeric.h"
-#include "src/value-inl.h"
+#include "../numeric.h"
+#include "../value-inl.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 #include "test_interp.h"
 

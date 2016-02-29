@@ -1,7 +1,7 @@
-#include "src/dict.h"
+#include "../dict.h"
 
-#include "src/interp.h"
-#include "src/test.h"
+#include "../interp.h"
+#include "../test.h"
 
 #include "test_interp.h"
 

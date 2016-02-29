@@ -1,8 +1,8 @@
-#include "src/object.h"
+#include "../object.h"
 
-#include "src/numeric.h"
-#include "src/test.h"
-#include "src/value-inl.h"
+#include "../numeric.h"
+#include "../test.h"
+#include "../value-inl.h"
 
 testcase(object)
 {

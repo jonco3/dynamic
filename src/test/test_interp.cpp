@@ -1,11 +1,12 @@
-#include "src/interp.h"
+#include "../interp.h"
 
-#include "src/block.h"
-#include "src/compiler.h"
-#include "src/exception.h"
-#include "src/instr.h"
-#include "src/repr.h"
-#include "src/test.h"
+#include "../block.h"
+#include "../compiler.h"
+#include "../exception.h"
+#include "../instr.h"
+#include "../reflect.h"
+#include "../repr.h"
+#include "../test.h"
 
 #include "test_interp.h"
 

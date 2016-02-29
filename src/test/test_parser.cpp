@@ -1,7 +1,7 @@
-#include "src/parser.h"
+#include "../parser.h"
 
-#include "src/repr.h"
-#include "src/test.h"
+#include "../repr.h"
+#include "../test.h"
 
 static void testParseExpression(const string& input, const string& expected)
 {

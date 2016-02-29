@@ -1,6 +1,6 @@
-#include "src/token.h"
+#include "../token.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 static void tokenize(const char *source)
 {

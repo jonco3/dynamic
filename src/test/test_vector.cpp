@@ -1,6 +1,6 @@
-#include "src/vector.h"
+#include "../vector.h"
 
-#include "src/test.h"
+#include "../test.h"
 
 #include <vector>
 

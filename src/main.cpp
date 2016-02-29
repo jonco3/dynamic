@@ -17,8 +17,6 @@
 #include <cstring>
 #include <iostream>
 
-#ifdef USE_READLINE
-
 #define Function Readline_Function
 
 #include <readline/readline.h>
@@ -42,20 +40,6 @@ char *readOneLine()
 
     return lineRead;
 }
-
-#else
-
-const size_t MaxLineLength 256;
-static char line_buffer[MaxLineLength];
-
-char *readOneLine()
-{
-    printf("> ");
-    char* result = fgets(line_buffer, MaxLineLength, stdin);
-    return result;
-}
-
-#endif
 
 void maybeAbortTests(string what)
 {}

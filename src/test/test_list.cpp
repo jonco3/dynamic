@@ -1,7 +1,7 @@
-#include "src/list.h"
+#include "../list.h"
 
-#include "src/interp.h"
-#include "src/test.h"
+#include "../interp.h"
+#include "../test.h"
 
 #include "test_interp.h"
 
