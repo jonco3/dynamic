@@ -112,33 +112,43 @@ def runTest(filename, command):
 def calculateTimeStats(runTimes):
     n = len(runTimes)
     mean = sum(runTimes) / n
+    if n == 1:
+        return mean, 0
+
     stdDev = math.sqrt(sum(map(lambda x: (x - mean) ** 2, runTimes)) / (n - 1))
     return mean, stdDev
 
-def formatTimes(runTimes):
-    meanSeconds, stdDev = calculateTimeStats(runTimes)
+def formatTimes(meanSeconds, stdDev):
     return "%-13.2f %-6.2f" % (meanSeconds * 1000, stdDev / meanSeconds * 100)
 
 def formatResult(result):
     return "%-20s" % result
+
+def formatScore(score):
+    return "%-20.2f" % score
 
 def formatExeName(command):
     exeName = os.path.basename(command.split()[0])
     return formatResult(exeName)
 
 def runTestDir(dirname, names):
+    commandCount = len(args.commands)
+    scores = [1] * commandCount
     for name in names:
         if name.endswith('.py'):
             filename = os.path.join(dirname, name)
             results = list(map(lambda c: runTest(filename, c), args.commands))
             line = '  %-20s ' % name
-            for result, extra in results:
+            for index in range(0, commandCount):
+                result, extra  = results[index]
                 if result == 'SKIP':
                     line += formatResult("skipped")
                 elif result != 'PASS':
                     line += formatResult(result)
                 elif args.benchmark:
-                    line += formatTimes(extra)
+                    meanSeconds, stdDev = calculateTimeStats(extra)
+                    scores[index] *= meanSeconds
+                    line += formatTimes(meanSeconds, stdDev)
                 else:
                     line += formatResult("ok")
             print(line)
@@ -147,6 +157,13 @@ def runTestDir(dirname, names):
                 for result, extra in results:
                     if result != 'PASS' and result != 'SKIP':
                         print(extra)
+
+    if args.benchmark and passCount == runCount:
+        for score in scores:
+            line = '%-22s ' % 'Score:'
+            score = 1000 * score ** (1 / runCount)
+            line += formatScore(score)
+        print(line)
 
 line = 'Running tests:         '
 line += "".join(map(formatExeName, args.commands))
