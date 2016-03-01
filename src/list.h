@@ -56,7 +56,7 @@ struct List : public Object
     void traceChildren(Tracer& t) override;
 
     int32_t len() const { return (int32_t)elements_.size(); }
-    Value getitem(size_t index) const { return elements_.at(index); }
+    Value getitem(size_t index) const { return elements_[index]; }
     const HeapVector<Value>& elements() const { return elements_; }
 
     void setitem(int32_t index, Value value);

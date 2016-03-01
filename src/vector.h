@@ -386,16 +386,6 @@ struct VectorImpl : public VectorStorage
         return ref(i);
     }
 
-    const T& at(size_t i) const {
-        checkIndex(i);
-        return ref(i);
-    }
-
-    T& at(size_t i) {
-        checkIndex(i);
-        return ref(i);
-    }
-
     T& front() {
         assert(!empty());
         return ref(0);
@@ -480,11 +470,6 @@ struct VectorImpl : public VectorStorage
     using Base::inlineCapacity;
     using Base::heapCapacity;
     using Base::ptr;
-
-    void checkIndex(size_t index) const {
-        if (index >= size())
-            throw std::out_of_range("Vector index out of range");
-    }
 
     const T& ref(size_t i) const {
         assert(i < size());
