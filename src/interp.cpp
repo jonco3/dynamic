@@ -40,7 +40,6 @@ void ExceptionHandler::traceChildren(Tracer& t)
 Interpreter::Interpreter()
   : instrp(nullptr),
     stack(1),
-    stackPos_(0),
     inExceptionHandler_(false),
     jumpKind_(JumpKind::None),
     currentException_(nullptr),
@@ -64,10 +63,6 @@ void Interpreter::init()
 
 void Interpreter::traceChildren(Tracer& t)
 {
-    // Clear the unused portion of the stack to avoid holding onto garbage.
-    for (size_t i = stackPos_; i < stack.size(); i++)
-        stack[i] = None;
-
     gc.traceVector(t, &frames);
     gc.traceVector(t, &stack);
     gc.trace(t, &currentException_);
@@ -84,14 +79,14 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
 #endif
 
     AutoSetAndRestoreValue<InstrThunk*> saveInstrp(instrp, nullptr);
-    pushFrame(block, stackPos(), 0);
+    pushFrame(block, stack.size(), 0);
 #ifdef DEBUG
-    unsigned initialPos = stackPos();
+    unsigned initialSize = stack.size();
 #endif
-    size_t initialSize = stack.size();
+    size_t initialCapacity = stack.capacity();
     bool ok = run(resultOut);
-    assert(stackPos() == initialPos);
-    stack.resize(initialSize);
+    assert(stack.size() == initialSize);
+    stack.reserve(initialCapacity); // todo: this doesn't shrink
     return ok;
 }
 
@@ -104,15 +99,15 @@ void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
     }
 #endif
 
-    assert(stackPos_ + 1 <= stack.size());
-    assert(stackPos() >= offsetFromTop);
+    assert(stack.size() + 1 <= stack.capacity());
+    assert(stack.size() >= offsetFromTop);
 
-    unsigned end = stackPos() - 1;
+    unsigned end = stack.size() - 1;
     unsigned begin = end - offsetFromTop;
+    stack.push_back(Value(None));
     for (unsigned i = end; i > 0 && i != begin; i--)
         stack[i] = stack[i - 1];
-    stack[stackPos_ - offsetFromTop] = value;
-    stackPos_++;
+    stack[stack.size() - offsetFromTop - 1] = value;
 }
 
 #ifdef LOG_EXECUTION
@@ -146,7 +141,7 @@ void Interpreter::logStackPush(const Value& value)
 {
     if (logExecution) {
         logStart(1);
-        cout << "push @" << dec << stackPos() << " ";
+        cout << "push @" << dec << stack.size() << " ";
         logValue(value);
         cout << endl;
     }
@@ -155,7 +150,7 @@ void Interpreter::logStackPush(const Value& value)
 void Interpreter::logStackPush(const Value* first, const Value* last)
 {
     if (logExecution) {
-        size_t pos = stackPos();
+        size_t pos = stack.size();
         while (first != last) {
             logStart(1);
             cout << "push @" << dec << pos++ << " ";
@@ -167,11 +162,11 @@ void Interpreter::logStackPush(const Value* first, const Value* last)
 
 void Interpreter::logStackPop(size_t count)
 {
-    size_t pos = stackPos();
+    size_t pos = stack.size();
     if (logExecution && count > 0) {
         for (size_t i = 0; i < count; i++) {
             logStart(1);
-            Value value = stack[stackPos() - 1 - i];
+            Value value = stack[stack.size() - 1 - i];
             cout << "pop @" << dec << --pos << " ";
             logValue(value);
             cout << endl;
@@ -200,19 +195,19 @@ void Interpreter::logInstr(Instr* instr)
 
 void Interpreter::ensureStackSpace(size_t newStackSize)
 {
-    if (newStackSize > stack.size())
-        stack.resize(newStackSize);
+    if (newStackSize > stack.capacity())
+        stack.reserve(newStackSize);
 }
 
 void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
                             unsigned extraPopCount)
 {
-    assert(stackPos() >= stackStartPos);
+    assert(stack.size() >= stackStartPos);
     frames.emplace_back(instrp, block, stackStartPos, extraPopCount);
     instrp = block->startInstr();
 
     unsigned newStackSize = stackStartPos + block->maxStackDepth();
-    assert(newStackSize >= stackPos());
+    assert(newStackSize >= stack.size());
     ensureStackSpace(newStackSize);
 
 #ifdef LOG_EXECUTION
@@ -242,8 +237,8 @@ void Interpreter::popFrame()
 
     // Update stack pos but don't resize backing vector on frame pop.
     unsigned pos = frame->stackPos() - frame->extraPopCount();
-    assert(pos <= stackPos());
-    stackPos_ = pos;  // todo: log removed values
+    assert(pos <= stack.size());
+    stack.resize(pos); // todo: log removed values
 
     instrp = frame->returnPoint();
     frames.pop_back();
@@ -313,7 +308,7 @@ void Interpreter::resumeGenerator(Traced<Block*> block,
                                   TracedVector<Value> savedStack,
                                   Traced<ExceptionHandler*> savedHandlers)
 {
-    pushFrame(block, stackPos(), 0);
+    pushFrame(block, stack.size(), 0);
     setFrameEnv(env);
     getFrame()->setHandlers(savedHandlers);
     instrp += ipOffset;
@@ -329,8 +324,8 @@ Interpreter::suspendGenerator(HeapVector<Value>& savedStack,
                               MutableTraced<ExceptionHandler*> savedHandlers)
 {
     Frame* frame = getFrame();
-    assert(frame->stackPos() <= stackPos());
-    unsigned len = stackPos() - frame->stackPos();
+    assert(frame->stackPos() <= stack.size());
+    unsigned len = stack.size() - frame->stackPos();
     assert(savedStack.empty());
     savedStack.resize(len);
     // todo: probably a better way to do this with STL
@@ -356,7 +351,7 @@ void Interpreter::pushExceptionHandler(ExceptionHandler::Type type,
     assert(offset);
     // todo: Why do we store instruction offsets rather than indices?
     Stack<ExceptionHandler*> handler(
-        gc.create<ExceptionHandler>(type, stackPos(), offset + currentOffset()));
+        gc.create<ExceptionHandler>(type, stack.size(), offset + currentOffset()));
     getFrame()->pushHandler(handler);
 }
 
@@ -376,7 +371,7 @@ void Interpreter::raiseException(Traced<Value> exception)
 void Interpreter::raiseException()
 {
     if (!handleException())
-        pushFrame(AbortTrampoline, stackPos() - 1, 0);
+        pushFrame(AbortTrampoline, stack.size() - 1, 0);
 }
 
 bool Interpreter::handleException()
@@ -414,7 +409,7 @@ bool Interpreter::startExceptionHandler(Traced<Exception*> exception)
     ExceptionHandler* handler = getFrame()->popHandler();
     instrp = getFrame()->block()->startInstr() + handler->offset();
     assert(handler->stackPos() <= stack.size());
-    stackPos_ = handler->stackPos();
+    stack.resize(handler->stackPos());
     inExceptionHandler_ = true;
     jumpKind_ = JumpKind::Exception;
     currentException_ = exception;
@@ -569,10 +564,10 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
     }
 
 #ifdef DEBUG
-    unsigned initialPos = stackPos() - getFrame()->block()->argCount();
+    unsigned initialSize = stack.size() - getFrame()->block()->argCount();
 #endif
     bool ok = run(resultOut);
-    assert(stackPos() == initialPos - 1);
+    assert(stack.size() == initialSize - 1);
     return ok;
 }
 
@@ -627,7 +622,7 @@ inline bool Interpreter::checkArguments(Traced<Callable*> callable,
 }
 
 inline unsigned Interpreter::mungeArguments(Traced<Function*> function,
-                                     unsigned argCount)
+                                            unsigned argCount)
 {
     // Fill in default values for missing arguments
     Stack<Value> value;
@@ -636,7 +631,7 @@ inline unsigned Interpreter::mungeArguments(Traced<Function*> function,
         // don't know statically how big to make the stack.  Grow it here if
         // necessary.
         size_t count = function->maxNormalArgs() - argCount;
-        ensureStackSpace(stackPos_ + count);
+        ensureStackSpace(stack.size() + count);
         do {
             value = function->paramDefault(argCount++);
             pushStack(value);
@@ -647,8 +642,7 @@ inline unsigned Interpreter::mungeArguments(Traced<Function*> function,
     assert(argCount >= function->maxNormalArgs());
     if (function->takesRest()) {
         size_t restCount = argCount - function->maxNormalArgs();
-        TracedVector<Value> restArgs(stackSlice(restCount));
-        Stack<Value> rest(Tuple::get(restArgs));
+        Stack<Value> rest(Tuple::get(stackSlice(restCount)));
         popStack(restCount);
         pushStack(rest);
         argCount = argCount - restCount + 1;
@@ -665,7 +659,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "setupCall @" << dec << stackPos() << " " << targetValue.get();
+        cout << "setupCall @" << dec << stack.size() << " " << targetValue.get();
         cout << " " << argCount << " " << extraPopCount << endl;
     }
 #endif
@@ -685,7 +679,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Block*> block(function->block());
         argCount = mungeArguments(function, argCount);
         assert(argCount == function->argCount());
-        pushFrame(block, stackPos() - argCount, extraPopCount);
+        pushFrame(block, stack.size() - argCount, extraPopCount);
         Stack<Env*> parentEnv(function->env());
         pushStack(parentEnv);
         return CallStarted;

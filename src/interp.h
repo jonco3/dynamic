@@ -63,76 +63,68 @@ struct Interpreter : public Cell
     void pushStack(S&& element) {
         Value value(element);
         logStackPush(value);
-        assert(stackPos_ + 1 <= stack.size());
-        stack[stackPos_++] = value;
+        stack.push_back_reserved(value);
     }
 
     template <typename S1, typename S2>
     void pushStack(S1&& element1, S2&& element2) {
         Value values[2] = { Value(element1), Value(element2) };
         logStackPush(&values[0], values + 2);
-        assert(stackPos_ + 2 <= stack.size());
-        stack[stackPos_++] = values[0];
-        stack[stackPos_++] = values[1];
+        stack.push_back_reserved(values[0]);
+        stack.push_back_reserved(values[1]);
     }
 
     template <typename S1, typename S2, typename S3>
     void pushStack(S1&& element1, S2&& element2, S3&& element3) {
         Value values[3] = { Value(element1), Value(element2), Value(element3) };
         logStackPush(&values[0], values + 3);
-        assert(stackPos_ + 3 <= stack.size());
-        stack[stackPos_++] = values[0];
-        stack[stackPos_++] = values[1];
-        stack[stackPos_++] = values[2];
+        stack.push_back_reserved(values[0]);
+        stack.push_back_reserved(values[1]);
+        stack.push_back_reserved(values[2]);
     }
 
     template <typename S>
-    void fillStack(unsigned count, S&& element) {
-        assert(stackPos_ + count <= stack.size());
+    void fillStack(size_t count, S&& element) {
         Value value(element);
-        for (unsigned i = 0; i < count; i++)
-            stack[stackPos_++] = value;
+        for (size_t i = 0; i < count; i++)
+            stack.push_back_reserved(value);
     }
 
     // Remove and return the value on the top of the stack.
     Value popStack() {
-        assert(stackPos() >= 1);
         logStackPop(1);
-        Value result = stack[--stackPos_];
-        stack[stackPos_] = Value(None);
+        Value result = stack.back();
+        stack.pop_back();
         return result;
     }
 
     // Remove |count| values from the top of the stack.
-    void popStack(unsigned count) {
-        assert(stackPos() >= count);
+    void popStack(size_t count) {
         logStackPop(count);
-        stackPos_ -= count;
-        for (unsigned i = 0; i < count; i++)
-            stack[stackPos_ + i] = Value(None);
+        for (size_t i = 0; i < count; i++)
+            stack.pop_back();
     }
 
     // Return the value at position |offset| counting from zero.
-    Value peekStack(unsigned offset = 0) {
-        assert(stackPos() >= offset + 1);
-        return stack[stackPos_ - offset - 1];
+    Value peekStack(size_t offset = 0) {
+        return stack[stack.size() - offset - 1];
     }
 
     // Return a reference to the topmost stack value.
     MutableTraced<Value> refStack() {
-        return stack.ref(stackPos_ - 1);
+        return stack.ref(stack.size() - 1);
     }
 
     // Return a reference to the |count| topmost values.
-    TracedVector<Value> stackSlice(unsigned count) {
-        assert(stackPos() >= count);
-        return TracedVector<Value>(stack, stackPos_ - count, count);
+    TracedVector<Value> stackSlice(size_t count) {
+        assert(stack.size() >= count);
+        return TracedVector<Value>(stack, stack.size() - count, count);
     }
 
     // Swap the two values on the top of the stack.
     void swapStack() {
-        assert(stackPos() >= 2);
-        swap(stack[stackPos_ - 1], stack[stackPos_ - 2]);
+        assert(stack.size() >= 2);
+        swap(stack[stack.size() - 1], stack[stack.size() - 2]);
         logStackSwap();
     }
 
@@ -159,9 +151,8 @@ struct Interpreter : public Cell
 
     InstrThunk* nextInstr() { return instrp; }
 
-    unsigned stackPos() const {
-        assert(stackPos_ <= stack.size());
-        return stackPos_;
+    size_t stackPos() const {
+        return stack.size();
     }
 
     Env* env() { return getFrame()->env(); }
@@ -251,7 +242,6 @@ struct Interpreter : public Cell
     HeapVector<Frame, std::vector<Frame>> frames;
     // todo: why is std::vector significantly faster?
     HeapVector<Value> stack;
-    unsigned stackPos_;
 
     bool inExceptionHandler_;
     JumpKind jumpKind_;
