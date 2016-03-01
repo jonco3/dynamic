@@ -1,19 +1,20 @@
 dynamic
 =======
 
-A toy implementation of the python programming language in C++.
+A python interpreter implemented in C++.
 
 Building
 --------
 
-  $ autoreconf
-  $ ./configure
-  $ make test
-  $ ./dynamic -l lib
+Requires cmake.
+
+  $ mkdir release-build && cd release-build
+  $ cmake
+  $ make -j8 check
+  $ ./bin/dynamic
   > print("Hello world")
   Hello world
 
-Some useful configure options:
+For a debug build use:
 
-  --enable-debug  -- build debug version, no optimisation
-  --with-ccache   -- use compiler cache if installed
+  $ cmake -DCMAKE_BUILD_TYPE=DEBUG
