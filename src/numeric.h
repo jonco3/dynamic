@@ -222,10 +222,8 @@ template <>
 inline bool
 Integer::binaryOp<BinaryLeftShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    if (b < 0) {
-        resultOut = gc.create<ValueError>("negative shift count");
-        return false;
-    }
+    if (b < 0)
+        return Raise<ValueError>("negative shift count", resultOut);
 
     if (b < 32) {
         resultOut = Integer::get(int64_t(a) << b);
@@ -239,10 +237,8 @@ template <>
 inline bool
 Integer::binaryOp<BinaryRightShift>(int32_t a, int32_t b, MutableTraced<Value> resultOut)
 {
-    if (b < 0) {
-        resultOut = gc.create<ValueError>("negative shift count");
-        return false;
-    }
+    if (b < 0)
+        return Raise<ValueError>("negative shift count", resultOut);
 
     resultOut = Integer::get(int64_t(a) >> b);
     return true;

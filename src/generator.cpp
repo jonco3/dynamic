@@ -93,15 +93,13 @@ void GeneratorIter::resume(Interpreter& interp)
 
       case Running:
         assert(savedStack_.empty());
-        interp.pushStack(gc.create<ValueError>("Generator running"));
-        interp.raiseException();
+        interp.raise<ValueError>("Generator running");
         break;
 
       case Finished:
         assert(savedStack_.empty());
         // todo: not sure about this behaviour, need tests
-        interp.pushStack(gc.create<StopIteration>());
-        interp.raiseException();
+        interp.raise<StopIteration>();
         break;
 
       default:

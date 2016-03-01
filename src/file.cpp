@@ -61,10 +61,8 @@ static bool ConvertSize(Traced<Value> arg, size_t& sizeOut,
     if (!checkInstanceOf(arg, Integer::ObjectClass, resultOut))
         return false;
 
-    if (!arg.toSize(sizeOut)) {
-        resultOut = gc.create<ValueError>("Size out of range");
-        return false;
-    }
+    if (!arg.toSize(sizeOut))
+        return Raise<ValueError>("Size out of range", resultOut);
 
     return true;
 }
@@ -98,10 +96,8 @@ static bool FileSeek(NativeArgs args, MutableTraced<Value> resultOut)
             return false;
 
         int i;
-        if (!args[2].toInt32(i) || (i < MinSeekWhence || i > MaxSeekWhence)) {
-            resultOut = gc.create<ValueError>("whence argumnt out of range");
-            return false;
-        }
+        if (!args[2].toInt32(i) || (i < MinSeekWhence || i > MaxSeekWhence))
+            return Raise<ValueError>("whence argumnt out of range", resultOut);
 
         whence = SeekWhence(i);
     }
@@ -164,8 +160,7 @@ void File::Init()
 /* static */ bool File::New(NativeArgs args,
                             MutableTraced<Value> resultOut)
 {
-    resultOut = gc.create<NotImplementedError>("Can't create file");
-    return false;
+    return Raise<NotImplementedError>("Can't create file", resultOut);
 }
 
 /* static */ bool File::Open(NativeArgs args,
@@ -175,8 +170,7 @@ void File::Init()
     if (!args[0].is<String>() ||
         (args.size() == 2 && !args[0].is<String>()))
     {
-        resultOut = gc.create<TypeError>("Expecting string arguments");
-        return false;
+        return Raise<TypeError>("Expecting string arguments", resultOut);
     }
 
     Stack<String*> filenameStr(args[0].as<String>());
@@ -190,16 +184,15 @@ void File::Init()
     string mode = modeStr->value();
     if (mode != "r" && mode != "w" && mode != "a") {
         // todo: implement other open modes
-        resultOut = gc.create<TypeError>("Bad file mode '" + mode + "'");
-        return false;
+        return Raise<TypeError>("Bad file mode '" + mode + "'", resultOut);
     }
 
     string filename = filenameStr->value();
     FILE* f = fopen(filename.c_str(), mode.c_str());
     if (!f) {
-        resultOut = gc.create<OSError>(
-            "Error opening file '" + filename + "': " + strerror(errno));
-        return false;
+        string message =
+            "Error opening file '" + filename + "': " + strerror(errno);
+        return Raise<OSError>(message, resultOut);
     }
 
     resultOut = gc.create<File>(f, filenameStr, modeStr);
@@ -262,8 +255,7 @@ bool File::checkError(string what, MutableTraced<Value> resultOut)
 
 bool File::createError(string what, MutableTraced<Value> resultOut)
 {
-    resultOut = gc.create<OSError>(what + ": " + strerror(errno));
-    return false;
+    return Raise<OSError>(what + ": " + strerror(errno), resultOut);
 }
 
 bool File::read(size_t size, MutableTraced<Value> resultOut)

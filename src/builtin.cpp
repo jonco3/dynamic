@@ -32,9 +32,8 @@ static bool builtin_hasattr(NativeArgs args,
 {
     Object* n = args[1].toObject();
     if (!n->is<String>()) {
-        resultOut = gc.create<TypeError>(
-            "hasattr(): attribute name must be string");
-        return false;
+        return Raise<TypeError>("hasattr(): attribute name must be string",
+                                resultOut);
     }
     Name name(internString(n->as<String>()->value()));
     resultOut = Boolean::get(args[0].toObject()->hasAttr(name));
@@ -64,8 +63,7 @@ static bool builtin_parse(NativeArgs args,
     } catch (const ParseError& e) {
         ostringstream s;
         s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
-        resultOut = gc.create<SyntaxError>(s.str());
-        return false;
+        return Raise<SyntaxError>(s.str(), resultOut);
     }
 
     return true;
@@ -179,7 +177,7 @@ static Env* DictToEnv(Traced<Value> arg, MutableTraced<Value> resultOut)
     }
 
     if (!arg.is<Dict>()) {
-        resultOut = gc.create<TypeError>("eval() arg 2 must be a dict");
+        Raise<TypeError>("eval() arg 2 must be a dict", resultOut);
         return nullptr;
     }
 
@@ -215,9 +213,8 @@ static bool builtin_eval(NativeArgs args,
 {
     Stack<Value> expression(args[0]);
     if (!expression.is<String>()) {
-        resultOut = gc.create<TypeError>("eval() arg 1 must be a string");
         // todo: support code objects
-        return false;
+        return Raise<TypeError>("eval() arg 1 must be a string", resultOut);
     }
 
     Stack<Env*> globals;
@@ -271,9 +268,8 @@ static bool builtin_exec(NativeArgs args,
 
     Stack<Value> expression(args[0]);
     if (!expression.is<String>()) {
-        resultOut = gc.create<TypeError>("exec() arg 1 must be a string");
         // todo: support code objects
-        return false;
+        return Raise<TypeError>("exec() arg 1 must be a string", resultOut);
     }
 
     Stack<Env*> globals;
@@ -325,8 +321,7 @@ static bool internal_execModule(NativeArgs args,
     Stack<Value> source(args[0]);
     Stack<Value> filename(args[1]);
     if (!source.is<String>() || !filename.is<String>()) {
-        resultOut = gc.create<TypeError>("execModule() args must be strings");
-        return false;
+        return Raise<TypeError>("execModule() args must be strings", resultOut);
     }
 
     Stack<Env*> globals(createTopLevel());

@@ -532,8 +532,7 @@ static bool raiseAttrError(Traced<Value> value, Name name,
     Stack<Class*> cls(value.type());
     string message =
         "'" + cls->name() + "' object has no attribute '" + name + "'";
-    resultOut = gc.create<AttributeError>(message);
-    return false;
+    return Raise<AttributeError>(message, resultOut);
 }
 
 static bool getSpecialAttr(Traced<Value> value, Name name,

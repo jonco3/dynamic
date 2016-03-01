@@ -31,9 +31,8 @@ static bool valueToString(Traced<Value> value, MutableTraced<Value> resultOut)
     if (!value.maybeGetAttr(Names::__str__, strFunc) &&
         !value.maybeGetAttr(Names::__repr__, strFunc))
     {
-        resultOut = gc.create<TypeError>(
-            "Object has no __str__ or __repr__ method");
-        return false;
+        return Raise<TypeError>("Object has no __str__ or __repr__ method",
+                                resultOut);
     }
 
     interp->pushStack(value);
@@ -41,9 +40,8 @@ static bool valueToString(Traced<Value> value, MutableTraced<Value> resultOut)
         return false;
 
     if (!resultOut.is<String>()) {
-        resultOut =
-            gc.create<TypeError>("__str__ method should return a string");
-        return false;
+        return Raise<TypeError>("__str__ method should return a string",
+                                resultOut);
     }
 
     return true;
@@ -247,8 +245,7 @@ void String::print(ostream& s) const
 
 static bool raiseOutOfRange(MutableTraced<Value> resultOut)
 {
-    resultOut = gc.create<IndexError>("string index out of range");
-    return false;
+    return Raise<IndexError>("string index out of range", resultOut);
 }
 
 bool String::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
@@ -280,8 +277,7 @@ bool String::getitem(Traced<Value> index, MutableTraced<Value> resultOut)
         resultOut = String::get(result);
         return true;
     } else {
-        resultOut = gc.create<TypeError>(
-            "string indices must be integers or slices");
-        return false;
+        return Raise<TypeError>("string indices must be integers or slices",
+                                resultOut);
     }
 }

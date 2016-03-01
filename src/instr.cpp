@@ -352,7 +352,7 @@ Interpreter::executeInstr_SetAttr(Traced<IdentInstr*> instr)
     if (builtinsInitialised) {
         if (obj->isInstanceOf<Class>()) {
             if (obj->as<Class>()->isFinal()) {
-                raiseTypeError(
+                raise<TypeError>(
                     "can't set attributes of built-in/extension type");
                 return;
             }
@@ -515,8 +515,7 @@ Interpreter::executeInstr_In(Traced<Instr*> instr)
         return;
     }
 
-    pushStack(gc.create<TypeError>("Argument is not iterable"));
-    raiseException();
+    raise<TypeError>("Argument is not iterable");
 }
 
 void
@@ -662,8 +661,7 @@ Interpreter::executeInstr_AssertionFailed(Traced<Instr*> instr)
     Object* obj = popStack().toObject();
     assert(obj->is<String>() || obj == None);
     string message = obj != None ? obj->as<String>()->value() : "";
-    pushStack(gc.create<AssertionError>(message));
-    raiseException();
+    raise<AssertionError>(message);
 }
 
 void
@@ -680,32 +678,20 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<IdentInstr*> instr)
         layout = layout->addName(*i);
 
     Stack<Value> bases;
-    if (!env->maybeGetAttr(Names::__bases__, bases)) {
-        pushStack(gc.create<AttributeError>("Missing __bases__"));
-        raiseException();
-        return;
-    }
+    if (!env->maybeGetAttr(Names::__bases__, bases))
+        return raise<AttributeError>("Missing __bases__");
 
-    if (!bases.toObject()->is<Tuple>()) {
-        pushStack(gc.create<TypeError>("__bases__ is not a tuple"));
-        raiseException();
-        return;
-    }
+    if (!bases.toObject()->is<Tuple>())
+        return raise<TypeError>("__bases__ is not a tuple");
 
     Stack<Tuple*> tuple(bases.as<Tuple>());
     Stack<Class*> base(Object::ObjectClass);
     if (tuple->len() > 1) {
-        pushStack(gc.create<NotImplementedError>(
-                             "Multiple inheritance not NYI"));
-        raiseException();
-        return;
+        return raise<NotImplementedError>("Multiple inheritance not NYI");
     } else if (tuple->len() == 1) {
         Stack<Value> value(tuple->getitem(0));
-        if (!value.toObject()->is<Class>()) {
-            pushStack(gc.create<TypeError>("__bases__[0] is not a class"));
-            raiseException();
-            return;
-        }
+        if (!value.toObject()->is<Class>())
+            return raise<TypeError>("__bases__[0] is not a class");
         base = value.as<Class>();
     }
 
@@ -734,10 +720,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
     // Otherwise create a SequenceIterator wrapping the target iterable.
     // todo: add hasMethodAttr, or just hasAttr?
     if (!getMethodAttr(target, Names::__getitem__, method))
-    {
-        resultOut = gc.create<TypeError>("Object not iterable");
-        return false;
-    }
+        return Raise<TypeError>("Object not iterable", resultOut);
 
     pushStack(target);
     return call(SequenceIterator, 1, resultOut);
@@ -754,8 +737,8 @@ Interpreter::executeDestructureGeneric(unsigned expected)
     Stack<Value> type(iterator.type());
     StackMethodAttr nextMethod;
     if (!getMethodAttr(type, Names::__next__, nextMethod)) {
-        return raiseTypeError(string("Argument is not iterable: ") +
-                              type.as<Class>()->name());
+        return raise<TypeError>(string("Argument is not iterable: ") +
+                                type.as<Class>()->name());
     }
 
     for (size_t count = 0; count < expected; count++) {
@@ -763,7 +746,7 @@ Interpreter::executeDestructureGeneric(unsigned expected)
             pushStack(iterator);
         if (!call(nextMethod.method, nextMethod.extraArgs(), result)) {
             if (result.is<StopIteration>())
-                return raiseValueError("too few values to unpack");
+                return raise<ValueError>("too few values to unpack");
             return raiseException(result);
         }
         pushStack(result);
@@ -772,7 +755,7 @@ Interpreter::executeDestructureGeneric(unsigned expected)
     if (nextMethod.isCallable)
         pushStack(iterator);
     if (call(nextMethod.method, nextMethod.extraArgs(), result))
-        return raiseValueError("too many values to unpack");
+        return raise<ValueError>("too many values to unpack");
     if (!result.is<StopIteration>())
         return raiseException(result);
 }
@@ -785,10 +768,10 @@ Interpreter::executeDestructureBuiltin(unsigned expected, T* seq)
 
     unsigned count = seq->len();
     if (count < expected)
-        return raiseValueError("too few values to unpack");
+        return raise<ValueError>("too few values to unpack");
 
     if (count > expected)
-        return raiseValueError("too many values to unpack");
+        return raise<ValueError>("too many values to unpack");
 
     for (unsigned i = 0; i < count; i++)
         pushStack(seq->getitem(i));
@@ -898,9 +881,7 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
             return ok;
     }
 
-    pushStack(gc.create<TypeError>(
-                         "unsupported operand type(s) for binary operation"));
-    raiseException();
+    raise<TypeError>("unsupported operand type(s) for binary operation");
     return false;
 }
 
@@ -998,9 +979,7 @@ Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
     } else if (op == CompareNE) {
         result = Boolean::get(left.toObject() != right.toObject());
     } else {
-        pushStack(gc.create<TypeError>(
-                      "unsupported operand type(s) for compare operation"));
-        raiseException();
+        raise<TypeError>("unsupported operand type(s) for compare operation");
         return false;
     }
 
@@ -1053,8 +1032,7 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& method)
         !getMethodAttr(type, Names::binMethod[op], method))
     {
         string message = "unsupported operand type(s) for augmented assignment";
-        pushStack(gc.create<TypeError>(message));
-        raiseException();
+        raise<TypeError>(message);
         return false;
     }
 

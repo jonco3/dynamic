@@ -86,10 +86,8 @@ bool Slice::getIterationData(int32_t length,
 {
     int32_t start, stop, step;
     indices(length, start, stop, step);
-    if (step == 0) {
-        resultOut = gc.create<ValueError>("slice step cannot be zero");
-        return false;
-    }
+    if (step == 0)
+        return Raise<ValueError>("slice step cannot be zero", resultOut);
 
     int32_t step_sgn = step > 0 ? 1 : -1;
     startOut = start;

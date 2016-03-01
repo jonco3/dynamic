@@ -121,8 +121,7 @@ bool checkInstanceOf(Traced<Value> v, Traced<Class*> cls,
     if (!v.isInstanceOf(cls)) {
         string message = "Expecting " + cls->name() +
             " but got " + v.type()->name();
-        resultOut = gc.create<TypeError>(message);
-        return false;
+        return Raise<TypeError>(message, resultOut);
     }
 
     return true;

@@ -1202,12 +1202,11 @@ struct ByteCompiler : public SyntaxVisitor
     }
 };
 
-static void CreateSyntaxError(const ParseError& e,
-                              MutableTraced<Value> resultOut)
+static bool RaiseSyntaxError(const ParseError& e, MutableTraced<Value> resultOut)
 {
     ostringstream s;
     s << e.what() << " at " << e.pos.file << " line " << dec << e.pos.line;
-    resultOut = gc.create<SyntaxError>(s.str());
+    return Raise<SyntaxError>(s.str(), resultOut);
 }
 
 bool CompileModule(const Input& input, Traced<Env*> globalsArg,
@@ -1224,7 +1223,7 @@ bool CompileModule(const Input& input, Traced<Env*> globalsArg,
         Stack<Block*> block(ByteCompiler().buildModule(globals, syntax.get()));
         resultOut = gc.create<CodeObject>(block);
     } catch (const ParseError& e) {
-        CreateSyntaxError(e, resultOut);
+        RaiseSyntaxError(e, resultOut);
         return false;
     }
 
@@ -1248,7 +1247,7 @@ bool CompileEval(const Input& input, Traced<Env*> globals,
         resultOut = gc.create<Function>(Names::evalFuncName, info,
                                         EmptyValueArray, locals);
     } catch (const ParseError& e) {
-        CreateSyntaxError(e, resultOut);
+        RaiseSyntaxError(e, resultOut);
         return false;
     }
 
@@ -1272,7 +1271,7 @@ bool CompileExec(const Input& input, Traced<Env*> globals,
         resultOut = gc.create<Function>(Names::evalFuncName, info,
                                         EmptyValueArray, locals);
     } catch (const ParseError& e) {
-        CreateSyntaxError(e, resultOut);
+        RaiseSyntaxError(e, resultOut);
         return false;
     }
 

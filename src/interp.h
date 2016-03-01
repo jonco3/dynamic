@@ -2,6 +2,7 @@
 #define __INTERP_H__
 
 #include "block.h"
+#include "common.h"
 #include "frame.h"
 #include "instr.h"
 #include "token.h"
@@ -167,11 +168,20 @@ struct Interpreter : public Cell
     Env* lexicalEnv(unsigned index);
     void setFrameEnv(Env* env);
 
+    template <typename T>
+    void raise() {
+        pushStack(gc.create<T>());
+        raiseException();
+    }
+
+    template <typename T>
+    void raise(const string& message) {
+        pushStack(gc.create<T>(message));
+        raiseException();
+    }
+
     void raiseAttrError(Traced<Value> value, Name ident);
     void raiseNameError(Name ident);
-    void raiseTypeError(string message);
-    void raiseValueError(string message);
-    void raiseNotImplementedError();
 
     bool call(Traced<Value> callable, unsigned argCount,
               MutableTraced<Value> resultOut);
@@ -273,19 +283,20 @@ struct Interpreter : public Cell
         CallFinished
     };
 
-    bool raiseArgumentError(Traced<Callable*> callable,
-                            unsigned count,
-                            MutableTraced<Value> resultOut);
-    inline bool checkArguments(Traced<Callable*> callable,
-                               const TracedVector<Value>& args,
+    bool failWithArgumentError(Traced<Callable*> callable,
+                               unsigned count,
                                MutableTraced<Value> resultOut);
+    CallStatus failWithTypeError(string message,
+                                 MutableTraced<Value> resultOut);
+    bool checkArguments(Traced<Callable*> callable,
+                        const TracedVector<Value>& args,
+                        MutableTraced<Value> resultOut);
     unsigned mungeArguments(Traced<Function*> function, unsigned argCount);
     bool call(Traced<Value> callable, NativeArgs args,
               MutableTraced<Value> resultOut);
     CallStatus setupCall(Traced<Value> target,
                          unsigned argCount, unsigned extraPopCount,
                          MutableTraced<Value> resultOut);
-    CallStatus raiseTypeError(string message, MutableTraced<Value> resultOut);
 
     // Instruction implementations
 #define declare_instr_method(name, cls)                                       \

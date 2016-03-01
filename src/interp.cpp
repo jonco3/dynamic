@@ -536,33 +536,13 @@ void Interpreter::raiseAttrError(Traced<Value> value, Name ident)
     const Class* cls = value.toObject()->type();
     string message =
         "'" + cls->name() + "' object has no attribute '" + ident + "'";
-    pushStack(gc.create<AttributeError>(message));
-    raiseException();
+    raise<AttributeError>(message);
 }
 
 void Interpreter::raiseNameError(Name ident)
 {
     string message = string("name '") + ident + "' is not defined";
-    pushStack(gc.create<NameError>(message));
-    raiseException();
-}
-
-void Interpreter::raiseTypeError(string message)
-{
-    pushStack(gc.create<TypeError>(message));
-    raiseException();
-}
-
-void Interpreter::raiseValueError(string message)
-{
-    pushStack(gc.create<ValueError>(message));
-    raiseException();
-}
-
-void Interpreter::raiseNotImplementedError()
-{
-    pushStack(gc.create<NotImplementedError>("Not implemented"));
-    raiseException();
+    raise<NameError>(message);
 }
 
 bool Interpreter::call(Traced<Value> targetValue, NativeArgs args,
@@ -610,9 +590,9 @@ void Interpreter::startCall(Traced<Value> targetValue,
     }
 }
 
-bool Interpreter::raiseArgumentError(Traced<Callable*> callable,
-                                     unsigned count,
-                                     MutableTraced<Value> resultOut)
+bool Interpreter::failWithArgumentError(Traced<Callable*> callable,
+                                        unsigned count,
+                                        MutableTraced<Value> resultOut)
 {
     ostringstream s;
     s << callable->name() << "() takes " << dec;
@@ -624,7 +604,15 @@ bool Interpreter::raiseArgumentError(Traced<Callable*> callable,
         s << " was given";
     else
         s << " were given";
-    return raiseTypeError(s.str(), resultOut);
+    failWithTypeError(s.str(), resultOut);
+    return false;
+}
+
+Interpreter::CallStatus
+Interpreter::failWithTypeError(string message, MutableTraced<Value> resultOut)
+{
+    Raise<TypeError>(message, resultOut);
+    return CallError;
 }
 
 inline bool Interpreter::checkArguments(Traced<Callable*> callable,
@@ -633,7 +621,7 @@ inline bool Interpreter::checkArguments(Traced<Callable*> callable,
 {
     unsigned count = args.size();
     if (count < callable->minArgs() || count > callable->maxArgs())
-        return raiseArgumentError(callable, count, resultOut);
+        return failWithArgumentError(callable, count, resultOut);
 
     return true;
 }
@@ -707,7 +695,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Value> func;
         if (!target->maybeGetAttr(Names::__new__, func) || func.isNone()) {
             string message = "cannot create '" + cls->name() + "' instances";
-            return raiseTypeError(message, resultOut);
+            return failWithTypeError(message, resultOut);
         }
         RootVector<Value> funcArgs(stackSlice(argCount));
         funcArgs.insert(funcArgs.begin(), Value(cls));
@@ -723,7 +711,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                     return CallError;
                 }
                 if (initResult.get().toObject() != None) {
-                    return raiseTypeError(
+                    return failWithTypeError(
                         "__init__() should return None", resultOut);
                 }
             }
@@ -737,19 +725,12 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     } else {
         Stack<Value> callHook;
         if (!getAttr(targetValue, Names::__call__, callHook)) {
-            return raiseTypeError(
+            return failWithTypeError(
                 "object is not callable:" + repr(target), resultOut);
         }
 
         return setupCall(callHook, argCount, extraPopCount, resultOut);
     }
-}
-
-Interpreter::CallStatus Interpreter::raiseTypeError(string message,
-                                                    MutableTraced<Value> resultOut)
-{
-    resultOut = gc.create<TypeError>(message);
-    return CallError;
 }
 
 const Heap<Instr*>& Interpreter::currentInstr() const

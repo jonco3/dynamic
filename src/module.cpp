@@ -43,10 +43,8 @@ void Module::Init()
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
 
-    if (!args[1].is<String>()) {
-        resultOut = gc.create<TypeError>("Expecting string argument");
-        return false;
-    }
+    if (!args[1].is<String>())
+        return Raise<TypeError>("Expecting string argument", resultOut);
 
     Stack<Class*> cls(args[0].as<Class>());
     Stack<String*> name(args[1].as<String>());
@@ -75,10 +73,8 @@ void Package::Init()
     if (!checkInstanceOf(args[0], Class::ObjectClass, resultOut))
         return false;
 
-    if (!args[1].is<String>() || !args[2].is<String>()) {
-        resultOut = gc.create<TypeError>("Expecting string argument");
-        return false;
-    }
+    if (!args[1].is<String>() || !args[2].is<String>())
+        return Raise<TypeError>("Expecting string argument", resultOut);
 
     Stack<Class*> cls(args[0].as<Class>());
     Stack<String*> name(args[1].as<String>());

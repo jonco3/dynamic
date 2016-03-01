@@ -129,10 +129,8 @@ template <BinaryOp Op>
 /* static */ inline bool
 Integer::binaryOp(const mpz_class& a, const mpz_class& b, MutableTraced<Value> resultOut)
 {
-    if (!b.fits_sint_p()) {
-        resultOut = gc.create<MemoryError>("Argument too large");
-        return false;
-    }
+    if (!b.fits_sint_p())
+        return Raise<MemoryError>("Argument too large", resultOut);
 
     return binaryOp<Op>(a, b.get_si(), resultOut);
 }
@@ -229,10 +227,8 @@ template <>
 Integer::binaryOp<BinaryLeftShift>(const mpz_class& a, int32_t b,
                                    MutableTraced<Value> resultOut)
 {
-    if (b < 0) {
-        resultOut = gc.create<ValueError>("negative shift count");
-        return false;
-    }
+    if (b < 0)
+        return Raise<ValueError>("negative shift count", resultOut);
 
     mpz_class r;
     mpz_mul_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
@@ -245,10 +241,8 @@ template <>
 Integer::binaryOp<BinaryRightShift>(const mpz_class& a, int32_t b,
                                     MutableTraced<Value> resultOut)
 {
-    if (b < 0) {
-        resultOut = gc.create<ValueError>("negative shift count");
-        return false;
-    }
+    if (b < 0)
+        return Raise<ValueError>("negative shift count", resultOut);
 
     mpz_class r;
     mpz_div_2exp(r.get_mpz_t(), a.get_mpz_t(), b);
@@ -393,16 +387,14 @@ static bool intNew(NativeArgs args, MutableTraced<Value> resultOut)
         }
         if (!ok || pos < str.size()) {
             string message = "could not convert string to int: '" + str + "'";
-            resultOut = gc.create<ValueError>(message);
-            return false;
+            return Raise<ValueError>(message, resultOut);
         }
         resultOut = Integer::get(value);
     } else {
         string message =
             "int() argument must be a string or a number, not '" +
             arg.type()->name() + "'";
-        resultOut = gc.create<TypeError>(message);
-        return false;
+        return Raise<TypeError>(message, resultOut);
     }
 
     return true;
@@ -769,16 +761,14 @@ static bool floatNew(NativeArgs args, MutableTraced<Value> resultOut)
         }
         if (!ok || pos < str.size()) {
             string message = "could not convert string to float: '" + str + "'";
-            resultOut = gc.create<ValueError>(message);
-            return false;
+            return Raise<ValueError>(message, resultOut);
         }
         resultOut = Float::get(value);
     } else {
         string message =
             "float() argument must be a string or a number, not '" +
             arg.type()->name() + "'";
-        resultOut = gc.create<TypeError>(message);
-        return false;
+        return Raise<TypeError>(message, resultOut);
     }
 
     return true;

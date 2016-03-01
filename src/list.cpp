@@ -199,7 +199,7 @@ void List::traceChildren(Tracer& t)
 
 static bool RaiseOutOfRange(MutableTraced<Value> resultOut)
 {
-    return Raise<IndexError>(resultOut, "index out of range");
+    return Raise<IndexError>("index out of range", resultOut);
 }
 
 template <typename T>
@@ -208,7 +208,7 @@ GetIndex(T* self, Traced<Value> index,
          int32_t* intOut, MutableTraced<Value> resultOut)
 {
     if (!index.isInt())
-        return Raise<TypeError>(resultOut, "indices must be integers");
+        return Raise<TypeError>("indices must be integers", resultOut);
 
     int32_t i;
     if (!index.toInt32(i))
@@ -398,7 +398,7 @@ static bool generic_getitem(NativeArgs args,
         resultOut = Value(result);
         return true;
     } else {
-        return Raise<TypeError>(resultOut, "indices must be integers or slices");
+        return Raise<TypeError>("indices must be integers or slices", resultOut);
     }
 }
 
@@ -430,7 +430,7 @@ static bool list_setitem(NativeArgs args,
         if (!args[2].is<List>()) {
             // todo: reference says this should be the same type, but cpython
             // accepts e.g. tuples.
-            return Raise<TypeError>(resultOut, "expecting list");
+            return Raise<TypeError>("expecting list", resultOut);
         }
 
         Stack<Slice*> slice(index.as<Slice>());
@@ -446,8 +446,8 @@ static bool list_setitem(NativeArgs args,
             self->replaceitems(start, count, list);
         } else {
             if (count != list->len()) {
-                return Raise<ValueError>(resultOut,
-                                         "Assigned list is the wrong size");
+                return Raise<ValueError>("Assigned list is the wrong size",
+                                         resultOut);
             }
 
             int32_t dest = start;
@@ -462,7 +462,7 @@ static bool list_setitem(NativeArgs args,
         return true;
     }
 
-    return Raise<TypeError>(resultOut, "indices must be integers or slices");
+    return Raise<TypeError>("indices must be integers or slices", resultOut);
 }
 
 static bool list_delitem(NativeArgs args,
