@@ -197,10 +197,9 @@ void List::traceChildren(Tracer& t)
     gc.traceVector(t, &elements_);
 }
 
-static bool raiseOutOfRange(MutableTraced<Value> resultOut)
+static bool RaiseOutOfRange(MutableTraced<Value> resultOut)
 {
-    resultOut = gc.create<IndexError>("index out of range");
-    return false;
+    return Raise<IndexError>(resultOut, "index out of range");
 }
 
 template <typename T>
@@ -208,19 +207,17 @@ inline static bool
 GetIndex(T* self, Traced<Value> index,
          int32_t* intOut, MutableTraced<Value> resultOut)
 {
-    if (!index.isInt()) {
-        resultOut = gc.create<TypeError>("indices must be integers");
-        return false;
-    }
+    if (!index.isInt())
+        return Raise<TypeError>(resultOut, "indices must be integers");
 
     int32_t i;
     if (!index.toInt32(i))
-        return raiseOutOfRange(resultOut);
+        return RaiseOutOfRange(resultOut);
 
     size_t len = self->len();
     i = WrapIndex(i, len);
     if (i < 0 || size_t(i) >= len)
-        return raiseOutOfRange(resultOut);
+        return RaiseOutOfRange(resultOut);
 
     *intOut = i;
     return true;
@@ -264,10 +261,8 @@ static bool compareElements(Value aArg, Value bArg)
     Stack<Value> b(bArg);
     Stack<Value> compare;
     Stack<Value> result;
-    if (!a.maybeGetAttr(Names::compareMethod[CompareLT], compare)) {
-        result = gc.create<TypeError>("Object has no __lt__ method");
-        throw PythonException(result);
-    }
+    if (!a.maybeGetAttr(Names::compareMethod[CompareLT], compare))
+        ThrowException<TypeError>("Object has no __lt__ method");
 
     interp->pushStack(a);
     interp->pushStack(b);
@@ -403,9 +398,7 @@ static bool generic_getitem(NativeArgs args,
         resultOut = Value(result);
         return true;
     } else {
-        resultOut = gc.create<TypeError>(
-            "indices must be integers or slices");
-        return false;
+        return Raise<TypeError>(resultOut, "indices must be integers or slices");
     }
 }
 
@@ -437,8 +430,7 @@ static bool list_setitem(NativeArgs args,
         if (!args[2].is<List>()) {
             // todo: reference says this should be the same type, but cpython
             // accepts e.g. tuples.
-            resultOut = gc.create<TypeError>("expecting list");
-            return false;
+            return Raise<TypeError>(resultOut, "expecting list");
         }
 
         Stack<Slice*> slice(index.as<Slice>());
@@ -454,9 +446,8 @@ static bool list_setitem(NativeArgs args,
             self->replaceitems(start, count, list);
         } else {
             if (count != list->len()) {
-                resultOut = gc.create<ValueError>(
-                    "Assigned list is the wrong size");
-                return false;
+                return Raise<ValueError>(resultOut,
+                                         "Assigned list is the wrong size");
             }
 
             int32_t dest = start;
@@ -471,8 +462,7 @@ static bool list_setitem(NativeArgs args,
         return true;
     }
 
-    resultOut = gc.create<TypeError>("indices must be integers or slices");
-    return false;
+    return Raise<TypeError>(resultOut, "indices must be integers or slices");
 }
 
 static bool list_delitem(NativeArgs args,

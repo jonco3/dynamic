@@ -82,4 +82,25 @@ struct PythonException : public runtime_error
     AutoAssertNoGC nogc_;
 };
 
+template <typename T, typename... Args>
+bool Raise(MutableTraced<Value> resultOut, Args&&... args)
+    __attribute__((noinline));
+
+template <typename T, typename... Args>
+bool Raise(MutableTraced<Value> resultOut, Args&&... args)
+{
+    resultOut = gc.create<T>(forward<Args>(args)...);
+    return false;
+}
+
+template <typename T, typename... Args>
+void ThrowException(Args&&... args) __attribute__((noinline));
+
+template <typename T, typename... Args>
+void ThrowException(Args&&... args)
+{
+    Stack<Value> error(gc.create<T>(forward<Args>(args)...));
+    throw PythonException(error);
+}
+
 #endif
