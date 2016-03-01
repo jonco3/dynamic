@@ -15,15 +15,10 @@ struct Integer : public Object
 
     static GlobalRoot<Class*> ObjectClass;
 
-    template <typename T, typename S>
-    static bool fits(S&& v) {
-        return v >= numeric_limits<T>::min() &&
-               v <= numeric_limits<T>::max();
-    }
-
     static Value get(int64_t v) {
-        if (fits<int32_t>(v))
-            return Value(int32_t(v));
+        int32_t int32value = v;
+        if (int32value == v)
+            return Value(int32value);
 
         return getObject(v);
     }
@@ -32,8 +27,9 @@ struct Integer : public Object
         static_assert(sizeof(long) >= sizeof(int32_t),
                       "This assumes that get_si() returns enough bits");
 
-        if (fits<int32_t>(v))
-            return Value(int32_t(v.get_si()));
+        int32_t int32value = v.get_si();
+        if (int32value == v)
+            return Value(int32value);
 
         return getObject(move(v));
     }
@@ -54,11 +50,8 @@ struct Integer : public Object
         static_assert(sizeof(value_.get_si()) >= sizeof(T),
                       "get_si() doesn't return enough bits");
 
-        if (!fits<T>(value_))
-            return false;
-
-        out = static_cast<T>(value_.get_si());
-        return true;
+        out = T(value_.get_si());
+        return out == value_;
     }
 
     template <class T>
@@ -66,11 +59,8 @@ struct Integer : public Object
         static_assert(sizeof(value_.get_ui()) >= sizeof(T),
                       "get_ui() doesn't return enough bits");
 
-        if (!fits<T>(value_))
-            return false;
-
-        out = static_cast<T>(value_.get_ui());
-        return true;
+        out = T(value_.get_ui());
+        return out == value_;
     }
 
     void traceChildren(Tracer& t) override;
