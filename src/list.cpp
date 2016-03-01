@@ -178,7 +178,7 @@ List::List(Traced<Class*> cls, Traced<Tuple*> init)
 void List::initElement(size_t index, const Value& value)
 {
     assert(elements_.size() == index);
-    elements_.push_back(value);
+    elements_.push_back_reserved(value);
 }
 
 void List::print(ostream& s) const

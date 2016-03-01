@@ -433,6 +433,11 @@ struct VectorImpl : public VectorStorage
         construct_back(value);
     }
 
+    void push_back_reserved(const T& value) {
+        assert(size() + 1 <= capacity());
+        construct_back(value);
+    }
+
     void pop_back() {
         destruct_back();
     }
@@ -455,6 +460,12 @@ struct VectorImpl : public VectorStorage
     template <class... Args>
     void emplace_back(Args&&... args) {
         reserve(size() + 1);
+        construct_back(std::forward<Args>(args)...);
+    }
+
+    template <class... Args>
+    void emplace_back_reserved(Args&&... args) {
+        assert(size() + 1 <= capacity());
         construct_back(std::forward<Args>(args)...);
     }
 
