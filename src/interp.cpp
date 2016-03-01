@@ -99,15 +99,7 @@ void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
     }
 #endif
 
-    assert(stack.size() + 1 <= stack.capacity());
-    assert(stack.size() >= offsetFromTop);
-
-    unsigned end = stack.size() - 1;
-    unsigned begin = end - offsetFromTop;
-    stack.push_back(Value(None));
-    for (unsigned i = end; i > 0 && i != begin; i--)
-        stack[i] = stack[i - 1];
-    stack[stack.size() - offsetFromTop - 1] = value;
+    stack.insert(stack.end() - offsetFromTop, value);
 }
 
 #ifdef LOG_EXECUTION
@@ -195,8 +187,7 @@ void Interpreter::logInstr(Instr* instr)
 
 void Interpreter::ensureStackSpace(size_t newStackSize)
 {
-    if (newStackSize > stack.capacity())
-        stack.reserve(newStackSize);
+    stack.reserve(newStackSize);
 }
 
 void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
