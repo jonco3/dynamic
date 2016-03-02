@@ -168,15 +168,15 @@ struct Interpreter;
     for_each_outofline_instr(instr)                                          \
     for_each_stub_instr(instr)
 
-#define for_each_instr_stack_adjustment(_)                                  \
+#define for_each_instr_stack_adjustment(_)                                   \
     _(Const, 1)                                                              \
     _(GetStackLocal, 1)                                                      \
     _(GetLexical, 1)                                                         \
     _(GetGlobal, 1)                                                          \
     _(SetAttr, -1)                                                           \
     _(DelAttr, -1)                                                           \
-    _(GetMethod, 2)                                                          \
-    _(CallMethod, -2)                                                        \
+    _(GetMethod, 1)                                                          \
+    _(CallMethod, -1)                                                        \
     _(CreateEnv, -1)                                                         \
     _(SetEnv, -1)                                                            \
     _(InitStackLocals, -1)                                                   \

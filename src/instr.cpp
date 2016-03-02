@@ -409,7 +409,8 @@ Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
         return;
     }
 
-    pushStack(result.method, Boolean::get(result.isCallable), value);
+    pushStack(result.method);
+    pushStack(result.isCallable ? value : Value(UninitializedSlot));
 
     // Check stub count before attempting to optimise.
     if (!instr->canAddStub())
@@ -427,10 +428,10 @@ Interpreter::executeInstr_GetMethod(Traced<IdentInstr*> instr)
 void
 Interpreter::executeInstr_CallMethod(Traced<CountInstr*> instr)
 {
-    bool extraArg = peekStack(instr->count + 1).as<Boolean>()->boolValue();
-    Stack<Value> target(peekStack(instr->count + 2));
+    bool extraArg = peekStack(instr->count) != Value(UninitializedSlot);
+    Stack<Value> target(peekStack(instr->count + 1));
     unsigned argCount = instr->count + (extraArg ? 1 : 0);
-    return startCall(target, argCount, extraArg ? 2 : 3);
+    return startCall(target, argCount, extraArg ? 1 : 2);
 }
 
 void
@@ -811,8 +812,8 @@ Interpreter::executeInstr_GetIterator(Traced<Instr*> instr)
 void
 Interpreter::executeInstr_IteratorNext(Traced<Instr*> instr)
 {
-    // The stack is already set up with next method and target on top
-    Stack<Value> target(peekStack(2));
+    // The stack is already set up with next method and object instance on top
+    Stack<Value> target(peekStack(1));
     Stack<Value> result;
     pushStack(peekStack());
     bool ok = call(target, 1, result);
@@ -1329,7 +1330,7 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
             dispatchNextStub();
 
         popStack();
-        pushStack(instr->result_, Boolean::True, value);
+        pushStack(instr->result_, value);
     end_handle_instr();
 
 #define define_binary_op_int_stub(name)                                       \

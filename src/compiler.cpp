@@ -665,7 +665,7 @@ struct ByteCompiler : public SyntaxVisitor
             emit<Instr_GetMethod>(Names::__setitem__);
             compile(s.right);
             // todo: there may be a better way than this stack manipulation
-            emit<Instr_Dup>(4);
+            emit<Instr_Dup>(3);
             emit<Instr_CallMethod>(2);
             emit<Instr_Swap>();
             emit<Instr_Pop>();
@@ -860,7 +860,6 @@ struct ByteCompiler : public SyntaxVisitor
 
         setBreakTargets();
         breakInstrs = move(oldBreakInstrs);
-        emit<Instr_Pop>();
         emit<Instr_Pop>();
         emit<Instr_Pop>();
         emit<Instr_Const>(None);
