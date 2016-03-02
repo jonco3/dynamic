@@ -682,10 +682,12 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
             string message = "cannot create '" + cls->name() + "' instances";
             return failWithTypeError(message, resultOut);
         }
-        RootVector<Value> funcArgs(stackSlice(argCount));
-        funcArgs.insert(funcArgs.begin(), Value(cls));
-        if (!call(func, funcArgs, resultOut))
+        insertStackEntry(argCount, Value(cls));
+        RootVector<Value> funcArgs(stackSlice(argCount + 1));
+        if (!call(func, funcArgs, resultOut)) {
+            popStack();
             return CallError;
+        }
         if (resultOut.isInstanceOf(cls)) {
             Stack<Value> initFunc;
             if (target->maybeGetAttr(Names::__init__, initFunc)) {
@@ -693,14 +695,17 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 funcArgs[0] = resultOut;
                 if (!call(initFunc, funcArgs, initResult)) {
                     resultOut = initResult;
+                    popStack();
                     return CallError;
                 }
                 if (initResult.get().toObject() != None) {
+                    popStack();
                     return failWithTypeError(
                         "__init__() should return None", resultOut);
                 }
             }
         }
+        popStack();
         return CallFinished;
     } else if (target->is<Method>()) {
         Stack<Method*> method(target->as<Method>());

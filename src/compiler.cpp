@@ -739,8 +739,12 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned count = s.right.size();
         if (methodCall)
             emit<Instr_CallMethod>(count);
-        else
+        else {
+            // Calling a constructor needs an extra stack slot to pass the class
+            // to __new__ and self to __init__.
+            maxStackDepth = max(stackDepth + 1, maxStackDepth);
             emit<Instr_Call>(count);
+        }
     }
 
     virtual void visit(const SyntaxReturn& s) {
@@ -786,7 +790,6 @@ struct ByteCompiler : public SyntaxVisitor
             lastCondFailed = emit<Instr_BranchIfFalse>();
             compile(suites[i].suite);
             branchesToEnd.push_back(emit<Instr_BranchAlways>());
-            //stackDepth -= 1;
         }
         branchHereFrom(lastCondFailed);
 
