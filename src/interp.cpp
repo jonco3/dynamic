@@ -678,32 +678,30 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         // todo: this is messy and needs refactoring
         Stack<Class*> cls(target->as<Class>());
         Stack<Value> func;
-        if (!target->maybeGetAttr(Names::__new__, func) || func.isNone()) {
-            string message = "cannot create '" + cls->name() + "' instances";
-            return failWithTypeError(message, resultOut);
-        }
-        insertStackEntry(argCount, Value(cls));
-        RootVector<Value> funcArgs(stackSlice(argCount + 1));
-        if (!call(func, funcArgs, resultOut)) {
-            popStack();
-            return CallError;
-        }
-        if (resultOut.isInstanceOf(cls)) {
-            Stack<Value> initFunc;
-            if (target->maybeGetAttr(Names::__init__, initFunc)) {
-                Stack<Value> initResult;
-                funcArgs[0] = resultOut;
-                if (!call(initFunc, funcArgs, initResult)) {
-                    resultOut = initResult;
-                    popStack();
-                    return CallError;
-                }
-                if (initResult.get().toObject() != None) {
-                    popStack();
-                    return failWithTypeError(
-                        "__init__() should return None", resultOut);
+        if (target->maybeGetAttr(Names::__new__, func) && !func.isNone()) {
+            insertStackEntry(argCount, Value(cls));
+            TracedVector<Value> funcArgs(stackSlice(argCount + 1));
+            if (!call(func, funcArgs, resultOut)) {
+                return CallError;
+            }
+            if (resultOut.isInstanceOf(cls)) {
+                Stack<Value> initFunc;
+                if (target->maybeGetAttr(Names::__init__, initFunc)) {
+                    Stack<Value> initResult;
+                    funcArgs[0] = resultOut;
+                    if (!call(initFunc, funcArgs, initResult)) {
+                        resultOut = initResult;
+                        return CallError;
+                    }
+                    if (initResult.get().toObject() != None) {
+                        return failWithTypeError(
+                            "__init__() should return None", resultOut);
+                    }
                 }
             }
+        } else {
+            string message = "cannot create '" + cls->name() + "' instances";
+            return failWithTypeError(message, resultOut);
         }
         popStack();
         return CallFinished;

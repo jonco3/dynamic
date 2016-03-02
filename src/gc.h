@@ -880,6 +880,12 @@ struct TracedVector
         return size_;
     }
 
+    T& operator[](unsigned index) {
+        checkValid();
+        assert(index < size_);
+        return vector_[index + offset_];
+    }
+
     Traced<T> operator[](unsigned index) const {
         checkValid();
         assert(index < size_);
