@@ -122,4 +122,18 @@ assert u(0, 1) == ((0, 1), 2, 3)
 assert v() == ((), 2, 3)
 assert v(0, 1) == ((), 0, 1)
 
+# argument list unpacking, or the splat operator
+
+def w(a, b, c):
+    return a, b, c
+
+assert w(*[1, 2, 3]) == (1, 2, 3)
+
+def x(*a):
+    return a
+
+assert x(*[1, 2, 3]) == (1, 2, 3)
+
+x(*range(100))
+
 print('ok')

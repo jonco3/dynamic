@@ -110,6 +110,7 @@ struct Interpreter;
     instr(AssertionFailed, Instr)                                            \
     instr(MakeClassFromFrame, IdentInstr)                                    \
     instr(Destructure, CountInstr)                                           \
+    instr(UnpackArgs, Instr)                                                 \
     instr(Raise, Instr)                                                      \
     instr(GetIterator, Instr)                                                \
     instr(IteratorNext, Instr)                                               \
@@ -487,13 +488,14 @@ struct CountInstr : public Instr
 {
     define_instr_type(CountInstr);
 
-    CountInstr(InstrCode code, unsigned count) : Instr(code), count(count) {
+    CountInstr(InstrCode code, size_t count) : Instr(code), count(count) {
         assert(instrType(code) == Type);
+        assert(count != SIZE_MAX);
     }
 
     void print(ostream& s) const override;
 
-    const unsigned count;
+    const size_t count;
 };
 
 struct IndexInstr : public Instr
@@ -532,20 +534,37 @@ struct CallWithFullArgsInstr : public Instr
 {
     define_instr_type(CallWithFullArgsInstr);
 
-    CallWithFullArgsInstr(InstrCode code, size_t posCount,
+    CallWithFullArgsInstr(InstrCode code,
+                          size_t argsPos,
+                          size_t maybePosCount, /* SIZE_MAX if unknown */
                           Traced<Layout*> keywords)
-      : Instr(code), posCount(posCount), keywords(keywords)
+      : Instr(code),
+        argsPos(argsPos),
+        maybePosCount(maybePosCount),
+        keywords(keywords)
     {
         assert(instrType(code) == Type);
     }
 
+    bool posCountKnown() const {
+        return maybePosCount != SIZE_MAX;
+    }
+
     size_t slotCount() const {
-        return posCount + keywords->slotCount();
+        assert(posCountKnown());
+        return maybePosCount + keywords->slotCount();
+    }
+
+    size_t slotCount(Frame* frame, size_t stackPos) const;
+
+    size_t keywordCount() const {
+        return keywords->slotCount();
     }
 
     void print(ostream& s) const override;
 
-    const size_t posCount;
+    const size_t argsPos;
+    const size_t maybePosCount;
     Heap<Layout*> keywords;
 };
 

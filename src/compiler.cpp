@@ -275,14 +275,16 @@ struct ByteCompiler : public SyntaxVisitor
 
     template <InstrCode Type, typename... Args>
     unsigned emit(Args&& ...args) {
-        assert(stackDepth >= 0);
         using Factory = InstrFactory<Type>;
         using Class = typename Factory::Class;
         Stack<Class*> instr(Factory::get(forward<Args>(args)...));
         unsigned index = block->append(instr);
 
-        stackDepth += InstrStackAdjustment<Type>::value;
-        stackDepth += InstrStackAdjustmentCountMultiple<Type>::Get(instr);
+        if (stackDepth != -1) {
+            stackDepth += InstrStackAdjustment<Type>::value;
+            stackDepth += InstrStackAdjustmentCountMultiple<Type>::Get(instr);
+        }
+
         assert(stackDepthAtInstr.size() == index);
         stackDepthAtInstr.push_back(stackDepth);
         maxStackDepth = max(stackDepth, maxStackDepth);
@@ -720,6 +722,8 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxCall& s) {
+        int initialStackDepth = stackDepth;
+
         // todo: check this actually how python works
         bool methodCall = s.target->is<SyntaxAttrRef>();
         if (methodCall) {
@@ -730,21 +734,28 @@ struct ByteCompiler : public SyntaxVisitor
             compile(s.target);
         }
 
+        int argsPos = stackDepth;
         for (const auto& i : s.positionalArgs)
             compile(*i);
-        for (const auto& i : s.iterableArgs)
+        for (const auto& i : s.iterableArgs) {
             compile(*i);
+            // This pushes a variable number of values onto the stack, so the
+            // stack depth is subseqently unknown.
+            emit<Instr_UnpackArgs>();
+            stackDepth = -1;
+        }
         for (const auto& i : s.keywordArgs)
             compile(*i->arg);
         if (s.mappingArg)
             compile(*s.mappingArg);
 
-        if (!s.iterableArgs.empty() || s.mappingArg)
-            throw ParseError(s.token, "Non-positional args not implemented");
+        if (s.mappingArg)
+            throw ParseError(s.token, "**kwargs not implemented");
 
-        unsigned posCount = s.positionalArgs.size();
-        unsigned keywordCount = s.keywordArgs.size();
-        if (keywordCount == 0) {
+        size_t posCount = s.positionalArgs.size();
+        size_t keywordCount = s.keywordArgs.size();
+        size_t iterablesCount = s.iterableArgs.size();
+        if (keywordCount == 0 && iterablesCount == 0) {
             if (methodCall) {
                 emit<Instr_CallMethod>(posCount);
             } else {
@@ -764,15 +775,20 @@ struct ByteCompiler : public SyntaxVisitor
                     throw ParseError(info->keyword->token,
                                      "Repeated keyword arg");
             }
+            if (iterablesCount != 0)
+                posCount = SIZE_MAX; // Unknown in this case.
             if (methodCall) {
-                emit<Instr_CallMethodWithFullArgs>(posCount, keywords);
+                emit<Instr_CallMethodWithFullArgs>(argsPos, posCount, keywords);
             } else {
                 // Calling a constructor needs an extra stack slot to pass the
                 // class to __new__ and self to __init__.
                 maxStackDepth = max(stackDepth + 1, maxStackDepth);
-                emit<Instr_CallWithFullArgs>(posCount, keywords);
+                emit<Instr_CallWithFullArgs>(argsPos, posCount, keywords);
             }
         }
+        assert(stackDepth == -1 || stackDepth == initialStackDepth + 1);
+        if (stackDepth == -1)
+            stackDepth = initialStackDepth + 1;
     }
 
     virtual void visit(const SyntaxReturn& s) {

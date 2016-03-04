@@ -332,6 +332,11 @@ struct Interpreter : public Cell
     void executeDestructureBuiltin(unsigned count, T* seq);
 
     void executeDestructureGeneric(unsigned count);
+
+    template <typename T>
+    void executeUnpackBuiltin(T* seq);
+
+    void executeUnpackGeneric();
 };
 
 extern GlobalRoot<Interpreter*> interp;

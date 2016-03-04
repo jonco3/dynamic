@@ -117,7 +117,12 @@ void ValueInstr::print(ostream& s) const
 void CallWithFullArgsInstr::print(ostream& s) const
 {
     Instr::print(s);
-    s << " " << posCount << " ";
+    s << " ";
+    if (maybePosCount == SIZE_MAX)
+        s << "?";
+    else
+        s << dec << maybePosCount;
+    s << " ";
     keywords->print(s);
 }
 
@@ -392,11 +397,20 @@ Interpreter::executeInstr_Call(Traced<CountInstr*> instr)
     startCall(target, instr->count, Layout::Empty, 1);
 }
 
+size_t CallWithFullArgsInstr::slotCount(Frame* frame, size_t stackPos) const
+{
+    stackPos -= frame->stackPos();
+    size_t count = stackPos - argsPos;
+    assert(!posCountKnown() || count == slotCount());
+    return count;
+}
+
 void
 Interpreter::executeInstr_CallWithFullArgs(Traced<CallWithFullArgsInstr*> instr)
 {
-    Stack<Value> target(peekStack(instr->slotCount()));
-    startCall(target, instr->posCount, instr->keywords, 1);
+    size_t slotCount = instr->slotCount(getFrame(), stack.size());
+    Stack<Value> target(peekStack(slotCount));
+    startCall(target, slotCount - instr->keywordCount(), instr->keywords, 1);
 }
 
 /*
@@ -452,10 +466,11 @@ void
 Interpreter::executeInstr_CallMethodWithFullArgs(
     Traced<CallWithFullArgsInstr*> instr)
 {
-    bool extraArg = peekStack(instr->slotCount()) != Value(UninitializedSlot);
-    Stack<Value> target(peekStack(instr->slotCount() + 1));
-    unsigned argCount = instr->slotCount() + (extraArg ? 1 : 0);
-    startCall(target, argCount, instr->keywords, extraArg ? 1 : 2);
+    size_t slotCount = instr->slotCount(getFrame(), stack.size());
+    bool extraArg = peekStack(slotCount) != Value(UninitializedSlot);
+    Stack<Value> target(peekStack(slotCount + 1));
+    unsigned posCount = slotCount - instr->keywordCount() + (extraArg ? 1 : 0);
+    startCall(target, posCount, instr->keywords, extraArg ? 1 : 2);
 }
 
 void
@@ -814,6 +829,60 @@ Interpreter::executeInstr_Destructure(Traced<CountInstr*> instr)
         executeDestructureBuiltin<List>(count, iterable.as<List>());
     else
         executeDestructureGeneric(count);
+}
+
+void
+Interpreter::executeUnpackGeneric()
+{
+    Stack<Value> result;
+    if (!getIterator(result))
+        return raiseException(result);
+
+    Stack<Value> iterator(result);
+    Stack<Value> type(iterator.type());
+    StackMethodAttr nextMethod;
+    if (!getMethodAttr(type, Names::__next__, nextMethod)) {
+        return raise<TypeError>(string("Argument is not iterable: ") +
+                                type.as<Class>()->name());
+    }
+
+    for (;;) {
+        if (nextMethod.isCallable)
+            pushStack(iterator);
+        if (!call(nextMethod.method, nextMethod.extraArgs(), result)) {
+            if (result.is<StopIteration>())
+                break;
+            return raiseException(result);
+        }
+        logStackPush(result);
+        stack.push_back(result);
+    }
+}
+
+template <typename T>
+void
+Interpreter::executeUnpackBuiltin(T* seq)
+{
+    popStack();
+
+    for (unsigned i = 0; i < seq->len(); i++) {
+        Value value = seq->getitem(i);
+        logStackPush(value);
+        stack.push_back(value);
+    }
+}
+
+void
+Interpreter::executeInstr_UnpackArgs(Traced<Instr*> instr)
+{
+    Stack<Value> iterable(peekStack());
+
+    if (iterable.is<Tuple>())
+        executeUnpackBuiltin<Tuple>(iterable.as<Tuple>());
+    else if (iterable.is<List>())
+        executeUnpackBuiltin<List>(iterable.as<List>());
+    else
+        executeUnpackGeneric();
 }
 
 void
