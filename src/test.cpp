@@ -1,7 +1,5 @@
 #include "test.h"
 
-#include "assert.h"
-
 #include <cstdio>
 #include <cstring>
 

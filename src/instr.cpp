@@ -114,7 +114,7 @@ void ValueInstr::print(ostream& s) const
         s << " " << value_;
 }
 
-void CallWithArgsInstr::print(ostream& s) const
+void CallWithFullArgsInstr::print(ostream& s) const
 {
     Instr::print(s);
     s << " " << posCount << " ";
@@ -393,7 +393,7 @@ Interpreter::executeInstr_Call(Traced<CountInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_CallWithFullArgs(Traced<CallWithArgsInstr*> instr)
+Interpreter::executeInstr_CallWithFullArgs(Traced<CallWithFullArgsInstr*> instr)
 {
     Stack<Value> target(peekStack(instr->slotCount()));
     startCall(target, instr->posCount, instr->keywords, 1);
@@ -449,7 +449,8 @@ Interpreter::executeInstr_CallMethod(Traced<CountInstr*> instr)
 }
 
 void
-Interpreter::executeInstr_CallMethodWithFullArgs(Traced<CallWithArgsInstr*> instr)
+Interpreter::executeInstr_CallMethodWithFullArgs(
+    Traced<CallWithFullArgsInstr*> instr)
 {
     bool extraArg = peekStack(instr->slotCount()) != Value(UninitializedSlot);
     Stack<Value> target(peekStack(instr->slotCount() + 1));

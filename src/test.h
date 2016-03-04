@@ -1,6 +1,8 @@
 #ifndef __TEST_H__
 #define __TEST_H__
 
+#include "assert.h"
+
 #include <cstdlib>
 #include <cstring>
 #include <iostream>

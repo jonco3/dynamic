@@ -54,7 +54,7 @@ struct Interpreter;
     type(CountInstr)                                                         \
     type(IndexInstr)                                                         \
     type(ValueInstr)                                                         \
-    type(CallWithArgsInstr)                                                  \
+    type(CallWithFullArgsInstr)                                              \
     type(BuiltinMethodInstr)                                                 \
     type(BranchInstr)                                                        \
     type(LambdaInstr)                                                        \
@@ -86,8 +86,8 @@ struct Interpreter;
     instr(GetMethod, IdentInstr)                                             \
     instr(Call, CountInstr)                                                  \
     instr(CallMethod, CountInstr)                                            \
-    instr(CallWithFullArgs, CallWithArgsInstr)                               \
-    instr(CallMethodWithFullArgs, CallWithArgsInstr)                         \
+    instr(CallWithFullArgs, CallWithFullArgsInstr)                           \
+    instr(CallMethodWithFullArgs, CallWithFullArgsInstr)                     \
     instr(CreateEnv, Instr)                                                  \
     instr(SetEnv, ValueInstr)                                                \
     instr(InitStackLocals, CountInstr)                                       \
@@ -210,8 +210,8 @@ struct Interpreter;
 #define for_each_instr_stack_adjust_count_multiple(_)                        \
     _(Call, CountInstr, count, -1)                                           \
     _(CallMethod, CountInstr, count, -1)                                     \
-    _(CallWithFullArgs, CallWithArgsInstr, slotCount(), -1)                  \
-    _(CallMethodWithFullArgs, CallWithArgsInstr, slotCount(), -1)            \
+    _(CallWithFullArgs, CallWithFullArgsInstr, slotCount(), -1)              \
+    _(CallMethodWithFullArgs, CallWithFullArgsInstr, slotCount(), -1)        \
     _(InitStackLocals, CountInstr, count, 1)                                 \
     _(Lambda, LambdaInstr, defaultCount(), -1)                               \
     _(Tuple, CountInstr, count, -1)                                          \
@@ -527,11 +527,12 @@ struct ValueInstr : public Instr
     Heap<Value> value_;
 };
 
-struct CallWithArgsInstr : public Instr
+struct CallWithFullArgsInstr : public Instr
 {
-    define_instr_type(CallWithArgsInstr);
+    define_instr_type(CallWithFullArgsInstr);
 
-    CallWithArgsInstr(InstrCode code, size_t posCount, Traced<Layout*> keywords)
+    CallWithFullArgsInstr(InstrCode code, size_t posCount,
+                          Traced<Layout*> keywords)
       : Instr(code), posCount(posCount), keywords(keywords)
     {
         assert(instrType(code) == Type);
@@ -799,15 +800,5 @@ for_each_unconditonal_branch_instr(define_unconditional_branch_instr)
 
 extern Instr* getNextInstr(Instr* instr);
 extern Instr* getFinalInstr(Instr* instr);
-
-inline unsigned getInstrCountField(Instr* instr) {
-    return 0;
-}
-inline unsigned getInstrCountField(CountInstr* instr) {
-    return instr->count;
-}
-inline unsigned getInstrCountField(LambdaInstr* instr) {
-    return instr->defaultCount();
-}
 
 #endif
