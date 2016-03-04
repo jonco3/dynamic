@@ -8,6 +8,7 @@
 #include "parser.h"
 #include "repr.h"
 #include "reflect.h"
+#include "singletons.h"
 #include "utils.h"
 
 #ifdef DEBUG
@@ -281,9 +282,7 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned index = block->append(instr);
 
         stackDepth += InstrStackAdjustment<Type>::value;
-        int countMultiple = InstrStackAdjustmentCountMultiple<Type>::value;
-        if (countMultiple)
-            stackDepth += countMultiple * getInstrCountField(instr);
+        stackDepth += InstrStackAdjustmentCountMultiple<Type>::Get(instr);
         assert(stackDepthAtInstr.size() == index);
         stackDepthAtInstr.push_back(stackDepth);
         maxStackDepth = max(stackDepth, maxStackDepth);
@@ -722,28 +721,57 @@ struct ByteCompiler : public SyntaxVisitor
 
     virtual void visit(const SyntaxCall& s) {
         // todo: check this actually how python works
-        bool methodCall = s.left->is<SyntaxAttrRef>();
-
+        bool methodCall = s.target->is<SyntaxAttrRef>();
         if (methodCall) {
-            const SyntaxAttrRef* pr = s.left->as<SyntaxAttrRef>();
+            const SyntaxAttrRef* pr = s.target->as<SyntaxAttrRef>();
             compile(pr->left);
             emit<Instr_GetMethod>(pr->right->id);
         } else {
-            compile(s.left);
+            compile(s.target);
         }
 
-        for (const auto& i : s.right) {
+        for (const auto& i : s.positionalArgs)
             compile(*i);
-        }
+        for (const auto& i : s.iterableArgs)
+            compile(*i);
+        for (const auto& i : s.keywordArgs)
+            compile(*i->arg);
+        if (s.mappingArg)
+            compile(*s.mappingArg);
 
-        unsigned count = s.right.size();
-        if (methodCall)
-            emit<Instr_CallMethod>(count);
-        else {
-            // Calling a constructor needs an extra stack slot to pass the class
-            // to __new__ and self to __init__.
-            maxStackDepth = max(stackDepth + 1, maxStackDepth);
-            emit<Instr_Call>(count);
+        if (!s.iterableArgs.empty() || s.mappingArg)
+            throw ParseError(s.token, "Non-positional args not implemented");
+
+        unsigned posCount = s.positionalArgs.size();
+        unsigned keywordCount = s.keywordArgs.size();
+        if (keywordCount == 0) {
+            if (methodCall) {
+                emit<Instr_CallMethod>(posCount);
+            } else {
+                // Calling a constructor needs an extra stack slot to pass the
+                // class to __new__ and self to __init__.
+                maxStackDepth = max(stackDepth + 1, maxStackDepth);
+                emit<Instr_Call>(posCount);
+            }
+        } else {
+            // Make a layout containing the keyword names in reverse order.
+            Stack<Layout*> keywords(Layout::Empty);
+            for (size_t i = s.keywordArgs.size(); i != 0; i--) {
+                const auto& info = s.keywordArgs[i - 1];
+                bool existing;
+                keywords = keywords->maybeAddName(info->keyword->id, existing);
+                if (existing)
+                    throw ParseError(info->keyword->token,
+                                     "Repeated keyword arg");
+            }
+            if (methodCall) {
+                emit<Instr_CallMethodWithFullArgs>(posCount, keywords);
+            } else {
+                // Calling a constructor needs an extra stack slot to pass the
+                // class to __new__ and self to __init__.
+                maxStackDepth = max(stackDepth + 1, maxStackDepth);
+                emit<Instr_CallWithFullArgs>(posCount, keywords);
+            }
         }
     }
 
@@ -872,15 +900,23 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned defaultCount = 0;
         for (auto i = params.begin(); i != params.end(); i++) {
             names.push_back(i->name);
-            if (i->maybeDefault) {
+            if (defaultCount || i->maybeDefault) {
+                assert(i->maybeDefault || i->takesRest);
                 defaultCount++;
-                compile(i->maybeDefault);
+                if (i->maybeDefault)
+                    compile(i->maybeDefault);
+                else
+                    emit<Instr_Const>(UninitializedSlot);
             }
         }
-        bool takesRest = false;
-        if (params.size() > 0)
-            takesRest = params.back().takesRest;
-        emit<Instr_Lambda>(defName, names, exprBlock, defaultCount, takesRest,
+        int restParam = -1;
+        for (size_t i = 0; i < params.size(); i++) {
+            if (params[i].takesRest) {
+                restParam = i;
+                break;
+            }
+        }
+        emit<Instr_Lambda>(defName, names, exprBlock, defaultCount, restParam,
                           isGenerator);
     }
 

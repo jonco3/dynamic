@@ -164,9 +164,15 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
     }
 
     virtual void visit(const SyntaxCall& s) {
-        s.left->accept(*this);
-        for (const auto& i : s.right)
+        s.target->accept(*this);
+        for (const auto& i : s.positionalArgs)
             i->accept(*this);
+        for (const auto& i : s.iterableArgs)
+            i->accept(*this);
+        for (const auto& i : s.keywordArgs)
+            i->arg->accept(*this);
+        if (s.mappingArg)
+            s.mappingArg->accept(*this);
     }
 
     virtual void visit(const SyntaxCond& s) {

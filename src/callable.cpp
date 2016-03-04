@@ -48,15 +48,16 @@ Native::Native(Name name, NativeFunc func, unsigned minArgs, unsigned maxArgs)
 {}
 
 FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
-                           unsigned defaultCount, bool takesRest,
+                           unsigned defaultCount, int restParam,
                            bool isGenerator)
   : params_(paramNames),
     block_(block),
     defaultCount_(defaultCount),
-    takesRest_(takesRest),
+    restParam_(restParam),
     isGenerator_(isGenerator)
 {
-    assert(!takesRest || argCount() > 0);
+    assert(restParam_ == -1 || argCount() > 0);
+    assert(restParam_ == -1 || restParam_ < argCount());
     assert(argCount() == block->argCount());
 }
 
@@ -65,13 +66,24 @@ void FunctionInfo::traceChildren(Tracer& t)
     gc.trace(t, &block_);
 }
 
+unsigned FunctionInfo::minArgs() const
+{
+    unsigned minArgs = argCount() - defaultCount_;
+    if (takesRest())
+        minArgs = min(minArgs, unsigned(restParam_));
+    return minArgs;
+}
+
+unsigned FunctionInfo::maxArgs() const
+{
+    return takesRest() ? UINT_MAX : argCount();
+}
+
 Function::Function(Name name,
                    Traced<FunctionInfo*> info,
                    TracedVector<Value> defaults,
                    Traced<Env*> env)
-  : Callable(ObjectClass, name,
-             info->argCount() - defaults.size() - (info->takesRest_ ? 1 : 0),
-             info->takesRest_ ? UINT_MAX : info->argCount()),
+  : Callable(ObjectClass, name, info->minArgs(), info->maxArgs()),
     info_(info),
     env_(env)
 {

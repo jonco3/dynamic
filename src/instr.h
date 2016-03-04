@@ -54,6 +54,7 @@ struct Interpreter;
     type(CountInstr)                                                         \
     type(IndexInstr)                                                         \
     type(ValueInstr)                                                         \
+    type(CallWithArgsInstr)                                                  \
     type(BuiltinMethodInstr)                                                 \
     type(BranchInstr)                                                        \
     type(LambdaInstr)                                                        \
@@ -85,6 +86,8 @@ struct Interpreter;
     instr(GetMethod, IdentInstr)                                             \
     instr(Call, CountInstr)                                                  \
     instr(CallMethod, CountInstr)                                            \
+    instr(CallWithFullArgs, CallWithArgsInstr)                               \
+    instr(CallMethodWithFullArgs, CallWithArgsInstr)                         \
     instr(CreateEnv, Instr)                                                  \
     instr(SetEnv, ValueInstr)                                                \
     instr(InitStackLocals, CountInstr)                                       \
@@ -205,14 +208,16 @@ struct Interpreter;
     _(ListAppend, -1)
 
 #define for_each_instr_stack_adjust_count_multiple(_)                        \
-    _(Call, -1)                                                              \
-    _(CallMethod, -1)                                                        \
-    _(InitStackLocals, 1)                                                    \
-    _(Lambda, -1)                                                            \
-    _(Tuple, -1)                                                             \
-    _(List, -1)                                                              \
-    _(Dict, -2)                                                              \
-    _(Destructure, 1)
+    _(Call, CountInstr, count, -1)                                           \
+    _(CallMethod, CountInstr, count, -1)                                     \
+    _(CallWithFullArgs, CallWithArgsInstr, slotCount(), -1)                  \
+    _(CallMethodWithFullArgs, CallWithArgsInstr, slotCount(), -1)            \
+    _(InitStackLocals, CountInstr, count, 1)                                 \
+    _(Lambda, LambdaInstr, defaultCount(), -1)                               \
+    _(Tuple, CountInstr, count, -1)                                          \
+    _(List, CountInstr, count, -1)                                           \
+    _(Dict, CountInstr, count, -2)                                           \
+    _(Destructure, CountInstr, count, 1)
 
 #define for_each_unconditonal_branch_instr(_)                                \
     _(BranchAlways)
@@ -239,36 +244,6 @@ enum InstrCode : uint8_t
 
 #undef define_instr_code_enum
 };
-
-template <InstrCode Code>
-struct InstrStackAdjustment { static const int value = 0; };
-#define define_instr_stack_adjustment(name, v)                                \
-    template <>                                                               \
-    struct InstrStackAdjustment<Instr_##name> {                               \
-        static const int value = v;                                           \
-    };
-for_each_instr_stack_adjustment(define_instr_stack_adjustment)
-#undef define_instr_stack_adjustment
-
-template <InstrCode Code>
-struct InstrStackAdjustmentCountMultiple { static const int value = 0; };
-#define define_instr_stack_adjustment_count_multiple(name, v)                 \
-    template <>                                                               \
-    struct InstrStackAdjustmentCountMultiple<Instr_##name> {                  \
-        static const int value = v;                                           \
-    };
-for_each_instr_stack_adjust_count_multiple(define_instr_stack_adjustment_count_multiple)
-#undef define_instr_stack_adjustment_count_multiple
-
-template <InstrCode Code>
-struct InstrIsUnconditionalBranch { static const bool value = false; };
-#define define_unconditional_branch_instr(name)                               \
-    template <>                                                               \
-    struct InstrIsUnconditionalBranch<Instr_##name> {                         \
-        static const bool value = true;                                       \
-    };
-for_each_unconditonal_branch_instr(define_unconditional_branch_instr)
-#undef define_unconditional_branch_instr
 
 extern InstrType instrType(InstrCode code);
 extern const char* instrName(InstrCode code);
@@ -552,6 +527,26 @@ struct ValueInstr : public Instr
     Heap<Value> value_;
 };
 
+struct CallWithArgsInstr : public Instr
+{
+    define_instr_type(CallWithArgsInstr);
+
+    CallWithArgsInstr(InstrCode code, size_t posCount, Traced<Layout*> keywords)
+      : Instr(code), posCount(posCount), keywords(keywords)
+    {
+        assert(instrType(code) == Type);
+    }
+
+    size_t slotCount() const {
+        return posCount + keywords->slotCount();;
+    }
+
+    void print(ostream& s) const override;
+
+    const size_t posCount;
+    Heap<Layout*> keywords;
+};
+
 struct BuiltinMethodInstr : public StubInstr
 {
     define_instr_type(BuiltinMethodInstr);
@@ -605,14 +600,14 @@ struct LambdaInstr : public Instr
                 const vector<Name>& paramNames,
                 Traced<Block*> block,
                 unsigned defaultCount = 0,
-                bool takesRest = false,
+                int restParam = -1,
                 bool isGenerator = false)
       : Instr(Instr_Lambda),
         funcName_(name),
         info_(nullptr)
     {
         info_ = gc.create<FunctionInfo>(paramNames, block, defaultCount,
-                                        takesRest, isGenerator);
+                                        restParam, isGenerator);
         assert(instrType(code) == Type);
     }
 
@@ -621,7 +616,11 @@ struct LambdaInstr : public Instr
     const vector<Name>& paramNames() const { return info_->params_; }
     Block* block() const { return info_->block_; }
     unsigned defaultCount() const { return info_->defaultCount_; }
-    bool takesRest() const { return info_->takesRest_; }
+    bool takesRest() const { return info_->takesRest(); }
+    unsigned restParam() const {
+        assert(takesRest());
+        return info_->restParam_;
+    }
     bool isGenerator() const { return info_->isGenerator_; }
 
     void traceChildren(Tracer& t) override;
@@ -763,6 +762,40 @@ for_each_outofline_instr(define_instr_factory)
 for_each_stub_instr(define_instr_factory)
 
 #undef define_instr_factory
+
+template <InstrCode Code>
+struct InstrStackAdjustment { static const int value = 0; };
+#define define_instr_stack_adjustment(name, v)                                \
+    template <>                                                               \
+    struct InstrStackAdjustment<Instr_##name> {                               \
+        static const int value = v;                                           \
+    };
+for_each_instr_stack_adjustment(define_instr_stack_adjustment)
+#undef define_instr_stack_adjustment
+
+template <InstrCode Code>
+struct InstrStackAdjustmentCountMultiple {
+    static int Get(Instr* instr) { return 0; }
+};
+#define define_instr_stack_adjustment_count_multiple(name, type, field, mul)  \
+    template <>                                                               \
+    struct InstrStackAdjustmentCountMultiple<Instr_##name> {                  \
+        static int Get(type* instr) {                                         \
+            return instr->field * mul;                                        \
+        }                                                                     \
+    };
+for_each_instr_stack_adjust_count_multiple(define_instr_stack_adjustment_count_multiple)
+#undef define_instr_stack_adjustment_count_multiple
+
+template <InstrCode Code>
+struct InstrIsUnconditionalBranch { static const bool value = false; };
+#define define_unconditional_branch_instr(name)                               \
+    template <>                                                               \
+    struct InstrIsUnconditionalBranch<Instr_##name> {                         \
+        static const bool value = true;                                       \
+    };
+for_each_unconditonal_branch_instr(define_unconditional_branch_instr)
+#undef define_unconditional_branch_instr
 
 extern Instr* getNextInstr(Instr* instr);
 extern Instr* getFinalInstr(Instr* instr);

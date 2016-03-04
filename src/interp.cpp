@@ -9,6 +9,7 @@
 #include "list.h"
 #include "name.h"
 #include "repr.h"
+#include "singletons.h"
 #include "utils.h"
 
 #include "value-inl.h"
@@ -90,16 +91,36 @@ bool Interpreter::exec(Traced<Block*> block, MutableTraced<Value> resultOut)
     return ok;
 }
 
-void Interpreter::insertStackEntry(unsigned offsetFromTop, Value value)
+void Interpreter::insertStackEntries(unsigned offsetFromTop, Value value,
+                                     size_t count)
 {
 #ifdef LOG_EXECUTION
     if (logExecution) {
         logStart(1);
-        cout << "insertStackEntry " << offsetFromTop << " " << value << endl;
+        cout << "insertStackEntries " << offsetFromTop << " ";
+        cout << value << " " << dec << count << endl;
     }
 #endif
 
+    assert(count == 1); // todo
     stack.insert(stack.end() - offsetFromTop, value);
+}
+
+void Interpreter::eraseStackEntries(unsigned offsetFromTop, size_t count)
+{
+#ifdef LOG_EXECUTION
+    if (logExecution) {
+        logStart(1);
+        cout << "eraseStackEntries " << offsetFromTop << " ";
+        cout << dec << count << endl;
+    }
+#endif
+
+    assert(offsetFromTop + 1 >= count);
+    assert(stack.size() >= offsetFromTop + count);
+    auto last = stack.end() - offsetFromTop;
+    auto first = last - count;
+    stack.erase(first, last);
 }
 
 #ifdef LOG_EXECUTION
@@ -548,7 +569,8 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
     // interpreter loop knows to exit rather than resume the the previous frame.
     AutoSetAndRestoreValue<InstrThunk*> saveInstrp(instrp, nullptr);
 
-    CallStatus status = setupCall(targetValue, argCount, 0, resultOut);
+    CallStatus status = setupCall(targetValue, argCount, Layout::Empty, 0,
+                                  resultOut);
     if (status != CallStarted) {
         popStack(argCount);
         return status == CallFinished;
@@ -563,10 +585,13 @@ bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
 }
 
 void Interpreter::startCall(Traced<Value> targetValue,
-                            unsigned argCount, unsigned extraPopCount)
+                            unsigned argCount,
+                            Traced<Layout*> keywordArgs,
+                            unsigned extraPopCount)
 {
     Stack<Value> result;
-    CallStatus status = setupCall(targetValue, argCount, extraPopCount, result);
+    CallStatus status = setupCall(targetValue, argCount, keywordArgs,
+                                  extraPopCount, result);
     if (status != CallStarted) {
         popStack(argCount);
         popStack(extraPopCount);
@@ -612,38 +637,157 @@ inline bool Interpreter::checkArguments(Traced<Callable*> callable,
     return true;
 }
 
-inline unsigned Interpreter::mungeArguments(Traced<Function*> function,
-                                            unsigned argCount)
+void Interpreter::mungeSimpleArguments(Traced<Function*> function,
+                                       unsigned argCount)
 {
-    // Fill in default values for missing arguments
-    Stack<Value> value;
-    if (argCount < function->maxNormalArgs()) {
-        // Because the number of default arguments depends on the function we
-        // don't know statically how big to make the stack.  Grow it here if
-        // necessary.
-        size_t count = function->maxNormalArgs() - argCount;
-        ensureStackSpace(stack.size() + count);
-        do {
-            value = function->paramDefault(argCount++);
-            pushStack(value);
-        } while (argCount < function->maxNormalArgs());
+    // Input stack:
+    //
+    //   +-------------+-------+-------+-------+
+    //   | Call target | Arg 0 |  ...  | Arg n |
+    //   +-------------+-------+-------+-------+
+    //
+    // Output stack:
+    //
+    //   +-------------+-------+-------+-------+-------+-------+
+    //   | Call target | Arg 0 |  ...  | Rest? |  ...  | Arg m |
+    //   +-------------+-------+-------+-------+-------+-------+
+
+    auto argsStart = stack.end() - argCount;
+
+    Stack<Value> restArg(Tuple::Empty);
+    if (function->takesRest() && argCount >= function->restParam()) {
+        size_t restCount = argCount - function->restParam();
+        restArg = Tuple::get(stackSlice(restCount));
     }
 
-    // Add rest argument tuple if necessary
-    assert(argCount >= function->maxNormalArgs());
-    if (function->takesRest()) {
-        size_t restCount = argCount - function->maxNormalArgs();
-        Stack<Value> rest(Tuple::get(stackSlice(restCount)));
-        popStack(restCount);
-        pushStack(rest);
-        argCount = argCount - restCount + 1;
+    // todo: do we still need to do this?
+    if (argCount > function->argCount()) {
+        auto argsEnd = argsStart + function->argCount();
+        stack.erase(argsEnd, stack.end());
+    } else if (argCount < function->argCount()) {
+        size_t count = function->argCount() - argCount;
+        stack.insert(argsStart + argCount, UninitializedSlot.get(), count);
     }
 
-    return argCount;
+    TracedVector<Value> args(stackSlice(function->argCount()));
+
+    // Fill in the rest argument if taken.
+    if (function->takesRest())
+        args[function->restParam()] = restArg;
+
+    // Fill unfilled slots from default args.
+    // todo: could store rest param like this to start with
+    size_t restParamOrSize = function->takesRest() ? function->restParam()
+                                                   : function->argCount();
+    for (size_t i = argCount; i < restParamOrSize; i++)
+        args[i] = function->paramDefault(i);
+    for (size_t i = restParamOrSize + 1; i < function->argCount(); i++)
+        args[i] = function->paramDefault(i);
+}
+
+bool Interpreter::mungeFullArguments(Traced<Function*> function,
+                                     Traced<Layout*> keywordArgs,
+                                     unsigned argCount,
+                                     MutableTraced<Value> resultOut)
+{
+    // Input stack:
+    //
+    //   +-------------+-------+-------+-------+------+------+------+
+    //   | Call target | Arg 0 |  ...  | Arg n | KW 0 |  ..  | KW m |
+    //   +-------------+-------+-------+-------+------+------+------+
+    //
+    // Intermediate state:
+    //
+    //   --+-------+-------+-------+-------+-------+------+------+------+
+    //     | Arg 0 |  ...  | Rest? |  ...  | Arg m | KW 0 |  ..  | KW m |
+    //   --+-------+-------+-------+-------+-------+------+------+------+
+    //
+    // Output stack:
+    //
+    //   +-------------+-------+-------+-------+-------+-------+
+    //   | Call target | Arg 0 |  ...  | Rest? |  ...  | Arg m |
+    //   +-------------+-------+-------+-------+-------+-------+
+
+    size_t keywordCount = keywordArgs->slotCount();
+    auto argsStart = stack.end() - keywordCount - argCount;
+
+    Stack<Value> restArg(Tuple::Empty);
+    if (function->takesRest() && argCount >= function->restParam()) {
+        size_t restCount = argCount - function->restParam();
+        restArg = Tuple::get(stackSlice(restCount, keywordCount));
+    }
+
+    // If there are more arguments supplied than formal args, move the keyword
+    // arguments down the stack. Alternatively, if there are fewer supplied
+    // arguments than formal args then move keyword arguments up the stack so
+    // there is enough space for all formal arguments, filling unsupplied
+    // positional args with UninitializedSlot and setting any rest argument to
+    // the empty tuple.
+    if (argCount > function->argCount()) {
+        auto argsEnd = argsStart + function->argCount();
+        stack.erase(argsEnd, stack.end() - keywordCount);
+    } else if (argCount < function->argCount()) {
+        size_t count = function->argCount() - argCount;
+        stack.insert(argsStart + argCount, UninitializedSlot.get(), count);
+
+        if (function->takesRest()) {
+            for (size_t i = function->restParam() + 1; i < argCount; i++)
+                *(argsStart + i) = UninitializedSlot.get();
+        }
+    }
+
+    // Fill in the rest argument if taken.
+    TracedVector<Value> args(stackSlice(function->argCount(), keywordCount));
+    if (function->takesRest())
+        args[function->restParam()] = restArg;
+
+    // For each supplied keyword arg, look up its position in the formal arg
+    // list and set its value.  Raise TypeError if slot already filled or if the
+    // argument is not found.
+    //
+    // todo: add to mapping dictionary for unknown keyword args if the function
+    // can receive that
+    if (keywordCount) {
+        TracedVector<Value> keywords(stackSlice(keywordCount));
+        Layout* l = keywordArgs;
+        for (size_t i = 0; i < keywordCount; i++)
+        {
+            int argPos = function->findArg(l->name());
+            if (argPos == -1)
+                return Raise<TypeError>("Keyword arg not found", resultOut);
+            // todo: lookup might be easier if formal arg list was a layout
+            assert(argPos < function->maxNormalArgs());
+            if (args[argPos] != UninitializedSlot.get()) {
+                return Raise<TypeError>(
+                    "Multiple values for argument: " + l->name()->value(),
+                    resultOut);
+            }
+            args[argPos] = keywords[i];
+            l = l->parent();
+        }
+    }
+    popStack(keywordCount);
+
+    // Fill unfilled slots from default args.  If there are unfilled slots
+    // remaining, raise TypeError.
+    size_t firstDefaultArg = function->firstDefaultParam();
+    for (size_t i = argCount; i < firstDefaultArg; i++) {
+        if (args[i] == UninitializedSlot.get()) {
+            return Raise<TypeError>("Missing argument: " +
+                                    function->paramName(i)->value(), resultOut);
+        }
+    }
+    for (size_t i = firstDefaultArg; i < function->argCount(); i++) {
+        if (args[i] == UninitializedSlot.get())
+            args[i] = function->paramDefault(i);
+    }
+
+    return true;
 }
 
 Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                                                unsigned argCount,
+                                               Traced<Layout*> keywordArgs,
                                                unsigned extraPopCount,
                                                MutableTraced<Value> resultOut)
 {
@@ -657,6 +801,10 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
 
     Stack<Object*> target(targetValue.toObject());
     if (target->is<Native>()) {
+        if (keywordArgs != Layout::Empty) {
+            return failWithTypeError(
+                "Native function takes no keyword arguments", resultOut);
+        }
         Stack<Native*> native(target->as<Native>());
         NativeArgs args(stackSlice(argCount));
         if (!checkArguments(native, args, resultOut))
@@ -668,9 +816,13 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         if (!checkArguments(function, stackSlice(argCount), resultOut))
             return CallError;
         Stack<Block*> block(function->block());
-        argCount = mungeArguments(function, argCount);
-        assert(argCount == function->argCount());
-        pushFrame(block, stack.size() - argCount, extraPopCount);
+        if (keywordArgs == Layout::Empty) {
+            mungeSimpleArguments(function, argCount);
+        } else {
+            if (!mungeFullArguments(function, keywordArgs, argCount, resultOut))
+                return CallError;
+        }
+        pushFrame(block, stack.size() - function->argCount(), extraPopCount);
         Stack<Env*> parentEnv(function->env());
         pushStack(parentEnv);
         return CallStarted;
@@ -679,7 +831,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         Stack<Class*> cls(target->as<Class>());
         Stack<Value> func;
         if (target->maybeGetAttr(Names::__new__, func) && !func.isNone()) {
-            insertStackEntry(argCount, Value(cls));
+            insertStackEntries(argCount, Value(cls));
             TracedVector<Value> funcArgs(stackSlice(argCount + 1));
             if (!call(func, funcArgs, resultOut)) {
                 return CallError;
@@ -708,8 +860,9 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
     } else if (target->is<Method>()) {
         Stack<Method*> method(target->as<Method>());
         Stack<Value> callable(method->callable());
-        insertStackEntry(argCount, method->object());
-        return setupCall(callable, argCount + 1, extraPopCount, resultOut);
+        insertStackEntries(argCount, method->object());
+        return setupCall(callable, argCount + 1, keywordArgs, extraPopCount,
+                         resultOut);
     } else {
         Stack<Value> callHook;
         if (!getAttr(targetValue, Names::__call__, callHook)) {
@@ -717,7 +870,8 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 "object is not callable:" + repr(target), resultOut);
         }
 
-        return setupCall(callHook, argCount, extraPopCount, resultOut);
+        return setupCall(callHook, argCount, keywordArgs, extraPopCount,
+                         resultOut);
     }
 }
 

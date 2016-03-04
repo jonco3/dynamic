@@ -163,11 +163,14 @@ Layout* Layout::addName(Name name, int expectedSlot)
     return layout;
 }
 
-Layout* Layout::maybeAddName(Name name)
+Layout* Layout::maybeAddName(Name name, bool& existing)
 {
-    if (hasName(name))
+    if (hasName(name)) {
+        existing = true;
         return this;
+    }
 
+    existing = false;
     return addName(name);
 }
 
@@ -184,7 +187,7 @@ void Layout::print(ostream& s) const
         assert(layout);
         s << layout->name();
         layout = layout->parent();
-        if (layout)
+        if (layout != Empty)
             s << ", ";
     }
     s << "}";

@@ -165,6 +165,7 @@ struct VectorStorageBase
     }
 
     size_t capacity() const {
+        assert(capacity_ < 10000);
         return capacity_;
     }
 
@@ -438,7 +439,8 @@ struct VectorImpl : public VectorStorage
 
     iterator erase(const_iterator first, const_iterator last);
 
-    iterator insert(const_iterator pos, const_reference value);
+    iterator insert(const_iterator pos, const_reference value,
+                    size_t count = 1);
 
     iterator insert(const_iterator pos, const_iterator first, iterator last);
 
@@ -644,16 +646,20 @@ VectorImpl<T, VectorStorage>::erase(const_iterator first, const_iterator last)
 
 template <typename T, typename VectorStorage>
 typename VectorImpl<T, VectorStorage>::iterator
-VectorImpl<T, VectorStorage>::insert(const_iterator pos, const_reference value)
+VectorImpl<T, VectorStorage>::insert(const_iterator pos,
+                                     const_reference value,
+                                     size_t count)
 {
     assert(pos.vector() == this);
     assert(pos.index() <= size());
 
-    reserve(size() + 1);
-    construct_back();
-    for (size_t i = size(); i != pos.index() + 1; i--)
-        ref(i - 1) = ref(i - 2);
-    ref(pos.index()) = value;
+    reserve(size() + count);
+    for (size_t i = 0; i < count; i++)
+        construct_back();
+    for (size_t i = size(); i != pos.index() + count; i--)
+        ref(i - 1) = ref(i - count - 1);
+    for (size_t i = 0; i < count; i++)
+        ref(pos.index() + i) = value;
     return iterator(this, pos.index());
 }
 

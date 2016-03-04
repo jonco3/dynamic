@@ -43,17 +43,20 @@ struct Native : public Callable
 struct FunctionInfo : public Cell
 {
     FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
-                 unsigned defaultCount = 0, bool takesRest = false,
+                 unsigned defaultCount = 0, int restParam = -1,
                  bool isGenerator = false);
 
     void traceChildren(Tracer& t) override;
 
     size_t argCount() const { return params_.size(); }
+    bool takesRest() const { return restParam_ != -1; }
+    unsigned minArgs() const;
+    unsigned maxArgs() const;
 
     vector<Name> params_;
     Heap<Block*> block_;
     unsigned defaultCount_;
-    bool takesRest_;
+    int restParam_;
     bool isGenerator_;
 };
 
@@ -73,13 +76,15 @@ struct Function : public Callable
 
     Block* block() const { return info_->block_; }
     Env* env() const { return env_; }
-    bool takesRest() const { return info_->takesRest_; }
+    bool takesRest() const  { return info_->takesRest(); }
     bool isGenerator() const { return info_->isGenerator_; }
+    size_t firstDefaultParam() const {
+        return argCount() - defaults_.size();
+    }
     Value paramDefault(unsigned i) {
         assert(i < info_->argCount());
-        i -= maxNormalArgs() - defaults_.size();
-        assert(i < defaults_.size());
-        return defaults_[i];
+        assert(i >= firstDefaultParam());
+        return defaults_[i - firstDefaultParam()];
     }
     size_t argCount() const {
         return info_->argCount();
@@ -87,9 +92,18 @@ struct Function : public Callable
     size_t maxNormalArgs() const {
         return info_->argCount() - (takesRest() ? 1 : 0);
     }
+    size_t defaultCount() const {
+        return defaults_.size();
+    }
     unsigned restParam() const {
         assert(takesRest());
-        return info_->argCount() - 1;
+        return info_->restParam_;
+    }
+    int findArg(Name name) {
+        auto i = find(info_->params_.begin(), info_->params_.end(), name);
+        if (i == info_->params_.end())
+            return -1;
+        return i - info_->params_.begin();
     }
 
     void traceChildren(Tracer& t) override;

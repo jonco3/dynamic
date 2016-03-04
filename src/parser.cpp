@@ -17,6 +17,16 @@ ParseError::ParseError(const Token& token, string message) :
     maybeAbortTests(s.str());
 }
 
+static void parseError(const Token& token, const string& message)
+{
+    throw ParseError(token, message);
+}
+
+static void parseError(const unique_ptr<Syntax>& syntax, const string& message)
+{
+    parseError(syntax->token, message);
+}
+
 /*
  * Match a comma separated list of expressions up to an end token.
  */
@@ -170,18 +180,70 @@ SyntaxParser::SyntaxParser()
     });
 
     addInfixHandler(Token_Bra, 200, [=] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
-        vector<unique_ptr<Syntax>> args;
+        vector<unique_ptr<Syntax>> positionalArgs;
+        vector<unique_ptr<KeywordArgInfo>> keywordArgs;
+        vector<unique_ptr<Syntax>> iterableArgs;
+        unique_ptr<Syntax> mappingArg;
+        bool first = true;
+        bool hadIterable = false;
+        bool hadMapping = false;
+        bool hadKeyword = false;
         while (!opt(Token_Ket)) {
-            if (!args.empty())
+            if (!first)
                 match(Token_Comma);
-            args.emplace_back(parseExpr());
+            first = false;
+
+            bool iterable = false;
+            bool mapping = false;
+            if (opt(Token_Times))
+                iterable = true;
+            else if (opt(Token_Power))
+                mapping = true;
+
+            unique_ptr<Syntax> arg(parseExpr());
+
+            unique_ptr<SyntaxName> keyword;
+            if (!iterable && !mapping && arg->is<SyntaxName>() &&
+                opt(Token_Assign))
+            {
+                keyword = unique_ptr_as<SyntaxName>(arg);
+                arg = parseExpr();
+            }
+
+            bool positional = !iterable && !mapping && !keyword;
+            if (iterable && hadMapping)
+                parseError(arg, "Iterable *arg after mapping **arg");
+            if (positional && hadKeyword)
+                parseError(arg, "Positional arg after keyword arg");
+            if (positional && hadIterable)
+                parseError(arg, "Positional arg after iterable *arg");
+            if (mapping && hadMapping)
+                parseError(arg, "Multiple mapping **args");
+            hadIterable = hadIterable || iterable;
+            hadMapping = hadMapping || mapping;
+            hadKeyword = hadKeyword || keyword;
+
+            if (positional)
+                positionalArgs.emplace_back(move(arg));
+            else if (keyword)
+                keywordArgs.emplace_back(
+                    make_unique<KeywordArgInfo>(move(keyword), move(arg)));
+            else if (iterable)
+                iterableArgs.emplace_back(move(arg));
+            else
+                mappingArg = move(arg);
         }
-        return make_unique<SyntaxCall>(token, move(l), move(args));
+        return make_unique<SyntaxCall>(token,
+                                       move(l),
+                                       move(positionalArgs),
+                                       move(iterableArgs),
+                                       move(keywordArgs),
+                                       move(mappingArg));
     });
 
     addBinaryOp(Token_Period, 200, Assoc_Left, [] (Token token, unique_ptr<Syntax> l, unique_ptr<Syntax> r) {
         if (!r->is<SyntaxName>())
-            throw ParseError(token, "Bad attribute reference");
+            parseError(r, "Bad attribute reference");
         unique_ptr<SyntaxName> name(r.release()->as<SyntaxName>());
         return make_unique<SyntaxAttrRef>(token, move(l), move(name));
     });
@@ -357,8 +419,8 @@ unique_ptr<SyntaxTarget> SyntaxParser::makeAssignTarget(unique_ptr<Syntax> targe
     } else if (target->is<SyntaxSubscript>()) {
         return unique_ptr_as<SyntaxSubscript>(target);
     } else {
-        throw ParseError(target->token,
-                         "Illegal target for assignment: " + target->name());
+        parseError(target, "Illegal target for assignment: " + target->name());
+        return nullptr; // todo: what's the best way to stop compiler warning?
     }
 }
 
@@ -423,9 +485,9 @@ unique_ptr<Syntax> SyntaxParser::parseAugAssign(Token token, unique_ptr<Syntax> 
     } else if (syntax->is<SyntaxSubscript>()) {
         target = unique_ptr_as<SyntaxSubscript>(syntax);
     } else {
-        throw ParseError(token,
-                         "Illegal target for augmented assignment: " +
-                         syntax->name());
+        parseError(syntax,
+                   "Illegal target for augmented assignment: " +
+                   syntax->name());
     }
 
     unique_ptr<Syntax> expr(parseExpr());
@@ -483,8 +545,7 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
     } else if (opt(Token_Raise)) {
         unique_ptr<Syntax> expr(parseExpr());
         if (opt(Token_Comma))
-            throw ParseError(token,
-                             "Multiple exressions for raise not supported"); // todo
+            parseError(token, "Multiple exressions for raise not supported"); // todo
         return make_unique<SyntaxRaise>(token, move(expr));
     } else if (opt(Token_Global)) {
         vector<Name> names;
@@ -573,31 +634,39 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
     bool hadRest = false;
     while (!opt(endToken)) {
         // todo: kwargs
-        bool takesRest = false;
+        bool isRest = false;
+        bool isDefault = false;
+
         if (opt(Token_Times))
-            takesRest = true;
+            isRest = true;
         Token t = match(Token_Identifier);
-        if (hadRest)
-            throw ParseError(t, "Parameter following rest parameter");
         Name name(internString(t.text));
         unique_ptr<Syntax> defaultExpr;
         if (opt(Token_Assign)) {
-            if (takesRest)
-                throw ParseError(t, "Rest parameter can't take default");
             defaultExpr = parseExpr();
-            hadDefault = true;
-        } else if (hadDefault && !takesRest) {
-            throw ParseError(t, "Non-default parameter following default parameter");
+            isDefault = true;
         }
-        for (auto i = params.begin(); i != params.end(); i++)
+
+        for (auto i = params.begin(); i != params.end(); i++) {
             if (name == i->name)
-                throw ParseError(t, "Duplicate parameter name: " +
-                                 name->value());
-        params.push_back({name, move(defaultExpr), takesRest});
+                parseError(t, "Duplicate parameter name: " + name->value());
+        }
+        if (isRest && hadRest)
+            parseError(t, "Multiple rest parameters");
+        if (isRest && isDefault)
+            parseError(t, "Rest parameter can't take default");
+        if (hadRest && !isDefault)
+            parseError(t, "Non-default parameter following rest parameter");
+        if (hadDefault && !isDefault && !isRest)
+            parseError(t, "Non-default parameter following default parameter");
+
+        hadRest = hadRest || isRest;
+        hadDefault = hadDefault || isDefault;
+
+        params.push_back({name, move(defaultExpr), isRest});
         if (opt(endToken))
             break;
         match(Token_Comma);
-        hadRest = takesRest;
     }
     return params;
 }
@@ -643,8 +712,7 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
         bool hadExpr = true;
         while (opt(Token_Except)) {
             if (!hadExpr) {
-                throw ParseError(token,
-                                 "Expresion-less except clause must be last");
+                parseError(token, "Expresion-less except clause must be last");
             }
             Token token = currentToken();
             unique_ptr<Syntax> expr;

@@ -116,9 +116,10 @@ struct Interpreter : public Cell
     }
 
     // Return a reference to the |count| topmost values.
-    TracedVector<Value> stackSlice(size_t count) {
-        assert(stack.size() >= count);
-        return TracedVector<Value>(stack, stack.size() - count, count);
+    TracedVector<Value> stackSlice(unsigned count, unsigned offsetFromTop = 0) {
+        assert(stack.size() >= count + offsetFromTop);
+        size_t pos = stack.size() - count - offsetFromTop;
+        return TracedVector<Value>(stack, pos, count);
     }
 
     // Swap the two values on the top of the stack.
@@ -128,8 +129,9 @@ struct Interpreter : public Cell
         logStackSwap();
     }
 
-    void insertStackEntry(unsigned offsetFromTop, Value value);
-
+    void insertStackEntries(unsigned offsetFromTop, Value value,
+                            size_t count = 1);
+    void eraseStackEntries(unsigned offsetFromTop, size_t count);
     void ensureStackSpace(size_t newStackSize);
 
     Value getStackLocal(unsigned offset) {
@@ -174,11 +176,12 @@ struct Interpreter : public Cell
     void raiseAttrError(Traced<Value> value, Name ident);
     void raiseNameError(Name ident);
 
-    bool call(Traced<Value> callable, unsigned argCount,
+    bool call(Traced<Value> callable, unsigned posArgCount,
               MutableTraced<Value> resultOut);
 
-    void startCall(Traced<Value> callable,
-                   unsigned argCount, unsigned extraPopCount = 0);
+    void startCall(Traced<Value> callable, unsigned posArgCount,
+                   Traced<Layout*> keywordArgs = Layout::Empty,
+                   unsigned extraPopCount = 0);
 
     void popFrame();
 
@@ -281,11 +284,15 @@ struct Interpreter : public Cell
     bool checkArguments(Traced<Callable*> callable,
                         const TracedVector<Value>& args,
                         MutableTraced<Value> resultOut);
-    unsigned mungeArguments(Traced<Function*> function, unsigned argCount);
+    void mungeSimpleArguments(Traced<Function*> function, unsigned argCount);
+    bool mungeFullArguments(Traced<Function*> function,
+                            Traced<Layout*> keywordArgs,
+                            unsigned argCount,
+                            MutableTraced<Value> resultOut);
     bool call(Traced<Value> callable, NativeArgs args,
               MutableTraced<Value> resultOut);
-    CallStatus setupCall(Traced<Value> target,
-                         unsigned argCount, unsigned extraPopCount,
+    CallStatus setupCall(Traced<Value> target, unsigned argCount,
+                         Traced<Layout*> keywordArgs, unsigned extraPopCount,
                          MutableTraced<Value> resultOut);
 
     // Instruction implementations

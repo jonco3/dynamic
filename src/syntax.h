@@ -434,18 +434,41 @@ struct SyntaxSlice : public Syntax
     const unique_ptr<Syntax> stride;
 };
 
+struct KeywordArgInfo
+{
+    KeywordArgInfo(unique_ptr<SyntaxName> keyword,
+                   unique_ptr<Syntax> arg)
+      : keyword(move(keyword)),
+        arg(move(arg))
+    {}
+
+    const unique_ptr<SyntaxName> keyword;
+    const unique_ptr<Syntax> arg;
+};
+
 struct SyntaxCall : public Syntax
 {
     define_syntax_members(Call, "call");
 
     SyntaxCall(const Token& token,
-               unique_ptr<Syntax> l,
-               vector<unique_ptr<Syntax>> r = {})
-      : Syntax(token), left(move(l)), right(move(r))
+               unique_ptr<Syntax> target,
+               vector<unique_ptr<Syntax>> positionalArgs,
+               vector<unique_ptr<Syntax>> iterableArgs,
+               vector<unique_ptr<KeywordArgInfo>> keywordArgs,
+               unique_ptr<Syntax> mappingArg)
+      : Syntax(token),
+        target(move(target)),
+        positionalArgs(move(positionalArgs)),
+        iterableArgs(move(iterableArgs)),
+        keywordArgs(move(keywordArgs)),
+        mappingArg(move(mappingArg))
     {}
 
-    const unique_ptr<Syntax> left;
-    const vector<unique_ptr<Syntax>> right;
+    const unique_ptr<Syntax> target;
+    const vector<unique_ptr<Syntax>> positionalArgs;
+    const vector<unique_ptr<Syntax>> iterableArgs;
+    const vector<unique_ptr<KeywordArgInfo>> keywordArgs;
+    const unique_ptr<Syntax> mappingArg;
 };
 
 struct SyntaxReturn : public UnarySyntax

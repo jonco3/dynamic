@@ -84,11 +84,42 @@ assert r(2, [1]) == [1, 2]
 assert r(3) == [3]
 assert r(4) == [3, 4]
 
-def rrr():
-    def rr(a = 1, b = 2, c = 3, d = 4, e = 5):
-        return e
-    return rr()
+# keyword arguments
+def s(a = -1, b = -2 , c = -3):
+    return a, b, c
 
-assert rrr() == 5
+assert s(1, 2, 3) == (1, 2, 3)
+assert s(1, 2, c = 3) == (1, 2, 3)
+assert s(1, c = 3, b = 2) == (1, 2, 3)
+assert s(c = 1, b = 2, a = 3) == (3, 2, 1)
+assert s(b = 2) == (-1, 2, -3)
+assert s(1, c = 3) == (1, -2, 3)
+
+def raisesException(thunk, exception):
+    ok = False
+    try:
+        thunk()
+    except exception:
+        ok = True
+    return ok
+
+assert raisesException(lambda: eval("s(a = 1, a = 1)"), SyntaxError)
+assert raisesException(lambda: s(1, a = 1), TypeError)
+
+def t(a, b = 2, c = 3):
+    pass
+
+assert raisesException(lambda: t(), TypeError)
+
+def u(*a, b = 2, c = 3):
+    return a, b, c
+
+def v(b = 2, c = 3, *a):
+    return a, b, c
+
+assert u() == ((), 2, 3)
+assert u(0, 1) == ((0, 1), 2, 3)
+assert v() == ((), 2, 3)
+assert v(0, 1) == ((), 0, 1)
 
 print('ok')

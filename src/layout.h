@@ -37,7 +37,9 @@ struct Layout : public SweptCell
     int hasName(Name name) { return lookupName(name) != NotFound; }
 
     Layout* addName(Name name, int expectedSlot = -1);
-    Layout* maybeAddName(Name name);
+
+    // Add a name to this layout it doesn't already contain it.
+    Layout* maybeAddName(Name name, bool& existing);
 
     void traceChildren(Tracer& t) override;
     void print(ostream& s) const override;

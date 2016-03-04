@@ -114,6 +114,13 @@ void ValueInstr::print(ostream& s) const
         s << " " << value_;
 }
 
+void CallWithArgsInstr::print(ostream& s) const
+{
+    Instr::print(s);
+    s << " " << posCount << " ";
+    keywords->print(s);
+}
+
 void ValueInstr::traceChildren(Tracer& t)
 {
     Instr::traceChildren(t);
@@ -382,7 +389,14 @@ void
 Interpreter::executeInstr_Call(Traced<CountInstr*> instr)
 {
     Stack<Value> target(peekStack(instr->count));
-    startCall(target, instr->count, 1);
+    startCall(target, instr->count, Layout::Empty, 1);
+}
+
+void
+Interpreter::executeInstr_CallWithFullArgs(Traced<CallWithArgsInstr*> instr)
+{
+    Stack<Value> target(peekStack(instr->slotCount()));
+    startCall(target, instr->posCount, instr->keywords, 1);
 }
 
 /*
@@ -431,7 +445,16 @@ Interpreter::executeInstr_CallMethod(Traced<CountInstr*> instr)
     bool extraArg = peekStack(instr->count) != Value(UninitializedSlot);
     Stack<Value> target(peekStack(instr->count + 1));
     unsigned argCount = instr->count + (extraArg ? 1 : 0);
-    return startCall(target, argCount, extraArg ? 1 : 2);
+    return startCall(target, argCount, Layout::Empty, extraArg ? 1 : 2);
+}
+
+void
+Interpreter::executeInstr_CallMethodWithFullArgs(Traced<CallWithArgsInstr*> instr)
+{
+    bool extraArg = peekStack(instr->slotCount()) != Value(UninitializedSlot);
+    Stack<Value> target(peekStack(instr->slotCount() + 1));
+    unsigned argCount = instr->slotCount() + (extraArg ? 1 : 0);
+    startCall(target, argCount, instr->keywords, extraArg ? 1 : 2);
 }
 
 void
