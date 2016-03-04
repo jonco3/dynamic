@@ -1,10 +1,10 @@
 #ifndef __GC_H__
 #define __GC_H__
 
+#include "assert.h"
 #include "utils.h"
 #include "vector.h"
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>

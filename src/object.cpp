@@ -9,7 +9,6 @@
 
 #include "value-inl.h"
 
-#include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>

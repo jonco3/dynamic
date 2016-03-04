@@ -11,8 +11,6 @@ struct Env;
 
 extern bool debugMode;
 
-extern void crash(const char* message);
-
 extern void init1();
 extern void init2(const string& internalsPath);
 extern void final();

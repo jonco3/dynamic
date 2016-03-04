@@ -1,8 +1,8 @@
 #include "token.h"
 
+#include "assert.h"
 #include "test.h"
 
-#include <cassert>
 #include <cstring>
 #include <ostream>
 #include <sstream>

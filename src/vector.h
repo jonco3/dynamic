@@ -10,6 +10,7 @@
 #include "assert.h"
 
 #include <cstddef>
+#include <cstdlib>
 #include <iterator>
 #include <stdexcept>
 #include <utility>

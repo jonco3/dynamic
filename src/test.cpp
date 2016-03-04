@@ -1,6 +1,7 @@
 #include "test.h"
 
-#include <cassert>
+#include "assert.h"
+
 #include <cstdio>
 #include <cstring>
 

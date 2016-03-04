@@ -1,11 +1,11 @@
 #ifndef __SYNTAX_H__
 #define __SYNTAX_H__
 
+#include "assert.h"
 #include "name.h"
 #include "specials.h"
 #include "token.h"
 
-#include <cassert>
 #include <memory>
 #include <ostream>
 #include <string>

@@ -1,6 +1,7 @@
 #ifndef __INTERP_H__
 #define __INTERP_H__
 
+#include "assert.h"
 #include "block.h"
 #include "common.h"
 #include "frame.h"
@@ -8,7 +9,6 @@
 #include "token.h"
 #include "value-inl.h"
 
-#include <cassert>
 #include <vector>
 
 using namespace std;

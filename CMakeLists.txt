@@ -21,6 +21,7 @@ add_compile_options(--std=c++14 -Wall -Werror -Wno-parentheses-equality)
 
 add_library(main_archive
             src/analysis.cpp
+            src/assert.cpp
             src/block.cpp
             src/builtin.cpp
             src/callable.cpp

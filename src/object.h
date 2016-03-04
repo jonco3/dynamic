@@ -1,13 +1,13 @@
 #ifndef __OBJECT_H__
 #define __OBJECT_H__
 
+#include "assert.h"
 #include "gcdefs.h"
 #include "layout.h"
 #include "name.h"
 #include "vector.h"
 #include "value.h"
 
-#include <cassert>
 #include <ostream>
 
 using namespace std;

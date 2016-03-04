@@ -27,12 +27,6 @@
 
 bool debugMode = true;
 
-void crash(const char* message)
-{
-    fprintf(stderr, "Abort: %s", message);
-    exit(1);
-}
-
 void init1()
 {
     Layout::init();

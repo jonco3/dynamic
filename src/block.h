@@ -1,11 +1,11 @@
 #ifndef __BLOCK_H__
 #define __BLOCK_H__
 
+#include "assert.h"
 #include "gcdefs.h"
 #include "instr.h"
 #include "token.h"
 
-#include <cassert>
 #include <vector>
 #include <ostream>
 
