@@ -180,6 +180,7 @@ struct Interpreter;
     _(DelAttr, -1)                                                           \
     _(GetMethod, 1)                                                          \
     _(CallMethod, -1)                                                        \
+    _(CallMethodWithFullArgs, -1)                                            \
     _(CreateEnv, -1)                                                         \
     _(SetEnv, -1)                                                            \
     _(InitStackLocals, -1)                                                   \
@@ -539,7 +540,7 @@ struct CallWithFullArgsInstr : public Instr
     }
 
     size_t slotCount() const {
-        return posCount + keywords->slotCount();;
+        return posCount + keywords->slotCount();
     }
 
     void print(ostream& s) const override;
