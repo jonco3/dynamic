@@ -735,14 +735,16 @@ struct ByteCompiler : public SyntaxVisitor
         }
 
         int argsPos = stackDepth;
-        for (const auto& i : s.positionalArgs)
-            compile(*i);
-        for (const auto& i : s.iterableArgs) {
-            compile(*i);
-            // This pushes a variable number of values onto the stack, so the
-            // stack depth is subseqently unknown.
-            emit<Instr_UnpackArgs>();
-            stackDepth = -1;
+        size_t unpackedCount = 0;
+        for (const auto& i : s.positionalArgs) {
+            compile(*i->arg);
+            if (i->isUnpacked) {
+                // This pushes a variable number of values onto the stack, so
+                // the stack depth is subseqently unknown.
+                emit<Instr_UnpackArgs>();
+                stackDepth = -1;
+                unpackedCount++;
+            }
         }
         for (const auto& i : s.keywordArgs)
             compile(*i->arg);
@@ -754,8 +756,7 @@ struct ByteCompiler : public SyntaxVisitor
 
         size_t posCount = s.positionalArgs.size();
         size_t keywordCount = s.keywordArgs.size();
-        size_t iterablesCount = s.iterableArgs.size();
-        if (keywordCount == 0 && iterablesCount == 0) {
+        if (keywordCount == 0 && unpackedCount == 0) {
             if (methodCall) {
                 emit<Instr_CallMethod>(posCount);
             } else {
@@ -775,7 +776,7 @@ struct ByteCompiler : public SyntaxVisitor
                     throw ParseError(info->keyword->token,
                                      "Repeated keyword arg");
             }
-            if (iterablesCount != 0)
+            if (unpackedCount != 0)
                 posCount = SIZE_MAX; // Unknown in this case.
             if (methodCall) {
                 emit<Instr_CallMethodWithFullArgs>(argsPos, posCount, keywords);

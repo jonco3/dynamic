@@ -133,7 +133,9 @@ def x(*a):
     return a
 
 assert x(*[1, 2, 3]) == (1, 2, 3)
+assert x(1, *(2, 3), 4) == (1, 2, 3, 4)
 
+# check stack is expanded correctly for unknown size arguments list
 x(*range(100))
 
 print('ok')

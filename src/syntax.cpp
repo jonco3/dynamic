@@ -29,6 +29,7 @@ struct SyntaxPrinter : public SyntaxVisitor
   private:
     ostream& os_;
 
+    void print(const ArgInfo& arg);
     void print(const KeywordArgInfo& syntax);
     void print(const InternedString& name);
     void printListCompTail(const Syntax& expr);
@@ -47,6 +48,13 @@ void SyntaxPrinter::print(const Syntax& syntax)
 void SyntaxPrinter::print(const InternedString& name)
 {
     os_ << &name;
+}
+
+void SyntaxPrinter::print(const ArgInfo& arg)
+{
+    if (arg.isUnpacked)
+        os_ << "*";
+    print(*arg.arg);
 }
 
 void SyntaxPrinter::print(const KeywordArgInfo& keywordArg)
@@ -229,7 +237,6 @@ void SyntaxPrinter::visit(const SyntaxCall& s)
     os_ << "(";
     bool first = true;
     first = printArgList(first, s.positionalArgs);
-    first = printArgList(first, s.iterableArgs, "*");
     first = printArgList(first, s.keywordArgs);
     if (s.mappingArg) {
         if (!first)

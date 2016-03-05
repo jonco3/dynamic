@@ -180,12 +180,11 @@ SyntaxParser::SyntaxParser()
     });
 
     addInfixHandler(Token_Bra, 200, [=] (ParserT& parser, Token token, unique_ptr<Syntax> l) {
-        vector<unique_ptr<Syntax>> positionalArgs;
+        vector<unique_ptr<ArgInfo>> positionalArgs;
         vector<unique_ptr<KeywordArgInfo>> keywordArgs;
-        vector<unique_ptr<Syntax>> iterableArgs;
         unique_ptr<Syntax> mappingArg;
         bool first = true;
-        bool hadIterable = false;
+        bool hadUnpacked = false;
         bool hadMapping = false;
         bool hadKeyword = false;
         while (!opt(Token_Ket)) {
@@ -193,50 +192,47 @@ SyntaxParser::SyntaxParser()
                 match(Token_Comma);
             first = false;
 
-            bool iterable = false;
+            bool unpacked = false;
             bool mapping = false;
             if (opt(Token_Times))
-                iterable = true;
+                unpacked = true;
             else if (opt(Token_Power))
                 mapping = true;
 
             unique_ptr<Syntax> arg(parseExpr());
 
             unique_ptr<SyntaxName> keyword;
-            if (!iterable && !mapping && arg->is<SyntaxName>() &&
+            if (!unpacked && !mapping && arg->is<SyntaxName>() &&
                 opt(Token_Assign))
             {
                 keyword = unique_ptr_as<SyntaxName>(arg);
                 arg = parseExpr();
             }
 
-            bool positional = !iterable && !mapping && !keyword;
-            if (iterable && hadMapping)
-                parseError(arg, "Iterable *arg after mapping **arg");
+            bool positional = !mapping && !keyword;
+            if (unpacked && hadMapping)
+                parseError(arg, "Unpacked iterable arg after mapping **arg");
             if (positional && hadKeyword)
                 parseError(arg, "Positional arg after keyword arg");
-            if (positional && hadIterable)
-                parseError(arg, "Positional arg after iterable *arg");
             if (mapping && hadMapping)
                 parseError(arg, "Multiple mapping **args");
-            hadIterable = hadIterable || iterable;
+            hadUnpacked = hadUnpacked || unpacked;
             hadMapping = hadMapping || mapping;
             hadKeyword = hadKeyword || keyword;
 
-            if (positional)
-                positionalArgs.emplace_back(move(arg));
-            else if (keyword)
+            if (positional) {
+                positionalArgs.emplace_back(
+                    make_unique<ArgInfo>(unpacked, move(arg)));
+            } else if (keyword) {
                 keywordArgs.emplace_back(
                     make_unique<KeywordArgInfo>(move(keyword), move(arg)));
-            else if (iterable)
-                iterableArgs.emplace_back(move(arg));
-            else
+            } else {
                 mappingArg = move(arg);
+            }
         }
         return make_unique<SyntaxCall>(token,
                                        move(l),
                                        move(positionalArgs),
-                                       move(iterableArgs),
                                        move(keywordArgs),
                                        move(mappingArg));
     });
