@@ -264,9 +264,7 @@ static bool compareElements(Value aArg, Value bArg)
     if (!a.maybeGetAttr(Names::compareMethod[CompareLT], compare))
         ThrowException<TypeError>("Object has no __lt__ method");
 
-    interp->pushStack(a);
-    interp->pushStack(b);
-    if (!interp->call(compare, 2, result))
+    if (!interp->call(compare, a, b, result))
         throw PythonException(result);
 
     return Value::IsTrue(result);
@@ -343,8 +341,7 @@ static bool generic_new(NativeArgs args,
     }
 
     Stack<Value> result;
-    interp->pushStack(arg);
-    if (!interp->call(IterableToList, 1, result)) {
+    if (!interp->call(IterableToList, Value(arg), result)) {
         resultOut = result;
         return false;
     }

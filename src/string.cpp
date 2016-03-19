@@ -35,8 +35,7 @@ static bool valueToString(Traced<Value> value, MutableTraced<Value> resultOut)
                                 resultOut);
     }
 
-    interp->pushStack(value);
-    if (!interp->call(strFunc, 1, resultOut))
+    if (!interp->call(strFunc, value, resultOut))
         return false;
 
     if (!resultOut.is<String>()) {

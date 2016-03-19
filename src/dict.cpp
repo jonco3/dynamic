@@ -199,8 +199,7 @@ size_t Dict::ValueHash::operator()(Value vArg) const
     if (!value.maybeGetAttr(Names::__hash__, hashFunc))
         ThrowException<TypeError>("Object has no __hash__ method");
 
-    interp->pushStack(value);
-    if (!interp->call(hashFunc, 1, result))
+    if (!interp->call(hashFunc, value, result))
         throw PythonException(result);
 
     if (result.isInt32())
@@ -219,9 +218,7 @@ bool Dict::ValuesEqual::operator()(Value a, Value b) const
     if (!a.maybeGetAttr(Names::__eq__, eqFunc))
         ThrowException<TypeError>("Object has no __eq__ method");
 
-    interp->pushStack(a);
-    interp->pushStack(b);
-    if (!interp->call(eqFunc, 2, result))
+    if (!interp->call(eqFunc, a, b, result))
         throw PythonException(result);
 
     Stack<Object*> obj(result.toObject());

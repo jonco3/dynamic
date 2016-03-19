@@ -552,17 +552,17 @@ void Interpreter::raiseNameError(Name ident)
     raise<NameError>(message);
 }
 
-bool Interpreter::call(Traced<Value> targetValue, NativeArgs args,
-                       MutableTraced<Value> resultOut)
+bool Interpreter::syncCall(Traced<Value> targetValue, NativeArgs args,
+                           MutableTraced<Value> resultOut)
 {
     unsigned argCount = args.size();
     for (unsigned i = 0; i < argCount; i++)
         pushStack(args[i]);
-    return call(targetValue, argCount, resultOut);
+    return syncCall(targetValue, argCount, resultOut);
 }
 
-bool Interpreter::call(Traced<Value> targetValue, unsigned argCount,
-                       MutableTraced<Value> resultOut)
+bool Interpreter::syncCall(Traced<Value> targetValue, unsigned argCount,
+                           MutableTraced<Value> resultOut)
 {
     // Synchronous call while we may already be in the interpreter.
     // Save the current instruction pointer and set it to null to so the
@@ -833,7 +833,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         if (target->maybeGetAttr(Names::__new__, func) && !func.isNone()) {
             insertStackEntries(argCount, Value(cls));
             TracedVector<Value> funcArgs(stackSlice(argCount + 1));
-            if (!call(func, funcArgs, resultOut)) {
+            if (!syncCall(func, funcArgs, resultOut)) {
                 return CallError;
             }
             if (resultOut.isInstanceOf(cls)) {
@@ -841,7 +841,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
                 if (target->maybeGetAttr(Names::__init__, initFunc)) {
                     Stack<Value> initResult;
                     funcArgs[0] = resultOut;
-                    if (!call(initFunc, funcArgs, initResult)) {
+                    if (!syncCall(initFunc, funcArgs, initResult)) {
                         resultOut = initResult;
                         return CallError;
                     }

@@ -754,7 +754,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
     {
         if (method.isCallable)
             pushStack(target);
-        return call(method.method, method.extraArgs(), resultOut);
+        return syncCall(method.method, method.extraArgs(), resultOut);
     }
 
     // Otherwise create a SequenceIterator wrapping the target iterable.
@@ -762,8 +762,7 @@ bool Interpreter::getIterator(MutableTraced<Value> resultOut)
     if (!getMethodAttr(target, Names::__getitem__, method))
         return Raise<TypeError>("Object not iterable", resultOut);
 
-    pushStack(target);
-    return call(SequenceIterator, 1, resultOut);
+    return call(SequenceIterator, target, resultOut);
 }
 
 void
@@ -784,7 +783,7 @@ Interpreter::executeDestructureGeneric(unsigned expected)
     for (size_t count = 0; count < expected; count++) {
         if (nextMethod.isCallable)
             pushStack(iterator);
-        if (!call(nextMethod.method, nextMethod.extraArgs(), result)) {
+        if (!syncCall(nextMethod.method, nextMethod.extraArgs(), result)) {
             if (result.is<StopIteration>())
                 return raise<ValueError>("too few values to unpack");
             return raiseException(result);
@@ -794,7 +793,7 @@ Interpreter::executeDestructureGeneric(unsigned expected)
 
     if (nextMethod.isCallable)
         pushStack(iterator);
-    if (call(nextMethod.method, nextMethod.extraArgs(), result))
+    if (syncCall(nextMethod.method, nextMethod.extraArgs(), result))
         return raise<ValueError>("too many values to unpack");
     if (!result.is<StopIteration>())
         return raiseException(result);
@@ -849,7 +848,7 @@ Interpreter::executeUnpackGeneric()
     for (;;) {
         if (nextMethod.isCallable)
             pushStack(iterator);
-        if (!call(nextMethod.method, nextMethod.extraArgs(), result)) {
+        if (!syncCall(nextMethod.method, nextMethod.extraArgs(), result)) {
             if (result.is<StopIteration>())
                 break;
             return raiseException(result);
@@ -908,8 +907,7 @@ Interpreter::executeInstr_IteratorNext(Traced<Instr*> instr)
     // The stack is already set up with next method and object instance on top
     Stack<Value> target(peekStack(1));
     Stack<Value> result;
-    pushStack(peekStack());
-    bool ok = call(target, 1, result);
+    bool ok = call(target, peekStack(), result);
     pushStack(result);
     bool finished = !ok && result.isObject() && result.is<StopIteration>();
     if (!finished && !ok)
@@ -928,9 +926,7 @@ bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
         return false;
 
     Stack<Value> result;
-    pushStack(left);
-    pushStack(right);
-    if (!call(method, 2, result)) {
+    if (!call(method, left, right, result)) {
         pushStack(result);
         raiseException();
         return true;
@@ -1134,7 +1130,7 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& method)
         pushStack(value);
     pushStack(update);
     Stack<Value> result;
-    bool ok = call(method.method, 1 + method.extraArgs(), result);
+    bool ok = syncCall(method.method, 1 + method.extraArgs(), result);
     pushStack(result);
     if (!ok)
         raiseException();

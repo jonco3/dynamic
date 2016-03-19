@@ -176,8 +176,44 @@ struct Interpreter : public Cell
     void raiseAttrError(Traced<Value> value, Name ident);
     void raiseNameError(Name ident);
 
-    bool call(Traced<Value> callable, unsigned posArgCount,
-              MutableTraced<Value> resultOut);
+    bool call(Traced<Value> callable, MutableTraced<Value> resultOut) {
+        return syncCall(callable, 0, resultOut);
+    }
+
+    template <typename S>
+    bool call(Traced<Value> callable,
+              S&& arg1,
+              MutableTraced<Value> resultOut)
+    {
+        Value value(arg1);
+        logStackPush(value); stack.push_back(value);
+        return syncCall(callable, 1, resultOut);
+    }
+
+    template <typename S1, typename S2>
+    bool call(Traced<Value> callable,
+              S1&& arg1, S2&& arg2,
+              MutableTraced<Value> resultOut)
+    {
+        Value values[2] = { Value(arg1), Value(arg2) };
+        logStackPush(&values[0], values + 2);
+        stack.push_back(values[0]);
+        stack.push_back(values[1]);
+        return syncCall(callable, 2, resultOut);
+    }
+
+    template <typename S1, typename S2, typename S3>
+    bool call(Traced<Value> callable,
+              S1&& arg1, S2&& arg2, S3&& arg3,
+              MutableTraced<Value> resultOut)
+    {
+        Value values[3] = { Value(arg1), Value(arg2), Value(arg3) };
+        logStackPush(&values[0], values + 3);
+        stack.push_back(values[0]);
+        stack.push_back(values[1]);
+        stack.push_back(values[2]);
+        return syncCall(callable, 3, resultOut);
+    }
 
     void startCall(Traced<Value> callable, unsigned posArgCount,
                    Traced<Layout*> keywordArgs = Layout::Empty,
@@ -289,8 +325,10 @@ struct Interpreter : public Cell
                             Traced<Layout*> keywordArgs,
                             unsigned argCount,
                             MutableTraced<Value> resultOut);
-    bool call(Traced<Value> callable, NativeArgs args,
-              MutableTraced<Value> resultOut);
+    bool syncCall(Traced<Value> callable, NativeArgs args,
+                  MutableTraced<Value> resultOut);
+    bool syncCall(Traced<Value> callable, unsigned posArgCount,
+                  MutableTraced<Value> resultOut);
     CallStatus setupCall(Traced<Value> target, unsigned argCount,
                          Traced<Layout*> keywordArgs, unsigned extraPopCount,
                          MutableTraced<Value> resultOut);

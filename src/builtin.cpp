@@ -246,7 +246,7 @@ static bool builtin_eval(NativeArgs args,
         return false;
 
     Stack<Value> function(resultOut);
-    if (!interp->call(function, 0, resultOut))
+    if (!interp->call(function, resultOut))
         return false;
 
     if (args.size() >= 2 && args[1].toObject() != None)
@@ -301,7 +301,7 @@ static bool builtin_exec(NativeArgs args,
         return false;
 
     Stack<Value> function(resultOut);
-    if (!interp->call(function, 0, resultOut))
+    if (!interp->call(function, resultOut))
         return false;
 
     if (args.size() >= 2 && args[1].toObject() != None)
