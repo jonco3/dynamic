@@ -502,17 +502,45 @@ unique_ptr<Syntax> SyntaxParser::parseAssignSource()
     return make_unique<SyntaxAssign>(token, move(target), move(expr));
 }
 
-unique_ptr<ImportInfo> SyntaxParser::parseModuleImport()
+Name SyntaxParser::parseModuleAs(Name moduleName)
 {
-    // todo: parse |(identifier ".")* identifier| here
-    Token t = match(Token_Identifier);
-    Name moduleName(internString(t.text));
     Name localName(moduleName);
     if (opt(Token_As)) {
-        t = match(Token_Identifier);
+        Token t = match(Token_Identifier);
         localName = internString(t.text);
     }
-    return make_unique<ImportInfo>(moduleName, localName);
+    return localName;
+}
+
+Name SyntaxParser::parseModuleName()
+{
+    Token t = match(Token_Identifier);
+    string str = t.text;
+    while (opt(Token_Period)) {
+        t = match(Token_Identifier);
+        str += "." + t.text;
+    }
+    return internString(str);
+}
+
+Name SyntaxParser::parseRelativeModuleName()
+{
+    string str = "";
+    while (opt(Token_Period))
+        str += ".";
+    Token t = match(Token_Identifier);
+    str += t.text;
+    while (opt(Token_Period)) {
+        t = match(Token_Identifier);
+        str += "." + t.text;
+    }
+    return internString(str);
+}
+
+unique_ptr<ImportInfo> SyntaxParser::parseModuleImport()
+{
+    Name moduleName(parseModuleName());
+    return make_unique<ImportInfo>(moduleName, parseModuleAs(moduleName));
 }
 
 unique_ptr<ImportInfo> SyntaxParser::parseIdImport()
@@ -574,12 +602,13 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         } while (opt(Token_Comma));
         return make_unique<SyntaxImport>(token, move(imports));
     } else if (opt(Token_From)) {
-        // todo: parse |"."* module | "."+| here
-        Token t = match(Token_Identifier);
-        Name moduleName(internString(t.text));
+        Name moduleName(parseRelativeModuleName());
         match(Token_Import);
         vector<unique_ptr<ImportInfo>> imports;
-        if (!opt(Token_Times)) {
+        if (opt(Token_Times)) {
+            if (moduleName->value()[0] == '.')
+                parseError(token, "Relative module name not allowed with *");
+        } else {
             bool brackets = opt(Token_Bra);
             do {
                 imports.emplace_back(parseIdImport());
