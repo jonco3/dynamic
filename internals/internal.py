@@ -103,29 +103,40 @@ def inUsingSubscript(container, object):
     except IndexError:
         return False
 
+def pathJoin(*path):
+    # todo: obvs needs os.path.join here
+    return '/'.join(path)
+
+def readModuleFile(name):
+    modpath = name.split(".")
+    for dirpath in sys.path:
+        try:
+            filename = pathJoin(dirpath, *modpath, "__init__.py")
+            f = open(filename)
+        except OSError:
+            try:
+                filename = pathJoin(dirpath, *modpath[:-1], modpath[-1] + ".py")
+                f = open(filename)
+            except OSError:
+                continue
+
+        source = f.read()
+        f.close()
+        return source, filename
+
+    return None, None
+
 def loadModule(name):
     if name in sys.modules:
         return sys.modules[name]
 
-    modpath = name.split(".")
-    for dirpath in sys.path:
-        filename = dirpath
-        # todo: obvs needs os.path.join here
-        for path in modpath:
-            filename += "/" + path
-        filename += ".py"
-        try:
-            f = open(filename)
-            source = f.read()
-            f.close()
-        except OSError:
-            continue
+    source, filename = readModuleFile(name)
+    if not source:
+        return None
 
-        module = execModule(source, filename)
-        sys.modules[name] = module
-        return module
-
-    return None
+    module = execModule(source, filename)
+    sys.modules[name] = module
+    return module
 
 def __import__(name, globals = None, locals = None, fromList = (), level = 0):
     if not isinstance(name, str):

@@ -79,9 +79,8 @@ static int runProgram(const char* filename, int arg_count, const char* args[])
 static int runModule(const char* name, int arg_count, const char* args[])
 {
     Stack<String*> nameStr(gc.create<String>(name));
-    interp->pushStack(Value(nameStr));
     Stack<Value> result;
-    bool ok = interp->call(LoadModule, 1, result);
+    bool ok = interp->call(LoadModule, nameStr, result);
     if (!ok) {
         printException(result);
         return EX_SOFTWARE;
