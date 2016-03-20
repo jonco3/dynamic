@@ -57,7 +57,10 @@ using namespace std;
     _(closed)                                                                 \
     _(softSpace)                                                              \
     _(path)                                                                   \
-    _(loadModule)
+    _(loadModule)                                                             \
+    _(__package__)                                                            \
+    _(__main__)                                                               \
+    _(builtins)
 
 struct InternedString;
 struct String;

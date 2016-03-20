@@ -15,8 +15,11 @@ GlobalRoot<Layout*> Package::InitialLayout;
 
 void Module::Init()
 {
-    ObjectClass.init(Class::createNative("module", New, 2));
-    InitialLayout.init(Object::InitialLayout->addName(Names::__name__));
+    ObjectClass.init(Class::createNative("module", New, 2, Env::ObjectClass));
+    InitialLayout.init(Object::InitialLayout->addName(Names::__name__)
+                                            ->addName(Names::__package__));
+    assert(InitialLayout->lookupName(Names::__name__) == NameSlot);
+    assert(InitialLayout->lookupName(Names::__package__) == PackageSlot);
 
     Stack<String*> name(Names::sys);
     Sys.init(gc.create<Module>(name));
@@ -48,23 +51,28 @@ void Module::Init()
 
     Stack<Class*> cls(args[0].as<Class>());
     Stack<String*> name(args[1].as<String>());
-    resultOut = gc.create<Module>(name, cls);
+    resultOut = gc.create<Module>(name, nullptr, cls);
     return true;
 }
 
-Module::Module(Traced<String*> name, Traced<Class*> cls, Traced<Layout*> layout)
-  : Object(cls, layout)
+Module::Module(Traced<String*> name,
+               Traced<String*> package,
+               Traced<Class*> cls,
+               Traced<Layout*> layout)
+  : Env(nullptr, layout, cls)
 {
     assert(cls->isDerivedFrom(ObjectClass));
     assert(layout->subsumes(InitialLayout));
-    //assert(layout->lookupName(Names::__name__) == NameSlot);
     setSlot(NameSlot, Value(name));
+    setSlot(PackageSlot, package ? Value(package) : Value(None));
 }
 
 void Package::Init()
 {
-    ObjectClass.init(Class::createNative("package", New, 3));
-    InitialLayout.init(Object::InitialLayout->addName(Names::__path__));
+    ObjectClass.init(Class::createNative("package", New, 3,
+                                         Module::ObjectClass));
+    InitialLayout.init(Module::InitialLayout->addName(Names::__path__));
+    assert(InitialLayout->lookupName(Names::__path__) == PathSlot);
 }
 
 /* static */ bool Package::New(NativeArgs args,
@@ -85,7 +93,7 @@ void Package::Init()
 
 Package::Package(Traced<String*> name, Traced<String*> path,
                  Traced<Class*> cls, Traced<Layout*> layout)
-  : Module(name, cls, layout)
+  : Module(name, name, cls, layout)
 {
     assert(cls->isDerivedFrom(ObjectClass));
     assert(layout->subsumes(InitialLayout));

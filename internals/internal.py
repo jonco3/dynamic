@@ -107,34 +107,38 @@ def pathJoin(*path):
     # todo: obvs needs os.path.join here
     return '/'.join(path)
 
-def readModuleFile(name):
-    modpath = name.split(".")
+def loadModuleFile(name):
+    modulePath = name.split(".")
     for dirpath in sys.path:
         try:
-            filename = pathJoin(dirpath, *modpath, "__init__.py")
+            packagePath = modulePath
+            filename = pathJoin(dirpath, *packagePath, "__init__.py")
             f = open(filename)
         except OSError:
             try:
-                filename = pathJoin(dirpath, *modpath[:-1], modpath[-1] + ".py")
+                packagePath = modulePath[:-1]
+                filename = pathJoin(dirpath, *packagePath,
+                                    modulePath[-1] + ".py")
                 f = open(filename)
             except OSError:
                 continue
 
         source = f.read()
         f.close()
-        return source, filename
+        package = ".".join(packagePath)
+        return package, source, filename
 
-    return None, None
+    return None, None, None
 
 def loadModule(name):
     if name in sys.modules:
         return sys.modules[name]
 
-    source, filename = readModuleFile(name)
+    package, source, filename = loadModuleFile(name)
     if not source:
         return None
 
-    module = execModule(source, filename)
+    module = execModule(name, package, source, filename)
     sys.modules[name] = module
     return module
 

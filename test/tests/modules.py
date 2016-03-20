@@ -1,9 +1,19 @@
 # output: ok
 
+assert __name__ == "__main__"
+assert __package__ == ""
+
+assert __builtins__.__name__ == "builtins"
+assert __builtins__.__package__ == ""
+
 import sys;
 assert isinstance(sys.argv, list)
+assert sys.__name__ == "sys"
+assert sys.__package__ == ""
 
 import bisect
+assert bisect.__name__ == "bisect"
+
 assert bisect.bisect_right([1, 1, 1, 1], 2) == 4
 
 import bisect as alias1, bisect as alias2

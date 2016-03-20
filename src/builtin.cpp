@@ -316,28 +316,37 @@ static bool builtin_exec(NativeArgs args,
 static bool internal_execModule(NativeArgs args,
                                 MutableTraced<Value> resultOut)
 {
-    // Like exec, but creates a global environment and returns it.
+    // Like exec, but creates a module object and returns it.
 
-    Stack<Value> source(args[0]);
-    Stack<Value> filename(args[1]);
-    if (!source.is<String>() || !filename.is<String>()) {
+    assert(args.size() == 4);
+    if (!args[0].is<String>() || !args[1].is<String>() ||
+        !args[2].is<String>() || !args[3].is<String>())
+    {
         return Raise<TypeError>("execModule() args must be strings", resultOut);
     }
+    Stack<String*> name(args[0].as<String>());
+    Stack<String*> package(args[1].as<String>());
+    Stack<String*> source(args[2].as<String>());
+    Stack<String*> filename(args[3].as<String>());
 
-    Stack<Env*> globals(createTopLevel());
-    if (!execModule(source.as<String>()->value(), filename.as<String>()->value(),
-                   globals, resultOut))
-    {
+    Stack<Module*> module(gc.create<Module>(name, package));
+
+    // todo: I've no idea if this is correct.
+    Stack<Object*> current(interp->getFrame()->block()->global());
+    Stack<Value> builtins(current->getAttr(Names::__builtins__));
+    module->setAttr(Names::__builtins__, builtins);
+
+    if (!execModule(source->value(), filename->value(), module, resultOut))
         return false;
-    }
 
-    resultOut = Value(globals);
+    resultOut = Value(module);
     return true;
 }
 
 void initBuiltins(const string& internalsPath)
 {
-    Builtin.init(gc.create<Env>());
+    Stack<String*> name(Names::builtins);
+    Builtin.init(gc.create<Module>(name));
     Stack<Value> value;
 
     // Functions
@@ -382,7 +391,7 @@ for_each_exception_class(set_exception_attr)
 
     Stack<Env*> internals(createTopLevel());
     internals->setAttr(Names::sys, Module::Sys);
-    initNativeMethod(internals, "execModule", internal_execModule, 2);
+    initNativeMethod(internals, "execModule", internal_execModule, 4);
 
     filename = internalsPath + "/internal.py";
     text = readFile(filename);

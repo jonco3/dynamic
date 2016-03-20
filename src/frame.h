@@ -15,8 +15,9 @@ struct Env : public Object
     static GlobalRoot<Layout*> InitialLayout;
     static void init();
 
-    Env(); // a global environment
-    Env(Traced<Env*> parent, Traced<Layout*> layout);
+    Env(Traced<Env*> parent = nullptr,
+        Traced<Layout*> layout = InitialLayout,
+        Traced<Class*> cls = ObjectClass);
 
     Env* parent() const { return parent_; }
 

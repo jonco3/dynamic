@@ -12,13 +12,12 @@ void Env::init()
     InitialLayout.init(Object::InitialLayout);
 }
 
-Env::Env()
-  : Object(ObjectClass, Layout::Empty), parent_(nullptr)
-{}
-
-Env::Env(Traced<Env*> parent, Traced<Layout*> layout)
-  : Object(ObjectClass, layout), parent_(parent)
-{}
+Env::Env(Traced<Env*> parent, Traced<Layout*> layout, Traced<Class*> cls)
+  : Object(cls, layout), parent_(parent)
+{
+    assert(cls->isDerivedFrom(ObjectClass));
+    assert(layout->subsumes(InitialLayout));
+}
 
 void Env::traceChildren(Tracer& t)
 {
