@@ -408,6 +408,28 @@ static bool generic_iter(NativeArgs args,
     return true;
 }
 
+template <class T>
+static bool generic_add(NativeArgs args, MutableTraced<Value> resultOut)
+{
+    if (!checkInstanceOf(args[0], T::ObjectClass, resultOut) ||
+        !checkInstanceOf(args[1], T::ObjectClass, resultOut))
+    {
+        return false;
+    }
+
+    Stack<T*> a(args[0].as<T>());
+    Stack<T*> b(args[1].as<T>());
+    size_t len = a->len() + b->len();
+    Stack<T*> result(T::getUninitialised(len));
+    for (size_t i = 0; i < a->len(); i++)
+        result->initElement(i, a->getitem(i));
+    for (size_t i = 0; i < b->len(); i++)
+        result->initElement(i + a->len(), b->getitem(i));
+
+    resultOut = Value(result);
+    return true;
+}
+
 static bool list_setitem(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
@@ -489,6 +511,7 @@ static void generic_initNatives(Traced<Class*> cls)
     initNativeMethod(cls, "__len__", generic_len<T>, 1);
     initNativeMethod(cls, "__getitem__", generic_getitem<T>, 2);
     initNativeMethod(cls, "__iter__", generic_iter<T>, 1);
+    initNativeMethod(cls, "__add__", generic_add<T>, 2);
     // __eq__ and __ne__ are supplied by internals/internal.py
 }
 

@@ -54,4 +54,13 @@ assert(a == [3, 1, 2])
 a.sort()
 assert(a == [1, 2, 3])
 
+assert [] + [] == []
+assert [1] + [] == [1]
+assert [] + [2] == [2]
+assert [1, 2] + [3, 4] == [1, 2, 3, 4]
+assert () + () == ()
+assert (1,) + () == (1,)
+assert () + (2,) == (2,)
+assert (1, 2) + (3, 4) == (1, 2, 3, 4)
+
 print('ok')
