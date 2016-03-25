@@ -1177,7 +1177,7 @@ struct ByteCompiler : public SyntaxVisitor
         }
         emit<Instr_List>(s.ids.size());
 
-        value = Value(0);
+        value = Value(int32_t(s.level));
         emit<Instr_Const>(value);
 
         emit<Instr_Call>(5);

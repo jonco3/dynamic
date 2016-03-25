@@ -765,10 +765,12 @@ struct SyntaxFrom : public Syntax
 {
     define_syntax_members(From, "from");
 
-  SyntaxFrom(const Token& token, Name module, vector<unique_ptr<ImportInfo>> ids)
-      : Syntax(token), module(module), ids(move(ids))
+    SyntaxFrom(const Token& token, unsigned level, Name module,
+               vector<unique_ptr<ImportInfo>> ids)
+      : Syntax(token), level(level), module(module), ids(move(ids))
     {}
 
+    const unsigned level;
     const Name module;
     const vector<unique_ptr<ImportInfo>> ids; // empty list => import *
 };

@@ -371,7 +371,7 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
                                       BinaryOp op);
 
     Name parseModuleName();
-    Name parseRelativeModuleName();
+    Name parseRelativeModuleName(unsigned& level);
     Name parseModuleAs(Name moduleName);
     unique_ptr<ImportInfo> parseModuleImport();
     unique_ptr<ImportInfo> parseRelativeModuleImport();

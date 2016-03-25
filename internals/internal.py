@@ -148,13 +148,23 @@ def __import__(name, globals = None, locals = None, fromList = (), level = 0):
 
     names = name.split(".")
 
-    if name not in sys.modules:
-        # Load ancestors up to requested module
-        path = []
-        for name in names:
-            path.append(name)
-            module = loadModule(".".join(path))
-            if not module:
-                raise ImportError("Module not found: " + ".".join(path))
-
+    if level == 0:
+        if name not in sys.modules:
+            # Load ancestors up to requested module
+            path = []
+            for name in names:
+                path.append(name)
+                module = loadModule(".".join(path))
+                if not module:
+                    raise ImportError("Module not found: " + ".".join(path))
+    else:
+        current = globals['__package__'].split(".")
+        if level > len(current):
+            raise ImportError("Relative import level out of range")
+        path = current[:-level] + names
+        name = ".".join(path)
+        module = loadModule(name)
+        if not module:
+            raise ImportError("Module not found: " + ".".join(path) + " from " +
+                              current + " level " + level)
     return sys.modules[name] if fromList else sys.modules[names[0]]

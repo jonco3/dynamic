@@ -523,13 +523,13 @@ Name SyntaxParser::parseModuleName()
     return internString(str);
 }
 
-Name SyntaxParser::parseRelativeModuleName()
+Name SyntaxParser::parseRelativeModuleName(unsigned& level)
 {
-    string str = "";
+    level = 0;
     while (opt(Token_Period))
-        str += ".";
+        level++;
     Token t = match(Token_Identifier);
-    str += t.text;
+    string str = t.text;
     while (opt(Token_Period)) {
         t = match(Token_Identifier);
         str += "." + t.text;
@@ -602,7 +602,8 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         } while (opt(Token_Comma));
         return make_unique<SyntaxImport>(token, move(imports));
     } else if (opt(Token_From)) {
-        Name moduleName(parseRelativeModuleName());
+        unsigned level;
+        Name moduleName(parseRelativeModuleName(level));
         match(Token_Import);
         vector<unique_ptr<ImportInfo>> imports;
         if (opt(Token_Times)) {
@@ -616,7 +617,7 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
             if (brackets)
                 match(Token_Ket);
         }
-        return make_unique<SyntaxFrom>(token, moduleName, move(imports));
+        return make_unique<SyntaxFrom>(token, level, moduleName, move(imports));
     }
 
     unique_ptr<Syntax> expr = parseExprOrExprList();

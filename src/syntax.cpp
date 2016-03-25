@@ -405,6 +405,8 @@ void SyntaxPrinter::visit(const SyntaxImport& s)
 void SyntaxPrinter::visit(const SyntaxFrom& s)
 {
     bool first = true;
+    for (unsigned i = 0; i < s.level; i++)
+        os_ << ".";
     os_ << s.name() << " " << s.module << " import ";
     for (const auto& i : s.ids) {
         if (!first)
