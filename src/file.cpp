@@ -5,6 +5,8 @@
 
 #include "value-inl.h"
 
+#include <unistd.h>
+
 GlobalRoot<Class*> File::ObjectClass;
 GlobalRoot<Layout*> File::InitialLayout;
 
