@@ -1,6 +1,8 @@
 #include "exception.h"
 
 #include "callable.h"
+#include "instr.h"
+#include "interp.h"
 #include "singletons.h"
 #include "string.h"
 #include "test.h"
@@ -93,11 +95,19 @@ string Exception::fullMessage() const
     string message = this->message();
     if (message != "")
         s << ": " << message;
-    if (pos_.file != "" || pos_.line != 0) {
-        s << " at";
-        if (pos_.file != "")
-            s << " " << pos_.file;
-        s << " line " << pos_.line;
+    return s.str();
+}
+
+string Exception::traceback() const
+{
+    ostringstream s;
+    s << "Traceback (most recent call last):" << endl;
+    for (size_t i = traceback_.size(); i != 0; i--) {
+        TokenPos pos = traceback_[i - 1];
+        if (pos.file != "" || pos.line != 0) {
+            s << "  File \"" << pos.file << "\", ";
+            s << "line " << pos.line << endl;
+        }
     }
     return s.str();
 }
@@ -107,8 +117,15 @@ void Exception::print(ostream& s) const
     s << fullMessage();
 }
 
-void Exception::setPos(const TokenPos& pos)
+void Exception::recordTraceback(const InstrThunk* instrp)
 {
-    assert(!hasPos());
-    pos_ = pos;
+    assert(traceback_.empty());
+    size_t count = interp->frameCount();
+    traceback_.reserve(count);
+    for (size_t i = 0; i < count; i++) {
+        Frame* frame = interp->getFrame(i);
+        if (instrp)
+            traceback_.push_back(frame->block()->getPos(instrp));
+        instrp = frame->returnPoint();
+    }
 }

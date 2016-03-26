@@ -221,6 +221,7 @@ struct Interpreter : public Cell
 
     void popFrame();
 
+    size_t frameCount() const { return frames.size(); }
     Frame* getFrame(unsigned reverseIndex = 0) {
         assert(reverseIndex < frames.size());
         return &frames[frameIndex() - reverseIndex];

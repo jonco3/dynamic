@@ -6,6 +6,8 @@
 #include "string.h"
 #include "token.h"
 
+struct InstrThunk;
+
 struct Exception : public Object
 {
     static void init();
@@ -14,19 +16,19 @@ struct Exception : public Object
     Exception(Traced<Class*> cls, const string& message);
     Exception(Traced<Class*> cls, Traced<String*> message);
 
-    bool hasPos() const { return pos_.line != 0; }
-    void setPos(const TokenPos& pos);
+    bool hasTraceback() const { return !traceback_.empty(); }
+    void recordTraceback(const InstrThunk *instrp);
 
-    const TokenPos& pos() const { return pos_; }
     string className() const;
     string message() const;
 
     string fullMessage() const;
+    string traceback() const;
 
     void print(ostream& s) const override;
 
   private:
-    TokenPos pos_;
+    vector<TokenPos> traceback_;
 
     void init(Traced<String*> message);
 };

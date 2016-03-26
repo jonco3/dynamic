@@ -11,8 +11,6 @@ testcase(exception)
     testEqual(exc->className(), "Exception");
     testEqual(exc->message(), "bar");
     testEqual(exc->fullMessage(), "Exception: bar");
-    exc->setPos(TokenPos("", 1, 0));
-    testEqual(exc->fullMessage(), "Exception: bar at line 1");
 
     exc = gc.create<Exception>(TypeError::ObjectClass, "baz");
     testEqual(exc->fullMessage(), "TypeError: baz");

@@ -53,7 +53,7 @@ struct Block : public Cell
         return instrs_.back();
     }
 
-    bool contains(InstrThunk* i) const {
+    bool contains(const InstrThunk* i) const {
         return i >= &instrs_.front() && i <= &instrs_.back();
     }
 
@@ -61,7 +61,7 @@ struct Block : public Cell
     void print(ostream& s) const override;
 
     void setNextPos(const TokenPos& pos);
-    TokenPos getPos(InstrThunk* instrp) const;
+    TokenPos getPos(const InstrThunk* instrp) const;
 
     // For unit tests
     InstrThunk* findInstr(unsigned code);

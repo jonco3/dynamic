@@ -73,7 +73,7 @@ void Block::traceChildren(Tracer& t)
         gc.trace(t, &i->data);
 }
 
-TokenPos Block::getPos(InstrThunk* instrp) const
+TokenPos Block::getPos(const InstrThunk* instrp) const
 {
     assert(contains(instrp));
 

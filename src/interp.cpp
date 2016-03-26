@@ -399,8 +399,8 @@ bool Interpreter::handleException()
 
     assert(value.isInstanceOf(Exception::ObjectClass));
     Stack<Exception*> exception(value.as<Exception>());
-    if (!exception->hasPos() && instrp)
-        exception->setPos(currentPos());
+    if (!exception->hasTraceback())
+        exception->recordTraceback(instrp ? instrp - 1 : nullptr);
     if (startExceptionHandler(exception))
         return true;
 

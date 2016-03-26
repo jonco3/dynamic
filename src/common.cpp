@@ -80,7 +80,7 @@ string readFile(string filename)
 void printException(Value value)
 {
     Exception* ex = value.asObject()->as<Exception>();
-    cerr << ex->fullMessage() << endl;
+    cerr << ex->traceback() << ex->fullMessage() << endl;
 }
 
 Env* createTopLevel()
