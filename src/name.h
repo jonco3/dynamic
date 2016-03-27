@@ -100,6 +100,7 @@ namespace Names
     extern Name listCompResult;
     extern Name evalFuncName;
     extern Name execFuncName;
+    extern Name emptyString;
 } /* namespace Names */
 
 extern Name internString(const string& str);

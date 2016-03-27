@@ -28,6 +28,7 @@ Name Names::compareMethodReflected[CountCompareOp];
 Name Names::listCompResult;
 Name Names::evalFuncName;
 Name Names::execFuncName;
+Name Names::emptyString;
 
 vector<Name> EmptyNameVector;
 
@@ -70,6 +71,7 @@ void initNames()
     Names::listCompResult = internString("%result");
     Names::evalFuncName = internString("<eval>");
     Names::execFuncName = internString("<exec>");
+    Names::emptyString = internString("");
 }
 
 void InternedStringMap::traceChildren(Tracer& t)
@@ -82,8 +84,6 @@ void InternedStringMap::traceChildren(Tracer& t)
 
 InternedString* InternedStringMap::get(const string& s)
 {
-    assert(s != "");
-
     auto i = strings_.find(s);
     if (i != strings_.end()) {
         assert(i->second->value() == s);
@@ -92,7 +92,7 @@ InternedString* InternedStringMap::get(const string& s)
     }
 
     Stack<InternedString*> interned;
-    interned = static_cast<InternedString*>(String::get(s));
+    interned = static_cast<InternedString*>(gc.create<String>(s));
     assert(interned->type());
     strings_[s] = interned;
     assert(strings_.find(s) != strings_.end());

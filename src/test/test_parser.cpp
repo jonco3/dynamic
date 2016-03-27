@@ -144,4 +144,5 @@ testcase(parser)
     testParseModule("from foo import (bar, baz)", "from foo import bar, baz");
     testParseException("from .foo import");
     testParseModule("from .foo import *");
+    testParseModule("from . import foo");
 }

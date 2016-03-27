@@ -214,7 +214,7 @@ void String::init()
     initNativeMethod(ObjectClass, "_print", str_print, 1);
     initNativeMethod(ObjectClass, "split", str_split, 1, 2);
 
-    EmptyString.init(gc.create<String>(""));
+    EmptyString.init(Names::emptyString);
 }
 
 String::String(const string& v)
