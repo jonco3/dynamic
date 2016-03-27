@@ -19,6 +19,11 @@ static void testParseModule(const string& input, const string& expected)
     testEqual(repr(*expr.get()), expected);
 }
 
+static void testParseModule(const string& input)
+{
+    testParseModule(input, input);
+}
+
 static void testParseException(const char* input)
 {
     SyntaxParser sp;
@@ -120,7 +125,23 @@ testcase(parser)
     testParseModule("(1, .3 + 1)", "(1, 0.3 + 1)");
 
     testParseModule("[x+1 for x in a]", "[ x + 1 for x in a ]");
-    testParseModule("[x+y for x in a for y in b]", "[ x + y for x in a for y in b ]");
-    testParseModule("[x+1 for x in a if x < 4]", "[ x + 1 for x in a if x < 4 ]");
-    testParseModule("[x**2 for x in range(10)]", "[ x ** 2 for x in range(10) ]");
+    testParseModule("[x+y for x in a for y in b]",
+                    "[ x + y for x in a for y in b ]");
+    testParseModule("[x+1 for x in a if x < 4]",
+                    "[ x + 1 for x in a if x < 4 ]");
+    testParseModule("[x**2 for x in range(10)]",
+                    "[ x ** 2 for x in range(10) ]");
+
+    testParseModule("import foo");
+    testParseModule("import foo.bar.baz");
+    testParseException("import .foo");
+    testParseModule("import foo as bar");
+    testParseModule("import foo, bar");
+    testParseModule("from foo import bar");
+    testParseModule("from .foo.bar import baz");
+    testParseModule("from ...foo import bar");
+    testParseModule("from foo import bar, baz");
+    testParseModule("from foo import (bar, baz)", "from foo import bar, baz");
+    testParseException("from .foo import");
+    testParseModule("from .foo import *");
 }

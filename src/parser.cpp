@@ -528,13 +528,19 @@ Name SyntaxParser::parseRelativeModuleName(unsigned& level)
     level = 0;
     while (opt(Token_Period))
         level++;
-    Token t = match(Token_Identifier);
-    string str = t.text;
+    Token t;
+    string name = "";
+    if (level == 0) {
+        t = match(Token_Identifier);
+        name = t.text;
+    } else if (opt(Token_Identifier, t)) {
+        name = t.text;
+    }
     while (opt(Token_Period)) {
         t = match(Token_Identifier);
-        str += "." + t.text;
+        name += "." + t.text;
     }
-    return internString(str);
+    return internString(name);
 }
 
 unique_ptr<ImportInfo> SyntaxParser::parseModuleImport()

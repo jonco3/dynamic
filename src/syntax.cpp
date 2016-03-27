@@ -399,24 +399,27 @@ void SyntaxPrinter::visit(const SyntaxImport& s)
             os_ << " as " << i->localName;
         first = false;
     }
-    os_ << endl;
 }
 
 void SyntaxPrinter::visit(const SyntaxFrom& s)
 {
     bool first = true;
+    os_ << s.name() << " ";
     for (unsigned i = 0; i < s.level; i++)
         os_ << ".";
-    os_ << s.name() << " " << s.module << " import ";
-    for (const auto& i : s.ids) {
-        if (!first)
-            os_ << ", ";
-        os_ << i->name;
-        if (i->name != i->localName)
-            os_ << " as " << i->localName;
-        first = false;
+    os_ << s.module << " import ";
+    if (s.ids.empty()) {
+        os_ << "*";
+    } else {
+        for (const auto& i : s.ids) {
+            if (!first)
+                os_ << ", ";
+            os_ << i->name;
+            if (i->name != i->localName)
+                os_ << " as " << i->localName;
+            first = false;
+        }
     }
-    os_ << endl;
 }
 
 static const SyntaxCompIterand& GetListCompIterand(const Syntax& expr)
