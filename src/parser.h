@@ -370,6 +370,11 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
     unique_ptr<Syntax> parseAugAssign(Token token, unique_ptr<Syntax> target,
                                       BinaryOp op);
 
+    unique_ptr<Syntax> parseDef(Token token,
+                                vector<unique_ptr<SyntaxDecorator>> decorators = {});
+    unique_ptr<Syntax> parseClass(Token token,
+                                  vector<unique_ptr<SyntaxDecorator>> decorators = {});
+
     Name parseModuleName();
     Name parseRelativeModuleName(unsigned& level);
     Name parseModuleAs(Name moduleName);

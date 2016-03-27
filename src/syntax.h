@@ -59,7 +59,8 @@ using namespace std;
     syntax(Import)                                                            \
     syntax(From)                                                              \
     syntax(ListComp)                                                          \
-    syntax(CompIterand)
+    syntax(CompIterand)                                                       \
+    syntax(Decorator)
 
 enum class SyntaxType
 {
@@ -530,17 +531,20 @@ struct SyntaxDef : public Syntax
     define_syntax_members(Def, "def");
 
     SyntaxDef(const Token& token,
+              vector<unique_ptr<SyntaxDecorator>> decorators,
               Name id,
               vector<Parameter> params,
               unique_ptr<SyntaxBlock> suite,
               bool isGenerator)
       : Syntax(token),
+        decorators(move(decorators)),
         id(id),
         params(move(params)),
         suite(move(suite)),
         isGenerator(isGenerator)
     {}
 
+    const vector<unique_ptr<SyntaxDecorator>> decorators;
     const Name id;
     const vector<Parameter> params;
     const unique_ptr<SyntaxBlock> suite;
@@ -609,12 +613,18 @@ struct SyntaxClass : public Syntax
     define_syntax_members(Class, "class");
 
     SyntaxClass(const Token& token,
+                vector<unique_ptr<SyntaxDecorator>> decorators,
                 Name id,
                 unique_ptr<SyntaxExprList> bases,
                 unique_ptr<SyntaxBlock> suite)
-      : Syntax(token), id(id), bases(move(bases)), suite(move(suite))
+      : Syntax(token),
+        decorators(move(decorators)),
+        id(id),
+        bases(move(bases)),
+        suite(move(suite))
     {}
 
+    const vector<unique_ptr<SyntaxDecorator>> decorators;
     const Name id;
     const unique_ptr<SyntaxExprList> bases;
     const unique_ptr<SyntaxBlock> suite;
@@ -796,6 +806,21 @@ struct SyntaxCompIterand : public Syntax
     {}
 
     unique_ptr<Syntax> expr;
+};
+
+struct SyntaxDecorator : public Syntax
+{
+    define_syntax_members(ListComp, "decorator");
+
+    SyntaxDecorator(const Token& token, unique_ptr<Syntax> expr)
+      : Syntax(token), expr(move(expr))
+    {
+        assert(this->expr->is<SyntaxName>() ||
+               this->expr->is<SyntaxAttrRef>() ||
+               this->expr->is<SyntaxCall>());
+    }
+
+    const unique_ptr<Syntax> expr;
 };
 
 #undef define_syntax_type

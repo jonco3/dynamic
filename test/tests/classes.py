@@ -167,4 +167,19 @@ except OSError:
   threw = True
 assert threw
 
+# decorators
+def d1(x):
+    return 1
+@d1
+class H:
+    pass
+assert H == 1
+
+def d2(y):
+    return lambda x: y
+@d2(2)
+def I():
+    pass
+assert I == 2
+
 print("ok")

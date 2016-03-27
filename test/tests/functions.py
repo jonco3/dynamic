@@ -138,4 +138,21 @@ assert x(1, *(2, 3), 4) == (1, 2, 3, 4)
 # check stack is expanded correctly for unknown size arguments list
 x(*range(100))
 
+# decorators
+def d1(x):
+    return 1
+@d1
+def y():
+    pass
+assert y == 1
+
+def d2(y):
+    return lambda x: y
+assert d2(0)(1) == 0
+
+@d2(2)
+def z():
+    pass
+assert z == 2
+
 print('ok')

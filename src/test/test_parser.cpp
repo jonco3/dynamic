@@ -145,4 +145,10 @@ testcase(parser)
     testParseException("from .foo import");
     testParseModule("from .foo import *");
     testParseModule("from . import foo");
+
+    testParseException("@1\ndef f():\n  pass");
+    testParseModule("@foo\ndef f():\n  pass", "@foo\ndef f():\npass");
+    testParseModule("@bar(1)\ndef f():\n  pass", "@bar(1)\ndef f():\npass");
+    testParseModule("@foo\n@bar\ndef f():\n  pass",
+                    "@foo\n@bar\ndef f():\npass");
 }

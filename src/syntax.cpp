@@ -273,6 +273,10 @@ void SyntaxPrinter::visit(const SyntaxLambda& s)
 
 void SyntaxPrinter::visit(const SyntaxDef& s)
 {
+    if (!s.decorators.empty()) {
+        printList(s.decorators, "\n");
+        os_ << endl;
+    }
     os_ << "def " << s.id << "(";
     bool first = true;
     for (const auto& i : s.params) {
@@ -335,6 +339,10 @@ void SyntaxPrinter::visit(const SyntaxAssert& s)
 void SyntaxPrinter::visit(const SyntaxClass& s)
 {
     // todo: indentation
+    if (!s.decorators.empty()) {
+        printList(s.decorators, "\n");
+        os_ << endl;
+    }
     os_ << "class " << s.id;
     if (!s.bases->elements.empty()) {
         print(*s.bases);
@@ -467,5 +475,11 @@ void SyntaxPrinter::visit(const SyntaxListComp& s)
 
 void SyntaxPrinter::visit(const SyntaxCompIterand& s)
 {
+    print(*s.expr);
+}
+
+void SyntaxPrinter::visit(const SyntaxDecorator& s)
+{
+    os_ << "@";
     print(*s.expr);
 }

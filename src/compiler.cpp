@@ -946,6 +946,8 @@ struct ByteCompiler : public SyntaxVisitor
     }
 
     virtual void visit(const SyntaxDef& s) {
+        for (const auto& d : s.decorators)
+            compile(*d);
         Stack<Block*> exprBlock;
         ByteCompiler compiler;
         if (s.isGenerator)
@@ -953,15 +955,21 @@ struct ByteCompiler : public SyntaxVisitor
         else
             exprBlock = compiler.buildFunctionBody(this, s.params, *s.suite);
         emitLambda(s.id, s.params, exprBlock, s.isGenerator);
+        for (size_t i = 0; i < s.decorators.size(); i++)
+            emit<Instr_Call>(1);
         compileAssign(s.id);
     }
 
     virtual void visit(const SyntaxClass& s) {
+        for (const auto& d : s.decorators)
+            compile(*d);
         Stack<Block*> suite(ByteCompiler().buildClass(this, s.id, *s.suite));
         vector<Name> params = { Names::__bases__ };
         emit<Instr_Lambda>(s.id, params, suite);
         compile(s.bases);
         emit<Instr_Call>(1);
+        for (size_t i = 0; i < s.decorators.size(); i++)
+            emit<Instr_Call>(1);
         if (parent) {
             int slot;
             alwaysTrue(lookupLocal(s.id, slot));
@@ -969,6 +977,10 @@ struct ByteCompiler : public SyntaxVisitor
         } else {
             emit<Instr_SetGlobal>(topLevel, s.id);
         }
+    }
+
+    virtual void visit(const SyntaxDecorator& s) {
+        compile(s.expr);
     }
 
     virtual void visit(const SyntaxAssert& s) {

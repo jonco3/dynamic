@@ -703,6 +703,44 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
     return params;
 }
 
+unique_ptr<Syntax>
+SyntaxParser::parseDef(Token token,
+                       vector<unique_ptr<SyntaxDecorator>> decorators)
+{
+    Token id = match(Token_Identifier);
+    match(Token_Bra);
+    vector<Parameter> params = parseParameterList(Token_Ket);
+    AutoSetAndRestore asar1(inFunction, true);
+    AutoSetAndRestore asar2(isGenerator, false);
+    unique_ptr<SyntaxBlock> suite(parseSuite());
+    Name name(internString(id.text));
+    return make_unique<SyntaxDef>(token,
+                                  move(decorators),
+                                  name,
+                                  move(params),
+                                  move(suite),
+                                  move(isGenerator));
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseClass(Token token,
+                       vector<unique_ptr<SyntaxDecorator>> decorators)
+{
+    Token id = match(Token_Identifier);
+    vector<unique_ptr<Syntax>> bases;
+    if (opt(Token_Bra))
+        bases = exprListTrailing(Token_Comma, Token_Ket);
+    unique_ptr<SyntaxExprList> baseList(
+        make_unique<SyntaxExprList>(token, move(bases)));
+    unique_ptr<SyntaxBlock> suite(parseSuite());
+    Name name(internString(id.text));
+    return make_unique<SyntaxClass>(token,
+                                    move(decorators),
+                                    name,
+                                    move(baseList),
+                                    move(suite));
+}
+
 unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
 {
     Token token = currentToken();
@@ -768,26 +806,29 @@ unique_ptr<Syntax> SyntaxParser::parseCompoundStatement()
                                       move(elseSuite), move(finallySuite));
     //} else if (opt(Token_With)) {
     } else if (opt(Token_Def)) {
-        Token id = match(Token_Identifier);
-        match(Token_Bra);
-        vector<Parameter> params = parseParameterList(Token_Ket);
-        AutoSetAndRestore asar1(inFunction, true);
-        AutoSetAndRestore asar2(isGenerator, false);
-        unique_ptr<SyntaxBlock> suite(parseSuite());
-        Name name(internString(id.text));
-        return make_unique<SyntaxDef>(token, name, move(params), move(suite),
-                                      move(isGenerator));
+        return parseDef(token);
     } else if (opt(Token_Class)) {
-        Token id = match(Token_Identifier);
-        vector<unique_ptr<Syntax>> bases;
-        if (opt(Token_Bra))
-            bases = exprListTrailing(Token_Comma, Token_Ket);
-        unique_ptr<SyntaxExprList> baseList(
-            make_unique<SyntaxExprList>(token, move(bases)));
-        unique_ptr<SyntaxBlock> suite(parseSuite());
-        Name name(internString(id.text));
-        return make_unique<SyntaxClass>(token, name, move(baseList),
-                                        move(suite));
+        return parseClass(token);
+    } else if (opt(Token_At)) {
+        vector<unique_ptr<SyntaxDecorator>> decorators;
+        do {
+            Token t = currentToken();
+            unique_ptr<Syntax> expr = expression();
+            if (!expr->is<SyntaxName>() && !expr->is<SyntaxCall>()) {
+                parseError(token,
+                           "Bad decorator: expected name or call but got: " +
+                           expr->name());
+            }
+            match(Token_Newline);
+            decorators.emplace_back(make_unique<SyntaxDecorator>(t, move(expr)));
+        } while (opt(Token_At));
+        if (opt(Token_Def))
+            return parseDef(token, move(decorators));
+        else if (opt(Token_Class))
+            return parseClass(token, move(decorators));
+        else
+            parseError(token, "Expected def or class after decorator");
+        return nullptr;
     } else {
         unique_ptr<Syntax> stmt = parseSimpleStatement();
         if (opt(Token_Semicolon)) {

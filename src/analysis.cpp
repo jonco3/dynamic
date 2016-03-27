@@ -226,6 +226,11 @@ struct DefinitionFinder : public DefaultSyntaxVisitor
         s.expr->accept(*this);
     }
 
+    virtual void visit(const SyntaxReturn& s) {
+        if (s.right)
+            s.right->accept(*this);
+    }
+
   private:
     bool inAssignTarget_;
     Root<Object*> defs_;
