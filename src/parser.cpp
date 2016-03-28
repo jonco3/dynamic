@@ -664,13 +664,16 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
     vector<Parameter> params;
     bool hadDefault = false;
     bool hadRest = false;
+    bool hadKeywords = false;
     while (!opt(endToken)) {
-        // todo: kwargs
         bool isRest = false;
+        bool isKeywords = false;
         bool isDefault = false;
 
         if (opt(Token_Times))
             isRest = true;
+        else if (opt(Token_Power))
+            isKeywords = true;
         Token t = match(Token_Identifier);
         Name name(internString(t.text));
         unique_ptr<Syntax> defaultExpr;
@@ -685,17 +688,22 @@ vector<Parameter> SyntaxParser::parseParameterList(TokenType endToken)
         }
         if (isRest && hadRest)
             parseError(t, "Multiple rest parameters");
-        if (isRest && isDefault)
-            parseError(t, "Rest parameter can't take default");
-        if (hadRest && !isDefault)
+        if (isKeywords && hadKeywords)
+            parseError(t, "Multiple keyword args parameters");
+        if ((isRest || isKeywords) && isDefault)
+            parseError(t, "Parameter can't take default");
+        if (hadRest && !isDefault && !isKeywords)
             parseError(t, "Non-default parameter following rest parameter");
-        if (hadDefault && !isDefault && !isRest)
+        if (hadDefault && !isDefault && !isRest && !isKeywords)
             parseError(t, "Non-default parameter following default parameter");
+        if (hadKeywords)
+            parseError(t, "Parameter following keyword args parameter");
 
         hadRest = hadRest || isRest;
+        hadKeywords = hadKeywords || isKeywords;
         hadDefault = hadDefault || isDefault;
 
-        params.push_back({name, move(defaultExpr), isRest});
+        params.push_back({name, move(defaultExpr), isRest, isKeywords});
         if (opt(endToken))
             break;
         match(Token_Comma);

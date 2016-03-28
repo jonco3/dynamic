@@ -917,6 +917,8 @@ struct ByteCompiler : public SyntaxVisitor
         unsigned defaultCount = 0;
         for (auto i = params.begin(); i != params.end(); i++) {
             names.push_back(i->name);
+            if (i->takesKeywords)
+                break;
             if (defaultCount || i->maybeDefault) {
                 assert(i->maybeDefault || i->takesRest);
                 defaultCount++;
@@ -927,14 +929,15 @@ struct ByteCompiler : public SyntaxVisitor
             }
         }
         int restParam = -1;
+        int keywordsParam = -1;
         for (size_t i = 0; i < params.size(); i++) {
-            if (params[i].takesRest) {
+            if (params[i].takesRest)
                 restParam = i;
-                break;
-            }
+            if (params[i].takesKeywords)
+                keywordsParam = i;
         }
         emit<Instr_Lambda>(defName, names, exprBlock, defaultCount, restParam,
-                          isGenerator);
+                           keywordsParam, isGenerator);
     }
 
     virtual void visit(const SyntaxLambda& s) {

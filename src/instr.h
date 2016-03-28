@@ -622,13 +622,14 @@ struct LambdaInstr : public Instr
                 Traced<Block*> block,
                 unsigned defaultCount = 0,
                 int restParam = -1,
+                int keywordsParam = -1,
                 bool isGenerator = false)
       : Instr(Instr_Lambda),
         funcName_(name),
         info_(nullptr)
     {
         info_ = gc.create<FunctionInfo>(paramNames, block, defaultCount,
-                                        restParam, isGenerator);
+                                        restParam, keywordsParam, isGenerator);
         assert(instrType(code) == Type);
     }
 
@@ -638,9 +639,14 @@ struct LambdaInstr : public Instr
     Block* block() const { return info_->block_; }
     unsigned defaultCount() const { return info_->defaultCount_; }
     bool takesRest() const { return info_->takesRest(); }
+    bool takesKeywords() const { return info_->takesKeywords(); }
     unsigned restParam() const {
         assert(takesRest());
         return info_->restParam_;
+    }
+    unsigned keywordsParam() const {
+        assert(takesKeywords());
+        return info_->keywordsParam_;
     }
     bool isGenerator() const { return info_->isGenerator_; }
 

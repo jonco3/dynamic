@@ -49,15 +49,18 @@ Native::Native(Name name, NativeFunc func, unsigned minArgs, unsigned maxArgs)
 
 FunctionInfo::FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
                            unsigned defaultCount, int restParam,
-                           bool isGenerator)
+                           int keywordsParam, bool isGenerator)
   : params_(paramNames),
     block_(block),
     defaultCount_(defaultCount),
     restParam_(restParam),
+    keywordsParam_(keywordsParam),
     isGenerator_(isGenerator)
 {
-    assert(restParam_ == -1 || argCount() > 0);
-    assert(restParam_ == -1 || restParam_ < argCount());
+    assert(restParam_ == -1 ||
+           (argCount() > 0 && restParam_ < argCount()));
+    assert(keywordsParam_ == -1 ||
+           (argCount() > 0 && keywordsParam_ < argCount()));
     assert(argCount() == block->argCount());
 }
 
@@ -69,6 +72,8 @@ void FunctionInfo::traceChildren(Tracer& t)
 unsigned FunctionInfo::minArgs() const
 {
     unsigned minArgs = argCount() - defaultCount_;
+    if (takesKeywords())
+        minArgs--;
     if (takesRest())
         minArgs = min(minArgs, unsigned(restParam_));
     return minArgs;

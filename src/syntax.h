@@ -511,6 +511,7 @@ struct Parameter
     Name name;
     unique_ptr<Syntax> maybeDefault;
     bool takesRest;
+    bool takesKeywords;
 };
 
 struct SyntaxLambda : public Syntax

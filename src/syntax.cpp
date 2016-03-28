@@ -29,9 +29,12 @@ struct SyntaxPrinter : public SyntaxVisitor
   private:
     ostream& os_;
 
+    template <typename T>
+    void print(const unique_ptr<T>& s);
     void print(const ArgInfo& arg);
     void print(const KeywordArgInfo& syntax);
-    void print(const InternedString& name);
+    void print(const InternedString* name);
+    void print(const Parameter& param);
     void printListCompTail(const Syntax& expr);
 };
 
@@ -45,9 +48,15 @@ void SyntaxPrinter::print(const Syntax& syntax)
     syntax.accept(*this);
 }
 
-void SyntaxPrinter::print(const InternedString& name)
+template <typename T>
+void SyntaxPrinter::print(const unique_ptr<T>& s)
 {
-    os_ << &name;
+    print(*s);
+}
+
+void SyntaxPrinter::print(const InternedString* name)
+{
+    os_ << name;
 }
 
 void SyntaxPrinter::print(const ArgInfo& arg)
@@ -71,7 +80,7 @@ void SyntaxPrinter::printList(const vector<T>& elems, string seperator)
     for (const auto& i : elems) {
         if (!first)
             os_ << seperator;
-        print(*i);
+        print(i);
         first = false;
     }
 }
@@ -255,18 +264,23 @@ void SyntaxPrinter::visit(const SyntaxCond& s)
     print(*s.alt);
 }
 
+void SyntaxPrinter::print(const Parameter& p)
+{
+    if (p.takesRest)
+        os_ << "*";
+    if (p.takesKeywords)
+        os_ << "**";
+    os_ << p.name;
+    if (p.maybeDefault) {
+        os_ << " = ";
+        print(*p.maybeDefault);
+    }
+}
+
 void SyntaxPrinter::visit(const SyntaxLambda& s)
 {
-    os_ << "lambda";
-    for (const auto& i : s.params) {
-        if (i.takesRest)
-            os_ << "*";
-        os_ << " " << i.name;
-        if (i.maybeDefault) {
-            os_ << " = ";
-            print(*i.maybeDefault);
-        }
-    }
+    os_ << "lambda ";
+    printList(s.params);
     os_ << ": ";
     print(*s.expr);
 }
@@ -278,19 +292,7 @@ void SyntaxPrinter::visit(const SyntaxDef& s)
         os_ << endl;
     }
     os_ << "def " << s.id << "(";
-    bool first = true;
-    for (const auto& i : s.params) {
-        if (!first)
-            os_ << ", ";
-        if (i.takesRest)
-            os_ << "*";
-        os_ << i.name;
-        if (i.maybeDefault) {
-            os_ << " = ";
-            print(*i.maybeDefault);
-        }
-        first = false;
-    }
+    printList(s.params);
     os_ << "):" << endl;
     print(*s.suite);
 }

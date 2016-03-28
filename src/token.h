@@ -133,6 +133,7 @@ struct Token
 
 struct TokenError : public runtime_error
 {
+    // todo: merge with ParseError
     TokenError(string message, const TokenPos& pos);
 };
 

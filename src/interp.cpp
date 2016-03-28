@@ -1,5 +1,6 @@
 #include "block.h"
 #include "callable.h"
+#include "dict.h"
 #include "exception.h"
 #include "frame.h"
 #include "generator.h"
@@ -675,13 +676,20 @@ void Interpreter::mungeSimpleArguments(Traced<Function*> function,
     if (function->takesRest())
         args[function->restParam()] = restArg;
 
+    // Fill in the keywords argument if taken.
+    if (function->takesKeywords())
+        args[function->keywordsParam()] = gc.create<Dict>();
+
     // Fill unfilled slots from default args.
     // todo: could store rest param like this to start with
-    size_t restParamOrSize = function->takesRest() ? function->restParam()
-                                                   : function->argCount();
-    for (size_t i = argCount; i < restParamOrSize; i++)
+    size_t defaultEnd = function->argCount();
+    if (function->takesKeywords())
+        defaultEnd--;
+    size_t restParamOrEnd =
+        function->takesRest() ? function->restParam() : defaultEnd;
+    for (size_t i = argCount; i < restParamOrEnd; i++)
         args[i] = function->paramDefault(i);
-    for (size_t i = restParamOrSize + 1; i < function->argCount(); i++)
+    for (size_t i = restParamOrEnd + 1; i < defaultEnd; i++)
         args[i] = function->paramDefault(i);
 }
 
@@ -747,26 +755,45 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
     //
     // todo: add to mapping dictionary for unknown keyword args if the function
     // can receive that
+    Dict* keywordDict = nullptr;
+    if (function->takesKeywords())
+        keywordDict = gc.create<Dict>();
     if (keywordCount) {
         TracedVector<Value> keywords(stackSlice(keywordCount));
         Layout* l = keywordArgs;
         for (size_t i = 0; i < keywordCount; i++)
         {
             int argPos = function->findArg(l->name());
-            if (argPos == -1)
-                return Raise<TypeError>("Keyword arg not found", resultOut);
-            // todo: lookup might be easier if formal arg list was a layout
-            assert(argPos < function->maxNormalArgs());
-            if (args[argPos] != UninitializedSlot.get()) {
-                return Raise<TypeError>(
-                    "Multiple values for argument: " + l->name()->value(),
-                    resultOut);
+            if (argPos == -1 ||
+                (function->takesRest() &&
+                 argPos == function->restParam()) ||
+                (function->takesKeywords() &&
+                 argPos == function->keywordsParam()))
+            {
+                if (keywordDict) {
+                    Stack<Value> key(l->name());
+                    Stack<Value> value(keywords[i]);
+                    keywordDict->setitem(key, value);
+                } else {
+                    return Raise<TypeError>("Unexpected keyword arg: " +
+                                            l->name()->value(),
+                                            resultOut);
+                }
+            } else {
+                // todo: lookup might be easier if formal arg list was a layout
+                if (args[argPos] != UninitializedSlot.get()) {
+                    return Raise<TypeError>(
+                        "Multiple values for argument: " + l->name()->value(),
+                        resultOut);
+                }
+                args[argPos] = keywords[i];
             }
-            args[argPos] = keywords[i];
             l = l->parent();
         }
     }
     popStack(keywordCount);
+    if (function->takesKeywords())
+        args[function->keywordsParam()] = keywordDict;
 
     // Fill unfilled slots from default args.  If there are unfilled slots
     // remaining, raise TypeError.

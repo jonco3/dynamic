@@ -121,6 +121,8 @@ assert u() == ((), 2, 3)
 assert u(0, 1) == ((0, 1), 2, 3)
 assert v() == ((), 2, 3)
 assert v(0, 1) == ((), 0, 1)
+assert raisesException(lambda: u(a = 1), TypeError)
+assert raisesException(lambda: v(a = 1), TypeError)
 
 # argument list unpacking, or the splat operator
 
@@ -154,5 +156,23 @@ assert d2(0)(1) == 0
 def z():
     pass
 assert z == 2
+
+# keyword args
+def aa(**kw):
+    return kw
+
+assert aa() == {}
+assert aa(foo = 1) == {'foo': 1}
+assert aa(foo = 1, bar = 2) == {'foo': 1, 'bar': 2}
+assert aa(kw = 1) == {'kw': 1}
+
+def bb(a, *b, c = 2, **kw):
+    return a, b, c, kw
+assert bb(0) == (0, (), 2, {})
+assert bb(0, 1) == (0, (1,), 2, {})
+assert bb(0, 1, 3) == (0, (1, 3), 2, {})
+assert bb(0, 1, c = 9) == (0, (1,), 9, {})
+assert bb(0, 1, d = 9) == (0, (1,), 2, {'d': 9})
+assert bb(0, kw = 9) == (0, (), 2, {'kw': 9})
 
 print('ok')

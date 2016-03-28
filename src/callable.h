@@ -42,14 +42,18 @@ struct Native : public Callable
 
 struct FunctionInfo : public Cell
 {
-    FunctionInfo(const vector<Name>& paramNames, Traced<Block*> block,
-                 unsigned defaultCount = 0, int restParam = -1,
+    FunctionInfo(const vector<Name>& paramNames,
+                 Traced<Block*> block,
+                 unsigned defaultCount = 0,
+                 int restParam = -1,
+                 int keywordsParam = -1,
                  bool isGenerator = false);
 
     void traceChildren(Tracer& t) override;
 
     size_t argCount() const { return params_.size(); }
     bool takesRest() const { return restParam_ != -1; }
+    bool takesKeywords() const { return keywordsParam_ != -1; }
     unsigned minArgs() const;
     unsigned maxArgs() const;
 
@@ -57,6 +61,7 @@ struct FunctionInfo : public Cell
     Heap<Block*> block_;
     unsigned defaultCount_;
     int restParam_;
+    int keywordsParam_;
     bool isGenerator_;
 };
 
@@ -77,9 +82,10 @@ struct Function : public Callable
     Block* block() const { return info_->block_; }
     Env* env() const { return env_; }
     bool takesRest() const  { return info_->takesRest(); }
+    bool takesKeywords() const  { return info_->takesKeywords(); }
     bool isGenerator() const { return info_->isGenerator_; }
     size_t firstDefaultParam() const {
-        return argCount() - defaults_.size();
+        return argCount() - (takesKeywords() ? 1 : 0) - defaults_.size();
     }
     Value paramDefault(unsigned i) {
         assert(i < info_->argCount());
@@ -89,15 +95,16 @@ struct Function : public Callable
     size_t argCount() const {
         return info_->argCount();
     }
-    size_t maxNormalArgs() const {
-        return info_->argCount() - (takesRest() ? 1 : 0);
-    }
     size_t defaultCount() const {
         return defaults_.size();
     }
     unsigned restParam() const {
         assert(takesRest());
         return info_->restParam_;
+    }
+    unsigned keywordsParam() const {
+        assert(takesKeywords());
+        return info_->keywordsParam_;
     }
     int findArg(Name name) {
         auto i = find(info_->params_.begin(), info_->params_.end(), name);

@@ -117,10 +117,12 @@ testcase(parser)
     testParseModule("def f(*x): pass", "def f(*x):\npass");
     testParseModule("def f(x, *y): pass", "def f(x, *y):\npass");
     testParseModule("def f(x = 0, *y): pass", "def f(x = 0, *y):\npass");
+    testParseModule("def f(**kw): pass", "def f(**kw):\npass");
     testParseException("def f(x, x): pass");
     testParseException("def f(x = 0, y): pass");
     testParseException("def f(*x, y): pass");
     testParseException("def f(*x = ()): pass");
+    testParseException("def f(**x, y): pass");
 
     testParseModule("(1, .3 + 1)", "(1, 0.3 + 1)");
 
