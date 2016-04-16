@@ -916,17 +916,20 @@ Interpreter::executeInstr_IteratorNext(Traced<Instr*> instr)
     pushStack(Boolean::get(!finished));
 }
 
-bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
+bool Interpreter::maybeCallBinaryOp(Name name,
                                     Traced<Value> left, Traced<Value> right,
-                                    MutableTraced<Value> method,
-                                    bool& okOut)
+                                    StackMethodAttr& methodOut, bool& okOut)
 {
     assert(!okOut);
-    if (!obj.maybeGetAttr(name, method))
+    Stack<Value> type(left.type());
+    if (!getMethodAttr(type, name, methodOut))
         return false;
 
     Stack<Value> result;
-    if (!call(method, left, right, result)) {
+    if (methodOut.isCallable)
+        pushStack(left);
+    pushStack(right);
+    if (!syncCall(methodOut.method, 1 + methodOut.extraArgs(), result)) {
         pushStack(result);
         raiseException();
         return true;
@@ -941,7 +944,7 @@ bool Interpreter::maybeCallBinaryOp(Traced<Value> obj, Name name,
 }
 
 bool
-Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
+Interpreter::executeBinaryOp(BinaryOp op, StackMethodAttr& methodOut)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -960,14 +963,14 @@ Interpreter::executeBinaryOp(BinaryOp op, MutableTraced<Value> method)
     bool ok = false;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        if (maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
+        if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok))
             return ok;
-        if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
+        if (maybeCallBinaryOp(names[op], left, right, methodOut, ok))
             return ok;
     } else {
-        if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
+        if (maybeCallBinaryOp(names[op], left, right, methodOut, ok))
             return ok;
-        if (maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
+        if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok))
             return ok;
     }
 
@@ -993,7 +996,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
     Stack<Value> left(peekStack(1));
 
     // Find the method to call and execute it.
-    Stack<Value> method;
+    StackMethodAttr method;
     if (!executeBinaryOp(op, method))
         return;
 
@@ -1015,11 +1018,12 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
         stub = gc.create<BinaryOpStubInstr>(code, currentInstr());
     } else if (left.type()->isFinal() && right.type()->isFinal()) {
         // If both arguments are instances of builtin classes, cache the method.
+        assert(method.isCallable);
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
         auto code = Instr_BinaryOpBuiltin;
         stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(),
-                                               lc, rc, method);
+                                               lc, rc, method.method);
     }
 
     if (stub)
@@ -1035,7 +1039,7 @@ InstrCode InlineFloatCompareOpInstr(CompareOp op) {
 }
 
 bool
-Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
+Interpreter::executeCompareOp(CompareOp op, StackMethodAttr& methodOut)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -1049,14 +1053,14 @@ Interpreter::executeCompareOp(CompareOp op, MutableTraced<Value> method)
     const Name* names = Names::compareMethod;
     const Name* rnames = Names::compareMethodReflected;
     bool ok = false;
-    if (maybeCallBinaryOp(left, names[op], left, right, method, ok))
+    if (maybeCallBinaryOp(names[op], left, right, methodOut, ok))
         return ok;
 
-    if (maybeCallBinaryOp(right, rnames[op], right, left, method, ok))
+    if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok))
         return ok;
 
     if (op == CompareNE &&
-        maybeCallBinaryOp(left, names[CompareEQ], left, right, method, ok))
+        maybeCallBinaryOp(names[CompareEQ], left, right, methodOut, ok))
     {
         if (ok)
             refStack() = Boolean::get(!peekStack().as<Boolean>()->value());
@@ -1085,7 +1089,7 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
     Stack<Value> left(peekStack(1));
 
     // Find the method to call and execute it.
-    Stack<Value> method;
+    StackMethodAttr method;
     if (!executeCompareOp(op, method))
         return;
 
@@ -1112,30 +1116,21 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
 }
 
 bool
-Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& method)
+Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut)
 {
     Stack<Value> update(popStack());
     Stack<Value> value(popStack());
 
-    Stack<Value> type(value.type());
-    if (!getMethodAttr(type, Names::augAssignMethod[op], method) &&
-        !getMethodAttr(type, Names::binMethod[op], method))
-    {
-        string message = "unsupported operand type(s) for augmented assignment";
-        raise<TypeError>(message);
-        return false;
-    }
+    const Name* aaNames = Names::augAssignMethod;
+    const Name* bNames = Names::binMethod;
+    bool ok = false;
+    if (maybeCallBinaryOp(aaNames[op], value, update, methodOut, ok))
+        return ok;
+    if (maybeCallBinaryOp(bNames[op], value, update, methodOut, ok))
+        return ok;
 
-    if (method.isCallable)
-        pushStack(value);
-    pushStack(update);
-    Stack<Value> result;
-    bool ok = syncCall(method.method, 1 + method.extraArgs(), result);
-    pushStack(result);
-    if (!ok)
-        raiseException();
-
-    return true;
+    raise<TypeError>("unsupported operand type(s) for augmented assignment");
+    return false;
 }
 
 static bool ShouldInlineIntAugAssignOp(BinaryOp op) {

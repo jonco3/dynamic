@@ -359,12 +359,11 @@ struct Interpreter : public Cell
     template <BinaryOp Op>
     void executeAugAssignUpdateFloat(Traced<BinaryOpStubInstr*> instr);
 
-    bool maybeCallBinaryOp(Traced<Value> obj, Name name,
-                           Traced<Value> left, Traced<Value> right,
-                           MutableTraced<Value> methodOut, bool& okOut);
-    bool executeBinaryOp(BinaryOp op, MutableTraced<Value> methodOut);
-    bool executeCompareOp(CompareOp op, MutableTraced<Value> methodOut);
-    bool executeAugAssignUpdate(BinaryOp op, StackMethodAttr& method);
+    bool maybeCallBinaryOp(Name name, Traced<Value> left, Traced<Value> right,
+                           StackMethodAttr& methodOut, bool& okOut);
+    bool executeBinaryOp(BinaryOp op, StackMethodAttr& methodOut);
+    bool executeCompareOp(CompareOp op, StackMethodAttr& methodOut);
+    bool executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut);
     bool getIterator(MutableTraced<Value> resultOut);
 
     template <typename T>
