@@ -103,3 +103,10 @@ def sorted(l):
     copy = l[:]
     copy.sort()
     return copy
+
+def enumerate(sequence, start=0):
+    # Example implementaion from the doc.
+    n = start
+    for elem in sequence:
+        yield n, elem
+        n += 1

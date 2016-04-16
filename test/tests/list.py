@@ -68,4 +68,10 @@ assert [1, 2] * 2 == [1, 2, 1, 2]
 assert (1, 2) * 0 == ()
 assert (1, 2) * 2 == (1, 2, 1, 2)
 
+r = []
+for x, y in enumerate(['a', 'b']):
+    r.append(x)
+    r.append(y)
+assert r == [0, 'a', 1, 'b']
+
 print('ok')

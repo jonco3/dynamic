@@ -593,7 +593,7 @@ unique_ptr<Syntax> SyntaxParser::parseSimpleStatement()
         return make_unique<SyntaxNonLocal>(token, move(names));
     } else if (opt(Token_Yield)) {
         isGenerator = true;
-        return make_unique<SyntaxYield>(token, parseExpr());
+        return make_unique<SyntaxYield>(token, parseExprOrExprList());
     } else if (opt(Token_Break)) {
         return make_unique<SyntaxBreak>(token);
     } else if (opt(Token_Continue)) {
