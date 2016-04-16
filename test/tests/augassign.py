@@ -136,8 +136,7 @@ class D:
         self.value += other
         return self
     def __add__(self, other):
-        self.value -= other
-        return self
+        return F(self.value - other)
 
 class E:
     def __init__(self, initial):
@@ -154,8 +153,7 @@ class F:
     def __iadd__(self, other):
         return NotImplemented
     def __add__(self, other):
-        self.value -= other
-        return self
+        return F(self.value - other)
 
 class G:
     def __init__(self, initial):
@@ -176,5 +174,13 @@ except TypeError:
     threw  = True
 assert threw
 assert g.value == 0
+
+class H:
+    def __init__(self, initial):
+        self.value = initial
+    def __radd__(self, other):
+        return H(self.value + other)
+
+h = 0; h += H(1); assert h.value == 1
 
 print('ok')

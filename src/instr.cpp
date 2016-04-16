@@ -1121,12 +1121,15 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut)
     Stack<Value> update(popStack());
     Stack<Value> value(popStack());
 
-    const Name* aaNames = Names::augAssignMethod;
-    const Name* bNames = Names::binMethod;
+    const Name* anames = Names::augAssignMethod;
+    const Name* bnames = Names::binMethod;
+    const Name* rnames = Names::binMethodReflected;
     bool ok = false;
-    if (maybeCallBinaryOp(aaNames[op], value, update, methodOut, ok))
+    if (maybeCallBinaryOp(anames[op], value, update, methodOut, ok))
         return ok;
-    if (maybeCallBinaryOp(bNames[op], value, update, methodOut, ok))
+    if (maybeCallBinaryOp(bnames[op], value, update, methodOut, ok))
+        return ok;
+    if (maybeCallBinaryOp(rnames[op], update, value, methodOut, ok))
         return ok;
 
     raise<TypeError>("unsupported operand type(s) for augmented assignment");
