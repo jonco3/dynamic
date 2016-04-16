@@ -430,6 +430,31 @@ static bool generic_add(NativeArgs args, MutableTraced<Value> resultOut)
     return true;
 }
 
+template <class T>
+static bool generic_mul(NativeArgs args, MutableTraced<Value> resultOut)
+{
+    if (!checkInstanceOf(args[0], T::ObjectClass, resultOut) ||
+        !checkInstanceOf(args[1], Integer::ObjectClass, resultOut))
+    {
+        return false;
+    }
+
+    Stack<T*> a(args[0].as<T>());
+    size_t reps;
+    if (!args[1].toSize(reps))
+        return Raise<ValueError>("Too many repetitions", resultOut);
+
+    size_t len = a->len() * reps; // todo: may overflow?
+    Stack<T*> result(T::getUninitialised(len));
+    for (size_t i = 0; i < reps; i++) {
+        for (size_t j = 0; j < a->len(); j++)
+            result->initElement(i * a->len() + j, a->getitem(j));
+    }
+
+    resultOut = Value(result);
+    return true;
+}
+
 static bool list_setitem(NativeArgs args,
                          MutableTraced<Value> resultOut)
 {
@@ -512,6 +537,7 @@ static void generic_initNatives(Traced<Class*> cls)
     initNativeMethod(cls, "__getitem__", generic_getitem<T>, 2);
     initNativeMethod(cls, "__iter__", generic_iter<T>, 1);
     initNativeMethod(cls, "__add__", generic_add<T>, 2);
+    initNativeMethod(cls, "__mul__", generic_mul<T>, 2);
     // __eq__ and __ne__ are supplied by internals/internal.py
 }
 
