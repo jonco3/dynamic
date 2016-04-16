@@ -365,14 +365,19 @@ void initAttr(Traced<Object*> cls, const string& nameString, Traced<Value> value
     cls->initAttr(name, value);
 }
 
-void initNativeMethod(Traced<Object*> cls, const string& nameString,
+void initNativeMethod(Traced<Object*> obj, const string& nameString,
                       NativeFunc func, unsigned minArgs, unsigned maxArgs)
 {
     Name name(internString(nameString));
+
     Stack<Value> value(None);
-    if (func)
-        value = gc.create<Native>(name, func, minArgs, maxArgs);
-    cls->initAttr(name, value);
+    if (func) {
+        Name funcName = name;
+        if (obj->is<Class>())
+            funcName = internString(obj->as<Class>()->name() + "." + nameString);
+        value = gc.create<Native>(funcName, func, minArgs, maxArgs);
+    }
+    obj->initAttr(name, value);
 }
 
 bool object_new(NativeArgs args, MutableTraced<Value> resultOut)
