@@ -1,26 +1,30 @@
 # output: ok
 
-v = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
-r = [11, 8, 30, 2.5, 2, 4, 10000000, 20, 2, 2, 14, 15]
+input = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+expected = [11, 8, 30, 2.5, 2, 4, 10000000, 20, 2, 2, 14, 15]
 
-v[0] += 1
-v[1] -= 2
-v[2] *= 3
-v[3] /= 4
-v[4] //= 5
-v[5] %= 6
-v[6] **= 7
-v[7] <<= 1
-v[8] >>= 2
-v[9] &= 3
-v[10] ^= 4
-v[11] |= 5
+def test(v):
+    v[0] += 1
+    v[1] -= 2
+    v[2] *= 3
+    v[3] /= 4
+    v[4] //= 5
+    v[5] %= 6
+    v[6] **= 7
+    v[7] <<= 1
+    v[8] >>= 2
+    v[9] &= 3
+    v[10] ^= 4
+    v[11] |= 5
+    return v
 
-assert v == r
+assert test(list(input)) == expected
 
 class Wrapped:
     def __init__(self, initial):
         self.value = initial
+    def __eq__(self, other):
+        return self.value == other
     def __iadd__(self, other):
         self.value += other
         return self
@@ -58,22 +62,7 @@ class Wrapped:
         self.value ^= other
         return self
 
-v = list(map(Wrapped, [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]))
-
-v[0] += 1
-v[1] -= 2
-v[2] *= 3
-v[3] /= 4
-v[4] //= 5
-v[5] %= 6
-v[6] **= 7
-v[7] <<= 1
-v[8] >>= 2
-v[9] &= 3
-v[10] ^= 4
-v[11] |= 5
-
-assert list(map(lambda x: x.value, v)) == r
+assert test(list(map(Wrapped, input))) == expected
 
 class Wrapped2:
     def __init__(self, initial):
@@ -102,47 +91,8 @@ class Wrapped2:
         return Wrapped(self.value & other)
     def __xor__(self, other):
         return Wrapped(self.value ^ other)
-    def __radd__(self, other):
-        return other + self.value
-    def __rsub__(self, other):
-        return other - self.value
-    def __rmul__(self, other):
-        return other * self.value
-    def __rtruediv__(self, other):
-        return other / self.value
-    def __rfloordiv__(self, other):
-        return other // self.value
-    def __rmod__(self, other):
-        return other % self.value
-    def __rpow__(self, other):
-        return other ** self.value
-    def __rlshift__(self, other):
-        return other << self.value
-    def __rrshift__(self, other):
-        return other >> self.value
-    def __ror__(self, other):
-        return other | self.value
-    def __rand__(self, other):
-        return other & self.value
-    def __rxor__(self, other):
-        return other ^ self.value
 
-v = list(map(Wrapped2, [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]))
-
-v[0] += 1
-v[1] -= 2
-v[2] *= 3
-v[3] /= 4
-v[4] //= 5
-v[5] %= 6
-v[6] **= 7
-v[7] <<= 1
-v[8] >>= 2
-v[9] &= 3
-v[10] ^= 4
-v[11] |= 5
-
-assert list(map(lambda x: x.value, v)) == r
+assert test(list(map(Wrapped2, input))) == expected
 
 class C:
     def __init__(self, value):
@@ -168,10 +118,6 @@ C.__iadd__ = incValue
 o += 1
 assert o.value == 2
 
-def decValue(self, other):
-    self.value -= other
-    return self
-
 class NonDataDescriptor:
     def __get__(self, instance, owner):
         def f(other):
@@ -182,5 +128,53 @@ class NonDataDescriptor:
 C.__iadd__ = NonDataDescriptor()
 o += 1
 assert o.value == 1
+
+class D:
+    def __init__(self, initial):
+        self.value = initial
+    def __iadd__(self, other):
+        self.value += other
+        return self
+    def __add__(self, other):
+        self.value -= other
+        return self
+
+class E:
+    def __init__(self, initial):
+        self.value = initial
+    def __iadd__(self, other):
+        self.value += other
+        return self
+    def __add__(self, other):
+        return NotImplemented
+
+class F:
+    def __init__(self, initial):
+        self.value = initial
+    def __iadd__(self, other):
+        return NotImplemented
+    def __add__(self, other):
+        self.value -= other
+        return self
+
+class G:
+    def __init__(self, initial):
+        self.value = initial
+    def __iadd__(self, other):
+        return NotImplemented
+    def __add__(self, other):
+        return NotImplemented
+
+d = D(0); d += 1; assert d.value == 1
+e = E(0); e += 1; assert e.value == 1
+f = F(0); f += 1; assert f.value == -1
+g = G(0);
+threw = False
+try:
+    g += 1
+except TypeError:
+    threw  = True
+assert threw
+assert g.value == 0
 
 print('ok')
