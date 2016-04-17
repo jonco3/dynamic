@@ -941,6 +941,7 @@ void Interpreter::replaceAllStubs(Instr* current, Instr* stub)
     it.data = stub;
 }
 
+#ifdef DEBUG
 void Interpreter::printInstrCounts()
 {
     cout << dec;
@@ -948,3 +949,4 @@ void Interpreter::printInstrCounts()
     for (size_t i = 0; i < InstrCodeCount; i++)
         printf("  %25s: %ld\n", instrName(InstrCode(i)), instrCounts[i]);
 }
+#endif
