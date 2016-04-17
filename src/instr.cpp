@@ -944,7 +944,8 @@ bool Interpreter::maybeCallBinaryOp(Name name,
 }
 
 bool
-Interpreter::executeBinaryOp(BinaryOp op, StackMethodAttr& methodOut)
+Interpreter::executeBinaryOp(BinaryOp op,
+                             StackMethodAttr& methodOut, bool& reversedOut)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -963,15 +964,23 @@ Interpreter::executeBinaryOp(BinaryOp op, StackMethodAttr& methodOut)
     bool ok = false;
     if (rtype != ltype && rtype->isDerivedFrom(ltype))
     {
-        if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok))
+        if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok)) {
+            reversedOut = true;
             return ok;
-        if (maybeCallBinaryOp(names[op], left, right, methodOut, ok))
+        }
+        if (maybeCallBinaryOp(names[op], left, right, methodOut, ok)) {
+            reversedOut = false;
             return ok;
+        }
     } else {
-        if (maybeCallBinaryOp(names[op], left, right, methodOut, ok))
+        if (maybeCallBinaryOp(names[op], left, right, methodOut, ok)) {
+            reversedOut = false;
             return ok;
-        if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok))
+        }
+        if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok)) {
+            reversedOut = true;
             return ok;
+        }
     }
 
     raise<TypeError>("unsupported operand type(s) for binary operation");
@@ -988,6 +997,11 @@ static bool ShouldInlineFloatBinaryOp(BinaryOp op) {
     return op <= BinaryTrueDiv;
 }
 
+static InstrCode BinaryOpBuiltinInstr(bool reversed)
+{
+    return reversed ? Instr_BinaryOpBuiltinReversed : Instr_BinaryOpBuiltin;
+}
+
 void
 Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 {
@@ -997,7 +1011,8 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
 
     // Find the method to call and execute it.
     StackMethodAttr method;
-    if (!executeBinaryOp(op, method))
+    bool reversed;
+    if (!executeBinaryOp(op, method, reversed))
         return;
 
     // Check stub count before attempting to optimise.
@@ -1021,7 +1036,7 @@ Interpreter::executeInstr_BinaryOp(Traced<BinaryOpInstr*> instr)
         assert(method.isCallable);
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
-        auto code = Instr_BinaryOpBuiltin;
+        auto code = BinaryOpBuiltinInstr(reversed);
         stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(),
                                                lc, rc, method.method);
     }
@@ -1039,7 +1054,8 @@ InstrCode InlineFloatCompareOpInstr(CompareOp op) {
 }
 
 bool
-Interpreter::executeCompareOp(CompareOp op, StackMethodAttr& methodOut)
+Interpreter::executeCompareOp(CompareOp op,
+                              StackMethodAttr& methodOut, bool& reversedOut)
 {
     Stack<Value> right(popStack());
     Stack<Value> left(popStack());
@@ -1053,15 +1069,20 @@ Interpreter::executeCompareOp(CompareOp op, StackMethodAttr& methodOut)
     const Name* names = Names::compareMethod;
     const Name* rnames = Names::compareMethodReflected;
     bool ok = false;
-    if (maybeCallBinaryOp(names[op], left, right, methodOut, ok))
+    if (maybeCallBinaryOp(names[op], left, right, methodOut, ok)) {
+        reversedOut = false;
         return ok;
+    }
 
-    if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok))
+    if (maybeCallBinaryOp(rnames[op], right, left, methodOut, ok)) {
+        reversedOut = true;
         return ok;
+    }
 
     if (op == CompareNE &&
         maybeCallBinaryOp(names[CompareEQ], left, right, methodOut, ok))
     {
+        reversedOut = false;
         if (ok)
             refStack() = Boolean::get(!peekStack().as<Boolean>()->value());
         return ok;
@@ -1077,7 +1098,9 @@ Interpreter::executeCompareOp(CompareOp op, StackMethodAttr& methodOut)
         return false;
     }
 
+    reversedOut = false;
     pushStack(result);
+    // todo: could return a different status to indicate no method to call?
     return false;
 }
 
@@ -1090,7 +1113,8 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
 
     // Find the method to call and execute it.
     StackMethodAttr method;
-    if (!executeCompareOp(op, method))
+    bool reversed;
+    if (!executeCompareOp(op, method, reversed))
         return;
 
     // Check stub count before attempting to optimise.
@@ -1116,7 +1140,8 @@ Interpreter::executeInstr_CompareOp(Traced<CompareOpInstr*> instr)
 }
 
 bool
-Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut)
+Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut,
+                                    bool& reversedOut)
 {
     Stack<Value> update(popStack());
     Stack<Value> value(popStack());
@@ -1125,12 +1150,18 @@ Interpreter::executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut)
     const Name* bnames = Names::binMethod;
     const Name* rnames = Names::binMethodReflected;
     bool ok = false;
-    if (maybeCallBinaryOp(anames[op], value, update, methodOut, ok))
+    if (maybeCallBinaryOp(anames[op], value, update, methodOut, ok)) {
+        reversedOut = false;
         return ok;
-    if (maybeCallBinaryOp(bnames[op], value, update, methodOut, ok))
+    }
+    if (maybeCallBinaryOp(bnames[op], value, update, methodOut, ok)) {
+        reversedOut = false;
         return ok;
-    if (maybeCallBinaryOp(rnames[op], update, value, methodOut, ok))
+    }
+    if (maybeCallBinaryOp(rnames[op], update, value, methodOut, ok)) {
+        reversedOut = true;
         return ok;
+    }
 
     raise<TypeError>("unsupported operand type(s) for augmented assignment");
     return false;
@@ -1155,7 +1186,8 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
 
     // Find the method to call and execute it.
     StackMethodAttr method;
-    if (!executeAugAssignUpdate(op, method))
+    bool reversed;
+    if (!executeAugAssignUpdate(op, method, reversed))
         return;
 
     // Check stub count before attempting to optimise.
@@ -1179,7 +1211,7 @@ Interpreter::executeInstr_AugAssignUpdate(Traced<BinaryOpInstr*> instr)
         assert(method.isCallable);
         Stack<Class*> lc(left.type());
         Stack<Class*> rc(right.type());
-        auto code = Instr_BinaryOpBuiltin;
+        auto code = BinaryOpBuiltinInstr(reversed);
         stub = gc.create<BuiltinBinaryOpInstr>(code, currentInstr(),
                                                lc, rc, method.method);
     }
@@ -1457,6 +1489,19 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
         {
             Stack<Value> method(instr->method());
+            startCall(method, 2);
+        }
+    end_handle_instr();
+
+    start_handle_instr(BinaryOpBuiltinReversed, BuiltinBinaryOpInstr);
+        Value right = peekStack(0);
+        Value left = peekStack(1);
+        if (left.type() != instr->left() || right.type() != instr->right())
+            dispatchNextStub();
+
+        {
+            Stack<Value> method(instr->method());
+            swapStack();
             startCall(method, 2);
         }
     end_handle_instr();

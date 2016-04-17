@@ -183,4 +183,11 @@ class H:
 
 h = 0; h += H(1); assert h.value == 1
 
+# Test builtin stub reverses its arguments when required
+def opt(a, b):
+    a += b
+    return a
+assert opt(1, 1.5) == 2.5
+assert opt(1, 1.5) == 2.5
+
 print('ok')

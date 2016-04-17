@@ -361,9 +361,12 @@ struct Interpreter : public Cell
 
     bool maybeCallBinaryOp(Name name, Traced<Value> left, Traced<Value> right,
                            StackMethodAttr& methodOut, bool& okOut);
-    bool executeBinaryOp(BinaryOp op, StackMethodAttr& methodOut);
-    bool executeCompareOp(CompareOp op, StackMethodAttr& methodOut);
-    bool executeAugAssignUpdate(BinaryOp op, StackMethodAttr& methodOut);
+    bool executeBinaryOp(BinaryOp op,
+                         StackMethodAttr& methodOut, bool& reversedOut);
+    bool executeCompareOp(CompareOp op,
+                          StackMethodAttr& methodOut, bool& reversedOut);
+    bool executeAugAssignUpdate(BinaryOp op,
+                                StackMethodAttr& methodOut, bool& reversedOut);
     bool getIterator(MutableTraced<Value> resultOut);
 
     template <typename T>

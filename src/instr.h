@@ -154,6 +154,7 @@ struct Interpreter;
     instr(BinaryOpFloat_Mul, BinaryOpStubInstr)                              \
     instr(BinaryOpFloat_TrueDiv, BinaryOpStubInstr)                          \
     instr(BinaryOpBuiltin, BuiltinBinaryOpInstr)                             \
+    instr(BinaryOpBuiltinReversed, BuiltinBinaryOpInstr)                     \
     instr(CompareOpInt_LT, CompareOpStubInstr)                               \
     instr(CompareOpInt_LE, CompareOpStubInstr)                               \
     instr(CompareOpInt_GT, CompareOpStubInstr)                               \
