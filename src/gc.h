@@ -148,6 +148,8 @@ extern GC gc;
 struct Cell
 {
     Cell();
+
+    // Destructor is not called except for classes derived from SweptCell.
     virtual ~Cell();
 
 #ifdef DEBUG
@@ -176,7 +178,11 @@ struct Cell
 
 struct SweptCell : public Cell
 {
-    virtual void sweep() = 0;
+    // Destructor is called classes derived from SweptCell.
+    virtual ~SweptCell() {}
+
+    // sweep() is called before any destructors a called.
+    virtual void sweep() {};
 };
 
 inline ostream& operator<<(ostream& s, const Cell& cell) {

@@ -22,6 +22,11 @@ extern bool logFrames;
 extern bool logExecution;
 #endif
 
+#ifdef DEBUG
+extern bool logInstrCounts;
+extern size_t instrCounts[InstrCodeCount];
+#endif
+
 struct Callable;
 struct Exception;
 struct ExceptionHandler;
@@ -52,9 +57,10 @@ struct ExceptionHandler : public Cell
     unsigned offset_;
 };
 
-struct Interpreter : public Cell
+struct Interpreter : public SweptCell
 {
     Interpreter();
+    ~Interpreter();
     static void init();
 
     bool exec(Traced<Block*> block, MutableTraced<Value> resultOut);
@@ -378,6 +384,10 @@ struct Interpreter : public Cell
     void executeUnpackBuiltin(T* seq);
 
     void executeUnpackGeneric();
+
+#ifdef DEBUG
+    void printInstrCounts();
+#endif
 };
 
 extern GlobalRoot<Interpreter*> interp;

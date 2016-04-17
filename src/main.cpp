@@ -123,7 +123,10 @@ const char* usageMessage =
     "  -lb                -- log big integer arithmetic\n"
     "  -z N               -- perform GC every N allocations\n"
 #endif
-    "  -sg                -- log GC stats\n"
+    "  -sg                -- print GC stats\n"
+#ifdef DEBUG
+    "  -si                -- print instruction count stats\n"
+#endif
     ;
 
 static void badUsage()
@@ -167,6 +170,10 @@ int main(int argc, const char* argv[])
 #endif
         else if (strcmp("-sg", opt) == 0)
             logGCStats = true;
+#ifdef DEBUG
+        else if (strcmp("-si", opt) == 0)
+            logInstrCounts = true;
+#endif
         else
             badUsage();
     }

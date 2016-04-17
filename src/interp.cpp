@@ -20,6 +20,11 @@ bool logFrames = false;
 bool logExecution = false;
 #endif
 
+#ifdef DEBUG
+bool logInstrCounts = false;
+size_t instrCounts[InstrCodeCount] = {0};
+#endif
+
 GlobalRoot<Block*> Interpreter::AbortTrampoline;
 
 GlobalRoot<Interpreter*> interp;
@@ -49,6 +54,14 @@ Interpreter::Interpreter()
     remainingFinallyCount_(0),
     loopControlTarget_(0)
 {}
+
+Interpreter::~Interpreter()
+{
+#ifdef DEBUG
+    if (logInstrCounts)
+        printInstrCounts();
+#endif
+}
 
 void Interpreter::init()
 {
@@ -926,4 +939,12 @@ void Interpreter::replaceAllStubs(Instr* current, Instr* stub)
     current->incStubCount();
     it.code = stub->code();
     it.data = stub;
+}
+
+void Interpreter::printInstrCounts()
+{
+    cout << dec;
+    printf("Instruction count stats\n");
+    for (size_t i = 0; i < InstrCodeCount; i++)
+        printf("  %25s: %ld\n", instrName(InstrCode(i)), instrCounts[i]);
 }

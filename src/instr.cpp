@@ -1367,28 +1367,16 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 
     dispatch();
 
-  instr_Abort: {
-        resultOut = popStack();
-        assert(resultOut.isInstanceOf(Exception::ObjectClass));
-        popFrame();
-        return false;
-    }
-
-  instr_Return: {
-        Value value = popStack();
-        returnFromFrame(value);
-        if (!instrp)  // todo: quit/abort instr
-            goto exit;
-        dispatch();
-    }
-
-  exit:
-    assert(!instrp);
-    resultOut = popStack();
-    return true;
+#ifdef DEBUG
+#define maybeCountInstr(instr)                                                \
+    instrCounts[instr]++;
+#else
+#define maybeCountInstr(instr)
+#endif
 
 #define start_handle_instr(it, cls)                                           \
     instr_##it: {                                                             \
+        maybeCountInstr(Instr_##it);                                          \
         Heap<cls*>& instr = reinterpret_cast<Heap<cls*>&>(thunk->data)
 
 #define execute_outofline_instr(it)                                           \
@@ -1397,6 +1385,28 @@ bool Interpreter::run(MutableTraced<Value> resultOut)
 #define end_handle_instr()                                                    \
         dispatch();                                                           \
     }
+
+    start_handle_instr(Abort, Instr);
+        (void)instr;
+        resultOut = popStack();
+        assert(resultOut.isInstanceOf(Exception::ObjectClass));
+        popFrame();
+        return false;
+    end_handle_instr();
+
+
+    start_handle_instr(Return, Instr);
+        (void)instr;
+        Value value = popStack();
+        returnFromFrame(value);
+        if (!instrp)  // todo: quit/abort instr
+            goto exit;
+    end_handle_instr();
+
+  exit:
+    assert(!instrp);
+    resultOut = popStack();
+    return true;
 
 #define handle_outofline_instr(it, cls)                                       \
     start_handle_instr(it, cls);                                              \
