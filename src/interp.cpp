@@ -946,7 +946,10 @@ void Interpreter::printInstrCounts()
 {
     cout << dec;
     printf("Instruction count stats\n");
-    for (size_t i = 0; i < InstrCodeCount; i++)
-        printf("  %25s: %ld\n", instrName(InstrCode(i)), instrCounts[i]);
+    for (size_t i = 0; i < InstrCodeCount; i++) {
+        size_t count = instrCounts[i];
+        if (count != 0)
+            printf("  %25s: %ld\n", instrName(InstrCode(i)), count);
+    }
 }
 #endif
