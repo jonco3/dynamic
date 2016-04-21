@@ -228,9 +228,16 @@ struct Interpreter : public SweptCell
     void popFrame();
 
     size_t frameCount() const { return frames.size(); }
-    Frame* getFrame(unsigned reverseIndex = 0) {
+
+    Frame* getFrame() {
+        assert(!frames.empty());
+        assert(frame == &frames.back());
+        return frame;
+    }
+
+    Frame* getFrame(unsigned reverseIndex) {
         assert(reverseIndex < frames.size());
-        return &frames[frameIndex() - reverseIndex];
+        return &frames[frames.size() - 1 - reverseIndex];
     }
 
     void returnFromFrame(Value value);
@@ -285,6 +292,7 @@ struct Interpreter : public SweptCell
     static GlobalRoot<Block*> AbortTrampoline;
 
     InstrThunk *instrp;
+    Frame* frame;
     HeapVector<Frame, std::vector<Frame>> frames;
     // todo: why is std::vector significantly faster?
     HeapVector<Value> stack;
@@ -297,11 +305,6 @@ struct Interpreter : public SweptCell
     unsigned loopControlTarget_;
 
     void traceChildren(Tracer& t) override;
-
-    unsigned frameIndex() {
-        assert(!frames.empty());
-        return frames.size() - 1;
-    }
 
     void pushFrame(Traced<Block*> block, unsigned stackStartPos,
                    unsigned extraPopCount);

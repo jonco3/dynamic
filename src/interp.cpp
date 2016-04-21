@@ -46,6 +46,7 @@ void ExceptionHandler::traceChildren(Tracer& t)
 
 Interpreter::Interpreter()
   : instrp(nullptr),
+    frame(nullptr),
     stack(1),
     inExceptionHandler_(false),
     jumpKind_(JumpKind::None),
@@ -230,6 +231,7 @@ void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
 {
     assert(stack.size() >= stackStartPos);
     frames.emplace_back(instrp, block, stackStartPos, extraPopCount);
+    frame = &frames.back();
     instrp = block->startInstr();
 
     unsigned newStackSize = stackStartPos + block->maxStackDepth();
@@ -249,7 +251,7 @@ void Interpreter::pushFrame(Traced<Block*> block, unsigned stackStartPos,
 void Interpreter::popFrame()
 {
     assert(!frames.empty());
-    Frame* frame = getFrame();
+    assert(frame = &frames.back());
 
     assert(!frame->exceptionHandlers());
 
@@ -268,10 +270,11 @@ void Interpreter::popFrame()
 
     instrp = frame->returnPoint();
     frames.pop_back();
+    frame = frames.empty() ? nullptr : &frames.back();
 
 #ifdef LOG_EXECUTION
     if (logFrames && instrp) {
-        TokenPos pos = frames.back().block()->getPos(instrp);
+        TokenPos pos = frame->block()->getPos(instrp);
         logStart();
         cout << "  return to " << pos << endl;
     }
