@@ -15,6 +15,7 @@ struct Value;
 template <>
 struct GCTraits<Value>
 {
+    using BaseType = Value;
     static inline Value nullValue();
     static inline bool isNonNull(Value value);
 #ifdef DEBUG

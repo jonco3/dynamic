@@ -163,7 +163,22 @@ GC::GC()
     allocCount(0),
 #endif
     collectAt(minCollectAt)
-{}
+{
+    registerStackRoots(StackRootList<Cell*>::Instance);
+}
+
+void GC::registerStackRoots(StackRootListBase& roots)
+{
+    assert(find(stackRootLists.begin(), stackRootLists.end(), &roots) == stackRootLists.end());
+    stackRootLists.push_back(&roots);
+}
+
+void GC::unregisterStackRoots(StackRootListBase& roots)
+{
+    auto i = find(stackRootLists.begin(), stackRootLists.end(), &roots);
+    assert(i != stackRootLists.end());
+    stackRootLists.erase(i);
+}
 
 Cell* GC::allocCell(SizeClass sc, bool requiresSweep)
 {
@@ -258,8 +273,8 @@ void GC::collect()
     Marker marker;
     for (RootBase* r = rootList; r; r = r->nextRoot())
         r->trace(marker);
-    for (StackBase* r = stackList; r; r = r->nextRoot())
-        r->trace(marker);
+    for (auto list : stackRootLists)
+        list->trace(marker);
 
     // Mark
     log("- marking reachable");
@@ -300,8 +315,8 @@ void GC::shutdown()
 {
     for (RootBase* r = rootList; r; r = r->nextRoot())
         r->clear();
-    for (StackBase* r = stackList; r; r = r->nextRoot())
-        r->clear();
+    for (auto list : stackRootLists)
+        list->clear();
     collect();
     assert(cellCount == 0);
 }
@@ -316,8 +331,8 @@ void GC::logStats()
         rootCount++;
 
     unsigned stackRootCount = 0;
-    for (StackBase* r = stackList; r; r = r->nextRoot())
-        stackRootCount++;
+    for (auto list : stackRootLists)
+        stackRootCount += list->count();
 
     cout << dec;
     cout << "GC stats" << endl;

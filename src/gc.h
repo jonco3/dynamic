@@ -27,7 +27,7 @@ extern size_t gcZealPeriod;
 struct Cell;
 struct Marker;
 struct RootBase;
-struct StackBase;
+struct StackRootListBase;
 struct SweptCell;
 template <typename T> struct Heap;
 template <typename T, typename V = Vector<T>> struct VectorBase;
@@ -46,6 +46,8 @@ struct GC
     unsigned scheduleFactorPercent;
 
     GC();
+    void registerStackRoots(StackRootListBase& roots);
+    void unregisterStackRoots(StackRootListBase& roots);
 
     void shutdown();
 
@@ -125,7 +127,7 @@ struct GC
     vector<SweptCell*> sweptCells[sizeClassCount];
     vector<Cell*> freeCells[sizeClassCount];
     RootBase* rootList;
-    StackBase* stackList;
+    vector<StackRootListBase*> stackRootLists;
     bool isSweeping;
 #ifdef DEBUG
     bool isAllocating;
@@ -136,7 +138,6 @@ struct GC
 
     friend struct Cell;
     friend struct RootBase;
-    friend struct StackBase;
     friend struct AutoAssertNoGC;
     friend struct AutoSupressGC;
     friend void testcase_body_gc();
@@ -197,6 +198,8 @@ static Cell const * const NullCellPtr = nullptr;
 template <typename T>
 struct GCTraits<T*>
 {
+    using BaseType = Cell*;
+
     static T* nullValue() {
         static_assert(is_base_of<Cell, T>::value, "Type T must be derived from Cell");
         return nullptr;
@@ -404,33 +407,6 @@ struct RootBase
     RootBase* prev_;
 };
 
-struct StackBase
-{
-    StackBase() : next_(nullptr) {
-        assert(!next_);
-        next_ = gc.stackList;
-        gc.stackList = this;
-    }
-
-    ~StackBase() {
-        assert(gc.stackList == this);
-        gc.stackList = next_;
-#ifdef DEBUG
-        next_ = nullptr;
-#endif
-    }
-
-    virtual void trace(Tracer& t) = 0;
-    virtual void clear() = 0;
-
-    StackBase* nextRoot() {
-        return next_;
-    }
-
-  private:
-    StackBase* next_;
-};
-
 template <typename W, typename T>
 struct WrapperMixins {};
 
@@ -506,12 +482,94 @@ struct Root
     }
 };
 
+template <typename T> struct Stack;
+template <typename T> struct StackBase;
+
+struct StackRootListBase
+{
+    virtual void trace(Tracer& t) = 0;
+    virtual void clear() = 0;
+    virtual size_t count() = 0;
+};
+
+template <typename T>
+struct StackRootList : public StackRootListBase
+{
+    static StackRootList<T> Instance;
+
+    void trace(Tracer& t) override {
+        for (auto r = first_; r; r = r->nextRoot())
+            r->trace(t);
+    }
+
+    void clear() override {
+        for (auto r = first_; r; r = r->nextRoot())
+            r->clear();
+    }
+
+    size_t count() override {
+        size_t result = 0;
+        for (auto r = first_; r; r = r->nextRoot())
+            result++;
+        return result;
+    }
+
+    StackBase<T>* add(StackBase<T>* t) {
+        StackBase<T>* next = first_;
+        first_ = t;
+        return next;
+    }
+
+    void remove(StackBase<T>* t) {
+        assert(first_ == t);
+        first_ = t->nextRoot();
+    }
+
+  private:
+    StackBase<T>* first_;
+};
+
+template <typename T>
+StackRootList<T> StackRootList<T>::Instance;
+
+template <typename T>
+struct StackBase
+{
+    StackBase() {
+        next_ = StackRootList<T>::Instance.add(this);
+    }
+
+    ~StackBase() {
+        StackRootList<T>::Instance.remove(this);
+#ifdef DEBUG
+        next_ = nullptr;
+#endif
+    }
+
+    StackBase* nextRoot() {
+        return next_;
+    }
+
+    void clear() {
+        auto self = static_cast<Stack<T>*>(this);
+        self->get() = GCTraits<T>::nullValue();
+    }
+
+    void trace(Tracer& t) {
+        auto self = static_cast<Stack<T>*>(this);
+        gc.traceUnbarriered(t, &self->get());
+    }
+
+  private:
+    StackBase<T>* next_;
+};
+
 // Roots a cell as long as it is alive, for stack use.
 template <typename T>
 struct Stack
   : public WrapperMixins<Stack<T>, T>,
     public PointerBase<T>,
-    protected StackBase
+    public StackBase<typename GCTraits<T>::BaseType>
 {
     Stack() {}
 
@@ -535,14 +593,6 @@ struct Stack
         this->ptr_ = ptr;
         maybeCheckValid(T, this->ptr_);
         return *this;
-    }
-
-    virtual void clear() override {
-        this->ptr_ = GCTraits<T>::nullValue();
-    }
-
-    void trace(Tracer& t) override {
-        gc.traceUnbarriered(t, &this->ptr_);
     }
 };
 

@@ -29,6 +29,7 @@ bool debugMode = true;
 
 void init1()
 {
+    gc.registerStackRoots(StackRootList<Value>::Instance);
     Layout::init();
     initObject();
     initCallable();
