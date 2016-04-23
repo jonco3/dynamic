@@ -746,17 +746,19 @@ struct ByteCompiler : public SyntaxVisitor
                 unpackedCount++;
             }
         }
+
         for (const auto& i : s.keywordArgs)
             compile(*i->arg);
-        if (s.mappingArg)
-            compile(*s.mappingArg);
 
-        if (s.mappingArg)
-            throw ParseError(s.token, "**kwargs not implemented");
+        // Handle mapping containing extra keyword args
+        bool hasMappingArg = s.mappingArg != nullptr;
+        if (hasMappingArg) {
+            compile(*s.mappingArg);
+            stackDepth = -1;
+        }
 
         size_t posCount = s.positionalArgs.size();
-        size_t keywordCount = s.keywordArgs.size();
-        if (keywordCount == 0 && unpackedCount == 0) {
+        if (s.keywordArgs.empty() && unpackedCount == 0 && !s.mappingArg) {
             if (methodCall) {
                 emit<Instr_CallMethod>(posCount);
             } else {
@@ -766,25 +768,22 @@ struct ByteCompiler : public SyntaxVisitor
                 emit<Instr_Call>(posCount);
             }
         } else {
-            // Make a layout containing the keyword names in reverse order.
             Stack<Layout*> keywords(Layout::Empty);
-            for (size_t i = s.keywordArgs.size(); i != 0; i--) {
-                const auto& info = s.keywordArgs[i - 1];
+            for (const auto& i : s.keywordArgs) {
                 bool existing;
-                keywords = keywords->maybeAddName(info->keyword->id, existing);
+                keywords = keywords->maybeAddName(i->keyword->id, existing);
                 if (existing)
-                    throw ParseError(info->keyword->token,
-                                     "Repeated keyword arg");
+                    throw ParseError(i->keyword->token, "Repeated keyword arg");
             }
-            if (unpackedCount != 0)
+            if (unpackedCount != 0 || hasMappingArg)
                 posCount = SIZE_MAX; // Unknown in this case.
             if (methodCall) {
-                emit<Instr_CallMethodWithFullArgs>(argsPos, posCount, keywords);
+                emit<Instr_CallMethodWithFullArgs>(argsPos, posCount, keywords, hasMappingArg);
             } else {
                 // Calling a constructor needs an extra stack slot to pass the
                 // class to __new__ and self to __init__.
                 maxStackDepth = max(stackDepth + 1, maxStackDepth);
-                emit<Instr_CallWithFullArgs>(argsPos, posCount, keywords);
+                emit<Instr_CallWithFullArgs>(argsPos, posCount, keywords, hasMappingArg);
             }
         }
         assert(stackDepth == -1 || stackDepth == initialStackDepth + 1);

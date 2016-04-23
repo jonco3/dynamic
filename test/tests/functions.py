@@ -1,8 +1,18 @@
 # output: ok
 
+def badArgCount(thunk):
+    threw = False
+    try:
+        thunk()
+    except TypeError:
+        threw = True
+    assert threw
+
 def f(x):
     return x + 1
 assert f(1) == 2
+badArgCount(lambda: f())
+badArgCount(lambda: f(1, 1))
 
 def g(x):
     return f(x)
@@ -40,6 +50,7 @@ def l(a, *b):
 assert l(0) == (0, ())
 assert l(1, 2) == (1, (2,))
 assert l(1, 2, 3) == (1, (2, 3))
+badArgCount(lambda: l())
 
 def m(a, b = 1, *c):
     return (a, b, c)
@@ -47,6 +58,7 @@ assert m(0) == (0, 1, ())
 assert m(1, 2) == (1, 2, ())
 assert m(1, 2, 3) == (1, 2, (3,))
 assert m(1, 2, 3, 4) == (1, 2, (3, 4))
+badArgCount(lambda: m())
 
 def n(a, b = 1, c = 2, *d):
     return (a, b, c, d)
@@ -88,12 +100,14 @@ assert r(4) == [3, 4]
 def s(a = -1, b = -2 , c = -3):
     return a, b, c
 
+assert s() == (-1, -2, -3)
 assert s(1, 2, 3) == (1, 2, 3)
 assert s(1, 2, c = 3) == (1, 2, 3)
 assert s(1, c = 3, b = 2) == (1, 2, 3)
 assert s(c = 1, b = 2, a = 3) == (3, 2, 1)
 assert s(b = 2) == (-1, 2, -3)
 assert s(1, c = 3) == (1, -2, 3)
+badArgCount(lambda: s(1, 2, 3, 4))
 
 def raisesException(thunk, exception):
     ok = False
@@ -174,5 +188,21 @@ assert bb(0, 1, 3) == (0, (1, 3), 2, {})
 assert bb(0, 1, c = 9) == (0, (1,), 9, {})
 assert bb(0, 1, d = 9) == (0, (1,), 2, {'d': 9})
 assert bb(0, kw = 9) == (0, (), 2, {'kw': 9})
+badArgCount(lambda: bb())
+
+# keyword splat, or whatever this is called
+
+def cc(a, b = -2, c = -3):
+    return a, b, c
+
+assert cc(a = 1) == (1, -2, -3)
+assert cc(**{'a': 1, 'b': 2, 'c': 3}) == (1, 2, 3)
+assert cc(**{'a': 1}) == (1, -2, -3)
+assert cc(**{'a': 1, 'c': 3}) == (1, -2, 3)
+assert cc(1, **{}) == (1, -2, -3)
+assert cc(1, c = 3, **{'b': 2}) == (1, 2, 3)
+assert cc(b = 2, **{'a': 1, 'c': 3}) == (1, 2, 3)
+badArgCount(lambda: cc())
+badArgCount(lambda: cc(1, 2, 3, 4))
 
 print('ok')

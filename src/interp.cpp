@@ -733,11 +733,13 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
     //   +-------------+-------+-------+-------+-------+-------+
 
     size_t keywordCount = keywordArgs->slotCount();
-    auto argsStart = stack.end() - keywordCount - argCount;
+    assert(keywordCount <= argCount);
+    auto argsStart = stack.end() - argCount;
+    size_t posCount = argCount - keywordCount;
 
     Stack<Value> restArg(Tuple::Empty);
-    if (function->takesRest() && argCount >= function->restParam()) {
-        size_t restCount = argCount - function->restParam();
+    if (function->takesRest() && posCount >= function->restParam()) {
+        size_t restCount = posCount - function->restParam();
         restArg = Tuple::get(stackSlice(restCount, keywordCount));
     }
 
@@ -747,15 +749,15 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
     // there is enough space for all formal arguments, filling unsupplied
     // positional args with UninitializedSlot and setting any rest argument to
     // the empty tuple.
-    if (argCount > function->argCount()) {
+    if (posCount > function->argCount()) {
         auto argsEnd = argsStart + function->argCount();
         stack.erase(argsEnd, stack.end() - keywordCount);
-    } else if (argCount < function->argCount()) {
-        size_t count = function->argCount() - argCount;
-        stack.insert(argsStart + argCount, UninitializedSlot.get(), count);
+    } else if (posCount < function->argCount()) {
+        size_t count = function->argCount() - posCount;
+        stack.insert(argsStart + posCount, UninitializedSlot.get(), count);
 
         if (function->takesRest()) {
-            for (size_t i = function->restParam() + 1; i < argCount; i++)
+            for (size_t i = function->restParam() + 1; i < posCount; i++)
                 *(argsStart + i) = UninitializedSlot.get();
         }
     }
@@ -768,16 +770,13 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
     // For each supplied keyword arg, look up its position in the formal arg
     // list and set its value.  Raise TypeError if slot already filled or if the
     // argument is not found.
-    //
-    // todo: add to mapping dictionary for unknown keyword args if the function
-    // can receive that
     Dict* keywordDict = nullptr;
     if (function->takesKeywords())
         keywordDict = gc.create<Dict>();
     if (keywordCount) {
         TracedVector<Value> keywords(stackSlice(keywordCount));
         Layout* l = keywordArgs;
-        for (size_t i = 0; i < keywordCount; i++)
+        for (size_t i = keywordCount; i != 0; i--)
         {
             int argPos = function->findArg(l->name());
             if (argPos == -1 ||
@@ -788,12 +787,11 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
             {
                 if (keywordDict) {
                     Stack<Value> key(l->name());
-                    Stack<Value> value(keywords[i]);
+                    Stack<Value> value(keywords[i - 1]);
                     keywordDict->setitem(key, value);
                 } else {
                     return Raise<TypeError>("Unexpected keyword arg: " +
-                                            l->name()->value(),
-                                            resultOut);
+                                            l->name()->value(), resultOut);
                 }
             } else {
                 // todo: lookup might be easier if formal arg list was a layout
@@ -802,7 +800,7 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
                         "Multiple values for argument: " + l->name()->value(),
                         resultOut);
                 }
-                args[argPos] = keywords[i];
+                args[argPos] = keywords[i - 1];
             }
             l = l->parent();
         }
@@ -814,7 +812,7 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
     // Fill unfilled slots from default args.  If there are unfilled slots
     // remaining, raise TypeError.
     size_t firstDefaultArg = function->firstDefaultParam();
-    for (size_t i = argCount; i < firstDefaultArg; i++) {
+    for (size_t i = posCount; i < firstDefaultArg; i++) {
         if (args[i] == UninitializedSlot.get()) {
             return Raise<TypeError>("Missing argument: " +
                                     function->paramName(i)->value(), resultOut);

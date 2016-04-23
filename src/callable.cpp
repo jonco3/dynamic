@@ -81,7 +81,7 @@ unsigned FunctionInfo::minArgs() const
 
 unsigned FunctionInfo::maxArgs() const
 {
-    return takesRest() ? UINT_MAX : argCount();
+    return takesRest() || takesKeywords() ? UINT_MAX : argCount();
 }
 
 Function::Function(Name name,

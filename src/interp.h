@@ -388,6 +388,8 @@ struct Interpreter : public SweptCell
 
     void executeUnpackGeneric();
 
+    Layout* unpackKeywordMapping(Traced<Layout*> initialKeywords);
+
 #ifdef DEBUG
     void printInstrCounts();
 #endif

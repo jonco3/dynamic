@@ -132,6 +132,12 @@ void ValueInstr::traceChildren(Tracer& t)
     gc.trace(t, &value_);
 }
 
+void CallWithFullArgsInstr::traceChildren(Tracer& t)
+{
+    Instr::traceChildren(t);
+    gc.trace(t, &keywords);
+}
+
 void BuiltinMethodInstr::traceChildren(Tracer& t)
 {
     StubInstr::traceChildren(t);
@@ -405,12 +411,30 @@ size_t CallWithFullArgsInstr::slotCount(Frame* frame, size_t stackPos) const
     return count;
 }
 
+Layout* Interpreter::unpackKeywordMapping(Traced<Layout*> initialKeywords)
+{
+    Stack<Layout*> keywords(initialKeywords);
+    Stack<Dict*> mapping(popStack().as<Dict>()); // todo: support non-dict mappings
+    for (auto i : mapping->entries()) {
+        Stack<Value> key(i.first);
+        if (!key.is<String>())
+            raise<TypeError>("Mapping contains non-string key");
+        Name name = internString(key.as<String>()->value());
+        keywords = keywords->addName(name);
+        stack.push_back(i.second);
+    }
+    return keywords;
+}
+
 void
 Interpreter::executeInstr_CallWithFullArgs(Traced<CallWithFullArgsInstr*> instr)
 {
+    Stack<Layout*> keywords(instr->keywords);
+    if (instr->mappingArg)
+        keywords = unpackKeywordMapping(keywords);
     size_t slotCount = instr->slotCount(getFrame(), stack.size());
     Stack<Value> target(peekStack(slotCount));
-    startCall(target, slotCount - instr->keywordCount(), instr->keywords, 1);
+    startCall(target, slotCount, keywords, 1);
 }
 
 /*
@@ -466,11 +490,14 @@ void
 Interpreter::executeInstr_CallMethodWithFullArgs(
     Traced<CallWithFullArgsInstr*> instr)
 {
+    Stack<Layout*> keywords(instr->keywords);
+    if (instr->mappingArg)
+        keywords = unpackKeywordMapping(keywords);
     size_t slotCount = instr->slotCount(getFrame(), stack.size());
     bool extraArg = peekStack(slotCount) != Value(UninitializedSlot);
     Stack<Value> target(peekStack(slotCount + 1));
-    unsigned posCount = slotCount - instr->keywordCount() + (extraArg ? 1 : 0);
-    startCall(target, posCount, instr->keywords, extraArg ? 1 : 2);
+    unsigned posCount = slotCount + (extraArg ? 1 : 0);
+    startCall(target, posCount, keywords, extraArg ? 1 : 2);
 }
 
 void

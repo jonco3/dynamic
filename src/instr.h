@@ -538,11 +538,13 @@ struct CallWithFullArgsInstr : public Instr
     CallWithFullArgsInstr(InstrCode code,
                           size_t argsPos,
                           size_t maybePosCount, /* SIZE_MAX if unknown */
-                          Traced<Layout*> keywords)
+                          Traced<Layout*> keywords,
+                          bool mappingArg)
       : Instr(code),
         argsPos(argsPos),
         maybePosCount(maybePosCount),
-        keywords(keywords)
+        keywords(keywords),
+        mappingArg(mappingArg)
     {
         assert(instrType(code) == Type);
     }
@@ -553,20 +555,18 @@ struct CallWithFullArgsInstr : public Instr
 
     size_t slotCount() const {
         assert(posCountKnown());
-        return maybePosCount + keywords->slotCount();
+        return maybePosCount + keywords->slotCount() + (mappingArg ? 1 : 0);
     }
 
     size_t slotCount(Frame* frame, size_t stackPos) const;
 
-    size_t keywordCount() const {
-        return keywords->slotCount();
-    }
-
     void print(ostream& s) const override;
+    void traceChildren(Tracer& t) override;
 
     const size_t argsPos;
     const size_t maybePosCount;
     Heap<Layout*> keywords;
+    const bool mappingArg;
 };
 
 struct BuiltinMethodInstr : public StubInstr
