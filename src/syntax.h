@@ -21,6 +21,7 @@ using namespace std;
     syntax(ExprList)                                                          \
     syntax(List)                                                              \
     syntax(Dict)                                                              \
+    syntax(Set)                                                              \
     syntax(Name)                                                              \
     syntax(Pos)                                                               \
     syntax(Neg)                                                               \
@@ -309,6 +310,18 @@ struct SyntaxDict : public Syntax
       : Syntax(token), entries(move(entries)) {}
 
     const vector<Entry> entries;
+};
+
+struct SyntaxSet : public Syntax
+{
+    define_syntax_members(Set, "set");
+
+    typedef unique_ptr<Syntax> Element;
+
+    SyntaxSet(const Token& token, vector<Element> elements)
+      : Syntax(token), elements(move(elements)) {}
+
+    const vector<Element> elements;
 };
 
 define_unary_syntax(Neg, "-");

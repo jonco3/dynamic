@@ -359,6 +359,11 @@ struct SyntaxParser : public Parser<unique_ptr<Syntax>>
     unique_ptr<SyntaxTarget> parseTargetList();
 
     unique_ptr<Syntax> parseListDisplay(Token token);
+    unique_ptr<Syntax> parseDictDisplay(Token token,
+                                        unique_ptr<Syntax> initialKey,
+                                        unique_ptr<Syntax> initialValue);
+    unique_ptr<Syntax> parseSetDisplay(Token token,
+                                       unique_ptr<Syntax> initialElement);
     unique_ptr<Syntax> parseListComprehension(Token token,
                                               unique_ptr<Syntax> expr);
     unique_ptr<Syntax> parseNextCompExpr(unique_ptr<Syntax> iterand);

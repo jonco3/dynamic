@@ -17,4 +17,8 @@ assert(2 in a)
 assert(3 in a)
 assert(4 not in a)
 
+assert(len({1, 2, 3}) == 3)
+assert(a == {3, 2, 1})
+assert(set() != {1})
+
 print('ok')

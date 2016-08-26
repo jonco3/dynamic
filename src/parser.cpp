@@ -98,17 +98,17 @@ SyntaxParser::SyntaxParser()
     });
 
     addPrefixHandler(Token_CBra, [=] (ParserT& parser, Token token) -> unique_ptr<Syntax> {
-        vector<SyntaxDict::Entry> entries;
-        while (!opt(Token_CKet)) {
-            unique_ptr<Syntax> key = parseExpr();
-            match(Token_Colon);
-            unique_ptr<Syntax> value = parseExpr();
-            entries.emplace_back(move(key), move(value));
-            if (opt(Token_CKet))
-                break;
-            match(Token_Comma);
+        if (opt(Token_CKet)) {
+            vector<SyntaxDict::Entry> entries;
+            return make_unique<SyntaxDict>(token, move(entries));
         }
-        return make_unique<SyntaxDict>(token, move(entries));
+        unique_ptr<Syntax> firstExpr = parseExpr();
+        if (opt(Token_Colon)) {
+            unique_ptr<Syntax> value = parseExpr();
+            return parseDictDisplay(token, move(firstExpr), move(value));
+        } else {
+            return parseSetDisplay(token, move(firstExpr));
+        }
     });
 
     // Lambda
@@ -279,6 +279,41 @@ unique_ptr<Syntax> SyntaxParser::parseListDisplay(Token token)
         exprs.push_back(parseExpr());
     }
     return make_unique<SyntaxList>(token, move(exprs));
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseDictDisplay(Token token,
+                               unique_ptr<Syntax> initialKey,
+                               unique_ptr<Syntax> initialValue)
+{
+    vector<SyntaxDict::Entry> entries;
+    entries.emplace_back(move(initialKey), move(initialValue));
+    while (!opt(Token_CKet)) {
+        match(Token_Comma);
+        if (opt(Token_CKet))
+            break;
+        unique_ptr<Syntax> key = parseExpr();
+        match(Token_Colon);
+        unique_ptr<Syntax> value = parseExpr();
+        entries.emplace_back(move(key), move(value));
+    }
+    return make_unique<SyntaxDict>(token, move(entries));
+}
+
+unique_ptr<Syntax>
+SyntaxParser::parseSetDisplay(Token token,
+                              unique_ptr<Syntax> initialElement)
+{
+    vector<SyntaxSet::Element> elements;
+    elements.emplace_back(move(initialElement));
+    while (!opt(Token_CKet)) {
+        match(Token_Comma);
+        if (opt(Token_CKet))
+            break;
+        unique_ptr<Syntax> element = parseExpr();
+        elements.emplace_back(move(element));
+    }
+    return make_unique<SyntaxSet>(token, move(elements));
 }
 
 unique_ptr<Syntax>

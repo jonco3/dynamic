@@ -106,6 +106,7 @@ struct Interpreter;
     instr(Tuple, CountInstr)                                                 \
     instr(List, CountInstr)                                                  \
     instr(Dict, CountInstr)                                                  \
+    instr(Set, CountInstr)                                                   \
     instr(Slice, Instr)                                                      \
     instr(AssertionFailed, Instr)                                            \
     instr(MakeClassFromFrame, IdentInstr)                                    \
@@ -196,6 +197,7 @@ struct Interpreter;
     _(Tuple, 1)                                                              \
     _(List, 1)                                                               \
     _(Dict, 1)                                                               \
+    _(Set, 1)                                                                \
     _(Slice, -2)                                                             \
     _(AssertionFailed, -1) /* to balance stack depth calculations */         \
     _(MakeClassFromFrame, 1)                                                 \
@@ -220,6 +222,7 @@ struct Interpreter;
     _(Tuple, CountInstr, count, -1)                                          \
     _(List, CountInstr, count, -1)                                           \
     _(Dict, CountInstr, count, -2)                                           \
+    _(Set, CountInstr, count, -1)                                            \
     _(Destructure, CountInstr, count, 1)
 
 #define for_each_unconditonal_branch_instr(_)                                \

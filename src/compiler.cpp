@@ -468,6 +468,12 @@ struct ByteCompiler : public SyntaxVisitor
         emit<Instr_Dict>(s.entries.size());
     }
 
+    virtual void visit(const SyntaxSet& s) {
+        for (const auto& i : s.elements)
+            compile(i);
+        emit<Instr_Set>(s.elements.size());
+    }
+
     virtual void visit(const SyntaxOr& s) {
         compile(s.left);
         unsigned branch = emit<Instr_Or>();

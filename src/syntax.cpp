@@ -174,6 +174,19 @@ void SyntaxPrinter::visit(const SyntaxDict& s)
     os_ << "}";
 }
 
+void SyntaxPrinter::visit(const SyntaxSet& s)
+{
+    os_ << "{";
+    bool first = true;
+    for (const auto& i : s.elements) {
+        if (!first)
+            os_ << ", ";
+        print(i);
+        first = false;
+    }
+    os_ << "}";
+}
+
 void SyntaxPrinter::visit(const SyntaxPass& s) { visitNullary(s); }
 void SyntaxPrinter::visit(const SyntaxBreak& s) { visitNullary(s); }
 void SyntaxPrinter::visit(const SyntaxContinue& s) { visitNullary(s); }

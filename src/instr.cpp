@@ -9,6 +9,7 @@
 #include "singletons.h"
 #include "slice.h"
 #include "list.h"
+#include "set.h"
 #include "utils.h"
 
 InstrType instrType(InstrCode code)
@@ -712,6 +713,14 @@ Interpreter::executeInstr_Dict(Traced<CountInstr*> instr)
     Dict* dict = gc.create<Dict>(stackSlice(instr->count * 2));
     popStack(instr->count * 2);
     pushStack(dict);
+}
+
+void
+Interpreter::executeInstr_Set(Traced<CountInstr*> instr)
+{
+    Set* set = gc.create<Set>(stackSlice(instr->count));
+    popStack(instr->count);
+    pushStack(set);
 }
 
 void
