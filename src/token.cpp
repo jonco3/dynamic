@@ -426,51 +426,15 @@ Token Tokenizer::findNextToken()
     }
 
     // String literals
-    if (peekChar() == '\'' || peekChar() == '"') {
-        // todo: r u and b prefixes
-        char delimiter = nextChar();
+    char c = peekChar();
+    if (c == '\'' || c == '"')
+        return tokenizeString(startPos, 's');
 
-        bool multiline = false;
-        if (delimiter == '"' && peekChar() == '"' && peekChar2() == '"') {
-            nextChar();
-            nextChar();
-            multiline = true;
-        }
-
-        ostringstream s;
-        char c;
-        while (c = nextChar(), c && (!isNewline(c) || multiline)) {
-            if (c == delimiter &&
-                (!multiline || (peekChar() == delimiter &&
-                                peekChar2() == delimiter)))
-            {
-                if (multiline) {
-                    nextChar();
-                    nextChar();
-                }
-                return {Token_String, s.str(), startPos};
-            }
-
-            if (c != '\\') {
-                s << c;
-                continue;
-            }
-
-            char c2 = nextChar();
-            if (!c2)
-                break;
-
-            if (c2 == '\n')
-                continue;
-            else if (c2 == 'n')
-                s << "\n";
-            else if (c2 == 't')
-                s << "\t";
-            else
-                s << c << c2;
-        }
-
-        throw TokenError("Unterminated string", pos);
+    if ((c == 'r' || c == 'u' || c == 'b') &&
+         (peekChar2() == '\'' || peekChar2() == '"'))
+    {
+        nextChar();
+        return tokenizeString(startPos, c);
     }
 
     // Identifiers and keywords
@@ -540,4 +504,53 @@ Token Tokenizer::findNextToken()
     }
 
     throw TokenError("Unexpected " + string(source, startIndex, 1), startPos);
+}
+
+Token Tokenizer::tokenizeString(TokenPos startPos, char type)
+{
+    // todo: implement r u and b prefixes
+
+    char delimiter = nextChar();
+
+    bool multiline = false;
+    if (delimiter == '"' && peekChar() == '"' && peekChar2() == '"') {
+        nextChar();
+        nextChar();
+        multiline = true;
+    }
+
+    ostringstream s;
+    char c;
+    while (c = nextChar(), c && (!isNewline(c) || multiline)) {
+        if (c == delimiter &&
+            (!multiline || (peekChar() == delimiter &&
+                            peekChar2() == delimiter)))
+        {
+            if (multiline) {
+                nextChar();
+                nextChar();
+            }
+            return {Token_String, s.str(), startPos};
+        }
+
+        if (c != '\\') {
+            s << c;
+            continue;
+        }
+
+        char c2 = nextChar();
+        if (!c2)
+            break;
+
+        if (c2 == '\n')
+            continue;
+        else if (c2 == 'n')
+            s << "\n";
+        else if (c2 == 't')
+            s << "\t";
+        else
+            s << c << c2;
+    }
+
+    throw TokenError("Unterminated string", pos);
 }

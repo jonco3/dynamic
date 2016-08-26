@@ -158,6 +158,8 @@ private:
 
     Token findNextToken();
 
+    Token tokenizeString(TokenPos startPos, char type);
+
     bool atEnd();
     char peekChar();
     char peekChar2();
