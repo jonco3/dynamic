@@ -157,6 +157,14 @@ struct Value
     uint64_t canonicalizeNaN(uint64_t bits);
 };
 
+// For maps and sets.
+struct ValueHash {
+    size_t operator()(Value v) const;
+};
+struct ValuesEqual {
+    bool operator()(Value a, Value b) const;
+};
+
 ostream& operator<<(ostream& s, const Value& v);
 
 #endif

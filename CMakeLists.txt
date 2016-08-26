@@ -43,6 +43,7 @@ add_library(main_archive
             src/object.cpp
             src/parser.cpp
             src/reflect.cpp
+            src/set.cpp
             src/singletons.cpp
             src/slice.cpp
             src/specials.cpp

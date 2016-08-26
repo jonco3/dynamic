@@ -18,6 +18,7 @@
 #include "reflect.h"
 #include "singletons.h"
 #include "slice.h"
+#include "set.h"
 #include "string.h"
 #include "list.h"
 #include "generator.h"
@@ -42,6 +43,7 @@ void init1()
     Slice::init();
     Dict::init();
     DictView::init();
+    Set::init();
     initSingletons();
     GeneratorIter::init();
     initReflect();

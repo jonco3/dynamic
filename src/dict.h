@@ -3,6 +3,8 @@
 
 #include "object.h"
 
+#include <unordered_map>
+
 struct Dict : public Object
 {
     static void init();
@@ -32,14 +34,6 @@ struct Dict : public Object
     Value values() const;
 
   private:
-    struct ValueHash {
-        size_t operator()(Value v) const;
-    };
-
-    struct ValuesEqual {
-        bool operator()(Value a, Value b) const;
-    };
-
     using Map = unordered_map<Value, Heap<Value>, ValueHash, ValuesEqual>;
     Map entries_;
 

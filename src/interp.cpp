@@ -770,7 +770,7 @@ bool Interpreter::mungeFullArguments(Traced<Function*> function,
     // For each supplied keyword arg, look up its position in the formal arg
     // list and set its value.  Raise TypeError if slot already filled or if the
     // argument is not found.
-    Dict* keywordDict = nullptr;
+    Stack<Dict*> keywordDict(nullptr);
     if (function->takesKeywords())
         keywordDict = gc.create<Dict>();
     if (keywordCount) {

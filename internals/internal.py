@@ -37,12 +37,27 @@ def dictEqual(a, b):
 def dictNotEqual(a, b):
     return not dictEqual(a, b)
 
+def setEqual(a, b):
+    if not isinstance(b, set):
+        return False
+    if len(a) != len(b):
+        return False
+    for key in a.keys():
+        if key not in b:
+            return False
+    return True
+
+def setNotEqual(a, b):
+    return not setEqual(a, b)
+
 list.__eq__ = listEqual
 list.__ne__ = listNotEqual
 tuple.__eq__ = tupleEqual
 tuple.__ne__ = tupleNotEqual
 dict.__eq__ = dictEqual
 dict.__ne__ = dictNotEqual
+set.__eq__ = setEqual
+set.__ne__ = setNotEqual
 
 def listExtend(a, b):
     for element in b:

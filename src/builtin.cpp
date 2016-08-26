@@ -13,6 +13,7 @@
 #include "parser.h"
 #include "reflect.h"
 #include "singletons.h"
+#include "set.h"
 #include "string.h"
 #include "value-inl.h"
 
@@ -372,6 +373,7 @@ void initBuiltins(const string& internalsPath)
     initAttr(Builtin, "list", List::ObjectClass);
     initAttr(Builtin, "tuple", Tuple::ObjectClass);
     initAttr(Builtin, "dict", Dict::ObjectClass);
+    initAttr(Builtin, "set", Set::ObjectClass);
     initAttr(Builtin, "bool", Boolean::ObjectClass);
     initAttr(Builtin, "int", Integer::ObjectClass);
     initAttr(Builtin, "float", Float::ObjectClass);
