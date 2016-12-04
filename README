@@ -9,7 +9,7 @@ Building
 Requires cmake.
 
   $ mkdir release-build && cd release-build
-  $ cmake
+  $ cmake ..
   $ make -j8 check
   $ ./bin/dynamic
   > print("Hello world")
@@ -17,4 +17,4 @@ Requires cmake.
 
 For a debug build use:
 
-  $ cmake -DCMAKE_BUILD_TYPE=DEBUG
+  $ cmake -DCMAKE_BUILD_TYPE=DEBUG ..
