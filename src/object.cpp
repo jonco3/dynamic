@@ -310,14 +310,13 @@ Class::Class(string name,
              bool final)
   : Object(ObjectClass, initialLayout),
     name_(name),
-    bases_(nullptr),
     final_(final)
 {
     // base is null for Object when we are initializing.
     assert(!Class::ObjectClass || base);
     assert(initialLayout->subsumes(InitialLayout));
     if (base)
-        setBases(base);
+        initBases(base);
 }
 
 void Class::finishInitNoBases()
@@ -328,17 +327,35 @@ void Class::finishInitNoBases()
 
 void Class::finishInit(Traced<Class*> base)
 {
-    setBases(base);
+    initBases(base);
     Object::finishInit(Class::ObjectClass);
 }
 
-void Class::setBases(Traced<Class*> base)
+void Class::initBases(Traced<Class*> base)
 {
     assert(!bases_);
     assert(base);
     RootVector<Value> bases(1);
     bases[0] = base;
     bases_ = Tuple::get(bases);
+}
+
+Tuple* Class::mro()
+{
+    if (mro_)
+        return mro_;
+
+    RootVector<Value> chain;
+    chain.push_back(this);
+
+    Stack<Object*> obj(base());
+    while (obj != None) {
+        Stack<Class*> cls(obj->as<Class>());
+        chain.push_back(cls.get());
+        obj = cls->base();
+    }
+    mro_ = Tuple::get(chain);
+    return mro_;
 }
 
 void Class::traceChildren(Tracer& t)
@@ -563,13 +580,20 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
     if (name == Names::__class__) {
         resultOut = value.type();
         return true;
-    } else if (value.is<Class>()) {
-        Stack<Object*> obj(value.asObject());
+    }
+
+    if (value.is<Class>()) {
+        Stack<Class*> cls(value.asObject()->as<Class>());
         if (name == Names::__name__) {
-            resultOut = gc.create<String>(obj->as<Class>()->name());
+            resultOut = gc.create<String>(cls->name());
             return true;
-        } else if (name == Names::__bases__) {
-            resultOut = obj->as<Class>()->bases();
+        }
+        if (name == Names::__bases__) {
+            resultOut = cls->bases();
+            return true;
+        }
+        if (name == Names::__mro__) {
+            resultOut = cls->mro();
             return true;
         }
     }

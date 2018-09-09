@@ -154,6 +154,7 @@ struct Class : public Object
 
     Object* base() const; // todo: to be removed.
     Tuple* bases() const { return bases_; }
+    Tuple* mro();
     const string& name() const { return name_; }
     bool isFinal() const { return final_; }
 
@@ -166,13 +167,15 @@ struct Class : public Object
   private:
     string name_;
     Heap<Tuple*> bases_;
+    Heap<Tuple*> mro_;
     bool final_;
 
     // Only for use during initialization
     void finishInit(Traced<Class*> base);
     void finishInitNoBases();
 
-    void setBases(Traced<Class*> base);
+    void initBases(Traced<Class*> base);
+    void initMRO(Traced<Class*> base);
 
     friend void initObject();
     friend void initObject2();

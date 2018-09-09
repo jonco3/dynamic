@@ -106,4 +106,25 @@ obj.attr = g
 assert obj.attr() == 41
 del C.attr
 
+threw = False
+try:
+  object.__class__ = None
+except TypeError as e:
+  threw = "can't set" in str(e)
+assert threw
+
+threw = False
+try:
+  object.__bases__ = None
+except TypeError as e:
+  threw = "can't set" in str(e)
+assert threw
+
+threw = False
+try:
+  object.__mro__ = None
+except TypeError as e:
+  threw = "can't set" in str(e)
+assert threw
+
 print('ok')

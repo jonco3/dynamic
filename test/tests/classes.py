@@ -5,8 +5,10 @@ typ = object.__class__
 
 assert object.__class__ == typ
 assert object.__bases__ == ()
+assert object.__mro__ == (object,)
 assert typ.__class__ == typ
 assert typ.__bases__ == (object,)
+assert typ.__mro__ == (typ, object)
 
 class C1:
   pass

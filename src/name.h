@@ -16,6 +16,7 @@ using namespace std;
     _(__class__)                                                              \
     _(__name__)                                                               \
     _(__bases__)                                                              \
+    _(__mro__)                                                                \
     _(__builtins__)                                                           \
     _(__contains__)                                                           \
     _(__len__)                                                                \
