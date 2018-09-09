@@ -1,6 +1,9 @@
 #ifndef __ASSERT_H__
 #define __ASSERT_H__
 
+// May have already been defined by standard library.
+#undef assert
+
 #ifdef NDEBUG
 
 #define assert(ignore)((void) 0)
