@@ -3,7 +3,7 @@
 
 #include "object.h"
 
-struct Slice : public ObjectInline<3>
+struct Slice : public InlineObject<3>
 {
     static void init();
 

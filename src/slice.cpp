@@ -29,7 +29,7 @@ static bool IsInt32OrNone(Value value)
 #endif
 
 Slice::Slice(NativeArgs args) :
-  ObjectInline<3>(ObjectClass, InitialLayout)
+  InlineObject<3>(ObjectClass, InitialLayout)
 {
     assert(args.size() == 3);
     assert(IsInt32OrNone(args[0]));
@@ -42,7 +42,7 @@ Slice::Slice(NativeArgs args) :
 }
 
 Slice::Slice(Traced<Class*> cls)
-  : ObjectInline<3>(cls)
+  : InlineObject<3>(cls)
 {
     assert(cls->isDerivedFrom(ObjectClass));
 }

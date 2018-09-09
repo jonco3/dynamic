@@ -202,7 +202,7 @@ void File::Init()
 }
 
 File::File(FILE* file, Traced<String*> name, Traced<String*> mode)
-  : ObjectInline<4>(ObjectClass, InitialLayout),
+  : InlineObject<4>(ObjectClass, InitialLayout),
     file_(file)
 {
     assert(file_);

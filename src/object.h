@@ -119,9 +119,9 @@ struct Object : public Cell
 };
 
 template <size_t N>
-struct ObjectInline : public Object
+struct InlineObject : public Object
 {
-    ObjectInline(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout)
+    InlineObject(Traced<Class*> cls, Traced<Layout*> layout = InitialLayout)
       : Object(inlineData_, cls, layout)
     {}
 
