@@ -362,6 +362,7 @@ void Class::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
     gc.trace(t, &bases_);
+    gc.trace(t, &mro_);
 }
 
 void Class::print(ostream& s) const
