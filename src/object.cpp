@@ -451,19 +451,18 @@ void initObject()
 
     String::init();
 
+    Tuple::init();
+
+    Class::ObjectClass->finishInit(Object::ObjectClass);
+    NoneObject::ObjectClass->finishInit(Object::ObjectClass);
+    Object::ObjectClass->finishInitNoBases(); // Depends on Empty.
+
     initNativeMethod(Object::ObjectClass, "__new__", object_new, 1, -1);
     initNativeMethod(Object::ObjectClass, "__repr__", object_repr, 1);
     initNativeMethod(Object::ObjectClass, "__dump__", object_dump, 1);
     initNativeMethod(Object::ObjectClass, "__hash__", object_hash, 1);
     initNativeMethod(NoneObject::ObjectClass, "__new__", nullptr, 1, -1);
     initNativeMethod(Class::ObjectClass, "__new__", nullptr, 1, -1);
-}
-
-void initObject2()
-{
-    Class::ObjectClass->finishInit(Object::ObjectClass);
-    NoneObject::ObjectClass->finishInit(Object::ObjectClass);
-    Object::ObjectClass->finishInitNoBases(); // Depends on Empty.
 }
 
 /*

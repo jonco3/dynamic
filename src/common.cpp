@@ -54,7 +54,6 @@ void init1()
 
 void init2(const string& internalsPath)
 {
-    initObject2();
     initBuiltins(internalsPath);
 }
 

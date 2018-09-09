@@ -584,7 +584,6 @@ void ListIterImpl<T>::init()
 
 void initList()
 {
-    Tuple::init();
     List::init();
     TupleIter::init();
     ListIter::init();
