@@ -525,7 +525,7 @@ template <typename T>
 using InlineVectorBase = VectorImpl<T, VectorStorageInline<T>>;
 
 template <typename T, size_t N>
-    struct InlineVector : public InlineVectorBase<T>
+struct InlineVector : public InlineVectorBase<T>
 {
     using Base = VectorImpl<T, VectorStorageInline<T>>;
     using Base::initInlineData;
@@ -547,7 +547,7 @@ template <typename T, size_t N>
     }
 
   private:
-    uint8_t inlineData_[N * sizeof(T)];
+    alignas(T) uint8_t inlineData_[N * sizeof(T)];
 };
 
 template <typename T, typename VectorStorage>

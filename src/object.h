@@ -126,7 +126,7 @@ struct ObjectInline : public Object
     {}
 
   private:
-    uint8_t inlineData_[N * sizeof(Value)];
+    alignas(Value) uint8_t inlineData_[N * sizeof(Value)];
 };
 
 struct Class : public Object
