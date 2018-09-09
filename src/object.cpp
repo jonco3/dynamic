@@ -40,19 +40,8 @@ Object* Object::create()
     return gc.create<Object>(ObjectClass);
 }
 
-Object::Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout)
-  : class_(nullptr),
-    layout_(layout)
-{
-    // todo: really, what the hell is this for?
-    if (cls != Class::ObjectClass)
-        assert(base == cls);
-    init(cls, layout);
-}
-
 Object::Object(Traced<Class*> cls, Traced<Layout*> layout)
-  : class_(nullptr),
-    layout_(layout)
+  : layout_(layout)
 {
     init(cls, layout);
 }

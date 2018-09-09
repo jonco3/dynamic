@@ -86,8 +86,6 @@ struct Object : public Cell
     bool isInstanceOf(Class* cls) const;
 
   protected:
-    Object(Traced<Class*> cls, Traced<Class*> base, Traced<Layout*> layout);
-
     template <size_t N>
     Object(uint8_t (&inlineData)[N], Traced<Class*> cls, Traced<Layout*> layout)
       : class_(nullptr),
