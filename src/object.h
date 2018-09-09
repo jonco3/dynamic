@@ -14,6 +14,7 @@ using namespace std;
 
 struct Class;
 struct Native;
+struct Tuple;
 
 using NativeArgs = const TracedVector<Value>&;
 using NativeFunc = bool (*)(NativeArgs, MutableTraced<Value>);
@@ -21,6 +22,7 @@ using NativeFunc = bool (*)(NativeArgs, MutableTraced<Value>);
 extern GlobalRoot<Object*> None;
 
 extern void initObject();
+extern void initObject2();
 
 struct Object : public Cell
 {
@@ -150,7 +152,8 @@ struct Class : public Object
     Class(string name, Traced<Class*> base = Object::ObjectClass,
           Traced<Layout*> initialLayout = InitialLayout, bool final = false);
 
-    Object* base() const { return base_; }
+    Object* base() const; // todo: to be removed.
+    Tuple* bases() const { return bases_; }
     const string& name() const { return name_; }
     bool isFinal() const { return final_; }
 
@@ -162,13 +165,17 @@ struct Class : public Object
 
   private:
     string name_;
-    Heap<Object*> base_;
+    Heap<Tuple*> bases_;
     bool final_;
 
     // Only for use during initialization
-    void finishInit(Traced<Object*> base);
+    void finishInit(Traced<Class*> base);
+    void finishInitNoBases();
+
+    void setBases(Traced<Class*> base);
 
     friend void initObject();
+    friend void initObject2();
 };
 
 extern bool object_new(NativeArgs args, MutableTraced<Value> resultOut);

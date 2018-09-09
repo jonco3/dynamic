@@ -1,5 +1,13 @@
 # output: ok
 
+# 'type' not fully implemented
+typ = object.__class__
+
+assert object.__class__ == typ
+assert object.__bases__ == ()
+assert typ.__class__ == typ
+assert typ.__bases__ == (object,)
+
 class C1:
   pass
 

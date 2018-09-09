@@ -129,3 +129,9 @@ void Exception::recordTraceback(const InstrThunk* instrp)
         instrp = frame->returnPoint();
     }
 }
+
+void printBacktrace()
+{
+    Stack<Exception*> e(gc.create<RuntimeError>(""));
+    cout << e->traceback();
+}

@@ -101,10 +101,12 @@ inline Class* Value::type() const
 {
     if (isInt32())
         return Integer::ObjectClass;
-    else if (isDouble())
+    if (isDouble())
         return Float::ObjectClass;
-    else
-        return asObject()->type();
+
+    Object* object = asObject();
+    assert(object);
+    return object->type();
 }
 
 template <typename T>

@@ -51,8 +51,7 @@ void Object::init(Traced<Class*> cls, Traced<Layout*> layout)
     assert(layout_);
     assert(layout_->subsumes(InitialLayout));
     slots_.assign(layout_->slotCount(), UninitializedSlot.get());
-    if (Class::ObjectClass)
-        class_ = cls;
+    class_ = cls;
 }
 
 void Object::finishInit(Traced<Class*> cls)
@@ -311,29 +310,58 @@ Class::Class(string name,
              bool final)
   : Object(ObjectClass, initialLayout),
     name_(name),
-    base_(base),
+    bases_(nullptr),
     final_(final)
 {
     // base is null for Object when we are initializing.
     assert(!Class::ObjectClass || base);
     assert(initialLayout->subsumes(InitialLayout));
+    if (base)
+        setBases(base);
 }
 
-void Class::finishInit(Traced<Object*> base)
+void Class::finishInitNoBases()
 {
-    Object::finishInit(ObjectClass);
-    base_ = base;
+    bases_ = Tuple::Empty;
+    Object::finishInit(Class::ObjectClass);
+}
+
+void Class::finishInit(Traced<Class*> base)
+{
+    setBases(base);
+    Object::finishInit(Class::ObjectClass);
+}
+
+void Class::setBases(Traced<Class*> base)
+{
+    assert(!bases_);
+    assert(base);
+    RootVector<Value> bases(1);
+    bases[0] = base;
+    bases_ = Tuple::get(bases);
 }
 
 void Class::traceChildren(Tracer& t)
 {
     Object::traceChildren(t);
-    gc.trace(t, &base_);
+    gc.trace(t, &bases_);
 }
 
 void Class::print(ostream& s) const
 {
     s << "Class " << name_;
+}
+
+Object* Class::base() const
+{
+    Stack<Tuple*> bases(bases_);
+    assert(bases);
+
+    if (bases->len() == 0)
+        return None;
+
+    assert(bases->len() == 1);
+    return bases->getitem(0).toObject();;
 }
 
 bool Class::isDerivedFrom(Class* cls) const
@@ -407,19 +435,14 @@ void initObject()
     Object::InitialLayout.init(Layout::Empty);
     Class::InitialLayout.init(Object::InitialLayout);
 
-    Stack<Class*> objectBase(nullptr);
     Object::ObjectClass.init(
-        gc.create<Class>("object", objectBase, Class::InitialLayout, true));
+        gc.create<Class>("object", nullptr, Class::InitialLayout, true));
     NoneObject::ObjectClass.init(
-        gc.create<Class>("None", Object::ObjectClass, Class::InitialLayout, true));
+        gc.create<Class>("None", nullptr, Class::InitialLayout, true));
     Class::ObjectClass.init(
-        gc.create<Class>("class", Object::ObjectClass, Class::InitialLayout, true));
+        gc.create<Class>("class", nullptr, Class::InitialLayout, true));
 
     None.init(gc.create<NoneObject>());
-
-    Class::ObjectClass->finishInit(Object::ObjectClass);
-    Object::ObjectClass->finishInit(None);
-    NoneObject::ObjectClass->finishInit(Object::ObjectClass);
 
     // Create classes for callables here as this is necessary before we can add
     // methods to objects.
@@ -434,6 +457,13 @@ void initObject()
     initNativeMethod(Object::ObjectClass, "__hash__", object_hash, 1);
     initNativeMethod(NoneObject::ObjectClass, "__new__", nullptr, 1, -1);
     initNativeMethod(Class::ObjectClass, "__new__", nullptr, 1, -1);
+}
+
+void initObject2()
+{
+    Class::ObjectClass->finishInit(Object::ObjectClass);
+    NoneObject::ObjectClass->finishInit(Object::ObjectClass);
+    Object::ObjectClass->finishInitNoBases(); // Depends on Empty.
 }
 
 /*
@@ -540,9 +570,7 @@ static bool getSpecialAttr(Traced<Value> value, Name name,
             resultOut = gc.create<String>(obj->as<Class>()->name());
             return true;
         } else if (name == Names::__bases__) {
-            RootVector<Value> bases(1);
-            bases[0] = obj->as<Class>()->base();
-            resultOut = Tuple::get(bases);
+            resultOut = obj->as<Class>()->bases();
             return true;
         }
     }

@@ -179,10 +179,10 @@ struct Cell
 
 struct SweptCell : public Cell
 {
-    // Destructor is called classes derived from SweptCell.
+    // Destructor is called for classes derived from SweptCell.
     virtual ~SweptCell() {}
 
-    // sweep() is called before any destructors a called.
+    // sweep() is called before any destructors are called.
     virtual void sweep() {};
 };
 
