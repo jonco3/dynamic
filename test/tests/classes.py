@@ -3,9 +3,11 @@
 # 'type' not fully implemented
 typ = object.__class__
 
+assert object.__name__ == "object"
 assert object.__class__ == typ
 assert object.__bases__ == ()
 assert object.__mro__ == (object,)
+assert typ.__name__ == "type"
 assert typ.__class__ == typ
 assert typ.__bases__ == (object,)
 assert typ.__mro__ == (typ, object)

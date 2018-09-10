@@ -458,7 +458,7 @@ void initObject()
     NoneObject::ObjectClass.init(
         gc.create<Class>("None", nullptr, Class::InitialLayout, true));
     Class::ObjectClass.init(
-        gc.create<Class>("class", nullptr, Class::InitialLayout, true));
+        gc.create<Class>("type", nullptr, Class::InitialLayout, true));
 
     None.init(gc.create<NoneObject>());
 
