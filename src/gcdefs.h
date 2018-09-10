@@ -4,8 +4,6 @@
 #include "gc.h"
 #include "name.h"
 
-#include <gmpxx.h>
-
 struct Class;
 struct Frame;
 struct Layout;
