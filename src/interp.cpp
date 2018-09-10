@@ -871,7 +871,7 @@ Interpreter::CallStatus Interpreter::setupCall(Traced<Value> targetValue,
         // todo: this is messy and needs refactoring
         Stack<Class*> cls(target->as<Class>());
         Stack<Value> func;
-        if (target->maybeGetAttr(Names::__new__, func) && !func.isNone()) {
+        if (cls->maybeGetClassAttr(Names::__new__, func) && !func.isNone()) {
             insertStackEntries(argCount, Value(cls));
             TracedVector<Value> funcArgs(stackSlice(argCount + 1));
             if (!syncCall(func, funcArgs, resultOut)) {

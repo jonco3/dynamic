@@ -156,11 +156,13 @@ struct Class : public Object
 
     Object* base() const; // todo: to be removed.
     Tuple* bases() const { return bases_; }
-    Tuple* mro();
+    Tuple* mro() const;
     const string& name() const { return name_; }
     bool isFinal() const { return final_; }
 
     bool isDerivedFrom(Class* base) const;
+
+    bool maybeGetClassAttr(Name name, MutableTraced<Value> valueOut) const;
 
     void traceChildren(Tracer& t) override;
 
@@ -169,7 +171,7 @@ struct Class : public Object
   private:
     string name_;
     Heap<Tuple*> bases_;
-    Heap<Tuple*> mro_;
+    mutable Heap<Tuple*> mro_;
     bool final_;
 
     // Only for use during initialization
@@ -182,7 +184,6 @@ struct Class : public Object
     void dumpInternals(ostream& s) const override;
 
     friend void initObject();
-    friend void initObject2();
 };
 
 extern bool object_new(NativeArgs args, MutableTraced<Value> resultOut);

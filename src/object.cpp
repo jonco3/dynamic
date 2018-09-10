@@ -134,46 +134,34 @@ bool Object::maybeGetOwnAttr(Name name, MutableTraced<Value> valueOut) const
 
 bool Object::hasAttr(Name name) const
 {
-    AutoAssertNoGC nogc;
+    if (hasOwnAttr(name))
+        return true;
 
-    const Object* obj = this;
-
-    for (;;) {
-        if (obj->hasOwnAttr(name))
+    Stack<Tuple*> bases(type()->mro());
+    for (size_t i = 0; i < bases->len(); i++) {
+        Stack<Class*> cls(bases->getitem(i).as<Class>());
+        if (cls->hasOwnAttr(name))
             return true;
-
-        if (!obj->is<Class>()) {
-            obj = obj->type();
-        } else {
-            obj = obj->as<Class>()->base();
-            if (obj == None)
-                return false;
-        }
-
-        assert(obj->is<Class>());
     }
+
+    return false;
 }
 
 bool Object::maybeGetAttr(Name name, MutableTraced<Value> valueOut) const
 {
-    AutoAssertNoGC nogc;
+    return maybeGetOwnAttr(name, valueOut) || type()->maybeGetClassAttr(name, valueOut);
+}
 
-    const Object* obj = this;
-
-    for (;;) {
-        if (obj->maybeGetOwnAttr(name, valueOut))
+bool Class::maybeGetClassAttr(Name name, MutableTraced<Value> valueOut) const
+{
+    Stack<Tuple*> bases(mro());
+    for (size_t i = 0; i < bases->len(); i++) {
+        Stack<Class*> cls(bases->getitem(i).as<Class>());
+        if (cls->maybeGetOwnAttr(name, valueOut))
             return true;
-
-        if (!obj->is<Class>()) {
-            obj = obj->type();
-        } else {
-            obj = obj->as<Class>()->base();
-            if (obj == None)
-                return false;
-        }
-
-        assert(obj->is<Class>());
     }
+
+    return false;
 }
 
 Value Object::getAttr(Name name) const
@@ -342,13 +330,13 @@ void Class::initBases(Traced<Class*> base)
     bases_ = Tuple::get(bases);
 }
 
-Tuple* Class::mro()
+Tuple* Class::mro() const
 {
     if (mro_)
         return mro_;
 
     RootVector<Value> chain;
-    chain.push_back(this);
+    chain.push_back(const_cast<Class*>(this));
 
     Stack<Object*> obj(base());
     while (obj != None) {
@@ -357,6 +345,7 @@ Tuple* Class::mro()
         obj = cls->base();
     }
     mro_ = Tuple::get(chain);
+
     return mro_;
 }
 
@@ -376,6 +365,7 @@ void Class::dumpInternals(ostream& s) const
 {
     s << "__name__: \"" << name() << "\", ";
     s << "__bases__: "; bases()->print(s); s << ", ";
+    s << "__mro__:"; mro()->print(s); s << ", ";
 }
 
 Object* Class::base() const
@@ -541,7 +531,7 @@ static bool findAttrForGet(Traced<Value> value, Name name,
 {
     Stack<Class*> cls(value.type());
     Stack<Value> classAttr;
-    bool foundOnClass = cls->maybeGetAttr(name, classAttr);
+    bool foundOnClass = cls->maybeGetClassAttr(name, classAttr);
 
     if (foundOnClass && isDataDescriptor(classAttr)) {
         resultOut = classAttr;
@@ -552,7 +542,7 @@ static bool findAttrForGet(Traced<Value> value, Name name,
     Stack<Object*> obj(value.maybeObject());
     if (obj) {
         if (obj->is<Class>()) {
-            if (obj->maybeGetAttr(name, resultOut)) {
+            if (obj->as<Class>()->maybeGetClassAttr(name, resultOut)) {
                 isDescriptor = isNonDataDescriptor(resultOut);
                 return true;
             }
@@ -705,7 +695,7 @@ bool findDescriptorForSetOrDelete(Name name, Traced<Object*> obj,
     Stack<Class*> cls(obj->type());
 
     Stack<Value> classAttr;
-    bool foundOnClass = cls->maybeGetAttr(name, classAttr);
+    bool foundOnClass = cls->maybeGetClassAttr(name, classAttr);
 
     if (!foundOnClass || !isDataDescriptor(classAttr))
         return false;
@@ -746,10 +736,12 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
 
 void print(Object* obj)
 {
-    obj->print(cout);
+    obj->print(cerr);
+    cerr << endl;
 }
 
 void dump(Object* obj)
 {
-    obj->dump(cout);
+    obj->dump(cerr);
+    cerr << endl;
 }
