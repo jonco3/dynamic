@@ -115,6 +115,8 @@ struct Object : public Cell
 
     void init(Traced<Class*> cls, Traced<Layout*> layout);
 
+    virtual void dumpInternals(ostream& s) const {}
+
     friend void initObject();
 };
 
@@ -176,6 +178,8 @@ struct Class : public Object
 
     void initBases(Traced<Class*> base);
     void initMRO(Traced<Class*> base);
+
+    void dumpInternals(ostream& s) const override;
 
     friend void initObject();
     friend void initObject2();

@@ -251,6 +251,8 @@ void Object::dump(ostream& s) const
     s << type()->name();
     s << " object at 0x" << hex << reinterpret_cast<uintptr_t>(this);
     s << " { ";
+    s << "__class__: "; type()->print(s); s << ", ";
+    dumpInternals(s);
     Layout* layout = layout_;
     while (layout != Layout::Empty) {
         s << *layout->name() << ": ";
@@ -264,7 +266,7 @@ void Object::dump(ostream& s) const
         if (layout != Layout::Empty)
             s << ", ";
     }
-    s << " } ";
+    s << " } " << endl;
 }
 
 /* static */ bool Object::IsTrue(Traced<Object*> obj)
@@ -368,6 +370,12 @@ void Class::traceChildren(Tracer& t)
 void Class::print(ostream& s) const
 {
     s << "Class " << name_;
+}
+
+void Class::dumpInternals(ostream& s) const
+{
+    s << "__name__: \"" << name() << "\", ";
+    s << "__bases__: "; bases()->print(s); s << ", ";
 }
 
 Object* Class::base() const
