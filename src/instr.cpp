@@ -747,8 +747,10 @@ Interpreter::executeInstr_MakeClassFromFrame(Traced<IdentInstr*> instr)
 
     // todo: this layout transplanting should be used to a utility method
     vector<Name> names;
-    for (Layout* l = env->layout(); l != Env::InitialLayout; l = l->parent())
-        names.push_back(l->name());
+    for (Layout* l = env->layout(); l != Env::InitialLayout; l = l->parent()) {
+        if (l->name() != Names::__bases__)
+            names.push_back(l->name());
+    }
     Stack<Layout*> layout(Class::InitialLayout);
     for (auto i = names.begin(); i != names.end(); i++)
         layout = layout->addName(*i);
