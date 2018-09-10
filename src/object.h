@@ -259,4 +259,8 @@ inline WrapperMixins<W, T*>::operator Traced<S*> () const
     return Traced<S*>::fromTracedLocation(ptr);
 }
 
+// Helper functions for use in the debugger.
+extern void print(Object* obj);
+extern void dump(Object* obj);
+
 #endif

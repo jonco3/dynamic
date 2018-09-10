@@ -735,3 +735,13 @@ bool delAttr(Traced<Object*> obj, Name name, MutableTraced<Value> resultOut)
     Stack<Value> func(desc->getAttr(Names::__delete__));
     return interp->call(func, desc, obj, resultOut);
 }
+
+void print(Object* obj)
+{
+    obj->print(cout);
+}
+
+void dump(Object* obj)
+{
+    obj->dump(cout);
+}
