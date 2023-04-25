@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 2.8.5)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
+find_package(GMP REQUIRED)
+
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
